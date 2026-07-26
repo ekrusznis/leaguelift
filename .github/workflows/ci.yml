@@ -1,0 +1,17 @@
+name: ci
+
+# Orchestration entry point referenced by branch protection. The actual work happens
+# in backend.yml, frontend.yml, and security.yml, each scoped to the paths it cares
+# about (DESIGN-DOC.md section 25.1) so an unrelated change doesn't wait on an unrelated
+# toolchain.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: No-op summary job
+        run: echo "See backend, frontend, and security workflows for the actual checks."

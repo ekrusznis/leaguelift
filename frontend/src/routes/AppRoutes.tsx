@@ -1,0 +1,24 @@
+import { Route, Routes } from "react-router-dom";
+import { AppShell } from "../app/AppShell";
+import { DashboardPage } from "../pages/DashboardPage";
+import { NotFoundPage } from "../pages/NotFoundPage";
+import { OrganizationsPage } from "../pages/OrganizationsPage";
+import { ProtectedRoute } from "./ProtectedRoute";
+
+export function AppRoutes() {
+	return (
+		<Routes>
+			<Route
+				element={
+					<ProtectedRoute>
+						<AppShell />
+					</ProtectedRoute>
+				}
+			>
+				<Route index element={<DashboardPage />} />
+				<Route path="organizations" element={<OrganizationsPage />} />
+			</Route>
+			<Route path="*" element={<NotFoundPage />} />
+		</Routes>
+	);
+}

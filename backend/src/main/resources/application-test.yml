@@ -1,0 +1,11 @@
+spring:
+  flyway:
+    clean-disabled: false
+
+leaguelift:
+  auth:
+    dev-bypass-enabled: true
+    dev-bypass-user:
+      external-subject: test-user
+      email: test@leaguelift.local
+      display-name: Test User

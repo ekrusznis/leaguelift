@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/leaguelift}
+    username: ${POSTGRES_USER:leaguelift}
+    password: ${POSTGRES_PASSWORD:leaguelift_local_password}
+
+# The local-dev authentication bypass is enabled ONLY because this profile explicitly
+# sets leaguelift.auth.dev-bypass-enabled=true. The bean that implements the bypass is
+# additionally gated with @Profile("local") in code, so both the profile AND this flag
+# must be true — see docs/security.md.
+leaguelift:
+  auth:
+    dev-bypass-enabled: true
+    dev-bypass-user:
+      external-subject: local-dev-user
+      email: dev@leaguelift.local
+      display-name: Local Dev User
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.leaguelift: DEBUG
