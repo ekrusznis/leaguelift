@@ -1,0 +1,140 @@
+package com.leaguelift.tournament.application
+
+import com.leaguelift.audit.application.AuditService
+import com.leaguelift.common.error.ConflictException
+import com.leaguelift.common.error.NotFoundException
+import com.leaguelift.common.error.ValidationException
+import com.leaguelift.common.web.CurrentUser
+import com.leaguelift.membership.application.MembershipService
+import com.leaguelift.tournament.domain.Tournament
+import com.leaguelift.tournament.persistence.TournamentRepository
+import org.springframework.dao.DuplicateKeyException
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
+import java.util.UUID
+
+private val EMAIL_PATTERN = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+
+@Service
+class TournamentService(
+    private val tournamentRepository: TournamentRepository,
+    private val membershipService: MembershipService,
+    private val auditService: AuditService,
+) {
+
+    fun list(organizationId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<Tournament> {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        return tournamentRepository.findAll(organizationId, offset, limit)
+    }
+
+    fun count(organizationId: UUID, currentUser: CurrentUser): Long {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        return tournamentRepository.countAll(organizationId)
+    }
+
+    fun get(organizationId: UUID, tournamentId: UUID, currentUser: CurrentUser): Tournament {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        return tournamentRepository.findById(tournamentId, organizationId)
+            ?: throw NotFoundException("TOURNAMENT_NOT_FOUND", "The tournament could not be found.")
+    }
+
+    @Transactional
+    fun create(
+        organizationId: UUID,
+        name: String,
+        sport: String?,
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+        location: String?,
+        contactEmail: String?,
+        currentUser: CurrentUser,
+    ): Tournament {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        validateDates(startDate, endDate)
+        validateContactEmail(contactEmail)
+        return try {
+            val tournament = tournamentRepository.insert(organizationId, name, sport, startDate, endDate, location, contactEmail)
+            auditService.record(
+                actorUserId = currentUser.userId,
+                organizationId = organizationId,
+                action = "tournament.created",
+                entityType = "tournament",
+                entityId = tournament.id,
+            )
+            tournament
+        } catch (e: DuplicateKeyException) {
+            throw ConflictException(
+                "TOURNAMENT_NAME_TAKEN",
+                "A tournament with this name already exists in the organization.",
+            )
+        }
+    }
+
+    @Transactional
+    fun update(
+        organizationId: UUID,
+        tournamentId: UUID,
+        name: String?,
+        sport: String?,
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+        location: String?,
+        contactEmail: String?,
+        currentUser: CurrentUser,
+    ): Tournament {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        tournamentRepository.findById(tournamentId, organizationId)
+            ?: throw NotFoundException("TOURNAMENT_NOT_FOUND", "The tournament could not be found.")
+        validateDates(startDate, endDate)
+        validateContactEmail(contactEmail)
+        return try {
+            tournamentRepository.update(tournamentId, organizationId, name, sport, startDate, endDate, location, contactEmail)
+            auditService.record(
+                actorUserId = currentUser.userId,
+                organizationId = organizationId,
+                action = "tournament.updated",
+                entityType = "tournament",
+                entityId = tournamentId,
+            )
+            tournamentRepository.findById(tournamentId, organizationId)!!
+        } catch (e: DuplicateKeyException) {
+            throw ConflictException(
+                "TOURNAMENT_NAME_TAKEN",
+                "A tournament with this name already exists in the organization.",
+            )
+        }
+    }
+
+    @Transactional
+    fun archive(organizationId: UUID, tournamentId: UUID, currentUser: CurrentUser) {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        val rows = tournamentRepository.archive(tournamentId, organizationId)
+        if (rows == 0) throw NotFoundException("TOURNAMENT_NOT_FOUND", "The tournament could not be found.")
+        auditService.record(
+            actorUserId = currentUser.userId,
+            organizationId = organizationId,
+            action = "tournament.archived",
+            entityType = "tournament",
+            entityId = tournamentId,
+        )
+    }
+
+    private fun validateDates(startDate: LocalDate?, endDate: LocalDate?) {
+        if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+            throw ValidationException(
+                "End date must not be before start date.",
+                listOf(com.leaguelift.common.error.FieldError("endDate", "End date must not be before start date.")),
+            )
+        }
+    }
+
+    private fun validateContactEmail(email: String?) {
+        if (email != null && !EMAIL_PATTERN.matches(email)) {
+            throw ValidationException(
+                "Contact email is not a valid email address.",
+                listOf(com.leaguelift.common.error.FieldError("contactEmail", "Invalid email format.")),
+            )
+        }
+    }
+}
