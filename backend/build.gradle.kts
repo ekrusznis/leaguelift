@@ -48,7 +48,7 @@ dependencies {
 	testImplementation("org.springframework.security:spring-security-test")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 	testImplementation("io.mockk:mockk:1.13.13")
-	testImplementation("com.ninja-squad:springmockk:4.0.2")
+	testImplementation("com.ninja-squad:springmockk:5.0.1")
 	testImplementation(platform("org.testcontainers:testcontainers-bom:1.20.4"))
 	testImplementation("org.testcontainers:junit-jupiter")
 	testImplementation("org.testcontainers:postgresql")
