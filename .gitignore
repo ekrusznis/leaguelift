@@ -37,3 +37,12 @@ npm-debug.log*
 *.pem
 *.key
 secrets/
+
+# Internal design and operational docs — kept locally but not pushed
+DESIGN-DOC.md
+docs/architecture.md
+docs/security.md
+docs/privacy-data-inventory.md
+docs/operations-runbook.md
+docs/launch-checklist.md
+docs/ai-agent-guardrails.md
