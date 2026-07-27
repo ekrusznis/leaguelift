@@ -4,6 +4,7 @@ import com.leaguelift.identity.domain.AppUser
 import com.leaguelift.identity.domain.AppUserStatus
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
+import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
@@ -55,7 +56,7 @@ class AppUserRepository(private val jdbcClient: JdbcClient) {
 			.param("externalSubject", externalSubject)
 			.param("email", email)
 			.param("displayName", displayName)
-			.param("now", now)
+			.param("now", Timestamp.from(now))
 			.update()
 		return AppUser(id, externalSubject, email, displayName, AppUserStatus.ACTIVE, now, now)
 	}

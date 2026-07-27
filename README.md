@@ -12,7 +12,9 @@ making non-trivial changes.
 
 ## Current status
 
-**Phase 0 — Repository and Platform Foundation.** See
+**Phase 0 (foundation) is built and running locally; Phase 1's first vertical slice
+(organization onboarding — profile, sports/contact info, administrator invitations,
+member management, onboarding checklist) is implemented.** See
 [`docs/launch-checklist.md`](./docs/launch-checklist.md) for what's implemented and
 what's next, and section 35 of `DESIGN-DOC.md` for the recommended order of upcoming
 vertical slices.
@@ -29,16 +31,13 @@ infra/      DigitalOcean / Cloudflare / deployment scripts
 
 ## Prerequisites
 
-- Java 21 (backend build target — see note below)
+- Java 17 (backend build target — downgraded from the originally documented 21;
+  see `docs/adr/ADR-013-java-17-baseline.md`). The Gradle build includes the Foojay
+  toolchain resolver, so `./gradlew` will auto-download a matching JDK if one isn't
+  already installed.
 - Node.js 22+ and npm
 - Docker and Docker Compose
 - PostgreSQL 16 (or use the provided `compose.yaml`)
-
-> **Note on this initial commit:** this foundation was scaffolded in a sandboxed
-> environment without Java 21, Gradle, or Maven Central access, so the backend has
-> **not** been compiled or test-run yet. See "Known limitations" in
-> `docs/launch-checklist.md`. The first thing to do after cloning is open `backend/`
-> in IntelliJ IDEA with a JDK 21 and let Gradle sync, then run `./gradlew test`.
 
 ## Local development
 

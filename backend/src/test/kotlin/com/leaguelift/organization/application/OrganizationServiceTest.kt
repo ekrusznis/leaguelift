@@ -73,9 +73,68 @@ class OrganizationServiceTest {
 		slug = "riverside-soccer",
 		organizationType = OrganizationType.RECREATIONAL_LEAGUE,
 		status = OrganizationStatus.ACTIVE,
+		sports = emptyList(),
+		contactEmail = null,
+		contactPhone = null,
 		createdAt = Instant.now(),
 		updatedAt = Instant.now(),
 	)
+
+	@Test
+	fun `updating with an invalid contact email is rejected`() {
+		val organization = existingOrganization()
+		every { membershipService.requireActiveMembership(organization.id, currentUser) } returns ownerMembership(organization.id, currentUser.userId)
+		every { organizationRepository.findById(organization.id) } returns organization
+
+		assertFailsWith<ValidationException> {
+			service.update(organization.id, null, null, null, "not-an-email", null, currentUser)
+		}
+	}
+
+	@Test
+	fun `updating with a valid profile succeeds and is audited`() {
+		val organization = existingOrganization()
+		val updated = organization.copy(sports = listOf("Soccer"), contactEmail = "ops@example.com")
+		every { membershipService.requireActiveMembership(organization.id, currentUser) } returns ownerMembership(organization.id, currentUser.userId)
+		every { organizationRepository.findById(organization.id) } returnsMany listOf(organization, updated)
+		every {
+			organizationRepository.updateProfile(organization.id, null, null, listOf("Soccer"), "ops@example.com", null)
+		} returns 1
+		every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+
+		val result = service.update(organization.id, null, null, listOf("Soccer"), "ops@example.com", null, currentUser)
+
+		assertEquals("ops@example.com", result.contactEmail)
+		verify(exactly = 1) {
+			auditService.record(currentUser.userId, organization.id, "organization.updated", "organization", organization.id, any())
+		}
+	}
+
+	@Test
+	fun `onboarding is incomplete until profile and a second administrator exist`() {
+		val organization = existingOrganization()
+		every { membershipService.requireActiveMembership(organization.id, currentUser) } returns ownerMembership(organization.id, currentUser.userId)
+		every { organizationRepository.findById(organization.id) } returns organization
+		every { membershipService.countMembers(organization.id) } returns 1
+
+		val progress = service.onboardingProgress(organization.id, currentUser)
+
+		assertEquals(false, progress.profileComplete)
+		assertEquals(false, progress.hasAdditionalAdministrator)
+	}
+
+	@Test
+	fun `onboarding is complete once profile and a second administrator exist`() {
+		val organization = existingOrganization().copy(sports = listOf("Soccer"), contactEmail = "ops@example.com")
+		every { membershipService.requireActiveMembership(organization.id, currentUser) } returns ownerMembership(organization.id, currentUser.userId)
+		every { organizationRepository.findById(organization.id) } returns organization
+		every { membershipService.countMembers(organization.id) } returns 2
+
+		val progress = service.onboardingProgress(organization.id, currentUser)
+
+		assertEquals(true, progress.profileComplete)
+		assertEquals(true, progress.hasAdditionalAdministrator)
+	}
 
 	private fun ownerMembership(organizationId: UUID, userId: UUID) = OrganizationMembership(
 		id = UUID.randomUUID(),

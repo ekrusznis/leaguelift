@@ -21,6 +21,7 @@ class JwtCurrentUserConverter(
 
 	override fun convert(jwt: Jwt): AbstractAuthenticationToken {
 		val externalSubject = jwt.subject
+			?: throw IllegalArgumentException("JWT missing required 'sub' claim")
 		val email = jwt.getClaimAsString("email") ?: "$externalSubject@unknown.leaguelift.local"
 		val displayName = jwt.getClaimAsString("name") ?: email
 		val appUser = userProvisioningService.resolveOrProvision(externalSubject, email, displayName)

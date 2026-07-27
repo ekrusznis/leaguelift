@@ -5,6 +5,7 @@ import com.leaguelift.membership.domain.MembershipStatus
 import com.leaguelift.membership.domain.OrganizationMembership
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
+import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
@@ -47,6 +48,54 @@ class MembershipRepository(private val jdbcClient: JdbcClient) {
 			.query(Long::class.java)
 			.single()
 
+	fun findById(membershipId: UUID): OrganizationMembership? =
+		jdbcClient.sql(
+			"""
+			select id, organization_id, user_id, role, status, created_at, updated_at
+			from organization_membership
+			where id = :membershipId
+			""".trimIndent(),
+		)
+			.param("membershipId", membershipId)
+			.query(::mapRow)
+			.optional()
+			.orElse(null)
+
+	fun existsForUser(organizationId: UUID, userId: UUID): Boolean =
+		jdbcClient.sql(
+			"""
+			select exists(
+				select 1 from organization_membership
+				where organization_id = :organizationId and user_id = :userId and status = 'ACTIVE'
+			)
+			""".trimIndent(),
+		)
+			.param("organizationId", organizationId)
+			.param("userId", userId)
+			.query(Boolean::class.java)
+			.single()
+
+	fun updateRole(membershipId: UUID, role: MembershipRole): Int {
+		val now = Instant.now()
+		return jdbcClient.sql(
+			"update organization_membership set role = :role, updated_at = :now where id = :membershipId",
+		)
+			.param("role", role.name)
+			.param("now", Timestamp.from(now))
+			.param("membershipId", membershipId)
+			.update()
+	}
+
+	fun revoke(membershipId: UUID): Int {
+		val now = Instant.now()
+		return jdbcClient.sql(
+			"update organization_membership set status = 'REVOKED', updated_at = :now where id = :membershipId",
+		)
+			.param("now", Timestamp.from(now))
+			.param("membershipId", membershipId)
+			.update()
+	}
+
 	fun insert(organizationId: UUID, userId: UUID, role: MembershipRole): OrganizationMembership {
 		val now = Instant.now()
 		val id = UUID.randomUUID()
@@ -60,7 +109,7 @@ class MembershipRepository(private val jdbcClient: JdbcClient) {
 			.param("organizationId", organizationId)
 			.param("userId", userId)
 			.param("role", role.name)
-			.param("now", now)
+			.param("now", Timestamp.from(now))
 			.update()
 		return OrganizationMembership(id, organizationId, userId, role, MembershipStatus.ACTIVE, now, now)
 	}

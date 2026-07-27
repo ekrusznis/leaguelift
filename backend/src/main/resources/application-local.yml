@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/leaguelift}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/leaguelift}
     username: ${POSTGRES_USER:leaguelift}
     password: ${POSTGRES_PASSWORD:leaguelift_local_password}
 

@@ -37,3 +37,7 @@ ADR-005 through ADR-012 are proposed later in `DESIGN-DOC.md` (fundraising, comm
 ledger, and infra phases) and should be written when those milestones begin — they are
 intentionally not pre-written here to avoid locking in unresolved product questions
 (see `DESIGN-DOC.md` section 33).
+
+An additional, unreserved decision:
+
+- ADR-013: Java 17 instead of Java 21 baseline (environment-driven, see the ADR itself)

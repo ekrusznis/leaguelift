@@ -16,7 +16,11 @@ Gates are defined in `DESIGN-DOC.md` section 31. This file tracks status against
 
 ## Pilot Organization Launch (section 31.2)
 
-Not started — depends on Phase 1 (organization onboarding, public pages).
+In progress. Organization onboarding (profile, sports/contact info, administrator
+invitations, member role management, onboarding checklist) is implemented per
+`DESIGN-DOC.md` section 35 #1. Still missing before this gate: public pages, file
+uploads/branding (slice #2), team/tournament creation (slices #3–4), privacy policy
+and terms review, mobile testing.
 
 ## Live Payments Launch (section 31.3)
 
@@ -27,17 +31,30 @@ model).
 
 Not started — depends on Phase 4.
 
-## Known limitations of this initial commit
+## Known limitations
 
-- The backend was scaffolded in a sandboxed environment with Java 11, no Gradle
-  installation, and no network access to Maven Central, so `backend/` has **not**
-  been compiled, and its tests have **not** been run. Run `./gradlew build` locally
-  with JDK 21 before trusting it.
-- The frontend **was** built and tested in-sandbox (Node 22, npm registry reachable) —
-  see the verification notes in the PR/commit this checklist ships with.
+- The Phase 0 foundation backend was confirmed building and syncing successfully in
+  IntelliJ IDEA on Java 17 (see ADR-013 — downgraded from the originally documented
+  Java 21, which wasn't reliably resolvable even with the Foojay auto-download
+  resolver).
+- The organization-onboarding slice (invitation module, extended organization/
+  membership modules, `V2__organization_onboarding.sql`) was written using the same
+  patterns and conventions as the already-verified Phase 0 code, but has **not** been
+  separately build- or test-run yet — run `./gradlew build test` and re-sync Gradle in
+  IntelliJ to confirm before trusting it. Watch specifically for the new
+  `com.fasterxml.jackson.databind.ObjectMapper` dependency injected into
+  `OrganizationRepository` (used to serialize `sports` to/from `jsonb`) resolving
+  correctly.
+- The frontend **was** built, linted, and tested (typecheck, 15 Vitest/RTL tests,
+  production build) in the sandbox this slice was authored in (Node 22, npm registry
+  reachable) — not yet run against the real backend end-to-end.
 - No Auth0 tenant is configured yet; both backend and frontend currently only exercise
   their local development-bypass authentication paths.
 - Repository/integration tests requiring Testcontainers + Docker are written but not
-  executed here.
+  executed in this sandbox — run them locally with Docker running.
 - CI workflows are written but have not yet run against a real GitHub Actions
   environment attached to this repository.
+- Invitation emails are not actually sent yet — `InvitationService` writes an
+  `outbox_event` (`membership.invited`) but no worker consumes it. The invite flow
+  currently only works by manually sharing the token/link from the create-invitation
+  API response.

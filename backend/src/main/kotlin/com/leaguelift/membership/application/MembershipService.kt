@@ -1,6 +1,8 @@
 package com.leaguelift.membership.application
 
 import com.leaguelift.common.error.ForbiddenException
+import com.leaguelift.common.error.NotFoundException
+import com.leaguelift.common.error.ValidationException
 import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.membership.domain.MembershipRole
 import com.leaguelift.membership.domain.OrganizationMembership
@@ -20,6 +22,53 @@ class MembershipService(private val membershipRepository: MembershipRepository) 
 	@Transactional
 	fun grantOwner(organizationId: UUID, userId: UUID): OrganizationMembership =
 		membershipRepository.insert(organizationId, userId, MembershipRole.OWNER)
+
+	@Transactional
+	fun grantMembership(organizationId: UUID, userId: UUID, role: MembershipRole): OrganizationMembership {
+		require(role != MembershipRole.OWNER) {
+			"grantMembership must not be used to grant OWNER; ownership transfer is a separate controlled workflow."
+		}
+		if (membershipRepository.existsForUser(organizationId, userId)) {
+			throw ValidationException("This user is already a member of the organization.")
+		}
+		return membershipRepository.insert(organizationId, userId, role)
+	}
+
+	/** OWNER or ADMINISTRATOR — the roles allowed to invite/manage other members. */
+	fun requireManagerRole(organizationId: UUID, currentUser: CurrentUser): OrganizationMembership {
+		val membership = requireActiveMembership(organizationId, currentUser)
+		if (membership.role != MembershipRole.OWNER && membership.role != MembershipRole.ADMINISTRATOR) {
+			throw ForbiddenException(
+				code = "MEMBERSHIP_MANAGEMENT_DENIED",
+				message = "Only organization owners and administrators can manage members.",
+			)
+		}
+		return membership
+	}
+
+	@Transactional
+	fun updateRole(organizationId: UUID, membershipId: UUID, newRole: MembershipRole, currentUser: CurrentUser) {
+		requireManagerRole(organizationId, currentUser)
+		val target = membershipRepository.findById(membershipId)
+			?.takeIf { it.organizationId == organizationId }
+			?: throw NotFoundException("MEMBERSHIP_NOT_FOUND", "The membership could not be found.")
+		if (target.role == MembershipRole.OWNER || newRole == MembershipRole.OWNER) {
+			throw ValidationException("Ownership cannot be changed through this endpoint.")
+		}
+		membershipRepository.updateRole(membershipId, newRole)
+	}
+
+	@Transactional
+	fun revoke(organizationId: UUID, membershipId: UUID, currentUser: CurrentUser) {
+		requireManagerRole(organizationId, currentUser)
+		val target = membershipRepository.findById(membershipId)
+			?.takeIf { it.organizationId == organizationId }
+			?: throw NotFoundException("MEMBERSHIP_NOT_FOUND", "The membership could not be found.")
+		if (target.role == MembershipRole.OWNER) {
+			throw ValidationException("The organization owner's membership cannot be revoked.")
+		}
+		membershipRepository.revoke(membershipId)
+	}
 
 	fun requireActiveMembership(organizationId: UUID, currentUser: CurrentUser): OrganizationMembership {
 		if (currentUser.platformAdministrator) {

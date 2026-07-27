@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
@@ -26,12 +27,14 @@ export function OrganizationList() {
 	return (
 		<ul className="flex flex-col gap-2" aria-label="Organizations">
 			{data.items.map((organization) => (
-				<li
-					key={organization.id}
-					className="rounded-lg border border-slate-gray/20 bg-pure-white p-4 shadow-sm"
-				>
-					<p className="font-heading font-semibold text-navy">{organization.name}</p>
-					<p className="text-sm text-slate-gray">/{organization.slug}</p>
+				<li key={organization.id}>
+					<Link
+						to={`/organizations/${organization.id}`}
+						className="block rounded-lg border border-slate-gray/20 bg-pure-white p-4 shadow-sm hover:border-victory-green"
+					>
+						<p className="font-heading font-semibold text-navy">{organization.name}</p>
+						<p className="text-sm text-slate-gray">/{organization.slug}</p>
+					</Link>
 				</li>
 			))}
 		</ul>

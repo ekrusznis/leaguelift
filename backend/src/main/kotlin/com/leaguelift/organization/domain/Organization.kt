@@ -22,13 +22,19 @@ data class Organization(
 	val slug: String,
 	val organizationType: OrganizationType,
 	val status: OrganizationStatus,
+	val sports: List<String>,
+	val contactEmail: String?,
+	val contactPhone: String?,
 	val createdAt: Instant,
 	val updatedAt: Instant,
 )
 
 private val SLUG_PATTERN = Regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
+private val EMAIL_PATTERN = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
 
 fun isValidSlug(slug: String): Boolean = SLUG_PATTERN.matches(slug)
+
+fun isValidContactEmail(email: String): Boolean = EMAIL_PATTERN.matches(email)
 
 /** Lower-cases and trims a candidate name into a slug-safe default; callers may override. */
 fun slugify(input: String): String =

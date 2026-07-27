@@ -17,12 +17,47 @@ export interface Organization {
 	slug: string;
 	organizationType: OrganizationType;
 	status: "ACTIVE" | "SUSPENDED" | "ARCHIVED";
+	sports: string[];
+	contactEmail: string | null;
+	contactPhone: string | null;
 	createdAt: string;
 	updatedAt: string;
 }
 
 export interface OrganizationPage {
 	items: Organization[];
+	page: number;
+	size: number;
+	totalElements: number;
+}
+
+export interface OnboardingProgress {
+	profileComplete: boolean;
+	hasAdditionalAdministrator: boolean;
+}
+
+export const INVITABLE_ROLES = [
+	"ADMINISTRATOR",
+	"FINANCE_MANAGER",
+	"TEAM_ADMINISTRATOR",
+	"TOURNAMENT_ADMINISTRATOR",
+	"VIEWER",
+] as const;
+
+export type InvitableRole = (typeof INVITABLE_ROLES)[number];
+
+export interface Invitation {
+	id: string;
+	organizationId: string;
+	email: string;
+	role: InvitableRole;
+	status: "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED";
+	expiresAt: string;
+	createdAt: string;
+}
+
+export interface InvitationPage {
+	items: Invitation[];
 	page: number;
 	size: number;
 	totalElements: number;

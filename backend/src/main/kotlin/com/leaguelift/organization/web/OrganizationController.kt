@@ -54,5 +54,19 @@ class OrganizationController(private val organizationService: OrganizationServic
 		@Valid @RequestBody request: UpdateOrganizationRequest,
 		@AuthenticationPrincipal currentUser: CurrentUser,
 	): OrganizationResponse =
-		organizationService.update(organizationId, request.name, request.organizationType, currentUser).toResponse()
+		organizationService.update(
+			organizationId,
+			request.name,
+			request.organizationType,
+			request.sports,
+			request.contactEmail,
+			request.contactPhone,
+			currentUser,
+		).toResponse()
+
+	@GetMapping("/{organizationId}/onboarding")
+	fun onboarding(
+		@PathVariable organizationId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): OnboardingProgressResponse = organizationService.onboardingProgress(organizationId, currentUser).toResponse()
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ORGANIZATION_TYPES } from "./types";
+import { INVITABLE_ROLES, ORGANIZATION_TYPES } from "./types";
 
 /**
  * Mirrors the backend's CreateOrganizationRequest validation
@@ -18,3 +18,35 @@ export const createOrganizationSchema = z.object({
 });
 
 export type CreateOrganizationFormValues = z.infer<typeof createOrganizationSchema>;
+
+export const COMMON_SPORTS = [
+	"Soccer",
+	"Baseball",
+	"Softball",
+	"Basketball",
+	"Football",
+	"Volleyball",
+	"Lacrosse",
+	"Hockey",
+	"Swimming",
+	"Track & Field",
+	"Wrestling",
+	"Cheer",
+] as const;
+
+export const updateOrganizationProfileSchema = z.object({
+	name: z.string().trim().min(2, "Name must be at least 2 characters.").max(120),
+	organizationType: z.enum(ORGANIZATION_TYPES),
+	sports: z.array(z.string()).min(1, "Select at least one sport."),
+	contactEmail: z.string().trim().email("Enter a valid email address."),
+	contactPhone: z.string().trim().max(40).optional().or(z.literal("")),
+});
+
+export type UpdateOrganizationProfileFormValues = z.infer<typeof updateOrganizationProfileSchema>;
+
+export const createInvitationSchema = z.object({
+	email: z.string().trim().email("Enter a valid email address."),
+	role: z.enum(INVITABLE_ROLES),
+});
+
+export type CreateInvitationFormValues = z.infer<typeof createInvitationSchema>;

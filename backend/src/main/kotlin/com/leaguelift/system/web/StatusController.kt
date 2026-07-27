@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RestController
 
 data class StatusResponse(val status: String = "OK", val version: String = "0.1.0")
 
-/** Public, unauthenticated status endpoint — permitted in SecurityConfig via /api/v1/public/**. */
+// Public, unauthenticated status endpoint — permitted in SecurityConfig via the /api/v1/public/** wildcard.
 @RestController
 @RequestMapping("/api/v1/public")
 class StatusController {

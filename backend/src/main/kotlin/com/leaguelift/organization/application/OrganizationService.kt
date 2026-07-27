@@ -8,6 +8,7 @@ import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.organization.domain.Organization
 import com.leaguelift.organization.domain.OrganizationType
+import com.leaguelift.organization.domain.isValidContactEmail
 import com.leaguelift.organization.domain.isValidSlug
 import com.leaguelift.organization.persistence.OrganizationRepository
 import org.springframework.stereotype.Service
@@ -61,12 +62,21 @@ class OrganizationService(
 		organizationId: UUID,
 		name: String?,
 		organizationType: OrganizationType?,
+		sports: List<String>?,
+		contactEmail: String?,
+		contactPhone: String?,
 		currentUser: CurrentUser,
 	): Organization {
 		membershipService.requireActiveMembership(organizationId, currentUser)
 		organizationRepository.findById(organizationId)
 			?: throw NotFoundException("ORGANIZATION_NOT_FOUND", "The organization could not be found.")
-		organizationRepository.updateNameAndType(organizationId, name, organizationType)
+		if (contactEmail != null && !isValidContactEmail(contactEmail)) {
+			throw ValidationException(
+				"Contact email is not a valid email address.",
+				listOf(com.leaguelift.common.error.FieldError("contactEmail", "Invalid email format.")),
+			)
+		}
+		organizationRepository.updateProfile(organizationId, name, organizationType, sports, contactEmail, contactPhone)
 		auditService.record(
 			actorUserId = currentUser.userId,
 			organizationId = organizationId,
@@ -76,4 +86,26 @@ class OrganizationService(
 		)
 		return organizationRepository.findById(organizationId)!!
 	}
+
+	/**
+	 * Onboarding checklist for the organization-owner setup flow (DESIGN-DOC.md
+	 * section 15.2). Only reflects modules that exist so far — team/tournament/public
+	 * page items are added here when those vertical slices ship (section 35), rather
+	 * than showing permanently-incomplete steps for modules that don't exist yet.
+	 */
+	fun onboardingProgress(organizationId: UUID, currentUser: CurrentUser): OnboardingProgress {
+		membershipService.requireActiveMembership(organizationId, currentUser)
+		val organization = organizationRepository.findById(organizationId)
+			?: throw NotFoundException("ORGANIZATION_NOT_FOUND", "The organization could not be found.")
+		val profileComplete = organization.sports.isNotEmpty() && organization.contactEmail != null
+		return OnboardingProgress(
+			profileComplete = profileComplete,
+			hasAdditionalAdministrator = membershipService.countMembers(organizationId) > 1,
+		)
+	}
 }
+
+data class OnboardingProgress(
+	val profileComplete: Boolean,
+	val hasAdditionalAdministrator: Boolean,
+)

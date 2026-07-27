@@ -1,37 +1,34 @@
 package com.leaguelift.organization.persistence
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.leaguelift.organization.domain.Organization
 import com.leaguelift.organization.domain.OrganizationStatus
 import com.leaguelift.organization.domain.OrganizationType
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
+import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
+private const val ORGANIZATION_COLUMNS =
+	"id, name, slug, organization_type, status, sports, contact_email, contact_phone, created_at, updated_at"
+
 @Repository
-class OrganizationRepository(private val jdbcClient: JdbcClient) {
+class OrganizationRepository(
+	private val jdbcClient: JdbcClient,
+	private val objectMapper: ObjectMapper,
+) {
 
 	fun findById(id: UUID): Organization? =
-		jdbcClient.sql(
-			"""
-			select id, name, slug, organization_type, status, created_at, updated_at
-			from organization
-			where id = :id
-			""".trimIndent(),
-		)
+		jdbcClient.sql("select $ORGANIZATION_COLUMNS from organization where id = :id")
 			.param("id", id)
 			.query(::mapRow)
 			.optional()
 			.orElse(null)
 
 	fun findBySlug(slug: String): Organization? =
-		jdbcClient.sql(
-			"""
-			select id, name, slug, organization_type, status, created_at, updated_at
-			from organization
-			where slug = :slug
-			""".trimIndent(),
-		)
+		jdbcClient.sql("select $ORGANIZATION_COLUMNS from organization where slug = :slug")
 			.param("slug", slug)
 			.query(::mapRow)
 			.optional()
@@ -45,7 +42,8 @@ class OrganizationRepository(private val jdbcClient: JdbcClient) {
 	fun findForUser(userId: UUID, offset: Int, limit: Int): List<Organization> =
 		jdbcClient.sql(
 			"""
-			select o.id, o.name, o.slug, o.organization_type, o.status, o.created_at, o.updated_at
+			select o.id, o.name, o.slug, o.organization_type, o.status, o.sports,
+			       o.contact_email, o.contact_phone, o.created_at, o.updated_at
 			from organization o
 			join organization_membership m on m.organization_id = o.id
 			where m.user_id = :userId and m.status = 'ACTIVE'
@@ -76,33 +74,65 @@ class OrganizationRepository(private val jdbcClient: JdbcClient) {
 		val id = UUID.randomUUID()
 		jdbcClient.sql(
 			"""
-			insert into organization (id, name, slug, organization_type, status, created_at, updated_at)
-			values (:id, :name, :slug, :organizationType, 'ACTIVE', :now, :now)
+			insert into organization (id, name, slug, organization_type, status, sports, created_at, updated_at)
+			values (:id, :name, :slug, :organizationType, 'ACTIVE', '[]'::jsonb, :now, :now)
 			""".trimIndent(),
 		)
 			.param("id", id)
 			.param("name", name)
 			.param("slug", slug)
 			.param("organizationType", organizationType.name)
-			.param("now", now)
+			.param("now", Timestamp.from(now))
 			.update()
-		return Organization(id, name, slug, organizationType, OrganizationStatus.ACTIVE, now, now)
+		return Organization(
+			id = id,
+			name = name,
+			slug = slug,
+			organizationType = organizationType,
+			status = OrganizationStatus.ACTIVE,
+			sports = emptyList(),
+			contactEmail = null,
+			contactPhone = null,
+			createdAt = now,
+			updatedAt = now,
+		)
 	}
 
-	fun updateNameAndType(id: UUID, name: String?, organizationType: OrganizationType?): Int {
+	/**
+	 * Partial update: any parameter left null keeps the existing column value (same
+	 * "null means don't change" convention as the original name/type update). There is
+	 * currently no way to explicitly clear contactEmail/contactPhone/sports back to
+	 * empty via this method — acceptable for this slice; revisit with an explicit
+	 * "clear" signal (e.g. a sealed Patch<T> wrapper) if that need shows up.
+	 */
+	fun updateProfile(
+		id: UUID,
+		name: String?,
+		organizationType: OrganizationType?,
+		sports: List<String>?,
+		contactEmail: String?,
+		contactPhone: String?,
+	): Int {
 		val now = Instant.now()
+		val sportsJson = sports?.let { objectMapper.writeValueAsString(it) }
 		return jdbcClient.sql(
 			"""
 			update organization
 			set name = coalesce(:name, name),
 			    organization_type = coalesce(:organizationType, organization_type),
+			    sports = coalesce(cast(:sports as jsonb), sports),
+			    contact_email = coalesce(:contactEmail, contact_email),
+			    contact_phone = coalesce(:contactPhone, contact_phone),
 			    updated_at = :now
 			where id = :id
 			""".trimIndent(),
 		)
 			.param("name", name)
 			.param("organizationType", organizationType?.name)
-			.param("now", now)
+			.param("sports", sportsJson)
+			.param("contactEmail", contactEmail)
+			.param("contactPhone", contactPhone)
+			.param("now", Timestamp.from(now))
 			.param("id", id)
 			.update()
 	}
@@ -114,6 +144,9 @@ class OrganizationRepository(private val jdbcClient: JdbcClient) {
 			slug = rs.getString("slug"),
 			organizationType = OrganizationType.valueOf(rs.getString("organization_type")),
 			status = OrganizationStatus.valueOf(rs.getString("status")),
+			sports = rs.getString("sports")?.let { objectMapper.readValue<List<String>>(it) } ?: emptyList(),
+			contactEmail = rs.getString("contact_email"),
+			contactPhone = rs.getString("contact_phone"),
 			createdAt = rs.getTimestamp("created_at").toInstant(),
 			updatedAt = rs.getTimestamp("updated_at").toInstant(),
 		)

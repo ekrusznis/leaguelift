@@ -3,11 +3,12 @@ info:
   title: LeagueLift API
   description: >
     LeagueLift revenue, fundraising, commerce, and fee-management API for youth sports
-    organizations. This document currently covers the Phase 0 foundation surface only
-    (DESIGN-DOC.md section 16.1). Endpoints are added milestone by milestone, and this
-    file is authoritative for the API contract — do not add backend endpoints without
-    updating this document in the same change.
-  version: "0.1.0"
+    organizations. This document currently covers the Phase 0 foundation plus the
+    Phase 1 "organization onboarding" vertical slice (DESIGN-DOC.md sections 16.1 and
+    35). Endpoints are added milestone by milestone, and this file is authoritative
+    for the API contract — do not add backend endpoints without updating this
+    document in the same change.
+  version: "0.2.0"
 servers:
   - url: /api/v1
 tags:
@@ -15,6 +16,7 @@ tags:
   - name: identity
   - name: organizations
   - name: members
+  - name: invitations
 paths:
   /public/status:
     get:
@@ -175,6 +177,181 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /organizations/{organizationId}/members/{memberId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - name: memberId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [members]
+      summary: Change a member's role
+      description: >
+        Owner-only role is out of scope here — ownership transfer is a separate
+        controlled workflow (DESIGN-DOC.md section 7.2). Only OWNER or ADMINISTRATOR
+        callers may change other members' roles.
+      operationId: updateMembershipRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMembershipRoleRequest"
+      responses:
+        "204":
+          description: Role updated
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [members]
+      summary: Revoke a member's access
+      operationId: revokeMembership
+      responses:
+        "204":
+          description: Membership revoked
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/onboarding:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [organizations]
+      summary: Get the organization's onboarding checklist status
+      operationId: getOnboardingProgress
+      responses:
+        "200":
+          description: Onboarding progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingProgressResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/invitations:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [invitations]
+      summary: List pending administrator invitations
+      operationId: listInvitations
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of pending invitations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [invitations]
+      summary: Invite an adult administrator to the organization
+      operationId: createInvitation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInvitationRequest"
+      responses:
+        "201":
+          description: Invitation created. The response includes the raw token once —
+            it is not retrievable afterward.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateInvitationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/invitations/{invitationId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [invitations]
+      summary: Revoke a pending invitation
+      operationId: revokeInvitation
+      responses:
+        "204":
+          description: Invitation revoked
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /invitations/{token}/accept:
+    post:
+      tags: [invitations]
+      summary: Accept an invitation as the currently authenticated user
+      description: >
+        The invitation's email must match the caller's own account email. Not nested
+        under /organizations/{organizationId} because the caller does not have
+        membership in that organization yet.
+      operationId: acceptInvitation
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invitation accepted; membership granted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Invitation email does not match the caller's account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -300,6 +477,16 @@ components:
           maxLength: 120
         organizationType:
           $ref: "#/components/schemas/OrganizationType"
+        sports:
+          type: array
+          items:
+            type: string
+        contactEmail:
+          type: string
+          format: email
+        contactPhone:
+          type: string
+          maxLength: 40
     OrganizationType:
       type: string
       enum:
@@ -313,7 +500,7 @@ components:
         - OTHER
     OrganizationResponse:
       type: object
-      required: [id, name, slug, organizationType, status, createdAt, updatedAt]
+      required: [id, name, slug, organizationType, status, sports, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -327,6 +514,17 @@ components:
         status:
           type: string
           enum: [ACTIVE, SUSPENDED, ARCHIVED]
+        sports:
+          type: array
+          items:
+            type: string
+        contactEmail:
+          type: string
+          format: email
+          nullable: true
+        contactPhone:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -385,6 +583,88 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MembershipResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+    UpdateMembershipRoleRequest:
+      type: object
+      required: [role]
+      properties:
+        role:
+          $ref: "#/components/schemas/MembershipRole"
+    OnboardingProgressResponse:
+      type: object
+      required: [profileComplete, hasAdditionalAdministrator]
+      properties:
+        profileComplete:
+          type: boolean
+          description: Organization has at least one sport and a contact email set.
+        hasAdditionalAdministrator:
+          type: boolean
+          description: The organization has more than just its original owner as a member.
+    InvitableMembershipRole:
+      type: string
+      description: MembershipRole minus OWNER — ownership transfer is a separate workflow.
+      enum:
+        - ADMINISTRATOR
+        - FINANCE_MANAGER
+        - TEAM_ADMINISTRATOR
+        - TOURNAMENT_ADMINISTRATOR
+        - VIEWER
+    CreateInvitationRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          $ref: "#/components/schemas/InvitableMembershipRole"
+    InvitationResponse:
+      type: object
+      required: [id, organizationId, email, role, status, expiresAt, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          $ref: "#/components/schemas/MembershipRole"
+        status:
+          type: string
+          enum: [PENDING, ACCEPTED, REVOKED, EXPIRED]
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    CreateInvitationResponse:
+      type: object
+      required: [invitation, token]
+      properties:
+        invitation:
+          $ref: "#/components/schemas/InvitationResponse"
+        token:
+          type: string
+          description: Raw invitation token, returned only once at creation time. Use it
+            to build the accept link (e.g. app.leaguelift.com/invitations/{token}).
+    InvitationPage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvitationResponse"
         page:
           type: integer
         size:

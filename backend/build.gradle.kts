@@ -1,6 +1,11 @@
 // Version baseline per DESIGN-DOC.md section 11.2: Spring Boot 4.1.0, Kotlin 2.3.21,
-// Java 21, Gradle 9.6.1. Patch versions may be bumped when builds/tests pass; major
-// version changes require an ADR (DESIGN-DOC.md section 11.2).
+// Gradle 9.6.1. Patch versions may be bumped when builds/tests pass; major version
+// changes require an ADR (DESIGN-DOC.md section 11.2).
+//
+// Java target is 17, not the originally documented 21 — see ADR-013. JDK 21 wasn't
+// reliably resolvable on the founder's dev machine even with the Foojay auto-download
+// resolver; Spring Boot 4.1 and Kotlin 2.3 both fully support 17 (Spring Boot's
+// minimum since 3.2), so this is a low-risk downgrade for local development.
 plugins {
 	id("org.springframework.boot") version "4.1.0"
 	id("io.spring.dependency-management") version "1.1.7"
@@ -13,7 +18,7 @@ version = "0.1.0"
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(17) // was 21 — see ADR-013
 	}
 }
 
