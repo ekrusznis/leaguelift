@@ -5,6 +5,7 @@ import { useOrganization } from "../features/organizations/api";
 import { InvitationsPanel } from "../features/organizations/InvitationsPanel";
 import { OnboardingChecklist } from "../features/organizations/OnboardingChecklist";
 import { OrganizationProfileForm } from "../features/organizations/OrganizationProfileForm";
+import { PublicPagesPanel } from "../features/publicpage/PublicPagesPanel";
 import { TeamList } from "../features/teams/TeamList";
 import { TournamentList } from "../features/tournaments/TournamentList";
 
@@ -44,6 +45,11 @@ export function OrganizationDetailPage() {
 			<section aria-label="Tournaments" className="flex flex-col gap-3">
 				<h2 className="font-heading text-lg font-semibold text-navy">Tournaments</h2>
 				<TournamentList organizationId={organization.id} />
+			</section>
+
+			<section aria-label="Public pages" className="flex flex-col gap-3">
+				<h2 className="font-heading text-lg font-semibold text-navy">Public Pages</h2>
+				<PublicPagesPanel organizationId={organization.id} organizationName={organization.name} />
 			</section>
 
 			<section aria-label="Administrators" className="flex flex-col gap-3">
