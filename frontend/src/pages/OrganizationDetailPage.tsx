@@ -1,6 +1,8 @@
 import { useParams } from "react-router-dom";
 import { ErrorState } from "../components/states/ErrorState";
 import { LoadingState } from "../components/states/LoadingState";
+import { FeeTemplateList } from "../features/fees/FeeTemplateList";
+import { HouseholdList } from "../features/households/HouseholdList";
 import { useOrganization } from "../features/organizations/api";
 import { InvitationsPanel } from "../features/organizations/InvitationsPanel";
 import { OnboardingChecklist } from "../features/organizations/OnboardingChecklist";
@@ -45,6 +47,16 @@ export function OrganizationDetailPage() {
 			<section aria-label="Tournaments" className="flex flex-col gap-3">
 				<h2 className="font-heading text-lg font-semibold text-navy">Tournaments</h2>
 				<TournamentList organizationId={organization.id} />
+			</section>
+
+			<section aria-label="Households" className="flex flex-col gap-3">
+				<h2 className="font-heading text-lg font-semibold text-navy">Households</h2>
+				<HouseholdList organizationId={organization.id} />
+			</section>
+
+			<section aria-label="Fee templates" className="flex flex-col gap-3">
+				<h2 className="font-heading text-lg font-semibold text-navy">Fee Templates</h2>
+				<FeeTemplateList organizationId={organization.id} />
 			</section>
 
 			<section aria-label="Public pages" className="flex flex-col gap-3">

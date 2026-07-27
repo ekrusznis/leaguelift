@@ -12,12 +12,23 @@ making non-trivial changes.
 
 ## Current status
 
-**Phase 0 (foundation) is built and running locally; Phase 1's first vertical slice
-(organization onboarding — profile, sports/contact info, administrator invitations,
-member management, onboarding checklist) is implemented.** See
-[`docs/launch-checklist.md`](./docs/launch-checklist.md) for what's implemented and
-what's next, and section 35 of `DESIGN-DOC.md` for the recommended order of upcoming
-vertical slices.
+Phase 0, Phase 1, and the core of Phase 2 are implemented and running locally.
+
+| Phase | What's done |
+|-------|-------------|
+| **Phase 0** | Repository, Spring Boot / React scaffold, PostgreSQL + Flyway, auth integration, organization CRUD, membership model, audit events, CI pipeline |
+| **Phase 1** | Organization profile & onboarding checklist, administrator invitations, teams, tournaments, public pages (DRAFT → PUBLISHED, public `/p/:slug` route), organization isolation integration test |
+| **Phase 2** | Households with adults, participants with team assignments, fee templates, fee assignments with status tracking |
+
+**Still to do** (approximate priority order):
+
+- Phase 1: File upload / branding (logo, cover image — requires DigitalOcean Spaces credentials)
+- Phase 2: Outstanding-balance aggregation, parent-facing dashboard, collections dashboard, CSV export, manual discounts/credits, payment history model
+- Phase 3: Fundraising campaigns, attribution, credits applied to fees, live payment processing
+- Phase 4+: Apparel commerce, sponsorship packages, reporting
+
+See `DESIGN-DOC.md` sections 10 and 30 for full milestone acceptance criteria, and
+`docs/openapi.yaml` for the current API contract.
 
 ## Repository layout
 

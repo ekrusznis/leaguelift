@@ -3,12 +3,12 @@ info:
   title: LeagueLift API
   description: >
     LeagueLift revenue, fundraising, commerce, and fee-management API for youth sports
-    organizations. This document currently covers the Phase 0 foundation plus the
-    Phase 1 "organization onboarding" vertical slice (DESIGN-DOC.md sections 16.1 and
-    35). Endpoints are added milestone by milestone, and this file is authoritative
-    for the API contract — do not add backend endpoints without updating this
-    document in the same change.
-  version: "0.2.0"
+    organizations. This document covers Phase 0 (foundation), Phase 1 (organization
+    onboarding, teams, tournaments, and public pages), and Phase 2 (households,
+    participants, fee templates, and fee assignments). Endpoints are added milestone
+    by milestone — do not add backend endpoints without updating this document in the
+    same change (DESIGN-DOC.md section 26.4).
+  version: "0.5.0"
 servers:
   - url: /api/v1
 tags:
@@ -17,6 +17,12 @@ tags:
   - name: organizations
   - name: members
   - name: invitations
+  - name: teams
+  - name: tournaments
+  - name: public-pages
+  - name: households
+  - name: participants
+  - name: fees
 paths:
   /public/status:
     get:
@@ -352,6 +358,938 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # --- Teams ---
+
+  /organizations/{organizationId}/teams:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [teams]
+      summary: List active teams
+      operationId: listTeams
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of active teams
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [teams]
+      summary: Create a team
+      operationId: createTeam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTeamRequest"
+      responses:
+        "201":
+          description: Team created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: A team with this name already exists in the organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /organizations/{organizationId}/teams/{teamId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/TeamIdParam"
+    get:
+      tags: [teams]
+      summary: Get a team by ID
+      operationId: getTeam
+      responses:
+        "200":
+          description: Team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [teams]
+      summary: Update a team
+      operationId: updateTeam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTeamRequest"
+      responses:
+        "200":
+          description: Updated team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [teams]
+      summary: Archive a team
+      operationId: archiveTeam
+      responses:
+        "204":
+          description: Team archived
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # --- Tournaments ---
+
+  /organizations/{organizationId}/tournaments:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [tournaments]
+      summary: List active tournaments
+      operationId: listTournaments
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of active tournaments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [tournaments]
+      summary: Create a tournament
+      operationId: createTournament
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTournamentRequest"
+      responses:
+        "201":
+          description: Tournament created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: A tournament with this name already exists in the organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /organizations/{organizationId}/tournaments/{tournamentId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/TournamentIdParam"
+    get:
+      tags: [tournaments]
+      summary: Get a tournament by ID
+      operationId: getTournament
+      responses:
+        "200":
+          description: Tournament
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [tournaments]
+      summary: Update a tournament
+      operationId: updateTournament
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTournamentRequest"
+      responses:
+        "200":
+          description: Updated tournament
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [tournaments]
+      summary: Archive a tournament
+      operationId: archiveTournament
+      responses:
+        "204":
+          description: Tournament archived
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # --- Public pages ---
+
+  /organizations/{organizationId}/pages:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [public-pages]
+      summary: List all public pages for the organization
+      operationId: listPublicPages
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of public pages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicPagePage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [public-pages]
+      summary: Create a public page for an entity
+      operationId: createPublicPage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePublicPageRequest"
+      responses:
+        "201":
+          description: Public page created in DRAFT status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicPageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: A page for this entity or slug already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /organizations/{organizationId}/pages/{pageId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/PageIdParam"
+    get:
+      tags: [public-pages]
+      summary: Get a page by ID
+      operationId: getPublicPage
+      responses:
+        "200":
+          description: Public page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicPageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [public-pages]
+      summary: Update page title, slug, or summary
+      operationId: updatePublicPage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePublicPageRequest"
+      responses:
+        "200":
+          description: Updated page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicPageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/pages/{pageId}/publish:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/PageIdParam"
+    post:
+      tags: [public-pages]
+      summary: Publish a page (DRAFT → PUBLISHED)
+      operationId: publishPage
+      responses:
+        "200":
+          description: Page published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicPageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/pages/{pageId}/unpublish:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/PageIdParam"
+    post:
+      tags: [public-pages]
+      summary: Unpublish a page (PUBLISHED → DRAFT)
+      operationId: unpublishPage
+      responses:
+        "200":
+          description: Page unpublished
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicPageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /public/pages/{slug}:
+    get:
+      tags: [public-pages]
+      summary: Get a published public page by slug (no auth required)
+      operationId: getPublicPageBySlug
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Published page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicPageResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # --- Households ---
+
+  /organizations/{organizationId}/households:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [households]
+      summary: List active households
+      operationId: listHouseholds
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of active households
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HouseholdPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [households]
+      summary: Create a household
+      operationId: createHousehold
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHouseholdRequest"
+      responses:
+        "201":
+          description: Household created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HouseholdResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/households/{householdId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/HouseholdIdParam"
+    get:
+      tags: [households]
+      summary: Get a household by ID
+      operationId: getHousehold
+      responses:
+        "200":
+          description: Household
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HouseholdResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [households]
+      summary: Update a household
+      operationId: updateHousehold
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateHouseholdRequest"
+      responses:
+        "200":
+          description: Updated household
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HouseholdResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/households/{householdId}/adults:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/HouseholdIdParam"
+    get:
+      tags: [households]
+      summary: List active adults in a household
+      operationId: listHouseholdAdults
+      responses:
+        "200":
+          description: List of active household adults
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HouseholdAdultResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [households]
+      summary: Add an adult to a household
+      operationId: addHouseholdAdult
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddHouseholdAdultRequest"
+      responses:
+        "201":
+          description: Adult added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HouseholdAdultResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/households/{householdId}/adults/{adultId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/HouseholdIdParam"
+      - name: adultId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [households]
+      summary: Remove (archive) an adult from a household
+      operationId: removeHouseholdAdult
+      responses:
+        "204":
+          description: Adult removed
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # --- Participants ---
+
+  /organizations/{organizationId}/households/{householdId}/participants:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/HouseholdIdParam"
+    get:
+      tags: [participants]
+      summary: List active participants in a household
+      operationId: listParticipants
+      responses:
+        "200":
+          description: List of active participants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ParticipantResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [participants]
+      summary: Add a participant to a household
+      operationId: createParticipant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateParticipantRequest"
+      responses:
+        "201":
+          description: Participant created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParticipantResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/participants/{participantId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/ParticipantIdParam"
+    patch:
+      tags: [participants]
+      summary: Update a participant's profile
+      operationId: updateParticipant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateParticipantRequest"
+      responses:
+        "200":
+          description: Updated participant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParticipantResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/participants/{participantId}/teams:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/ParticipantIdParam"
+    get:
+      tags: [participants]
+      summary: List active team assignments for a participant
+      operationId: listParticipantTeams
+      responses:
+        "200":
+          description: List of active team assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ParticipantTeamResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [participants]
+      summary: Assign a participant to a team
+      operationId: assignParticipantToTeam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignTeamRequest"
+      responses:
+        "201":
+          description: Assignment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParticipantTeamResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Participant is already assigned to this team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /organizations/{organizationId}/participants/{participantId}/teams/{teamId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/ParticipantIdParam"
+      - $ref: "#/components/parameters/TeamIdParam"
+    delete:
+      tags: [participants]
+      summary: Remove a participant from a team
+      operationId: removeParticipantFromTeam
+      responses:
+        "204":
+          description: Assignment removed
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # --- Fee Templates ---
+
+  /organizations/{organizationId}/fee-templates:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [fees]
+      summary: List active fee templates
+      operationId: listFeeTemplates
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of active fee templates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeTemplatePage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [fees]
+      summary: Create a fee template
+      operationId: createFeeTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFeeTemplateRequest"
+      responses:
+        "201":
+          description: Fee template created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeTemplateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/fee-templates/{templateId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/FeeTemplateIdParam"
+    get:
+      tags: [fees]
+      summary: Get a fee template by ID
+      operationId: getFeeTemplate
+      responses:
+        "200":
+          description: Fee template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeTemplateResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [fees]
+      summary: Update a fee template
+      operationId: updateFeeTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFeeTemplateRequest"
+      responses:
+        "200":
+          description: Updated fee template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeTemplateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [fees]
+      summary: Archive a fee template
+      operationId: archiveFeeTemplate
+      responses:
+        "204":
+          description: Template archived
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # --- Fee Assignments ---
+
+  /organizations/{organizationId}/households/{householdId}/fee-assignments:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/HouseholdIdParam"
+    get:
+      tags: [fees]
+      summary: List fee assignments for a household
+      operationId: listFeeAssignments
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of fee assignments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeAssignmentPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [fees]
+      summary: Assign a fee to a household
+      operationId: createFeeAssignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFeeAssignmentRequest"
+      responses:
+        "201":
+          description: Fee assignment created with OPEN status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeAssignmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/fee-assignments/{assignmentId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/FeeAssignmentIdParam"
+    get:
+      tags: [fees]
+      summary: Get a fee assignment by ID
+      operationId: getFeeAssignment
+      responses:
+        "200":
+          description: Fee assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeAssignmentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/fee-assignments/{assignmentId}/status:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/FeeAssignmentIdParam"
+    patch:
+      tags: [fees]
+      summary: Update the status of a fee assignment
+      description: >
+        Fee assignment amounts are immutable (financial ledger). Only the
+        status field may be changed via this endpoint.
+      operationId: updateFeeAssignmentStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFeeAssignmentStatusRequest"
+      responses:
+        "200":
+          description: Fee assignment with updated status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeAssignmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -361,6 +1299,55 @@ components:
   parameters:
     OrganizationIdParam:
       name: organizationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TeamIdParam:
+      name: teamId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TournamentIdParam:
+      name: tournamentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PageIdParam:
+      name: pageId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    HouseholdIdParam:
+      name: householdId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ParticipantIdParam:
+      name: participantId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    FeeTemplateIdParam:
+      name: templateId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    FeeAssignmentIdParam:
+      name: assignmentId
       in: path
       required: true
       schema:
@@ -671,5 +1658,714 @@ components:
           type: integer
         totalElements:
           type: integer
+    # --- Team schemas ---
+    CreateTeamRequest:
+      type: object
+      required: [name, sport]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        sport:
+          type: string
+          minLength: 1
+          maxLength: 60
+        season:
+          type: string
+          maxLength: 60
+          nullable: true
+        contactEmail:
+          type: string
+          format: email
+          nullable: true
+    UpdateTeamRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        sport:
+          type: string
+          minLength: 1
+          maxLength: 60
+        season:
+          type: string
+          nullable: true
+        contactEmail:
+          type: string
+          format: email
+          nullable: true
+    TeamResponse:
+      type: object
+      required: [id, organizationId, name, sport, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sport:
+          type: string
+        season:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [ACTIVE, ARCHIVED]
+        contactEmail:
+          type: string
+          format: email
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    TeamPage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+
+    # --- Tournament schemas ---
+    CreateTournamentRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        sport:
+          type: string
+          nullable: true
+        startDate:
+          type: string
+          format: date
+          nullable: true
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        contactEmail:
+          type: string
+          format: email
+          nullable: true
+    UpdateTournamentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        sport:
+          type: string
+          nullable: true
+        startDate:
+          type: string
+          format: date
+          nullable: true
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        contactEmail:
+          type: string
+          format: email
+          nullable: true
+    TournamentResponse:
+      type: object
+      required: [id, organizationId, name, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sport:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [ACTIVE, ARCHIVED]
+        startDate:
+          type: string
+          format: date
+          nullable: true
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        contactEmail:
+          type: string
+          format: email
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    TournamentPage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TournamentResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+
+    # --- Public page schemas ---
+    CreatePublicPageRequest:
+      type: object
+      required: [pageType, entityId, slug, title]
+      properties:
+        pageType:
+          type: string
+          enum: [ORGANIZATION, TEAM, TOURNAMENT]
+        entityId:
+          type: string
+          format: uuid
+        slug:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+          minLength: 3
+          maxLength: 80
+        title:
+          type: string
+          maxLength: 120
+        summary:
+          type: string
+          maxLength: 500
+          nullable: true
+    UpdatePublicPageRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+          minLength: 3
+          maxLength: 80
+        title:
+          type: string
+          maxLength: 120
+        summary:
+          type: string
+          nullable: true
+    PublicPageResponse:
+      type: object
+      required: [id, organizationId, pageType, entityId, slug, title, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        pageType:
+          type: string
+          enum: [ORGANIZATION, TEAM, TOURNAMENT]
+        entityId:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, ARCHIVED]
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PublicPagePage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicPageResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+
+    # --- Household schemas ---
+    CreateHouseholdRequest:
+      type: object
+      required: [displayName]
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        contactEmail:
+          type: string
+          format: email
+          nullable: true
+        contactPhone:
+          type: string
+          maxLength: 30
+          nullable: true
+        notes:
+          type: string
+          maxLength: 1000
+          nullable: true
+    UpdateHouseholdRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        contactEmail:
+          type: string
+          format: email
+          nullable: true
+        contactPhone:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+    HouseholdResponse:
+      type: object
+      required: [id, organizationId, displayName, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        contactEmail:
+          type: string
+          format: email
+          nullable: true
+        contactPhone:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [ACTIVE, ARCHIVED]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    HouseholdPage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/HouseholdResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+    AddHouseholdAdultRequest:
+      type: object
+      required: [firstName, lastName]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 60
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 60
+        email:
+          type: string
+          format: email
+          nullable: true
+        phone:
+          type: string
+          maxLength: 30
+          nullable: true
+        relationship:
+          type: string
+          maxLength: 60
+          nullable: true
+        isPrimary:
+          type: boolean
+          default: false
+    HouseholdAdultResponse:
+      type: object
+      required: [id, householdId, organizationId, firstName, lastName, isPrimary, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        householdId:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        relationship:
+          type: string
+          nullable: true
+        isPrimary:
+          type: boolean
+        status:
+          type: string
+          enum: [ACTIVE, ARCHIVED]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # --- Participant schemas ---
+    CreateParticipantRequest:
+      type: object
+      required: [firstName, lastName]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 60
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 60
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          maxLength: 1000
+          nullable: true
+    UpdateParticipantRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 60
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 60
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+    ParticipantResponse:
+      type: object
+      required: [id, householdId, organizationId, firstName, lastName, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        householdId:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, ARCHIVED]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AssignTeamRequest:
+      type: object
+      required: [teamId]
+      properties:
+        teamId:
+          type: string
+          format: uuid
+        joinedAt:
+          type: string
+          format: date
+          nullable: true
+    ParticipantTeamResponse:
+      type: object
+      required: [id, participantId, teamId, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        participantId:
+          type: string
+          format: uuid
+        teamId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        joinedAt:
+          type: string
+          format: date
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    # --- Fee schemas ---
+    CreateFeeTemplateRequest:
+      type: object
+      required: [name, amountMinor]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 500
+          nullable: true
+        amountMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Amount in minor currency units (e.g. cents for USD)
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          default: USD
+    UpdateFeeTemplateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          nullable: true
+        amountMinor:
+          type: integer
+          format: int64
+          minimum: 0
+    FeeTemplateResponse:
+      type: object
+      required: [id, organizationId, name, amountMinor, currency, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        amountMinor:
+          type: integer
+          format: int64
+          description: Amount in minor currency units
+        currency:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, ARCHIVED]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    FeeTemplatePage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeeTemplateResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+    CreateFeeAssignmentRequest:
+      type: object
+      required: [description, originalAmountMinor]
+      properties:
+        description:
+          type: string
+          minLength: 1
+          maxLength: 255
+        originalAmountMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Amount in minor currency units
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          default: USD
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+        feeTemplateId:
+          type: string
+          format: uuid
+          nullable: true
+        participantId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Scopes the fee to a specific participant within the household
+    UpdateFeeAssignmentStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [OPEN, PARTIALLY_PAID, PAID, WAIVED, CANCELLED]
+    FeeAssignmentResponse:
+      type: object
+      required: [id, organizationId, householdId, description, originalAmountMinor, currency, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        householdId:
+          type: string
+          format: uuid
+        participantId:
+          type: string
+          format: uuid
+          nullable: true
+        feeTemplateId:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+        originalAmountMinor:
+          type: integer
+          format: int64
+          description: Original amount in minor currency units (immutable)
+        currency:
+          type: string
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+        status:
+          type: string
+          enum: [OPEN, PARTIALLY_PAID, PAID, WAIVED, CANCELLED]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    FeeAssignmentPage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeeAssignmentResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+
 security:
   - bearerAuth: []
