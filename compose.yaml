@@ -29,8 +29,6 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-leaguelift}
       POSTGRES_USER: ${POSTGRES_USER:-leaguelift}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-leaguelift_local_password}
-      OIDC_ISSUER_URI: ${OIDC_ISSUER_URI:-}
-      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
     ports:
       - "8080:8080"
 
@@ -43,7 +41,6 @@ services:
       - backend
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api/v1}
-      VITE_AUTH_DEV_MODE: ${VITE_AUTH_DEV_MODE:-true}
     ports:
       - "5173:80"
 

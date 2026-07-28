@@ -29,7 +29,7 @@ export function OrganizationList() {
 			{data.items.map((organization) => (
 				<li key={organization.id}>
 					<Link
-						to={`/organizations/${organization.id}`}
+						to={`/app/organizations/${organization.id}`}
 						className="block rounded-lg border border-slate-gray/20 bg-pure-white p-4 shadow-sm hover:border-victory-green"
 					>
 						<p className="font-heading font-semibold text-navy">{organization.name}</p>

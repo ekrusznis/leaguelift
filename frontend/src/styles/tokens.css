@@ -14,6 +14,38 @@
   --color-error-red: #C93636;
   --color-info-blue: #2F6FED;
 
+  /*
+   * Full scale from LEAGUELIFT_SALES_SITE_DESIGN.md section 5.1. The names above
+   * predate the sales-site spec and stay put (existing app screens use them); the
+   * scale below is what the marketing site and auth pages are built with. Several
+   * steps are intentionally identical values to the names above (e.g. navy-900 ==
+   * navy, green-500 == victory-green) — same brand color, doc-accurate token name.
+   */
+  --color-navy-950: #061321;
+  --color-navy-900: #0B1F33;
+  --color-navy-800: #102B46;
+  --color-navy-700: #173B5C;
+
+  --color-green-600: #159957;
+  --color-green-500: #20B26B;
+  --color-green-400: #3CCF83;
+
+  --color-gold-500: #F4B740;
+  --color-gold-400: #FFC95C;
+
+  --color-ice-50: #F7F9FC;
+  --color-white: #FFFFFF;
+
+  --color-slate-700: #526275;
+  --color-slate-500: #76869A;
+  --color-slate-300: #C9D2DD;
+  --color-slate-200: #DDE4EC;
+
+  --color-error-600: #C93636;
+  --color-warning-600: #BC7B00;
+  --color-info-600: #2F6FED;
+  --color-success-700: #117A46;
+
   --font-heading: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
 }

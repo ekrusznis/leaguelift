@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
@@ -24,7 +24,10 @@ export function FeeTemplateList({ organizationId }: { organizationId: string }) 
 		reset,
 		formState: { errors, isSubmitting },
 	} = useForm<CreateFeeTemplateFormValues>({
-		resolver: zodResolver(createFeeTemplateSchema),
+		// z.coerce.number() (amountMinor) makes zodResolver's inferred input type
+		// diverge from CreateFeeTemplateFormValues's output type — a known
+		// zod/react-hook-form generic mismatch (see CampaignList.tsx).
+		resolver: zodResolver(createFeeTemplateSchema) as Resolver<CreateFeeTemplateFormValues>,
 		defaultValues: { name: "", description: "", amountMinor: 0, currency: "USD" },
 	});
 

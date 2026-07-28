@@ -126,7 +126,7 @@ export function HouseholdList({ organizationId }: { organizationId: string }) {
 								)}
 							</div>
 							<Link
-								to={`/organizations/${organizationId}/households/${household.id}`}
+								to={`/app/organizations/${organizationId}/households/${household.id}`}
 								className="rounded-md border border-slate-gray/30 px-3 py-1.5 text-sm font-medium text-navy hover:bg-ice-white"
 							>
 								View

@@ -2,8 +2,8 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 const NAV_ITEMS = [
-	{ to: "/", label: "Overview" },
-	{ to: "/organizations", label: "Organizations" },
+	{ to: "/app", label: "Overview" },
+	{ to: "/app/organizations", label: "Organizations" },
 ];
 
 /**
@@ -30,7 +30,7 @@ export function AppShell() {
 							<NavLink
 								key={item.to}
 								to={item.to}
-								end={item.to === "/"}
+								end={item.to === "/app"}
 								className={({ isActive }) =>
 									`rounded-md px-2 py-1 text-sm font-medium ${
 										isActive ? "bg-pure-white/10" : "hover:bg-pure-white/5"

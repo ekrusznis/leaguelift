@@ -13,7 +13,7 @@ Not yet provisioned. This is a Phase 0 placeholder. Before provisioning:
 1. Write and accept ADR-008 (DigitalOcean deployment) in `docs/adr/`.
 2. Decide staging vs. production account/project separation.
 3. Decide managed Postgres sizing and backup/PITR configuration
-   (`docs/operations-runbook.md`).
+   (`DESIGN-DOC.md` section 18.3).
 4. Wire `.github/workflows/deploy.yml` to actually push images and trigger an
    App Platform deployment once an app spec exists here.
 

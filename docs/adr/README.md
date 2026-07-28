@@ -17,7 +17,7 @@ Proposed | Accepted | Superseded
 ## Alternatives Considered
 ```
 
-Numbers reserved by `DESIGN-DOC.md` section 28:
+Numbers reserved by `DESIGN-DOC.md` section 22:
 
 - ADR-001: Modular monolith
 - ADR-002: Managed OIDC authentication
@@ -36,8 +36,10 @@ ADR-001 through ADR-004 are written (Accepted) as part of the Phase 0 foundation
 ADR-005 through ADR-012 are proposed later in `DESIGN-DOC.md` (fundraising, commerce,
 ledger, and infra phases) and should be written when those milestones begin — they are
 intentionally not pre-written here to avoid locking in unresolved product questions
-(see `DESIGN-DOC.md` section 33).
+(see `DESIGN-DOC.md` section 19.3).
 
-An additional, unreserved decision:
+Additional, unreserved decisions:
 
 - ADR-013: Java 17 instead of Java 21 baseline (environment-driven, see the ADR itself)
+- ADR-014: Traditional email/password authentication, superseding ADR-002 (managed
+  OIDC/Auth0 was never actually configured against a real tenant)

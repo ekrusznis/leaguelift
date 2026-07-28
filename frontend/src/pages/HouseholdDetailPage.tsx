@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/states/EmptyState";
 import { ErrorState } from "../components/states/ErrorState";
@@ -55,7 +55,10 @@ const STATUS_COLORS: Record<FeeAssignmentStatus, string> = {
 function AddAdultForm({ organizationId, householdId, onDone }: { organizationId: string; householdId: string; onDone: () => void }) {
 	const addAdult = useAddAdult(organizationId, householdId);
 	const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<AddAdultFormValues>({
-		resolver: zodResolver(addAdultSchema),
+		// isPrimary's schema default makes zodResolver's inferred input type diverge
+		// from AddAdultFormValues's output type — a known zod/react-hook-form
+		// generic mismatch (see CampaignList.tsx).
+		resolver: zodResolver(addAdultSchema) as Resolver<AddAdultFormValues>,
 		defaultValues: { firstName: "", lastName: "", email: "", phone: "", relationship: "", isPrimary: false },
 	});
 
@@ -315,7 +318,10 @@ function AddFeeAssignmentForm({
 	const createAssignment = useCreateFeeAssignment(organizationId, householdId);
 
 	const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<CreateFeeAssignmentFormValues>({
-		resolver: zodResolver(createFeeAssignmentSchema),
+		// z.coerce.number() (originalAmountMinor) makes zodResolver's inferred input
+		// type diverge from CreateFeeAssignmentFormValues's output type — the same
+		// known zod/react-hook-form generic mismatch as FeeTemplateList's amountMinor field.
+		resolver: zodResolver(createFeeAssignmentSchema) as Resolver<CreateFeeAssignmentFormValues>,
 		defaultValues: { description: "", originalAmountMinor: 0, currency: "USD", dueDate: "", feeTemplateId: "", participantId: "" },
 	});
 
@@ -473,7 +479,7 @@ export function HouseholdDetailPage() {
 		<div className="flex flex-col gap-8">
 			<div>
 				<Link
-					to={`/organizations/${organizationId}`}
+					to={`/app/organizations/${organizationId}`}
 					className="mb-2 inline-block text-sm text-azure-blue hover:underline"
 				>
 					← Back to organization

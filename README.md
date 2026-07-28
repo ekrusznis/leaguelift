@@ -72,10 +72,15 @@ The API starts on `http://localhost:8080`. Health checks:
 - `GET /actuator/health/liveness`
 - `GET /actuator/health/readiness`
 
-The `local` Spring profile enables a development authentication bypass — a fixed
-internal test user — so the frontend and API can be exercised without a configured
-Auth0 tenant. This bypass is hard-disabled outside the `local` profile
-(see `docs/security.md`).
+There is no authentication bypass in any environment, including local — every
+request must present a real, validly-signed JWT (see `DESIGN-DOC.md` section 7).
+Authentication is traditional email/password against our own database
+(`POST /api/v1/auth/register` / `POST /api/v1/auth/login`, ADR-014) — no external
+identity provider to configure. To get a real session locally, either register a new
+account through the frontend, or sign in as one of the four seeded dashboard-role
+accounts (`backend/src/main/resources/db/seed/V9000__dev_seed_dashboard_role_users.sql`,
+password `DevPassword123!` for all four — only loaded when the `local` profile's
+`spring.flyway.locations` includes `classpath:db/seed`, never in staging/prod).
 
 ### 3. Run the frontend
 
@@ -86,10 +91,8 @@ npm run dev
 ```
 
 The app starts on `http://localhost:5173` and talks to the API at
-`VITE_API_BASE_URL` (defaults to `http://localhost:8080/api/v1`). With
-`VITE_AUTH_DEV_MODE=true` (the default in `.env.example`), the frontend uses an
-in-memory mock session instead of redirecting to Auth0, matching the backend's local
-bypass.
+`VITE_API_BASE_URL` (defaults to `http://localhost:8080/api/v1`). Sign-in and
+registration always call the real backend endpoints — there is no mock session mode.
 
 ### 4. Run everything with Docker Compose
 
@@ -114,14 +117,11 @@ Repository- and pull-request-level checks are defined in `.github/workflows/`.
 
 ## Documentation
 
-- [`DESIGN-DOC.md`](./DESIGN-DOC.md) — authoritative product & engineering spec
-- [`docs/architecture.md`](./docs/architecture.md) — module boundaries and request flow
-- [`docs/security.md`](./docs/security.md) — authn/authz, secrets, headers
-- [`docs/privacy-data-inventory.md`](./docs/privacy-data-inventory.md) — personal data inventory
+- [`DESIGN-DOC.md`](./DESIGN-DOC.md) — authoritative product & engineering spec: architecture
+  (section 5), security (7), database (8), API surface (9), dashboard UI (10), roadmap and
+  launch gates (14), testing/observability/operations (18), privacy data inventory (21), and
+  AI agent operating instructions (20)
 - [`docs/openapi.yaml`](./docs/openapi.yaml) — API contract (foundation endpoints)
-- [`docs/operations-runbook.md`](./docs/operations-runbook.md) — on-call / operations
-- [`docs/launch-checklist.md`](./docs/launch-checklist.md) — gate-by-gate launch readiness
-- [`docs/ai-agent-guardrails.md`](./docs/ai-agent-guardrails.md) — rules for AI coding agents
 - [`docs/adr/`](./docs/adr) — Architecture Decision Records
 
 ## License
