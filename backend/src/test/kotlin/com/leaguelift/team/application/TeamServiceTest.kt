@@ -32,7 +32,7 @@ class TeamServiceTest {
     private val service = TeamService(teamRepository, membershipService, auditService)
 
     private val orgId = UUID.randomUUID()
-    private val currentUser = CurrentUser(UUID.randomUUID(), "sub-manager", "manager@example.com", "Manager")
+    private val currentUser = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
 
     @Test
     fun `list requires active membership`() {

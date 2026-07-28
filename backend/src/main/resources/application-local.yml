@@ -3,18 +3,24 @@ spring:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/leaguelift}
     username: ${POSTGRES_USER:leaguelift}
     password: ${POSTGRES_PASSWORD:leaguelift_local_password}
+  flyway:
+    # db/seed holds dev-only fixture data (four test users, one per dashboard role —
+    # see docs/LEAGUELIFT_DASHBOARD_DESIGN.md) and must never apply to staging/prod,
+    # so it's only added to the locations list here, not in the base application.yml.
+    locations: classpath:db/migration,classpath:db/seed
+    # Required because db/seed's V9000+ fixture migrations sit "ahead of" the real
+    # sequence — see the comment on FlywayConfig.outOfOrder for why this is safe.
+    out-of-order: true
 
-# The local-dev authentication bypass is enabled ONLY because this profile explicitly
-# sets leaguelift.auth.dev-bypass-enabled=true. The bean that implements the bypass is
-# additionally gated with @Profile("local") in code, so both the profile AND this flag
-# must be true — see docs/security.md.
+# There is no auth bypass in any profile, including local — authenticate for real via
+# POST /api/v1/auth/register or /login (see docs/security.md), or use one of the
+# seeded dashboard-role accounts (db/seed/V9000__dev_seed_dashboard_role_users.sql,
+# password "DevPassword123!" for all four).
 leaguelift:
-  auth:
-    dev-bypass-enabled: true
-    dev-bypass-user:
-      external-subject: local-dev-user
-      email: dev@leaguelift.local
-      display-name: Local Dev User
+  # Dev-only fixed secret — never used outside the local profile. Must be at least
+  # 32 bytes for HS256 (see JwtProperties.secretKey).
+  jwt:
+    secret: "local-dev-only-jwt-signing-secret-do-not-use-in-prod!!"
 
 management:
   endpoint:

@@ -32,7 +32,7 @@ class InvitationServiceTest {
 	private val service = InvitationService(invitationRepository, membershipService, auditService, outboxWriter)
 
 	private val organizationId = UUID.randomUUID()
-	private val admin = CurrentUser(UUID.randomUUID(), "sub-admin", "admin@example.com", "Admin")
+	private val admin = CurrentUser(UUID.randomUUID(), "admin@example.com", "Admin")
 
 	@Test
 	fun `inviting OWNER is rejected`() {
@@ -87,7 +87,7 @@ class InvitationServiceTest {
 	fun `accepting with a mismatched email is rejected`() {
 		val invitation = pendingInvitation(email = "invitee@example.com")
 		every { invitationRepository.findByToken("tok") } returns invitation
-		val wrongUser = CurrentUser(UUID.randomUUID(), "sub-wrong", "someone-else@example.com", "Someone Else")
+		val wrongUser = CurrentUser(UUID.randomUUID(), "someone-else@example.com", "Someone Else")
 
 		assertFailsWith<ForbiddenException> {
 			service.accept("tok", wrongUser)
@@ -99,7 +99,7 @@ class InvitationServiceTest {
 		val invitation = pendingInvitation(email = "invitee@example.com", expiresAt = Instant.now().minusSeconds(60))
 		every { invitationRepository.findByToken("tok") } returns invitation
 		every { invitationRepository.markStatus(invitation.id, InvitationStatus.EXPIRED) } returns 1
-		val invitee = CurrentUser(UUID.randomUUID(), "sub-invitee", "invitee@example.com", "Invitee")
+		val invitee = CurrentUser(UUID.randomUUID(), "invitee@example.com", "Invitee")
 
 		assertFailsWith<ValidationException> {
 			service.accept("tok", invitee)

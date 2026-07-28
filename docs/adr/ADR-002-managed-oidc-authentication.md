@@ -1,7 +1,8 @@
 # ADR-002: Managed OIDC Authentication
 
 ## Status
-Accepted
+Superseded by ADR-014 (traditional email/password authentication). Preserved
+unedited below as the historical record of the original decision.
 
 ## Context
 

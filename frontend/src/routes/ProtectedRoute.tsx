@@ -1,6 +1,5 @@
-import type { ReactNode } from "react";
+import { Outlet } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { LoadingState } from "../components/states/LoadingState";
 import { UnauthorizedState } from "../components/states/UnauthorizedState";
 
 /**
@@ -8,17 +7,16 @@ import { UnauthorizedState } from "../components/states/UnauthorizedState";
  * boundary. The backend enforces membership/role checks independently on every
  * request (DESIGN-DOC.md sections 7, 18.2), so a user who bypasses this component
  * still cannot read data they aren't authorized for.
+ *
+ * Used as a layout route (`<Route element={<ProtectedRoute />}>`) so any number of
+ * nested child routes can share the same gate via <Outlet />.
  */
-export function ProtectedRoute({ children }: { children: ReactNode }) {
+export function ProtectedRoute() {
 	const { status } = useAuth();
-
-	if (status === "loading") {
-		return <LoadingState label="Checking your session…" />;
-	}
 
 	if (status === "unauthenticated") {
 		return <UnauthorizedState message="Please sign in to continue." />;
 	}
 
-	return <>{children}</>;
+	return <Outlet />;
 }

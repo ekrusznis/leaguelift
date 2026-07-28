@@ -36,7 +36,7 @@ class ParticipantServiceTest {
 
     private val orgId = UUID.randomUUID()
     private val householdId = UUID.randomUUID()
-    private val currentUser = CurrentUser(UUID.randomUUID(), "sub-manager", "manager@example.com", "Manager")
+    private val currentUser = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
 
     @Test
     fun `listForHousehold requires active membership`() {

@@ -24,6 +24,9 @@ class ConflictException(code: String, message: String) :
 class ForbiddenException(code: String, message: String) :
 	ApiException(code, message, HttpStatus.FORBIDDEN)
 
+class UnauthorizedException(code: String, message: String) :
+	ApiException(code, message, HttpStatus.UNAUTHORIZED)
+
 class ValidationException(
 	message: String,
 	fieldErrors: List<FieldError> = emptyList(),

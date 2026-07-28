@@ -30,7 +30,7 @@ class OrganizationServiceTest {
 	private val auditService = mockk<AuditService>()
 	private val service = OrganizationService(organizationRepository, membershipService, auditService)
 
-	private val currentUser = CurrentUser(UUID.randomUUID(), "sub-owner", "owner@example.com", "Owner")
+	private val currentUser = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")
 
 	@Test
 	fun `creating an organization rejects an invalid slug`() {

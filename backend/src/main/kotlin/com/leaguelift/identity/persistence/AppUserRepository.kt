@@ -11,15 +11,15 @@ import java.util.UUID
 @Repository
 class AppUserRepository(private val jdbcClient: JdbcClient) {
 
-	fun findByExternalSubject(externalSubject: String): AppUser? =
+	fun findByEmail(email: String): AppUser? =
 		jdbcClient.sql(
 			"""
-			select id, external_subject, email, display_name, status, created_at, updated_at
+			select id, email, display_name, status, password_hash, created_at, updated_at
 			from app_user
-			where external_subject = :externalSubject
+			where email = :email
 			""".trimIndent(),
 		)
-			.param("externalSubject", externalSubject)
+			.param("email", email)
 			.query(::mapRow)
 			.optional()
 			.orElse(null)
@@ -27,7 +27,7 @@ class AppUserRepository(private val jdbcClient: JdbcClient) {
 	fun findById(id: UUID): AppUser? =
 		jdbcClient.sql(
 			"""
-			select id, external_subject, email, display_name, status, created_at, updated_at
+			select id, email, display_name, status, password_hash, created_at, updated_at
 			from app_user
 			where id = :id
 			""".trimIndent(),
@@ -38,36 +38,35 @@ class AppUserRepository(private val jdbcClient: JdbcClient) {
 			.orElse(null)
 
 	/**
-	 * Creates a new app_user. Callers are responsible for first checking
-	 * [findByExternalSubject] within the same transaction/service method to keep
-	 * provisioning idempotent (DESIGN-DOC.md section 27.2 — outbox/idempotency habits
-	 * apply broadly, even outside the strict outbox mechanism).
+	 * Creates a new app_user with an already-hashed password. Throws
+	 * [org.springframework.dao.DuplicateKeyException] if `email` is already taken —
+	 * callers translate that to a client-facing 409 (see `AuthController`).
 	 */
-	fun insert(externalSubject: String, email: String, displayName: String): AppUser {
+	fun insert(email: String, displayName: String, passwordHash: String?): AppUser {
 		val now = Instant.now()
 		val id = UUID.randomUUID()
 		jdbcClient.sql(
 			"""
-			insert into app_user (id, external_subject, email, display_name, status, created_at, updated_at)
-			values (:id, :externalSubject, :email, :displayName, 'ACTIVE', :now, :now)
+			insert into app_user (id, email, display_name, status, password_hash, created_at, updated_at)
+			values (:id, :email, :displayName, 'ACTIVE', :passwordHash, :now, :now)
 			""".trimIndent(),
 		)
 			.param("id", id)
-			.param("externalSubject", externalSubject)
 			.param("email", email)
 			.param("displayName", displayName)
+			.param("passwordHash", passwordHash)
 			.param("now", Timestamp.from(now))
 			.update()
-		return AppUser(id, externalSubject, email, displayName, AppUserStatus.ACTIVE, now, now)
+		return AppUser(id, email, displayName, AppUserStatus.ACTIVE, passwordHash, now, now)
 	}
 
 	private fun mapRow(rs: java.sql.ResultSet, rowNum: Int): AppUser =
 		AppUser(
 			id = rs.getObject("id", UUID::class.java),
-			externalSubject = rs.getString("external_subject"),
 			email = rs.getString("email"),
 			displayName = rs.getString("display_name"),
 			status = AppUserStatus.valueOf(rs.getString("status")),
+			passwordHash = rs.getString("password_hash"),
 			createdAt = rs.getTimestamp("created_at").toInstant(),
 			updatedAt = rs.getTimestamp("updated_at").toInstant(),
 		)

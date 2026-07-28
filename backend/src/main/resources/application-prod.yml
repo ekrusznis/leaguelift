@@ -3,16 +3,12 @@ spring:
     url: ${DATABASE_URL}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${OIDC_ISSUER_URI}
-          audiences: ${OIDC_AUDIENCE}
-
 leaguelift:
-  auth:
-    dev-bypass-enabled: false
+  jwt:
+    # No default — startup fails if this isn't set, rather than silently signing
+    # tokens with a guessable key. Generate with e.g. `openssl rand -base64 48`.
+    # Must be a different value from staging's secret.
+    secret: ${JWT_SECRET}
 
 management:
   endpoint:

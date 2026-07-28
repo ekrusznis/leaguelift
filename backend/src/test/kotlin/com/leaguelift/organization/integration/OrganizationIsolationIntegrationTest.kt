@@ -3,7 +3,7 @@ package com.leaguelift.organization.integration
 import com.leaguelift.audit.application.AuditService
 import com.leaguelift.common.error.ForbiddenException
 import com.leaguelift.common.web.CurrentUser
-import com.leaguelift.identity.application.UserProvisioningService
+import com.leaguelift.identity.application.PasswordAuthenticationService
 import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.organization.application.OrganizationService
 import com.leaguelift.organization.domain.OrganizationType
@@ -30,18 +30,18 @@ class OrganizationIsolationIntegrationTest : AbstractIntegrationTest() {
 	lateinit var membershipService: MembershipService
 
 	@Autowired
-	lateinit var userProvisioningService: UserProvisioningService
+	lateinit var passwordAuthenticationService: PasswordAuthenticationService
 
 	@Autowired
 	lateinit var auditService: AuditService
 
 	@Test
 	fun `a user cannot read an organization they are not a member of`() {
-		val ownerAppUser = userProvisioningService.resolveOrProvision("owner-sub", "owner@example.com", "Owner")
-		val owner = userProvisioningService.toCurrentUser(ownerAppUser)
+		val ownerAppUser = passwordAuthenticationService.register("owner-${System.nanoTime()}@example.com", "password1234", "Owner")
+		val owner = passwordAuthenticationService.toCurrentUser(ownerAppUser)
 
-		val outsiderAppUser = userProvisioningService.resolveOrProvision("outsider-sub", "outsider@example.com", "Outsider")
-		val outsider = userProvisioningService.toCurrentUser(outsiderAppUser)
+		val outsiderAppUser = passwordAuthenticationService.register("outsider-${System.nanoTime()}@example.com", "password1234", "Outsider")
+		val outsider = passwordAuthenticationService.toCurrentUser(outsiderAppUser)
 
 		val organization = organizationService.create(
 			"Riverside Soccer",

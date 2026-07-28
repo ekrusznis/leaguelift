@@ -3,9 +3,5 @@ spring:
     clean-disabled: false
 
 leaguelift:
-  auth:
-    dev-bypass-enabled: true
-    dev-bypass-user:
-      external-subject: test-user
-      email: test@leaguelift.local
-      display-name: Test User
+  jwt:
+    secret: "test-only-jwt-signing-secret-do-not-use-in-prod-either!!"

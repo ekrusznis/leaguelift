@@ -29,7 +29,7 @@ class MembershipServiceTest {
 	@Test
 	fun `user without a membership is denied access to the organization`() {
 		val organizationId = UUID.randomUUID()
-		val user = CurrentUser(UUID.randomUUID(), "sub-1", "a@example.com", "A", platformAdministrator = false)
+		val user = CurrentUser(UUID.randomUUID(), "a@example.com", "A", platformAdministrator = false)
 		every { membershipRepository.findActiveMembership(organizationId, user.userId) } returns null
 
 		assertFailsWith<ForbiddenException> {
@@ -40,7 +40,7 @@ class MembershipServiceTest {
 	@Test
 	fun `user with an active membership is granted access`() {
 		val organizationId = UUID.randomUUID()
-		val user = CurrentUser(UUID.randomUUID(), "sub-2", "b@example.com", "B", platformAdministrator = false)
+		val user = CurrentUser(UUID.randomUUID(), "b@example.com", "B", platformAdministrator = false)
 		val membership = OrganizationMembership(
 			id = UUID.randomUUID(),
 			organizationId = organizationId,
@@ -60,7 +60,7 @@ class MembershipServiceTest {
 	@Test
 	fun `platform administrator without a membership is still granted synthetic access`() {
 		val organizationId = UUID.randomUUID()
-		val admin = CurrentUser(UUID.randomUUID(), "sub-admin", "admin@example.com", "Admin", platformAdministrator = true)
+		val admin = CurrentUser(UUID.randomUUID(), "admin@example.com", "Admin", platformAdministrator = true)
 		every { membershipRepository.findActiveMembership(organizationId, admin.userId) } returns null
 
 		val result = service.requireActiveMembership(organizationId, admin)
@@ -71,7 +71,7 @@ class MembershipServiceTest {
 	@Test
 	fun `viewer cannot manage members`() {
 		val organizationId = UUID.randomUUID()
-		val viewer = CurrentUser(UUID.randomUUID(), "sub-viewer", "viewer@example.com", "Viewer")
+		val viewer = CurrentUser(UUID.randomUUID(), "viewer@example.com", "Viewer")
 		every { membershipRepository.findActiveMembership(organizationId, viewer.userId) } returns membership(organizationId, viewer.userId, MembershipRole.VIEWER)
 
 		assertFailsWith<ForbiddenException> {
@@ -82,7 +82,7 @@ class MembershipServiceTest {
 	@Test
 	fun `administrator can manage members`() {
 		val organizationId = UUID.randomUUID()
-		val admin = CurrentUser(UUID.randomUUID(), "sub-admin2", "admin2@example.com", "Admin2")
+		val admin = CurrentUser(UUID.randomUUID(), "admin2@example.com", "Admin2")
 		every { membershipRepository.findActiveMembership(organizationId, admin.userId) } returns membership(organizationId, admin.userId, MembershipRole.ADMINISTRATOR)
 
 		val result = service.requireManagerRole(organizationId, admin)
@@ -93,7 +93,7 @@ class MembershipServiceTest {
 	@Test
 	fun `the owner membership cannot be revoked`() {
 		val organizationId = UUID.randomUUID()
-		val owner = CurrentUser(UUID.randomUUID(), "sub-owner", "owner@example.com", "Owner")
+		val owner = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")
 		val ownerMembership = membership(organizationId, owner.userId, MembershipRole.OWNER)
 		every { membershipRepository.findActiveMembership(organizationId, owner.userId) } returns ownerMembership
 		every { membershipRepository.findById(ownerMembership.id) } returns ownerMembership
@@ -106,7 +106,7 @@ class MembershipServiceTest {
 	@Test
 	fun `revoking a nonexistent membership is not found`() {
 		val organizationId = UUID.randomUUID()
-		val admin = CurrentUser(UUID.randomUUID(), "sub-admin3", "admin3@example.com", "Admin3")
+		val admin = CurrentUser(UUID.randomUUID(), "admin3@example.com", "Admin3")
 		val missingId = UUID.randomUUID()
 		every { membershipRepository.findActiveMembership(organizationId, admin.userId) } returns membership(organizationId, admin.userId, MembershipRole.ADMINISTRATOR)
 		every { membershipRepository.findById(missingId) } returns null
@@ -119,7 +119,7 @@ class MembershipServiceTest {
 	@Test
 	fun `revoking a non-owner membership succeeds`() {
 		val organizationId = UUID.randomUUID()
-		val admin = CurrentUser(UUID.randomUUID(), "sub-admin4", "admin4@example.com", "Admin4")
+		val admin = CurrentUser(UUID.randomUUID(), "admin4@example.com", "Admin4")
 		val target = membership(organizationId, UUID.randomUUID(), MembershipRole.VIEWER)
 		every { membershipRepository.findActiveMembership(organizationId, admin.userId) } returns membership(organizationId, admin.userId, MembershipRole.ADMINISTRATOR)
 		every { membershipRepository.findById(target.id) } returns target

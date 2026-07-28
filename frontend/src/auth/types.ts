@@ -3,9 +3,22 @@ export interface AuthUser {
 	email: string;
 }
 
+export interface AuthResult {
+	success: boolean;
+	error?: string;
+}
+
+export interface RegisterParams {
+	firstName: string;
+	lastName: string;
+	email: string;
+	password: string;
+}
+
 export interface AuthState {
-	status: "loading" | "authenticated" | "unauthenticated";
+	status: "authenticated" | "unauthenticated";
 	user: AuthUser | null;
-	login: () => void;
+	login: (email: string, password: string) => Promise<AuthResult>;
+	register: (params: RegisterParams) => Promise<AuthResult>;
 	logout: () => void;
 }
