@@ -1,0 +1,142 @@
+package com.leaguelift.dashboard.application
+
+import com.leaguelift.common.error.ForbiddenException
+import com.leaguelift.common.error.NotFoundException
+import com.leaguelift.common.web.CurrentUser
+import com.leaguelift.dashboard.web.AthleteSummary
+import com.leaguelift.dashboard.web.FamilyCredits
+import com.leaguelift.dashboard.web.FeeLineItem
+import com.leaguelift.dashboard.web.FundraiserSummary
+import com.leaguelift.dashboard.web.HouseholdOverviewResponse
+import com.leaguelift.dashboard.web.OrderSummary
+import com.leaguelift.dashboard.web.OutstandingBalance
+import com.leaguelift.dashboard.web.RequiredActionItem
+import com.leaguelift.dashboard.web.ScheduleItem
+import com.leaguelift.dashboard.web.UpdateItem
+import com.leaguelift.fee.domain.FeeAssignmentStatus
+import com.leaguelift.fee.persistence.FeeRepository
+import com.leaguelift.fundraising.domain.CampaignStatus
+import com.leaguelift.fundraising.persistence.CampaignRepository
+import com.leaguelift.household.domain.Household
+import com.leaguelift.household.persistence.HouseholdRepository
+import com.leaguelift.membership.persistence.MembershipRepository
+import com.leaguelift.participant.persistence.ParticipantRepository
+import com.leaguelift.team.persistence.TeamRepository
+import org.springframework.stereotype.Service
+import java.time.LocalDate
+import java.util.UUID
+
+private val OUTSTANDING_STATUSES = setOf(FeeAssignmentStatus.OPEN, FeeAssignmentStatus.PARTIALLY_PAID)
+private const val FEE_ASSIGNMENT_LIMIT = 50
+private const val CAMPAIGN_LIMIT = 25
+
+/**
+ * One method per Parent-dashboard card, each its own controller endpoint. Real data
+ * for athletes and outstanding fees; canned sample data for schedule, credits, orders,
+ * required actions, and organization updates, which have no backing table yet. See
+ * [OwnerDashboardService] for the same real/demo split pattern.
+ *
+ * Authorization has no real `guardian_relationship` FK to check yet (DESIGN-DOC.md
+ * section 4.2/8.3), so every method allows either: the caller is an active
+ * organization member (staff support case), or the caller's email matches an active
+ * `household_adult` on this household — the same interim rule
+ * [DashboardContextService] uses to resolve the Parent role in the first place.
+ */
+@Service
+class ParentDashboardService(
+	private val householdRepository: HouseholdRepository,
+	private val membershipRepository: MembershipRepository,
+	private val participantRepository: ParticipantRepository,
+	private val teamRepository: TeamRepository,
+	private val feeRepository: FeeRepository,
+	private val campaignRepository: CampaignRepository,
+) {
+
+	fun getOverview(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): HouseholdOverviewResponse {
+		val household = requireHousehold(organizationId, householdId, currentUser)
+		return HouseholdOverviewResponse(household.displayName)
+	}
+
+	fun getAthletes(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): List<AthleteSummary> {
+		requireHousehold(organizationId, householdId, currentUser)
+		return participantRepository.findByHousehold(householdId, organizationId).map { participant ->
+			val teamNames = participantRepository.listTeamAssignments(participant.id, organizationId)
+				.mapNotNull { teamRepository.findById(it.teamId, organizationId)?.name }
+			AthleteSummary(participant.id, "${participant.firstName} ${participant.lastName}", teamNames)
+		}
+	}
+
+	fun getFamilySchedule(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): List<ScheduleItem> {
+		requireHousehold(organizationId, householdId, currentUser)
+		return listOf(
+			ScheduleItem("fam-1", "SAT", "24", "vs Westview Warriors", "Home Game", "4:30 PM", "Home"),
+			ScheduleItem("fam-2", "WED", "28", "JV Basketball Practice", "Practice", "5:00 PM", null),
+		)
+	}
+
+	fun getOutstandingBalance(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): OutstandingBalance {
+		requireHousehold(organizationId, householdId, currentUser)
+		val feeAssignments = feeRepository.findByHousehold(householdId, organizationId, offset = 0, limit = FEE_ASSIGNMENT_LIMIT)
+		val outstanding = feeAssignments.filter { it.status in OUTSTANDING_STATUSES }
+		val currency = outstanding.firstOrNull()?.currency ?: feeAssignments.firstOrNull()?.currency ?: "USD"
+		return OutstandingBalance(
+			totalOutstandingMinor = outstanding.sumOf { it.originalAmountMinor },
+			currency = currency,
+			isApproximate = true,
+			lineItems = outstanding.map { FeeLineItem(it.description, it.originalAmountMinor, it.status.name, it.dueDate) },
+		)
+	}
+
+	fun getFamilyCredits(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): FamilyCredits {
+		requireHousehold(organizationId, householdId, currentUser)
+		return FamilyCredits(isDemoData = true, currency = "USD", pendingMinor = 12_000, availableMinor = 8_500, appliedThisSeasonMinor = 21_500)
+	}
+
+	fun getActiveFundraisers(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): List<FundraiserSummary> {
+		requireHousehold(organizationId, householdId, currentUser)
+		return campaignRepository.findAll(organizationId, offset = 0, limit = CAMPAIGN_LIMIT)
+			.filter { it.status == CampaignStatus.ACTIVE }
+			.map {
+				FundraiserSummary(
+					campaignId = it.id,
+					name = it.name,
+					isRaisedDemoData = true,
+					raisedMinor = (it.goalAmountMinor * 0.55).toLong(),
+					goalMinor = it.goalAmountMinor,
+					currency = it.currency,
+				)
+			}
+	}
+
+	fun getRecentOrders(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): List<OrderSummary> {
+		requireHousehold(organizationId, householdId, currentUser)
+		return listOf(OrderSummary("ord-1", "Riverside Soccer Hoodie", "#LL-78231", LocalDate.now().minusDays(10), "Shipped"))
+	}
+
+	fun getRequiredActions(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): List<RequiredActionItem> {
+		requireHousehold(organizationId, householdId, currentUser)
+		return listOf(RequiredActionItem("act-1", "warning", "Uniform Size Needed", "Uniform order needs a size selection", "Due soon"))
+	}
+
+	fun getOrganizationUpdates(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): List<UpdateItem> {
+		requireHousehold(organizationId, householdId, currentUser)
+		return listOf(UpdateItem("upd-1", "Spring Playoff Information", "Playoff brackets have been released.", "Posted recently"))
+	}
+
+	private fun requireHousehold(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): Household {
+		val household = householdRepository.findById(householdId, organizationId)
+			?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
+		requireAccess(organizationId, householdId, currentUser)
+		return household
+	}
+
+	private fun requireAccess(organizationId: UUID, householdId: UUID, currentUser: CurrentUser) {
+		if (currentUser.platformAdministrator) return
+		val hasOrgMembership = membershipRepository.findActiveMembership(organizationId, currentUser.userId) != null
+		if (hasOrgMembership) return
+		val isHouseholdAdult = householdRepository.listAdults(householdId, organizationId)
+			.any { it.email?.equals(currentUser.email, ignoreCase = true) == true }
+		if (isHouseholdAdult) return
+		throw ForbiddenException("HOUSEHOLD_ACCESS_DENIED", "You do not have access to this household.")
+	}
+}

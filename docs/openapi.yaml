@@ -4,15 +4,19 @@ info:
   description: >
     LeagueLift revenue, fundraising, commerce, and fee-management API for youth sports
     organizations. This document covers Phase 0 (foundation), Phase 1 (organization
-    onboarding, teams, tournaments, and public pages), and Phase 2 (households,
-    participants, fee templates, and fee assignments). Endpoints are added milestone
-    by milestone — do not add backend endpoints without updating this document in the
-    same change (DESIGN-DOC.md section 26.4).
-  version: "0.5.0"
+    onboarding, teams, tournaments, and public pages), Phase 2 (households,
+    participants, fee templates, and fee assignments), Phase 3 slice 11
+    (fundraising campaigns and their public pages — contribution/payment recording
+    is a later slice), and traditional email/password authentication (superseding
+    the originally planned external-IdP/Auth0 approach — see DESIGN-DOC.md section
+    11.5). Endpoints are added milestone by milestone — do not add backend endpoints
+    without updating this document in the same change (DESIGN-DOC.md section 26.4).
+  version: "0.7.0"
 servers:
   - url: /api/v1
 tags:
   - name: system
+  - name: auth
   - name: identity
   - name: organizations
   - name: members
@@ -23,6 +27,8 @@ tags:
   - name: households
   - name: participants
   - name: fees
+  - name: fundraising
+  - name: dashboard
 paths:
   /public/status:
     get:
@@ -38,13 +44,66 @@ paths:
               schema:
                 $ref: "#/components/schemas/StatusResponse"
 
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Create an account with an email and password
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Account created and signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: An account with that email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Sign in with an email and password
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /bootstrap:
     post:
       tags: [identity]
-      summary: Provision the authenticated identity-provider subject as an internal app_user
-      description: >
-        Idempotent. If an app_user already exists for the caller's external subject,
-        returns it unchanged; otherwise creates it.
+      summary: Get the current authenticated user (idempotent; kept for client compatibility with /me)
       operationId: bootstrapCurrentUser
       responses:
         "200":
@@ -1290,6 +1349,830 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # --- Fundraising Campaigns (Phase 3 slice 11) ---
+
+  /organizations/{organizationId}/campaigns:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [fundraising]
+      summary: List fundraising campaigns for an organization
+      operationId: listCampaigns
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of campaigns
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [fundraising]
+      summary: Create a fundraising campaign
+      description: >
+        Campaigns are created in DRAFT status. They are not publicly visible
+        (via GET /public/campaigns/{slug}) until published.
+      operationId: createCampaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCampaignRequest"
+      responses:
+        "201":
+          description: Campaign created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The requested slug is already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /organizations/{organizationId}/campaigns/{campaignId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/CampaignIdParam"
+    get:
+      tags: [fundraising]
+      summary: Get a campaign by ID
+      operationId: getCampaign
+      responses:
+        "200":
+          description: Campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [fundraising]
+      summary: Update a campaign
+      operationId: updateCampaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCampaignRequest"
+      responses:
+        "200":
+          description: Updated campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/campaigns/{campaignId}/publish:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/CampaignIdParam"
+    post:
+      tags: [fundraising]
+      summary: Publish a campaign's public page
+      description: Transitions a DRAFT campaign to ACTIVE and makes it visible via GET /public/campaigns/{slug}.
+      operationId: publishCampaign
+      responses:
+        "200":
+          description: Published campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/campaigns/{campaignId}/status:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/CampaignIdParam"
+    patch:
+      tags: [fundraising]
+      summary: Update a campaign's status
+      description: For transitions other than the initial publish, e.g. marking a campaign COMPLETED or ARCHIVED.
+      operationId: updateCampaignStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCampaignStatusRequest"
+      responses:
+        "200":
+          description: Campaign with updated status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /public/campaigns/{slug}:
+    get:
+      tags: [fundraising]
+      summary: Get a published campaign's public page by slug
+      operationId: getPublicCampaign
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Published campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicCampaignResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /me/dashboard-context:
+    get:
+      tags: [dashboard]
+      summary: >
+        Resolve which dashboard the signed-in user should land on (real role check —
+        DESIGN-DOC.md section 10.1 — not a dev-only switcher). See
+        DashboardContextService for the resolution order and its interim limitations.
+      operationId: getDashboardContext
+      responses:
+        "200":
+          description: Resolved dashboard context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardContextResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # Every dashboard card is its own endpoint (DESIGN-DOC.md section 10.1/10.2), not one
+  # bundled response per dashboard, so the frontend can load/error/empty each card
+  # independently. Athlete endpoints are entirely demo data (no participant-login
+  # concept exists yet); Owner/Coach/Parent endpoints are real where the schema
+  # supports it and clearly tagged `isDemoData`/`isFundraisingDemoData`/`isRaisedDemoData`
+  # where it does not — see the application services for the exact split.
+
+  /me/dashboard/athlete/overview:
+    get:
+      tags: [dashboard]
+      summary: Athlete dashboard — next event overview (demo)
+      operationId: getAthleteOverview
+      responses:
+        "200":
+          description: Athlete overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthleteOverviewResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /me/dashboard/athlete/teams:
+    get:
+      tags: [dashboard]
+      summary: Athlete dashboard — my teams (demo)
+      operationId: getAthleteTeams
+      responses:
+        "200":
+          description: Athlete's teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AthleteTeamSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /me/dashboard/athlete/week-events:
+    get:
+      tags: [dashboard]
+      summary: Athlete dashboard — this week's schedule (demo)
+      operationId: getAthleteWeekEvents
+      responses:
+        "200":
+          description: This week's events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScheduleItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /me/dashboard/athlete/recent-history:
+    get:
+      tags: [dashboard]
+      summary: Athlete dashboard — recent history (demo)
+      operationId: getAthleteRecentHistory
+      responses:
+        "200":
+          description: Recent history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HistoryItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /me/dashboard/athlete/guardians:
+    get:
+      tags: [dashboard]
+      summary: Athlete dashboard — guardians (demo)
+      operationId: getAthleteGuardians
+      responses:
+        "200":
+          description: Guardians
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GuardianSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /me/dashboard/athlete/orders:
+    get:
+      tags: [dashboard]
+      summary: Athlete dashboard — orders (demo)
+      operationId: getAthleteOrders
+      responses:
+        "200":
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrderSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /organizations/{organizationId}/dashboard/owner/summary:
+    get:
+      tags: [dashboard]
+      summary: Owner dashboard — organization summary (real counts)
+      operationId: getOwnerSummary
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Organization summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerSummaryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/dashboard/owner/financial-overview:
+    get:
+      tags: [dashboard]
+      summary: Owner dashboard — financial overview (demo)
+      operationId: getOwnerFinancialOverview
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Financial overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialOverviewResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/dashboard/owner/attention-required:
+    get:
+      tags: [dashboard]
+      summary: Owner dashboard — attention required (demo)
+      operationId: getOwnerAttentionRequired
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Items needing attention
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttentionItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/dashboard/owner/team-performance:
+    get:
+      tags: [dashboard]
+      summary: Owner dashboard — team performance (real team/participant data; demo fundraising)
+      operationId: getOwnerTeamPerformance
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Team performance rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamPerformanceRow"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/dashboard/owner/upcoming-events:
+    get:
+      tags: [dashboard]
+      summary: Owner dashboard — upcoming events (demo)
+      operationId: getOwnerUpcomingEvents
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Upcoming events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScheduleItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/dashboard/owner/recent-activity:
+    get:
+      tags: [dashboard]
+      summary: Owner dashboard — recent activity (real, from audit_event)
+      operationId: getOwnerRecentActivity
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/dashboard/owner/onboarding-progress:
+    get:
+      tags: [dashboard]
+      summary: Owner dashboard — onboarding progress (demo)
+      operationId: getOwnerOnboardingProgress
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Onboarding progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OwnerOnboardingProgress"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/dashboard/owner/reports-snapshot:
+    get:
+      tags: [dashboard]
+      summary: Owner dashboard — reports snapshot (demo)
+      operationId: getOwnerReportsSnapshot
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Reports snapshot
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReportMetric"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/dashboard/coach/teams:
+    get:
+      tags: [dashboard]
+      summary: Coach dashboard — teams (real)
+      operationId: getCoachTeams
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CoachTeamSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/dashboard/coach/team-schedule:
+    get:
+      tags: [dashboard]
+      summary: Coach dashboard — team schedule (demo)
+      operationId: getCoachTeamSchedule
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Team schedule
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScheduleItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/dashboard/coach/roster-summary:
+    get:
+      tags: [dashboard]
+      summary: Coach dashboard — roster summary (real athlete count; demo attendance)
+      operationId: getCoachRosterSummary
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Roster summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RosterSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/dashboard/coach/team-page-status:
+    get:
+      tags: [dashboard]
+      summary: Coach dashboard — team page status (real, when a page exists)
+      operationId: getCoachTeamPageStatus
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Team page status, or null when the organization has no teams
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamPageStatusItem"
+                nullable: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/dashboard/coach/fundraising-progress:
+    get:
+      tags: [dashboard]
+      summary: Coach dashboard — fundraising progress (real when a campaign exists; demo raised amount)
+      operationId: getCoachFundraisingProgress
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Fundraising progress, or null when there is no active campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FundraisingProgress"
+                nullable: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/dashboard/coach/announcements:
+    get:
+      tags: [dashboard]
+      summary: Coach dashboard — announcements (demo)
+      operationId: getCoachAnnouncements
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Announcements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AnnouncementItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/dashboard/coach/required-actions:
+    get:
+      tags: [dashboard]
+      summary: Coach dashboard — required actions (demo)
+      operationId: getCoachRequiredActions
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Required actions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RequiredActionItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/households/{householdId}/dashboard/parent/overview:
+    get:
+      tags: [dashboard]
+      summary: Parent dashboard — household overview (real)
+      operationId: getParentOverview
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/HouseholdIdParam"
+      responses:
+        "200":
+          description: Household overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HouseholdOverviewResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/households/{householdId}/dashboard/parent/athletes:
+    get:
+      tags: [dashboard]
+      summary: Parent dashboard — athletes (real)
+      operationId: getParentAthletes
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/HouseholdIdParam"
+      responses:
+        "200":
+          description: Athletes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AthleteSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/households/{householdId}/dashboard/parent/family-schedule:
+    get:
+      tags: [dashboard]
+      summary: Parent dashboard — family schedule (demo)
+      operationId: getParentFamilySchedule
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/HouseholdIdParam"
+      responses:
+        "200":
+          description: Family schedule
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScheduleItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/households/{householdId}/dashboard/parent/outstanding-balance:
+    get:
+      tags: [dashboard]
+      summary: Parent dashboard — outstanding balance (real, approximate — see FeeLineItem)
+      operationId: getParentOutstandingBalance
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/HouseholdIdParam"
+      responses:
+        "200":
+          description: Outstanding balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutstandingBalance"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/households/{householdId}/dashboard/parent/family-credits:
+    get:
+      tags: [dashboard]
+      summary: Parent dashboard — family credits (demo)
+      operationId: getParentFamilyCredits
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/HouseholdIdParam"
+      responses:
+        "200":
+          description: Family credits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FamilyCredits"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/households/{householdId}/dashboard/parent/active-fundraisers:
+    get:
+      tags: [dashboard]
+      summary: Parent dashboard — active fundraisers (real campaigns; demo raised amount)
+      operationId: getParentActiveFundraisers
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/HouseholdIdParam"
+      responses:
+        "200":
+          description: Active fundraisers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FundraiserSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/households/{householdId}/dashboard/parent/recent-orders:
+    get:
+      tags: [dashboard]
+      summary: Parent dashboard — recent orders (demo)
+      operationId: getParentRecentOrders
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/HouseholdIdParam"
+      responses:
+        "200":
+          description: Recent orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrderSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/households/{householdId}/dashboard/parent/required-actions:
+    get:
+      tags: [dashboard]
+      summary: Parent dashboard — required actions (demo)
+      operationId: getParentRequiredActions
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/HouseholdIdParam"
+      responses:
+        "200":
+          description: Required actions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RequiredActionItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/households/{householdId}/dashboard/parent/organization-updates:
+    get:
+      tags: [dashboard]
+      summary: Parent dashboard — organization updates (demo)
+      operationId: getParentOrganizationUpdates
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/HouseholdIdParam"
+      responses:
+        "200":
+          description: Organization updates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UpdateItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1348,6 +2231,13 @@ components:
         format: uuid
     FeeAssignmentIdParam:
       name: assignmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CampaignIdParam:
+      name: campaignId
       in: path
       required: true
       schema:
@@ -1427,6 +2317,47 @@ components:
                 type: string
               message:
                 type: string
+    RegisterRequest:
+      type: object
+      required: [email, password, firstName, lastName]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 200
+        firstName:
+          type: string
+          maxLength: 60
+        lastName:
+          type: string
+          maxLength: 60
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    AuthResponse:
+      type: object
+      required: [accessToken, tokenType, expiresIn, user]
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          format: int64
+          description: Access token lifetime in seconds
+        user:
+          $ref: "#/components/schemas/UserResponse"
     UserResponse:
       type: object
       required: [id, email, displayName, status]
@@ -2366,6 +3297,625 @@ components:
           type: integer
         totalElements:
           type: integer
+    CreateCampaignRequest:
+      type: object
+      required: [name, slug, campaignType, goalAmountMinor]
+      properties:
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional team attribution. Omit for an organization-wide campaign.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 63
+          description: Lowercase alphanumeric with optional hyphens. Globally unique.
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+        campaignType:
+          $ref: "#/components/schemas/CampaignType"
+        goalAmountMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Goal amount in minor currency units (e.g. cents for USD)
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          default: USD
+        startDate:
+          type: string
+          format: date
+          nullable: true
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    UpdateCampaignRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          nullable: true
+        goalAmountMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        startDate:
+          type: string
+          format: date
+          nullable: true
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    UpdateCampaignStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/CampaignStatus"
+    CampaignType:
+      type: string
+      enum:
+        - ORGANIZATION_GENERAL
+        - TEAM_GENERAL
+        - TRAVEL
+        - TOURNAMENT_FEES
+        - UNIFORMS
+        - EQUIPMENT
+        - FACILITY_IMPROVEMENTS
+        - SCHOLARSHIPS
+        - SPECIAL_EVENTS
+        - APPAREL_BASED
+        - SPONSOR_SUPPORTED
+    CampaignStatus:
+      type: string
+      enum: [DRAFT, ACTIVE, COMPLETED, ARCHIVED]
+    CampaignResponse:
+      type: object
+      required: [id, organizationId, name, slug, campaignType, goalAmountMinor, currency, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        campaignType:
+          $ref: "#/components/schemas/CampaignType"
+        goalAmountMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        startDate:
+          type: string
+          format: date
+          nullable: true
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        status:
+          $ref: "#/components/schemas/CampaignStatus"
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CampaignPage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CampaignResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+    PublicCampaignResponse:
+      type: object
+      required: [id, organizationId, name, slug, campaignType, goalAmountMinor, currency, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        campaignType:
+          $ref: "#/components/schemas/CampaignType"
+        goalAmountMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        startDate:
+          type: string
+          format: date
+          nullable: true
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        status:
+          $ref: "#/components/schemas/CampaignStatus"
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    DashboardRole:
+      type: string
+      enum: [OWNER, COACH, PARENT, ATHLETE]
+    DashboardContextResponse:
+      type: object
+      required: [role]
+      properties:
+        role:
+          $ref: "#/components/schemas/DashboardRole"
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
+        householdId:
+          type: string
+          format: uuid
+          nullable: true
+
+    ScheduleItem:
+      type: object
+      required: [id, day, date, title, subtitle, time]
+      properties:
+        id:
+          type: string
+        day:
+          type: string
+        date:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        time:
+          type: string
+        tag:
+          type: string
+          nullable: true
+    RequiredActionItem:
+      type: object
+      required: [id, tone, title, subtitle, dueLabel]
+      properties:
+        id:
+          type: string
+        tone:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        dueLabel:
+          type: string
+    OrderSummary:
+      type: object
+      required: [id, productName, orderNumber, orderedAt, status]
+      properties:
+        id:
+          type: string
+        productName:
+          type: string
+        orderNumber:
+          type: string
+        orderedAt:
+          type: string
+          format: date
+        status:
+          type: string
+    ActivityItem:
+      type: object
+      required: [id, action, entityType, entityId, occurredAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+          format: uuid
+        occurredAt:
+          type: string
+          format: date-time
+
+    OwnerSummaryResponse:
+      type: object
+      required: [organizationName, activeTeams, participants, households, upcomingTournaments]
+      properties:
+        organizationName:
+          type: string
+        activeTeams:
+          type: integer
+          format: int64
+        participants:
+          type: integer
+          format: int64
+        households:
+          type: integer
+          format: int64
+        upcomingTournaments:
+          type: integer
+          format: int64
+    FinancialOverviewResponse:
+      type: object
+      required: [isDemoData, currency, feesAssignedMinor, feesCollectedMinor, outstandingMinor, fundraisingMinor, apparelSalesMinor, pendingPayoutMinor]
+      properties:
+        isDemoData:
+          type: boolean
+        currency:
+          type: string
+        feesAssignedMinor:
+          type: integer
+          format: int64
+        feesCollectedMinor:
+          type: integer
+          format: int64
+        outstandingMinor:
+          type: integer
+          format: int64
+        fundraisingMinor:
+          type: integer
+          format: int64
+        apparelSalesMinor:
+          type: integer
+          format: int64
+        pendingPayoutMinor:
+          type: integer
+          format: int64
+    AttentionItem:
+      type: object
+      required: [id, tone, title, subtitle, count]
+      properties:
+        id:
+          type: string
+        tone:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        count:
+          type: integer
+    TeamPerformanceRow:
+      type: object
+      required: [teamId, name, sport, participants, status, isFundraisingDemoData]
+      properties:
+        teamId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sport:
+          type: string
+        participants:
+          type: integer
+          format: int64
+        status:
+          type: string
+        isFundraisingDemoData:
+          type: boolean
+        fundraisingRaisedMinor:
+          type: integer
+          format: int64
+          nullable: true
+        fundraisingGoalMinor:
+          type: integer
+          format: int64
+          nullable: true
+    OwnerOnboardingProgress:
+      type: object
+      required: [isDemoData, completedSteps, totalSteps]
+      properties:
+        isDemoData:
+          type: boolean
+        completedSteps:
+          type: integer
+        totalSteps:
+          type: integer
+    ReportMetric:
+      type: object
+      required: [isDemoData, label, valueMinor, trendPercent]
+      properties:
+        isDemoData:
+          type: boolean
+        label:
+          type: string
+        valueMinor:
+          type: integer
+          format: int64
+        trendPercent:
+          type: number
+    CoachTeamSummary:
+      type: object
+      required: [teamId, name, sport, participants]
+      properties:
+        teamId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sport:
+          type: string
+        participants:
+          type: integer
+          format: int64
+    RosterSummary:
+      type: object
+      required: [athletes, isAttendanceDemoData, attendanceRatePercent, availabilityResponsePercent]
+      properties:
+        athletes:
+          type: integer
+          format: int64
+        isAttendanceDemoData:
+          type: boolean
+        attendanceRatePercent:
+          type: integer
+        availabilityResponsePercent:
+          type: integer
+    TeamPageStatusItem:
+      type: object
+      required: [teamId, teamName, status]
+      properties:
+        teamId:
+          type: string
+          format: uuid
+        teamName:
+          type: string
+        status:
+          type: string
+        slug:
+          type: string
+          nullable: true
+    FundraisingProgress:
+      type: object
+      required: [campaignId, name, status, goalAmountMinor, currency, isRaisedDemoData, raisedMinor]
+      properties:
+        campaignId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+        goalAmountMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        isRaisedDemoData:
+          type: boolean
+        raisedMinor:
+          type: integer
+          format: int64
+    AnnouncementItem:
+      type: object
+      required: [id, title, body, postedLabel, isNew]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        postedLabel:
+          type: string
+        isNew:
+          type: boolean
+    AthleteSummary:
+      type: object
+      required: [participantId, name, teamNames]
+      properties:
+        participantId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        teamNames:
+          type: array
+          items:
+            type: string
+    FeeLineItem:
+      type: object
+      required: [description, amountMinor, status]
+      properties:
+        description:
+          type: string
+        amountMinor:
+          type: integer
+          format: int64
+        status:
+          type: string
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+    OutstandingBalance:
+      type: object
+      required: [totalOutstandingMinor, currency, isApproximate, lineItems]
+      properties:
+        totalOutstandingMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        isApproximate:
+          type: boolean
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeeLineItem"
+    FamilyCredits:
+      type: object
+      required: [isDemoData, currency, pendingMinor, availableMinor, appliedThisSeasonMinor]
+      properties:
+        isDemoData:
+          type: boolean
+        currency:
+          type: string
+        pendingMinor:
+          type: integer
+          format: int64
+        availableMinor:
+          type: integer
+          format: int64
+        appliedThisSeasonMinor:
+          type: integer
+          format: int64
+    FundraiserSummary:
+      type: object
+      required: [campaignId, name, isRaisedDemoData, raisedMinor, goalMinor, currency]
+      properties:
+        campaignId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        isRaisedDemoData:
+          type: boolean
+        raisedMinor:
+          type: integer
+          format: int64
+        goalMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+    UpdateItem:
+      type: object
+      required: [id, title, body, postedLabel]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        postedLabel:
+          type: string
+    HouseholdOverviewResponse:
+      type: object
+      required: [householdName]
+      properties:
+        householdName:
+          type: string
+
+    NextEventSummary:
+      type: object
+      required: [title, subtitle, dateLabel, location]
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+        dateLabel:
+          type: string
+        location:
+          type: string
+    AthleteTeamSummary:
+      type: object
+      required: [name, detail, coachName]
+      properties:
+        name:
+          type: string
+        detail:
+          type: string
+        coachName:
+          type: string
+    HistoryItem:
+      type: object
+      required: [id, opponent, dateLabel, location, result]
+      properties:
+        id:
+          type: string
+        opponent:
+          type: string
+        dateLabel:
+          type: string
+        location:
+          type: string
+        result:
+          type: string
+        won:
+          type: boolean
+          nullable: true
+    GuardianSummary:
+      type: object
+      required: [name, role, email, phone]
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+    AthleteOverviewResponse:
+      type: object
+      required: [displayName, isDemoData]
+      properties:
+        displayName:
+          type: string
+        isDemoData:
+          type: boolean
+        nextEvent:
+          $ref: "#/components/schemas/NextEventSummary"
+          nullable: true
 
 security:
   - bearerAuth: []

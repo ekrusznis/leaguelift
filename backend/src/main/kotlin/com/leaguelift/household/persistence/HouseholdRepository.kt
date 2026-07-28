@@ -78,6 +78,25 @@ class HouseholdRepository(private val jdbcClient: JdbcClient) {
             .param("now", Timestamp.from(now)).param("id", id).param("organizationId", organizationId).update()
     }
 
+    /**
+     * Interim stand-in for the real `guardian_relationship` link between `app_user`
+     * and `household_adult`, which does not exist yet (DESIGN-DOC.md section 8.3).
+     * Matches by email only, so it is correlation, not a foreign key — used by
+     * `DashboardContextService` to resolve the Parent dashboard role. Replace with a
+     * real FK-backed lookup once `guardian_relationship` is built.
+     */
+    fun findActiveAdultByEmail(email: String): HouseholdAdult? =
+        jdbcClient.sql(
+            """
+            select $ADULT_COLS from household_adult
+            where lower(email) = lower(:email) and status = 'ACTIVE'
+            limit 1
+            """.trimIndent(),
+        )
+            .param("email", email)
+            .query(::mapAdult)
+            .optional().orElse(null)
+
     fun listAdults(householdId: UUID, organizationId: UUID): List<HouseholdAdult> =
         jdbcClient.sql(
             """

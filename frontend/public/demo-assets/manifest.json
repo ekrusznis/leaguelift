@@ -1,0 +1,56 @@
+{
+	"version": 1,
+	"note": "Generated demo-only assets (docs/LEAGUELIFT_MEDIA_ASSET_DESIGN.md sections 18-20). Fictional people, teams, and organizations — never represented as real LeagueLift customers.",
+	"assets": [
+		{ "key": "athlete.01", "type": "PARTICIPANT_AVATAR", "path": "/demo-assets/avatars/athletes/athlete-avatar-01.webp", "altText": "" },
+		{ "key": "athlete.02", "type": "PARTICIPANT_AVATAR", "path": "/demo-assets/avatars/athletes/athlete-avatar-02.webp", "altText": "" },
+		{ "key": "athlete.03", "type": "PARTICIPANT_AVATAR", "path": "/demo-assets/avatars/athletes/athlete-avatar-03.webp", "altText": "" },
+		{ "key": "athlete.04", "type": "PARTICIPANT_AVATAR", "path": "/demo-assets/avatars/athletes/athlete-avatar-04.webp", "altText": "" },
+		{ "key": "athlete.05", "type": "PARTICIPANT_AVATAR", "path": "/demo-assets/avatars/athletes/athlete-avatar-05.webp", "altText": "" },
+		{ "key": "athlete.06", "type": "PARTICIPANT_AVATAR", "path": "/demo-assets/avatars/athletes/athlete-avatar-06.webp", "altText": "" },
+		{ "key": "athlete.07", "type": "PARTICIPANT_AVATAR", "path": "/demo-assets/avatars/athletes/athlete-avatar-07.webp", "altText": "" },
+		{ "key": "athlete.08", "type": "PARTICIPANT_AVATAR", "path": "/demo-assets/avatars/athletes/athlete-avatar-08.webp", "altText": "" },
+
+		{ "key": "adult.01", "type": "GUARDIAN_AVATAR", "path": "/demo-assets/avatars/adults/adult-avatar-01.webp", "altText": "" },
+		{ "key": "adult.02", "type": "COACH_AVATAR", "path": "/demo-assets/avatars/adults/adult-avatar-02.webp", "altText": "" },
+		{ "key": "adult.03", "type": "STAFF_AVATAR", "path": "/demo-assets/avatars/adults/adult-avatar-03.webp", "altText": "" },
+		{ "key": "adult.04", "type": "STAFF_AVATAR", "path": "/demo-assets/avatars/adults/adult-avatar-04.webp", "altText": "" },
+		{ "key": "adult.05", "type": "GUARDIAN_AVATAR", "path": "/demo-assets/avatars/adults/adult-avatar-05.webp", "altText": "" },
+		{ "key": "adult.06", "type": "STAFF_AVATAR", "path": "/demo-assets/avatars/adults/adult-avatar-06.webp", "altText": "" },
+		{ "key": "adult.07", "type": "STAFF_AVATAR", "path": "/demo-assets/avatars/adults/adult-avatar-07.webp", "altText": "" },
+		{ "key": "adult.08", "type": "GUARDIAN_AVATAR", "path": "/demo-assets/avatars/adults/adult-avatar-08.webp", "altText": "" },
+
+		{ "key": "team.wolfpack", "type": "TEAM_LOGO", "path": "/demo-assets/logos/teams/team-wolfpack.png", "altText": "Wolfpack team logo" },
+		{ "key": "team.falcons", "type": "TEAM_LOGO", "path": "/demo-assets/logos/teams/team-falcons.png", "altText": "Falcons team logo" },
+		{ "key": "team.storm", "type": "TEAM_LOGO", "path": "/demo-assets/logos/teams/team-storm.png", "altText": "Storm team logo" },
+		{ "key": "team.strikers", "type": "TEAM_LOGO", "path": "/demo-assets/logos/teams/team-strikers.png", "altText": "Strikers team logo" },
+		{ "key": "team.hawks", "type": "TEAM_LOGO", "path": "/demo-assets/logos/teams/team-hawks.png", "altText": "Hawks team logo" },
+		{ "key": "team.blaze", "type": "TEAM_LOGO", "path": "/demo-assets/logos/teams/team-blaze.png", "altText": "Blaze team logo" },
+
+		{ "key": "org.elite-fc", "type": "ORGANIZATION_LOGO", "path": "/demo-assets/logos/organizations/org-elite-fc.png", "altText": "Elite FC logo" },
+		{ "key": "org.champions-cup", "type": "TOURNAMENT_LOGO", "path": "/demo-assets/logos/organizations/org-champions-cup.png", "altText": "Champions Cup logo" },
+		{ "key": "org.sharks-baseball", "type": "ORGANIZATION_LOGO", "path": "/demo-assets/logos/organizations/org-sharks-baseball.png", "altText": "Sharks Baseball logo" },
+		{ "key": "org.falcons-athletics", "type": "ORGANIZATION_LOGO", "path": "/demo-assets/logos/organizations/org-falcons-athletics.png", "altText": "Falcons Athletics logo" },
+		{ "key": "org.all-star-showdown", "type": "TOURNAMENT_LOGO", "path": "/demo-assets/logos/organizations/org-all-star-showdown.png", "altText": "All-Star Showdown logo" },
+		{ "key": "org.northwest-sports-academy", "type": "ORGANIZATION_LOGO", "path": "/demo-assets/logos/organizations/org-northwest-sports-academy.png", "altText": "Northwest Sports Academy logo" },
+
+		{ "key": "product.green-hoodie", "type": "PRODUCT_PRIMARY_IMAGE", "path": "/demo-assets/products/product-green-hoodie.webp", "altText": "Green team hoodie" },
+		{ "key": "product.navy-performance-tee", "type": "PRODUCT_PRIMARY_IMAGE", "path": "/demo-assets/products/product-navy-performance-tee.webp", "altText": "Navy performance tee" },
+		{ "key": "product.white-baseball-jersey", "type": "PRODUCT_PRIMARY_IMAGE", "path": "/demo-assets/products/product-white-baseball-jersey.webp", "altText": "White baseball jersey" },
+		{ "key": "product.navy-team-cap", "type": "PRODUCT_PRIMARY_IMAGE", "path": "/demo-assets/products/product-navy-team-cap.webp", "altText": "Navy team cap" },
+		{ "key": "product.tournament-sweatshirt", "type": "PRODUCT_PRIMARY_IMAGE", "path": "/demo-assets/products/product-tournament-sweatshirt.webp", "altText": "Tournament sweatshirt" },
+		{ "key": "product.black-quarter-zip", "type": "PRODUCT_PRIMARY_IMAGE", "path": "/demo-assets/products/product-black-quarter-zip.webp", "altText": "Black quarter-zip pullover" },
+
+		{ "key": "background.soccer", "type": "DASHBOARD_PANEL_BACKGROUND", "path": "/demo-assets/backgrounds/soccer/soccer-bg-1280.webp", "altText": "" },
+		{ "key": "background.hockey", "type": "DASHBOARD_PANEL_BACKGROUND", "path": "/demo-assets/backgrounds/hockey/hockey-bg-1280.webp", "altText": "" },
+		{ "key": "background.basketball", "type": "DASHBOARD_PANEL_BACKGROUND", "path": "/demo-assets/backgrounds/basketball/basketball-bg-1280.webp", "altText": "" },
+
+		{ "key": "promo.sidebar", "type": "SIDEBAR_PROMO_BACKGROUND", "path": "/demo-assets/promotions/sidebar-promo-480.webp", "altText": "" },
+
+		{ "key": "hero.multisport-huddle", "type": "SPORT_BACKGROUND", "path": "/demo-assets/hero/hero-multisport-huddle-1600.webp", "altText": "" },
+		{ "key": "hero.multisport-walkout", "type": "SPORT_BACKGROUND", "path": "/demo-assets/hero/hero-multisport-walkout-900.webp", "altText": "" },
+		{ "key": "hero.community-handoff", "type": "CAMPAIGN_COVER", "path": "/demo-assets/hero/hero-community-handoff-1200.webp", "altText": "A coach and families at a team gear handoff table" },
+		{ "key": "hero.apparel-collection", "type": "PRODUCT_GALLERY_IMAGE", "path": "/demo-assets/hero/hero-apparel-collection-1200.webp", "altText": "A collection of folded team apparel" },
+		{ "key": "hero.gold-accent", "type": "DASHBOARD_PANEL_BACKGROUND", "path": "/demo-assets/hero/hero-gold-accent-900.webp", "altText": "" }
+	]
+}

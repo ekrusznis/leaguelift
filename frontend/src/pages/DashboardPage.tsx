@@ -1,22 +1,46 @@
-import { useAuth } from "../auth/AuthContext";
+import { AthleteDashboard } from "../dashboard/roles/AthleteDashboard";
+import { CoachDashboard } from "../dashboard/roles/CoachDashboard";
+import { OwnerDashboard } from "../dashboard/roles/OwnerDashboard";
+import { ParentDashboard } from "../dashboard/roles/ParentDashboard";
+import { useDashboardContext } from "../dashboard/api";
+import { LoadingState } from "../components/states/LoadingState";
+import { ErrorState } from "../components/states/ErrorState";
+import { UnauthorizedState } from "../components/states/UnauthorizedState";
 
 /**
- * Dashboards must answer: what needs attention, what's outstanding, what's active,
- * what changed, what to do next (DESIGN-DOC.md section 17.4). Phase 0 has no
- * financial or campaign data yet, so this is intentionally a minimal welcome screen
- * rather than a vanity chart with nothing to act on.
+ * Routes the signed-in user to their dashboard based on a real backend role check
+ * (GET /me/dashboard-context) — not a dev-only switcher (DESIGN-DOC.md section 10.1).
+ * Owner/Coach need an organizationId and Parent additionally needs a householdId;
+ * both come from the resolved context, not from client state.
  */
 export function DashboardPage() {
-	const { user } = useAuth();
+	const context = useDashboardContext();
 
-	return (
-		<div className="flex flex-col gap-4">
-			<h1 className="font-heading text-2xl font-bold text-navy">Welcome{user ? `, ${user.displayName}` : ""}</h1>
-			<p className="max-w-prose text-slate-gray">
-				This is the Phase 0 foundation shell. Once organizations, teams, fees, and
-				fundraising are built out, this dashboard will surface outstanding balances,
-				active campaigns, and recent activity.
-			</p>
-		</div>
-	);
+	if (context.isLoading) {
+		return <LoadingState label="Loading your dashboard…" />;
+	}
+
+	if (context.isError) {
+		return <ErrorState message="Could not determine your dashboard." onRetry={() => context.refetch()} />;
+	}
+
+	const data = context.data;
+	if (!data) {
+		return null;
+	}
+
+	switch (data.role) {
+		case "OWNER":
+			return data.organizationId ? <OwnerDashboard organizationId={data.organizationId} /> : <UnauthorizedState message="No organization found for your account." />;
+		case "COACH":
+			return data.organizationId ? <CoachDashboard organizationId={data.organizationId} /> : <UnauthorizedState message="No organization found for your account." />;
+		case "PARENT":
+			return data.organizationId && data.householdId ? (
+				<ParentDashboard organizationId={data.organizationId} householdId={data.householdId} />
+			) : (
+				<UnauthorizedState message="No household found for your account." />
+			);
+		case "ATHLETE":
+			return <AthleteDashboard />;
+	}
 }

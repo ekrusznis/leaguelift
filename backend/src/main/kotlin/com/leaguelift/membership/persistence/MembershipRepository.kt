@@ -48,6 +48,28 @@ class MembershipRepository(private val jdbcClient: JdbcClient) {
 			.query(Long::class.java)
 			.single()
 
+	/**
+	 * The first ACTIVE organization_membership for this user, in no particular
+	 * cross-organization order (a user is only expected to belong to one
+	 * organization in practice today). Used by dashboard role resolution
+	 * (`DashboardContextService`) to determine Owner/Coach context without the
+	 * caller already knowing which organization to ask about.
+	 */
+	fun findAnyActiveMembershipForUser(userId: UUID): OrganizationMembership? =
+		jdbcClient.sql(
+			"""
+			select id, organization_id, user_id, role, status, created_at, updated_at
+			from organization_membership
+			where user_id = :userId and status = 'ACTIVE'
+			order by created_at asc
+			limit 1
+			""".trimIndent(),
+		)
+			.param("userId", userId)
+			.query(::mapRow)
+			.optional()
+			.orElse(null)
+
 	fun findById(membershipId: UUID): OrganizationMembership? =
 		jdbcClient.sql(
 			"""

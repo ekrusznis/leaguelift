@@ -47,6 +47,19 @@ class TournamentRepository(private val jdbcClient: JdbcClient) {
             .query(Long::class.java)
             .single()
 
+    /** Tournaments that haven't concluded yet (no end date, or end date in the future). */
+    fun countUpcoming(organizationId: UUID): Long =
+        jdbcClient.sql(
+            """
+            select count(*) from tournament
+            where organization_id = :organizationId and status = 'ACTIVE'
+              and (end_date is null or end_date >= current_date)
+            """.trimIndent(),
+        )
+            .param("organizationId", organizationId)
+            .query(Long::class.java)
+            .single()
+
     fun insert(
         organizationId: UUID,
         name: String,

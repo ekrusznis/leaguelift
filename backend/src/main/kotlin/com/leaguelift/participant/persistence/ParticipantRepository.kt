@@ -25,6 +25,23 @@ class ParticipantRepository(private val jdbcClient: JdbcClient) {
             .param("id", id).param("organizationId", organizationId)
             .query(::mapParticipant).optional().orElse(null)
 
+    fun countActiveForOrganization(organizationId: UUID): Long =
+        jdbcClient.sql("select count(*) from participant where organization_id = :organizationId and status = 'ACTIVE'")
+            .param("organizationId", organizationId)
+            .query(Long::class.java).single()
+
+    fun countActiveForTeam(teamId: UUID, organizationId: UUID): Long =
+        jdbcClient.sql(
+            """
+            select count(*) from participant_team pt
+            join participant p on p.id = pt.participant_id
+            where pt.team_id = :teamId and pt.organization_id = :organizationId
+              and pt.status = 'ACTIVE' and p.status = 'ACTIVE'
+            """.trimIndent(),
+        )
+            .param("teamId", teamId).param("organizationId", organizationId)
+            .query(Long::class.java).single()
+
     fun findByHousehold(householdId: UUID, organizationId: UUID): List<Participant> =
         jdbcClient.sql(
             """
