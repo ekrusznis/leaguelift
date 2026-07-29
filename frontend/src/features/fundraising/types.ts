@@ -29,6 +29,8 @@ export interface Campaign {
 	publishedAt: string | null;
 	createdAt: string;
 	updatedAt: string;
+	/** Sum of CONFIRMED contributions — real data, not a demo placeholder. */
+	raisedMinor: number;
 }
 
 export interface CampaignPage {
@@ -53,4 +55,41 @@ export interface PublicCampaign {
 	endDate: string | null;
 	status: CampaignStatus;
 	publishedAt: string | null;
+	raisedMinor: number;
+}
+
+export type ContributionStatus = "PENDING" | "CONFIRMED" | "CANCELED";
+
+/** Response from POST /public/campaigns/{slug}/contributions. */
+export interface ContributionCheckout {
+	contributionId: string;
+	checkoutUrl: string;
+}
+
+/** Response from GET /public/campaigns/{slug}/contributions/{contributionId} — used by the browser's return-page poll. */
+export interface ContributionStatusResult {
+	id: string;
+	status: ContributionStatus;
+	amountMinor: number;
+	currency: string;
+	confirmedAt: string | null;
+}
+
+/** Org-admin list shape from GET /organizations/{id}/campaigns/{campaignId}/contributions. */
+export interface Contribution {
+	id: string;
+	amountMinor: number;
+	currency: string;
+	supporterName: string | null;
+	isAnonymous: boolean;
+	supporterEmail: string | null;
+	confirmedAt: string | null;
+	createdAt: string;
+}
+
+export interface ContributionPage {
+	items: Contribution[];
+	page: number;
+	size: number;
+	totalElements: number;
 }

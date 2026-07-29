@@ -39,6 +39,9 @@ class SecurityConfig(
 				authorize
 					.requestMatchers("/api/v1/public/**").permitAll()
 					.requestMatchers("/api/v1/auth/**").permitAll()
+					// Stripe calls this directly — no JWT, authenticity comes from the
+					// Stripe-Signature header instead (verified in StripeWebhookController).
+					.requestMatchers("/api/v1/webhooks/**").permitAll()
 					.requestMatchers("/actuator/health/**").permitAll()
 					.requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 					.anyRequest().authenticated()

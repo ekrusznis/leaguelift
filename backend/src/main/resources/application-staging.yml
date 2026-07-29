@@ -19,6 +19,7 @@ leaguelift:
   # this phase to Connect onboarding only, never live charge routing).
   stripe:
     secret-key: ${STRIPE_SECRET_KEY}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET}
 
 management:
   endpoint:

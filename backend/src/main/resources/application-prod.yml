@@ -20,6 +20,7 @@ leaguelift:
   # alone; ADR-005 explicitly scopes this phase to Connect onboarding only.
   stripe:
     secret-key: ${STRIPE_SECRET_KEY}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET}
 
 management:
   endpoint:

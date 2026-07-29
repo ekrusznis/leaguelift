@@ -48,3 +48,7 @@ Additional, unreserved decisions:
 - ADR-013: Java 17 instead of Java 21 baseline (environment-driven, see the ADR itself)
 - ADR-014: Traditional email/password authentication, superseding ADR-002 (managed
   OIDC/Auth0 was never actually configured against a real tenant)
+- ADR-015: Inbound webhook consumption (the `webhook_event` table and a real
+  Stripe webhook receiver) pulled forward from Phase 5, scoped narrowly to
+  confirming campaign contributions via `checkout.session.completed` — written
+  as part of Phase 3's contribution-recording slice (2026-07-29)

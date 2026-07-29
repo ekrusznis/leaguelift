@@ -34,6 +34,7 @@ leaguelift:
   # error until STRIPE_SECRET_KEY (a test-mode secret key) is supplied in .env.
   stripe:
     secret-key: ${STRIPE_SECRET_KEY:}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
 
 management:
   endpoint:

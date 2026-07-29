@@ -12,6 +12,8 @@ import com.leaguelift.dashboard.web.ReportMetric
 import com.leaguelift.dashboard.web.ScheduleItem
 import com.leaguelift.dashboard.web.TeamPerformanceRow
 import com.leaguelift.fee.persistence.FeeRepository
+import com.leaguelift.fundraising.persistence.CampaignRepository
+import com.leaguelift.fundraising.persistence.ContributionRepository
 import com.leaguelift.household.persistence.HouseholdRepository
 import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.organization.persistence.OrganizationRepository
@@ -45,6 +47,8 @@ class OwnerDashboardService(
 	private val tournamentRepository: TournamentRepository,
 	private val auditEventRepository: AuditEventRepository,
 	private val feeRepository: FeeRepository,
+	private val campaignRepository: CampaignRepository,
+	private val contributionRepository: ContributionRepository,
 ) {
 
 	fun getSummary(organizationId: UUID, currentUser: CurrentUser): OwnerSummaryResponse {
@@ -65,12 +69,12 @@ class OwnerDashboardService(
 		val fees = feeRepository.getFinancialSummary(organizationId)
 		return FinancialOverviewResponse(
 			isFeesDemoData = false,
-			isFundraisingDemoData = true,
+			isFundraisingDemoData = false,
 			currency = "USD",
 			feesAssignedMinor = fees.feesAssignedMinor,
 			feesCollectedMinor = fees.feesCollectedMinor,
 			outstandingMinor = fees.outstandingMinor,
-			fundraisingMinor = 3_468_000,
+			fundraisingMinor = contributionRepository.sumConfirmedByOrganization(organizationId),
 			apparelSalesMinor = 1_892_000,
 			pendingPayoutMinor = 784_500,
 		)
@@ -90,15 +94,16 @@ class OwnerDashboardService(
 		membershipService.requireActiveMembership(organizationId, currentUser)
 		return teamRepository.findAll(organizationId, offset = 0, limit = TEAM_PERFORMANCE_LIMIT)
 			.map { team ->
+				val activeCampaign = campaignRepository.findActiveByTeam(team.id, organizationId)
 				TeamPerformanceRow(
 					teamId = team.id,
 					name = team.name,
 					sport = team.sport,
 					participants = participantRepository.countActiveForTeam(team.id, organizationId),
 					status = team.status.name,
-					isFundraisingDemoData = true,
-					fundraisingRaisedMinor = null,
-					fundraisingGoalMinor = null,
+					isFundraisingDemoData = activeCampaign == null,
+					fundraisingRaisedMinor = activeCampaign?.let { contributionRepository.sumConfirmedByCampaign(it.id) },
+					fundraisingGoalMinor = activeCampaign?.goalAmountMinor,
 				)
 			}
 	}

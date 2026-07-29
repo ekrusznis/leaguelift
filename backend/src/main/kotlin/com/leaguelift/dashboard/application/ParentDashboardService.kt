@@ -20,6 +20,7 @@ import com.leaguelift.fee.persistence.FeePaymentRepository
 import com.leaguelift.fee.persistence.FeeRepository
 import com.leaguelift.fundraising.domain.CampaignStatus
 import com.leaguelift.fundraising.persistence.CampaignRepository
+import com.leaguelift.fundraising.persistence.ContributionRepository
 import com.leaguelift.household.domain.Household
 import com.leaguelift.household.persistence.HouseholdRepository
 import com.leaguelift.membership.persistence.MembershipRepository
@@ -55,6 +56,7 @@ class ParentDashboardService(
 	private val feePaymentRepository: FeePaymentRepository,
 	private val feeAdjustmentRepository: FeeAdjustmentRepository,
 	private val campaignRepository: CampaignRepository,
+	private val contributionRepository: ContributionRepository,
 ) {
 
 	fun getOverview(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): HouseholdOverviewResponse {
@@ -112,8 +114,8 @@ class ParentDashboardService(
 				FundraiserSummary(
 					campaignId = it.id,
 					name = it.name,
-					isRaisedDemoData = true,
-					raisedMinor = (it.goalAmountMinor * 0.55).toLong(),
+					isRaisedDemoData = false,
+					raisedMinor = contributionRepository.sumConfirmedByCampaign(it.id),
 					goalMinor = it.goalAmountMinor,
 					currency = it.currency,
 				)

@@ -51,6 +51,8 @@ data class CampaignResponse(
     val publishedAt: Instant?,
     val createdAt: Instant,
     val updatedAt: Instant,
+    /** Sum of CONFIRMED contributions (fundraising/persistence/ContributionRepository.kt). Real, not demo data. */
+    val raisedMinor: Long,
 )
 
 /** Public-facing shape for the campaign's public page (section 16.6: `GET /public/campaigns/{slug}`). */
@@ -68,12 +70,13 @@ data class PublicCampaignResponse(
     val endDate: LocalDate?,
     val status: String,
     val publishedAt: Instant?,
+    val raisedMinor: Long,
 )
 
-fun Campaign.toResponse() = CampaignResponse(
-    id, organizationId, teamId, name, slug, description, campaignType.name, goalAmountMinor, currency, startDate, endDate, status.name, publishedAt, createdAt, updatedAt,
+fun Campaign.toResponse(raisedMinor: Long) = CampaignResponse(
+    id, organizationId, teamId, name, slug, description, campaignType.name, goalAmountMinor, currency, startDate, endDate, status.name, publishedAt, createdAt, updatedAt, raisedMinor,
 )
 
-fun Campaign.toPublicResponse() = PublicCampaignResponse(
-    id, organizationId, teamId, name, slug, description, campaignType.name, goalAmountMinor, currency, startDate, endDate, status.name, publishedAt,
+fun Campaign.toPublicResponse(raisedMinor: Long) = PublicCampaignResponse(
+    id, organizationId, teamId, name, slug, description, campaignType.name, goalAmountMinor, currency, startDate, endDate, status.name, publishedAt, raisedMinor,
 )

@@ -6,8 +6,11 @@ info:
     organizations. This document covers Phase 0 (foundation), Phase 1 (organization
     onboarding, teams, tournaments, and public pages), Phase 2 (households,
     participants, fee templates, and fee assignments), Phase 3 slice 11
-    (fundraising campaigns and their public pages — contribution/payment recording
-    is a later slice), traditional email/password authentication (superseding
+    (fundraising campaigns and their public pages) plus its remainder (campaign
+    contribution recording via test-mode Stripe Checkout, real raised totals, and
+    an inbound Stripe webhook receiver — DESIGN-DOC.md section 8.5; family
+    credit rules remain a later slice pending section 19.3's open questions),
+    traditional email/password authentication (superseding
     the originally planned external-IdP/Auth0 approach — see DESIGN-DOC.md section
     11.5), Phase 1's remaining file-upload/branding slice (organization logo/cover
     image via S3-compatible object storage — DESIGN-DOC.md section 11, ADR-012), and
@@ -17,7 +20,7 @@ info:
     charge routing yet).
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
-  version: "0.10.0"
+  version: "0.11.0"
 servers:
   - url: /api/v1
 tags:
@@ -36,6 +39,7 @@ tags:
   - name: fundraising
   - name: media
   - name: payouts
+  - name: webhooks
   - name: dashboard
 paths:
   /public/status:
@@ -1828,6 +1832,31 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /organizations/{organizationId}/campaigns/{campaignId}/contributions:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/CampaignIdParam"
+    get:
+      tags: [fundraising]
+      summary: List an organization's confirmed contributions to a campaign
+      operationId: listCampaignContributions
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of confirmed contributions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributionPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   # --- Media (organization logo/cover upload — DESIGN-DOC.md section 11, ADR-012) ---
 
   /organizations/{organizationId}/media/uploads:
@@ -1975,6 +2004,109 @@ paths:
                 $ref: "#/components/schemas/PublicCampaignResponse"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /public/campaigns/{slug}/contributions:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags: [fundraising]
+      summary: Start a one-time contribution checkout (test-mode Stripe Checkout)
+      description: >
+        Public, unauthenticated. Creates a PENDING contribution and a Stripe
+        Checkout Session; the caller redirects the browser to the returned
+        checkoutUrl. Confirmation happens only via POST /webhooks/stripe, not this
+        response — see ContributionService.
+      operationId: createContributionCheckout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContributionCheckoutRequest"
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributionCheckoutResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: The payments provider is unavailable (e.g. no Stripe test-mode key configured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /public/campaigns/{slug}/contributions/{contributionId}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: contributionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [fundraising]
+      summary: Poll a contribution's status
+      description: >
+        Public, unauthenticated — used by the browser's Stripe Checkout return
+        page. Read-only: this never flips status itself, it only reflects what
+        the Stripe webhook has already recorded.
+      operationId: getContributionStatus
+      responses:
+        "200":
+          description: Contribution status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributionStatusResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # --- Webhooks (DESIGN-DOC.md section 17) ---
+
+  /webhooks/stripe:
+    post:
+      tags: [webhooks]
+      summary: Stripe inbound webhook receiver
+      description: >
+        Not authenticated with a JWT — authenticity comes from the Stripe-Signature
+        header instead, verified server-side against leaguelift.stripe.webhook-secret.
+        Only checkout.session.completed is consumed this slice (campaign-contribution
+        confirmation); other event types are recorded as IGNORED. Idempotent per
+        (provider, externalEventId) — see webhook_event. Stripe Connect account-status
+        webhooks remain Phase 5.
+      operationId: receiveStripeWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Raw Stripe event payload — verified via signature before being parsed, never trusted otherwise.
+      responses:
+        "200":
+          description: Event processed (or already recorded — Stripe's own automatic retry of a known event is a no-op)
+        "400":
+          description: Signature verification failed
+        "500":
+          description: >
+            Processing failed after signature verification succeeded — Stripe will
+            retry automatically per its own retry schedule; no separate retry worker
+            exists for this.
 
   /me/dashboard-context:
     get:
@@ -4014,7 +4146,7 @@ components:
       enum: [DRAFT, ACTIVE, COMPLETED, ARCHIVED]
     CampaignResponse:
       type: object
-      required: [id, organizationId, name, slug, campaignType, goalAmountMinor, currency, status, createdAt, updatedAt]
+      required: [id, organizationId, name, slug, campaignType, goalAmountMinor, currency, status, createdAt, updatedAt, raisedMinor]
       properties:
         id:
           type: string
@@ -4060,6 +4192,10 @@ components:
         updatedAt:
           type: string
           format: date-time
+        raisedMinor:
+          type: integer
+          format: int64
+          description: Sum of CONFIRMED contributions (real data, not a demo placeholder).
     CampaignPage:
       type: object
       required: [items, page, size, totalElements]
@@ -4076,7 +4212,7 @@ components:
           type: integer
     PublicCampaignResponse:
       type: object
-      required: [id, organizationId, name, slug, campaignType, goalAmountMinor, currency, status]
+      required: [id, organizationId, name, slug, campaignType, goalAmountMinor, currency, status, raisedMinor]
       properties:
         id:
           type: string
@@ -4116,6 +4252,121 @@ components:
           type: string
           format: date-time
           nullable: true
+        raisedMinor:
+          type: integer
+          format: int64
+          description: Sum of CONFIRMED contributions (real data, not a demo placeholder).
+
+    ContributionStatus:
+      type: string
+      enum: [PENDING, CONFIRMED, CANCELED]
+    CreateContributionCheckoutRequest:
+      type: object
+      required: [amountMinor, successUrl, cancelUrl]
+      description: >
+        Public, unauthenticated — a supporter contributing to a campaign is never a
+        LeagueLift user. Confirmation happens only via the Stripe webhook
+        (POST /webhooks/stripe), not this call's response.
+      properties:
+        amountMinor:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Contribution amount in minor currency units. Bounded server-side (ContributionLimits — currently $1.00-$50,000.00).
+        supporterName:
+          type: string
+          maxLength: 120
+          nullable: true
+        isAnonymous:
+          type: boolean
+          default: false
+          description: When true, supporterName is dropped server-side regardless of what was sent.
+        supporterEmail:
+          type: string
+          format: email
+          maxLength: 254
+          nullable: true
+        successUrl:
+          type: string
+          description: >
+            May contain the literal placeholder "{CONTRIBUTION_ID}", substituted
+            server-side with the created contribution's id before being handed to
+            Stripe as the Checkout Session's success_url (mirrors Stripe's own
+            "{CHECKOUT_SESSION_ID}" convention) — the frontend can't know the
+            contribution id until this call returns.
+        cancelUrl:
+          type: string
+    ContributionCheckoutResponse:
+      type: object
+      required: [contributionId, checkoutUrl]
+      properties:
+        contributionId:
+          type: string
+          format: uuid
+        checkoutUrl:
+          type: string
+          description: Stripe-hosted Checkout Session URL. Redirect the browser here directly.
+    ContributionStatusResponse:
+      type: object
+      required: [id, status, amountMinor, currency]
+      description: Status-poll shape for the browser's return page. No supporter contact info exposed back to the browser.
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/ContributionStatus"
+        amountMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        confirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+    ContributionResponse:
+      type: object
+      required: [id, amountMinor, currency, isAnonymous, createdAt]
+      description: Org-admin list shape — confirmed contributions only.
+      properties:
+        id:
+          type: string
+          format: uuid
+        amountMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        supporterName:
+          type: string
+          nullable: true
+        isAnonymous:
+          type: boolean
+        supporterEmail:
+          type: string
+          nullable: true
+        confirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    ContributionPage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContributionResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
 
     DashboardRole:
       type: string

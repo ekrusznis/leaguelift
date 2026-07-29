@@ -224,7 +224,8 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 									</span>
 								</p>
 								<p className="text-sm text-slate-gray">
-									Goal {formatMoneyMinorUnits(campaign.goalAmountMinor, campaign.currency)} &middot; /{campaign.slug}
+									{formatMoneyMinorUnits(campaign.raisedMinor, campaign.currency)} raised of{" "}
+									{formatMoneyMinorUnits(campaign.goalAmountMinor, campaign.currency)} goal &middot; /{campaign.slug}
 								</p>
 							</div>
 							{campaign.status === "DRAFT" && (

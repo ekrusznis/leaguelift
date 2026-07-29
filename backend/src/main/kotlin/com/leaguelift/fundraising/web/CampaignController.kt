@@ -3,6 +3,7 @@ package com.leaguelift.fundraising.web
 import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.common.web.PageResponse
 import com.leaguelift.fundraising.application.CampaignService
+import com.leaguelift.fundraising.application.ContributionService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -19,7 +20,10 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/campaigns")
-class CampaignController(private val campaignService: CampaignService) {
+class CampaignController(
+    private val campaignService: CampaignService,
+    private val contributionService: ContributionService,
+) {
 
     @GetMapping
     fun list(
@@ -29,7 +33,8 @@ class CampaignController(private val campaignService: CampaignService) {
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<CampaignResponse> {
         val offset = page * size
-        val items = campaignService.list(organizationId, currentUser, offset, size).map { it.toResponse() }
+        val items = campaignService.list(organizationId, currentUser, offset, size)
+            .map { it.toResponse(contributionService.getConfirmedTotal(it.id)) }
         val total = campaignService.count(organizationId, currentUser)
         return PageResponse(items, page, size, total)
     }
@@ -45,7 +50,7 @@ class CampaignController(private val campaignService: CampaignService) {
             request.campaignType, request.goalAmountMinor, request.currency, request.startDate, request.endDate,
             currentUser,
         )
-        return ResponseEntity.status(HttpStatus.CREATED).body(campaign.toResponse())
+        return ResponseEntity.status(HttpStatus.CREATED).body(campaign.toResponse(raisedMinor = 0))
     }
 
     @GetMapping("/{campaignId}")
@@ -53,7 +58,10 @@ class CampaignController(private val campaignService: CampaignService) {
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): CampaignResponse = campaignService.get(organizationId, campaignId, currentUser).toResponse()
+    ): CampaignResponse {
+        val campaign = campaignService.get(organizationId, campaignId, currentUser)
+        return campaign.toResponse(contributionService.getConfirmedTotal(campaign.id))
+    }
 
     @PatchMapping("/{campaignId}")
     fun update(
@@ -61,17 +69,23 @@ class CampaignController(private val campaignService: CampaignService) {
         @PathVariable campaignId: UUID,
         @Valid @RequestBody request: UpdateCampaignRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): CampaignResponse = campaignService.update(
-        organizationId, campaignId, request.name, request.description, request.goalAmountMinor,
-        request.startDate, request.endDate, currentUser,
-    ).toResponse()
+    ): CampaignResponse {
+        val campaign = campaignService.update(
+            organizationId, campaignId, request.name, request.description, request.goalAmountMinor,
+            request.startDate, request.endDate, currentUser,
+        )
+        return campaign.toResponse(contributionService.getConfirmedTotal(campaign.id))
+    }
 
     @PostMapping("/{campaignId}/publish")
     fun publish(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): CampaignResponse = campaignService.publish(organizationId, campaignId, currentUser).toResponse()
+    ): CampaignResponse {
+        val campaign = campaignService.publish(organizationId, campaignId, currentUser)
+        return campaign.toResponse(contributionService.getConfirmedTotal(campaign.id))
+    }
 
     @PatchMapping("/{campaignId}/status")
     fun updateStatus(
@@ -79,5 +93,22 @@ class CampaignController(private val campaignService: CampaignService) {
         @PathVariable campaignId: UUID,
         @Valid @RequestBody request: UpdateCampaignStatusRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): CampaignResponse = campaignService.updateStatus(organizationId, campaignId, request.status, currentUser).toResponse()
+    ): CampaignResponse {
+        val campaign = campaignService.updateStatus(organizationId, campaignId, request.status, currentUser)
+        return campaign.toResponse(contributionService.getConfirmedTotal(campaign.id))
+    }
+
+    @GetMapping("/{campaignId}/contributions")
+    fun listContributions(
+        @PathVariable organizationId: UUID,
+        @PathVariable campaignId: UUID,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PageResponse<ContributionResponse> {
+        val offset = page * size
+        val items = contributionService.listConfirmed(organizationId, campaignId, currentUser, offset, size).map { it.toResponse() }
+        val total = contributionService.getConfirmedCount(campaignId)
+        return PageResponse(items, page, size, total)
+    }
 }

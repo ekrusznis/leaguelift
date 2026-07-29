@@ -30,6 +30,7 @@ const draftCampaign: Campaign = {
 	publishedAt: null,
 	createdAt: new Date().toISOString(),
 	updatedAt: new Date().toISOString(),
+	raisedMinor: 0,
 };
 
 describe("CampaignList", () => {

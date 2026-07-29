@@ -8,7 +8,11 @@ import com.leaguelift.fee.domain.FeeAssignmentStatus
 import com.leaguelift.fee.persistence.FeeAdjustmentRepository
 import com.leaguelift.fee.persistence.FeePaymentRepository
 import com.leaguelift.fee.persistence.FeeRepository
+import com.leaguelift.fundraising.domain.Campaign
+import com.leaguelift.fundraising.domain.CampaignStatus
+import com.leaguelift.fundraising.domain.CampaignType
 import com.leaguelift.fundraising.persistence.CampaignRepository
+import com.leaguelift.fundraising.persistence.ContributionRepository
 import com.leaguelift.household.domain.AdultStatus
 import com.leaguelift.household.domain.Household
 import com.leaguelift.household.domain.HouseholdAdult
@@ -35,10 +39,11 @@ class ParentDashboardServiceTest {
 	private val feePaymentRepository = mockk<FeePaymentRepository>()
 	private val feeAdjustmentRepository = mockk<FeeAdjustmentRepository>()
 	private val campaignRepository = mockk<CampaignRepository>()
+	private val contributionRepository = mockk<ContributionRepository>()
 
 	private val service = ParentDashboardService(
 		householdRepository, membershipRepository, participantRepository, teamRepository,
-		feeRepository, feePaymentRepository, feeAdjustmentRepository, campaignRepository,
+		feeRepository, feePaymentRepository, feeAdjustmentRepository, campaignRepository, contributionRepository,
 	)
 
 	private val orgId = UUID.randomUUID()
@@ -117,6 +122,27 @@ class ParentDashboardServiceTest {
 		val result = service.getAthletes(orgId, householdId, guardian)
 
 		assertEquals(0, result.size)
+	}
+
+	@Test
+	fun `getActiveFundraisers returns real confirmed contribution totals`() {
+		val campaign = Campaign(
+			id = UUID.randomUUID(), organizationId = orgId, teamId = null, name = "Spring Trip Fund",
+			slug = "spring-trip-fund", description = null, campaignType = CampaignType.TRAVEL,
+			goalAmountMinor = 100_000L, currency = "USD", startDate = null, endDate = null,
+			status = CampaignStatus.ACTIVE, publishedAt = Instant.now(), createdAt = Instant.now(), updatedAt = Instant.now(),
+		)
+		every { householdRepository.findById(householdId, orgId) } returns household()
+		every { membershipRepository.findActiveMembership(orgId, guardian.userId) } returns null
+		every { householdRepository.listAdults(householdId, orgId) } returns listOf(adult(guardian.email))
+		every { campaignRepository.findAll(orgId, 0, 25) } returns listOf(campaign)
+		every { contributionRepository.sumConfirmedByCampaign(campaign.id) } returns 34_500L
+
+		val result = service.getActiveFundraisers(orgId, householdId, guardian)
+
+		assertEquals(1, result.size)
+		assertEquals(false, result.first().isRaisedDemoData)
+		assertEquals(34_500L, result.first().raisedMinor)
 	}
 
 	private fun feeAssignment(status: FeeAssignmentStatus, originalAmountMinor: Long) = FeeAssignment(

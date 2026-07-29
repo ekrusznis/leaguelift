@@ -24,6 +24,22 @@ class CampaignRepository(private val jdbcClient: JdbcClient) {
             .optional()
             .orElse(null)
 
+    /** Most recently created active campaign for a team — used by the owner dashboard's team-performance row (one team, one headline fundraiser at a time is enough for that card). */
+    fun findActiveByTeam(teamId: UUID, organizationId: UUID): Campaign? =
+        jdbcClient.sql(
+            """
+            select $COLUMNS from campaign
+            where team_id = :teamId and organization_id = :organizationId and status = 'ACTIVE'
+            order by created_at desc
+            limit 1
+            """.trimIndent(),
+        )
+            .param("teamId", teamId)
+            .param("organizationId", organizationId)
+            .query(::mapRow)
+            .optional()
+            .orElse(null)
+
     fun findBySlug(slug: String): Campaign? =
         jdbcClient.sql("select $COLUMNS from campaign where lower(slug) = lower(:slug)")
             .param("slug", slug)

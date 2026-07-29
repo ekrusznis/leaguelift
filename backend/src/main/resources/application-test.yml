@@ -18,3 +18,4 @@ leaguelift:
   # is only exercised with a mocked StripeConnectClient, same pattern as SpacesClient).
   stripe:
     secret-key: "test-secret-key-not-real"
+    webhook-secret: "test-webhook-secret-not-real"

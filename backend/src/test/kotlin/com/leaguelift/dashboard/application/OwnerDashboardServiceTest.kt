@@ -13,6 +13,11 @@ import com.leaguelift.organization.domain.OrganizationStatus
 import com.leaguelift.organization.domain.OrganizationType
 import com.leaguelift.fee.domain.OrganizationFeeFinancialSummary
 import com.leaguelift.fee.persistence.FeeRepository
+import com.leaguelift.fundraising.domain.Campaign
+import com.leaguelift.fundraising.domain.CampaignStatus
+import com.leaguelift.fundraising.domain.CampaignType
+import com.leaguelift.fundraising.persistence.CampaignRepository
+import com.leaguelift.fundraising.persistence.ContributionRepository
 import com.leaguelift.organization.persistence.OrganizationRepository
 import com.leaguelift.participant.persistence.ParticipantRepository
 import com.leaguelift.team.domain.Team
@@ -38,10 +43,13 @@ class OwnerDashboardServiceTest {
 	private val tournamentRepository = mockk<TournamentRepository>()
 	private val auditEventRepository = mockk<AuditEventRepository>()
 	private val feeRepository = mockk<FeeRepository>()
+	private val campaignRepository = mockk<CampaignRepository>()
+	private val contributionRepository = mockk<ContributionRepository>()
 
 	private val service = OwnerDashboardService(
 		membershipService, organizationRepository, teamRepository,
 		householdRepository, participantRepository, tournamentRepository, auditEventRepository, feeRepository,
+		campaignRepository, contributionRepository,
 	)
 
 	private val orgId = UUID.randomUUID()
@@ -75,34 +83,60 @@ class OwnerDashboardServiceTest {
 	}
 
 	@Test
-	fun `getFinancialOverview returns real fee figures but keeps fundraising demo-tagged`() {
+	fun `getFinancialOverview returns real fee and fundraising figures`() {
 		every { membershipService.requireActiveMembership(orgId, currentUser) } returns membership()
 		every { feeRepository.getFinancialSummary(orgId) } returns OrganizationFeeFinancialSummary(
 			feesAssignedMinor = 15000L, feesCollectedMinor = 5000L, outstandingMinor = 10000L,
 		)
+		every { contributionRepository.sumConfirmedByOrganization(orgId) } returns 42_00L
 
 		val result = service.getFinancialOverview(orgId, currentUser)
 
 		assertEquals(false, result.isFeesDemoData)
-		assertEquals(true, result.isFundraisingDemoData)
+		assertEquals(false, result.isFundraisingDemoData)
 		assertEquals(15000L, result.feesAssignedMinor)
 		assertEquals(5000L, result.feesCollectedMinor)
 		assertEquals(10000L, result.outstandingMinor)
+		assertEquals(42_00L, result.fundraisingMinor)
 		verify(exactly = 1) { membershipService.requireActiveMembership(orgId, currentUser) }
 	}
 
 	@Test
-	fun `getTeamPerformance includes real participant counts and is tagged demo for fundraising`() {
+	fun `getTeamPerformance is tagged demo for fundraising when a team has no active campaign`() {
 		val team = Team(UUID.randomUUID(), orgId, "U12 Blue", "Soccer", "2025", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
 		every { membershipService.requireActiveMembership(orgId, currentUser) } returns membership()
 		every { teamRepository.findAll(orgId, 0, 10) } returns listOf(team)
 		every { participantRepository.countActiveForTeam(team.id, orgId) } returns 5
+		every { campaignRepository.findActiveByTeam(team.id, orgId) } returns null
 
 		val result = service.getTeamPerformance(orgId, currentUser)
 
 		assertEquals(1, result.size)
 		assertEquals(5, result.first().participants)
 		assertEquals(true, result.first().isFundraisingDemoData)
+		assertEquals(null, result.first().fundraisingRaisedMinor)
+	}
+
+	@Test
+	fun `getTeamPerformance returns real fundraising figures when a team has an active campaign`() {
+		val team = Team(UUID.randomUUID(), orgId, "U12 Blue", "Soccer", "2025", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
+		val campaign = Campaign(
+			id = UUID.randomUUID(), organizationId = orgId, teamId = team.id, name = "Spring Trip Fund",
+			slug = "spring-trip-fund", description = null, campaignType = CampaignType.TRAVEL,
+			goalAmountMinor = 100_000L, currency = "USD", startDate = null, endDate = null,
+			status = CampaignStatus.ACTIVE, publishedAt = Instant.now(), createdAt = Instant.now(), updatedAt = Instant.now(),
+		)
+		every { membershipService.requireActiveMembership(orgId, currentUser) } returns membership()
+		every { teamRepository.findAll(orgId, 0, 10) } returns listOf(team)
+		every { participantRepository.countActiveForTeam(team.id, orgId) } returns 5
+		every { campaignRepository.findActiveByTeam(team.id, orgId) } returns campaign
+		every { contributionRepository.sumConfirmedByCampaign(campaign.id) } returns 55_000L
+
+		val result = service.getTeamPerformance(orgId, currentUser)
+
+		assertEquals(false, result.first().isFundraisingDemoData)
+		assertEquals(55_000L, result.first().fundraisingRaisedMinor)
+		assertEquals(100_000L, result.first().fundraisingGoalMinor)
 	}
 
 	@Test

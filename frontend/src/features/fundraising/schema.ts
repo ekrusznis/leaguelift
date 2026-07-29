@@ -42,3 +42,22 @@ export const createCampaignSchema = z
 	});
 
 export type CreateCampaignFormValues = z.infer<typeof createCampaignSchema>;
+
+/**
+ * Mirrors the backend's CreateContributionCheckoutRequest and
+ * ContributionLimits (backend/src/main/kotlin/com/leaguelift/fundraising/domain/Contribution.kt) —
+ * min $1.00 / max $50,000.00, mirrored here for immediate UX feedback; the backend
+ * remains authoritative.
+ */
+export const createContributionSchema = z.object({
+	amountMinor: z.coerce
+		.number()
+		.int("Amount must be a whole number of cents.")
+		.min(100, "Minimum contribution is $1.00.")
+		.max(5_000_000, "Maximum contribution is $50,000.00."),
+	supporterName: z.string().trim().max(120).optional().or(z.literal("")),
+	isAnonymous: z.boolean(),
+	supporterEmail: z.string().trim().email("Enter a valid email address.").max(254).optional().or(z.literal("")),
+});
+
+export type CreateContributionFormValues = z.infer<typeof createContributionSchema>;
