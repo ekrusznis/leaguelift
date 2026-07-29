@@ -118,8 +118,8 @@ class MediaUploadEndToEndIntegrationTest : AbstractIntegrationTest() {
 		assertEquals(10, confirmed.asset.widthPx)
 		assertEquals(10, confirmed.asset.heightPx)
 
-		val assignment = mediaAssignmentService.assign(organization.id, MediaUsageSlot.LOGO, requested.asset.id, "Riverside Soccer logo", owner)
-		val active = mediaAssignmentService.listActive(organization.id, owner)
+		val assignment = mediaAssignmentService.assignOrganizationMedia(organization.id, MediaUsageSlot.LOGO, requested.asset.id, "Riverside Soccer logo", owner)
+		val active = mediaAssignmentService.listActiveOrganizationMedia(organization.id, owner)
 		assertTrue(active.any { it.id == assignment.id })
 	}
 

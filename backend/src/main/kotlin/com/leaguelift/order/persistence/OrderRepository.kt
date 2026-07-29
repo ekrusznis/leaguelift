@@ -1,0 +1,112 @@
+package com.leaguelift.order.persistence
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.leaguelift.order.domain.Order
+import com.leaguelift.order.domain.OrderStatus
+import com.leaguelift.order.domain.ShippingAddress
+import org.springframework.jdbc.core.simple.JdbcClient
+import org.springframework.stereotype.Repository
+import java.sql.Timestamp
+import java.time.Instant
+import java.util.UUID
+
+private const val COLUMNS = """
+    id, organization_id, store_id, status, currency, supporter_name, supporter_email,
+    shipping_address, stripe_checkout_session_id, confirmed_at, created_at
+"""
+
+@Repository
+class OrderRepository(private val jdbcClient: JdbcClient, private val objectMapper: ObjectMapper) {
+
+	fun findById(id: UUID, organizationId: UUID): Order? =
+		jdbcClient.sql("""select $COLUMNS from "order" where id = :id and organization_id = :organizationId""")
+			.param("id", id)
+			.param("organizationId", organizationId)
+			.query(::mapRow)
+			.optional()
+			.orElse(null)
+
+	fun findByStripeCheckoutSessionId(sessionId: String): Order? =
+		jdbcClient.sql("""select $COLUMNS from "order" where stripe_checkout_session_id = :sessionId""")
+			.param("sessionId", sessionId)
+			.query(::mapRow)
+			.optional()
+			.orElse(null)
+
+	fun findByStore(storeId: UUID, offset: Int, limit: Int): List<Order> =
+		jdbcClient.sql(
+			"""
+			select $COLUMNS from "order"
+			where store_id = :storeId and status = 'CONFIRMED'
+			order by confirmed_at desc
+			offset :offset limit :limit
+			""".trimIndent(),
+		)
+			.param("storeId", storeId)
+			.param("offset", offset)
+			.param("limit", limit)
+			.query(::mapRow)
+			.list()
+
+	fun countConfirmedByStore(storeId: UUID): Long =
+		jdbcClient.sql("""select count(*) from "order" where store_id = :storeId and status = 'CONFIRMED'""")
+			.param("storeId", storeId)
+			.query(Long::class.java)
+			.single()
+
+	fun insertPending(organizationId: UUID, storeId: UUID, currency: String, supporterName: String?, supporterEmail: String?): Order {
+		val id = UUID.randomUUID()
+		val now = Instant.now()
+		jdbcClient.sql(
+			"""
+			insert into "order" (id, organization_id, store_id, status, currency, supporter_name, supporter_email, created_at)
+			values (:id, :organizationId, :storeId, 'PENDING', :currency, :supporterName, :supporterEmail, :now)
+			""".trimIndent(),
+		)
+			.param("id", id)
+			.param("organizationId", organizationId)
+			.param("storeId", storeId)
+			.param("currency", currency)
+			.param("supporterName", supporterName)
+			.param("supporterEmail", supporterEmail)
+			.param("now", Timestamp.from(now))
+			.update()
+		return Order(id, organizationId, storeId, OrderStatus.PENDING, currency, supporterName, supporterEmail, null, null, null, now)
+	}
+
+	fun attachStripeSession(id: UUID, stripeCheckoutSessionId: String): Int =
+		jdbcClient.sql("""update "order" set stripe_checkout_session_id = :sessionId where id = :id""")
+			.param("sessionId", stripeCheckoutSessionId)
+			.param("id", id)
+			.update()
+
+	/** Only flips PENDING -> CONFIRMED. Returns rows affected (0 if already confirmed/canceled — the idempotency guard, same pattern as ContributionRepository.markConfirmed). */
+	fun markConfirmed(id: UUID, shippingAddress: ShippingAddress?): Int {
+		val now = Instant.now()
+		return jdbcClient.sql(
+			"""
+			update "order" set status = 'CONFIRMED', confirmed_at = :now, shipping_address = cast(:shippingAddress as jsonb)
+			where id = :id and status = 'PENDING'
+			""".trimIndent(),
+		)
+			.param("now", Timestamp.from(now))
+			.param("shippingAddress", shippingAddress?.let { objectMapper.writeValueAsString(it) })
+			.param("id", id)
+			.update()
+	}
+
+	private fun mapRow(rs: java.sql.ResultSet, rowNum: Int): Order =
+		Order(
+			id = rs.getObject("id", UUID::class.java),
+			organizationId = rs.getObject("organization_id", UUID::class.java),
+			storeId = rs.getObject("store_id", UUID::class.java),
+			status = OrderStatus.valueOf(rs.getString("status")),
+			currency = rs.getString("currency"),
+			supporterName = rs.getString("supporter_name"),
+			supporterEmail = rs.getString("supporter_email"),
+			shippingAddress = rs.getString("shipping_address")?.let { objectMapper.readValue(it, ShippingAddress::class.java) },
+			stripeCheckoutSessionId = rs.getString("stripe_checkout_session_id"),
+			confirmedAt = rs.getTimestamp("confirmed_at")?.toInstant(),
+			createdAt = rs.getTimestamp("created_at").toInstant(),
+		)
+}

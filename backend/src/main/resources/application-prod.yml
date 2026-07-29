@@ -21,6 +21,11 @@ leaguelift:
   stripe:
     secret-key: ${STRIPE_SECRET_KEY}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET}
+  # No default — startup fails if unset. Draft-order-only (Phase 4 slice 1); no
+  # send-to-production call exists yet, see the printify integration module.
+  printify:
+    api-token: ${PRINTIFY_API_TOKEN}
+    shop-id: ${PRINTIFY_SHOP_ID}
 
 management:
   endpoint:

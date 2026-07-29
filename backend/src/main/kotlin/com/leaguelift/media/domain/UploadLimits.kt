@@ -11,15 +11,21 @@ object UploadLimits {
 	private const val MAX_LOGO_RASTER_BYTES = 10L * 1024 * 1024
 	private const val MAX_LOGO_SVG_BYTES = 2L * 1024 * 1024
 	private const val MAX_COVER_BYTES = 15L * 1024 * 1024
+	private const val MAX_PRODUCT_DESIGN_RASTER_BYTES = 15L * 1024 * 1024
+	private const val MAX_PRODUCT_DESIGN_SVG_BYTES = 2L * 1024 * 1024
 
 	const val MAX_DIMENSION_PX = 10_000
 
 	private val LOGO_CONTENT_TYPES = setOf("image/png", "image/jpeg", "image/webp", "image/svg+xml")
 	private val COVER_CONTENT_TYPES = setOf("image/png", "image/jpeg", "image/webp")
+	// Same shape as LOGO — a product design is typically a team/org graphic being
+	// print-placed, so vector (SVG) is just as relevant here as it is for a logo.
+	private val PRODUCT_DESIGN_CONTENT_TYPES = setOf("image/png", "image/jpeg", "image/webp", "image/svg+xml")
 
 	fun allowedContentTypes(slot: MediaUsageSlot): Set<String> = when (slot) {
 		MediaUsageSlot.LOGO -> LOGO_CONTENT_TYPES
 		MediaUsageSlot.COVER -> COVER_CONTENT_TYPES
+		MediaUsageSlot.PRODUCT_DESIGN -> PRODUCT_DESIGN_CONTENT_TYPES
 	}
 
 	fun isContentTypeAllowed(slot: MediaUsageSlot, contentType: String): Boolean =
@@ -28,6 +34,7 @@ object UploadLimits {
 	fun maxBytes(slot: MediaUsageSlot, contentType: String): Long = when (slot) {
 		MediaUsageSlot.LOGO -> if (contentType == "image/svg+xml") MAX_LOGO_SVG_BYTES else MAX_LOGO_RASTER_BYTES
 		MediaUsageSlot.COVER -> MAX_COVER_BYTES
+		MediaUsageSlot.PRODUCT_DESIGN -> if (contentType == "image/svg+xml") MAX_PRODUCT_DESIGN_SVG_BYTES else MAX_PRODUCT_DESIGN_RASTER_BYTES
 	}
 
 	/**

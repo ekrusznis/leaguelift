@@ -70,11 +70,11 @@ class MediaAssignmentIntegrationTest : AbstractIntegrationTest() {
 
 		val firstUpload = mediaUploadService.requestUpload(organization.id, MediaUsageSlot.LOGO, "logo-1.png", "image/png", 1024, owner)
 		mediaUploadService.confirmUpload(organization.id, firstUpload.asset.id, owner)
-		mediaAssignmentService.assign(organization.id, MediaUsageSlot.LOGO, firstUpload.asset.id, null, owner)
+		mediaAssignmentService.assignOrganizationMedia(organization.id, MediaUsageSlot.LOGO, firstUpload.asset.id, null, owner)
 
 		val secondUpload = mediaUploadService.requestUpload(organization.id, MediaUsageSlot.LOGO, "logo-2.png", "image/png", 1024, owner)
 		mediaUploadService.confirmUpload(organization.id, secondUpload.asset.id, owner)
-		val secondAssignment = mediaAssignmentService.assign(organization.id, MediaUsageSlot.LOGO, secondUpload.asset.id, null, owner)
+		val secondAssignment = mediaAssignmentService.assignOrganizationMedia(organization.id, MediaUsageSlot.LOGO, secondUpload.asset.id, null, owner)
 
 		val retiredFirstAssignment = mediaAssignmentRepository.findActiveBySlot(MediaEntityType.ORGANIZATION, organization.id, MediaUsageSlot.LOGO)
 		assertEquals(secondAssignment.id, retiredFirstAssignment?.id, "the active assignment must now be the second one")

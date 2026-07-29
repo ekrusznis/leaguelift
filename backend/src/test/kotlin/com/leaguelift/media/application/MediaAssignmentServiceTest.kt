@@ -58,7 +58,7 @@ class MediaAssignmentServiceTest {
 		every { mediaAssignmentRepository.insert(any(), any(), any(), any(), any(), any(), any(), any()) } returns sampleAssignment(asset.id)
 		every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 
-		service.assign(orgId, MediaUsageSlot.LOGO, asset.id, null, currentUser)
+		service.assignOrganizationMedia(orgId, MediaUsageSlot.LOGO, asset.id, null, currentUser)
 
 		verify(exactly = 1) { membershipService.requireManagerRole(orgId, currentUser) }
 	}
@@ -70,7 +70,7 @@ class MediaAssignmentServiceTest {
 		every { mediaAssetRepository.findById(asset.id, orgId) } returns asset
 
 		assertFailsWith<ValidationException> {
-			service.assign(orgId, MediaUsageSlot.LOGO, asset.id, null, currentUser)
+			service.assignOrganizationMedia(orgId, MediaUsageSlot.LOGO, asset.id, null, currentUser)
 		}
 	}
 
@@ -80,7 +80,7 @@ class MediaAssignmentServiceTest {
 		every { mediaAssetRepository.findById(any(), orgId) } returns null
 
 		assertFailsWith<NotFoundException> {
-			service.assign(orgId, MediaUsageSlot.LOGO, UUID.randomUUID(), null, currentUser)
+			service.assignOrganizationMedia(orgId, MediaUsageSlot.LOGO, UUID.randomUUID(), null, currentUser)
 		}
 	}
 
@@ -97,7 +97,7 @@ class MediaAssignmentServiceTest {
 		every { mediaAssignmentRepository.insert(any(), any(), any(), any(), any(), any(), any(), any()) } returns sampleAssignment(newAsset.id)
 		every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 
-		service.assign(orgId, MediaUsageSlot.LOGO, newAsset.id, null, currentUser)
+		service.assignOrganizationMedia(orgId, MediaUsageSlot.LOGO, newAsset.id, null, currentUser)
 
 		verify(exactly = 1) { mediaAssignmentRepository.retire(previous.id, orgId) }
 		verify(exactly = 1) { mediaAssetRepository.archive(previous.assetId, orgId) }
@@ -116,7 +116,7 @@ class MediaAssignmentServiceTest {
 		every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 		every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
 
-		val result = service.assign(orgId, MediaUsageSlot.LOGO, asset.id, null, currentUser)
+		val result = service.assignOrganizationMedia(orgId, MediaUsageSlot.LOGO, asset.id, null, currentUser)
 
 		assertEquals(Visibility.PUBLIC, result.visibility)
 		verify(exactly = 1) { outboxWriter.write("media_assignment", result.id, orgId, "media.assignment.published", any()) }
@@ -134,7 +134,7 @@ class MediaAssignmentServiceTest {
 		} returns sampleAssignment(asset.id, visibility = Visibility.ORGANIZATION_PRIVATE, publicationStatus = PublicationStatus.PRIVATE)
 		every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 
-		val result = service.assign(orgId, MediaUsageSlot.LOGO, asset.id, null, currentUser)
+		val result = service.assignOrganizationMedia(orgId, MediaUsageSlot.LOGO, asset.id, null, currentUser)
 
 		assertEquals(Visibility.ORGANIZATION_PRIVATE, result.visibility)
 		verify(exactly = 0) { outboxWriter.write(any(), any(), any(), any(), any()) }
@@ -145,7 +145,7 @@ class MediaAssignmentServiceTest {
 		every { membershipService.requireActiveMembership(orgId, currentUser) } returns managerMembership()
 		every { mediaAssignmentRepository.listActive(MediaEntityType.ORGANIZATION, orgId) } returns emptyList()
 
-		service.listActive(orgId, currentUser)
+		service.listActiveOrganizationMedia(orgId, currentUser)
 
 		verify(exactly = 1) { membershipService.requireActiveMembership(orgId, currentUser) }
 		verify(exactly = 0) { membershipService.requireManagerRole(any(), any()) }

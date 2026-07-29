@@ -2,6 +2,8 @@ package com.leaguelift.webhook.web
 
 import com.leaguelift.config.StripeProperties
 import com.leaguelift.fundraising.application.ContributionService
+import com.leaguelift.order.application.OrderService
+import com.leaguelift.order.domain.ShippingAddress
 import com.leaguelift.webhook.domain.WebhookProcessingStatus
 import com.leaguelift.webhook.persistence.WebhookEventRepository
 import com.stripe.exception.SignatureVerificationException
@@ -24,11 +26,14 @@ private const val PROVIDER = "stripe"
 /**
  * Inbound Stripe webhook receiver (DESIGN-DOC.md section 17). Only
  * `checkout.session.completed` is consumed this slice, to confirm campaign
- * contributions (`fundraising/application/ContributionService.kt`) — Stripe
- * Connect account-status webhooks remain Phase 5. Processed synchronously inline
- * (no outbox-consumer worker exists yet, and doesn't need to for one lightweight
- * event type): a genuine processing failure returns 500 so Stripe's own automatic
- * retry schedule covers it, rather than us building a retry worker for this.
+ * contributions (`fundraising/application/ContributionService.kt`) and store
+ * orders (`order/application/OrderService.kt`) — Stripe Connect account-status
+ * webhooks remain Phase 5. A session's own metadata (`orderId` present or not)
+ * disambiguates which one a given event is for, since both use the same event
+ * type. Processed synchronously inline (no outbox-consumer worker exists yet,
+ * and doesn't need to for one lightweight event type): a genuine processing
+ * failure returns 500 so Stripe's own automatic retry schedule covers it, rather
+ * than us building a retry worker for this.
  */
 @RestController
 @RequestMapping("/api/v1/webhooks/stripe")
@@ -36,6 +41,7 @@ class StripeWebhookController(
 	private val stripeProperties: StripeProperties,
 	private val webhookEventRepository: WebhookEventRepository,
 	private val contributionService: ContributionService,
+	private val orderService: OrderService,
 ) {
 
 	@PostMapping
@@ -58,6 +64,7 @@ class StripeWebhookController(
 
 		val payloadHash = sha256Hex(payload)
 		var relatedEntityId: UUID? = null
+		var relatedEntityType: String? = null
 		var failureMessage: String? = null
 		val outcome = try {
 			when (event.type) {
@@ -65,8 +72,13 @@ class StripeWebhookController(
 					val session = event.dataObjectDeserializer.getObject().orElseThrow {
 						IllegalStateException("Unable to deserialize checkout.session.completed payload")
 					} as Session
-					val contribution = contributionService.confirmFromWebhook(session.id, session.paymentStatus)
-					relatedEntityId = contribution?.id
+					if (session.metadata?.containsKey("orderId") == true) {
+						relatedEntityType = "order"
+						relatedEntityId = orderService.confirmFromWebhook(session.id, session.paymentStatus, shippingAddressOf(session))?.id
+					} else {
+						relatedEntityType = "contribution"
+						relatedEntityId = contributionService.confirmFromWebhook(session.id, session.paymentStatus)?.id
+					}
 					WebhookProcessingStatus.PROCESSED
 				}
 				else -> WebhookProcessingStatus.IGNORED
@@ -85,7 +97,7 @@ class StripeWebhookController(
 			payloadHash = payloadHash,
 			signatureVerified = true,
 			processingStatus = outcome,
-			relatedEntityType = if (relatedEntityId != null) "contribution" else null,
+			relatedEntityType = if (relatedEntityId != null) relatedEntityType else null,
 			relatedEntityId = relatedEntityId,
 			lastError = failureMessage,
 		)
@@ -100,4 +112,22 @@ class StripeWebhookController(
 	private fun sha256Hex(value: String): String =
 		MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
 			.joinToString("") { "%02x".format(it) }
+
+	/**
+	 * Stripe Checkout's shipping_address_collection surfaces the collected address
+	 * on `customer_details.address` (this SDK version has no separate top-level
+	 * "shipping" field — confirmed against the actual Session model class).
+	 */
+	private fun shippingAddressOf(session: Session): ShippingAddress? {
+		val address = session.customerDetails?.address ?: return null
+		return ShippingAddress(
+			name = session.customerDetails?.name,
+			line1 = address.line1,
+			line2 = address.line2,
+			city = address.city,
+			state = address.state,
+			postalCode = address.postalCode,
+			country = address.country,
+		)
+	}
 }

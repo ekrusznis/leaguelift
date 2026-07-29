@@ -68,10 +68,10 @@ class MediaOrganizationIsolationIntegrationTest : AbstractIntegrationTest() {
 			organization.id, MediaUsageSlot.LOGO, "logo.png", "image/png", 1024, owner,
 		)
 		mediaUploadService.confirmUpload(organization.id, requested.asset.id, owner)
-		val assignment = mediaAssignmentService.assign(organization.id, MediaUsageSlot.LOGO, requested.asset.id, null, owner)
+		val assignment = mediaAssignmentService.assignOrganizationMedia(organization.id, MediaUsageSlot.LOGO, requested.asset.id, null, owner)
 
 		// The owner can see their own organization's assignment.
-		assert(mediaAssignmentService.listActive(organization.id, owner).any { it.id == assignment.id })
+		assert(mediaAssignmentService.listActiveOrganizationMedia(organization.id, owner).any { it.id == assignment.id })
 
 		assertFailsWith<ForbiddenException> {
 			mediaUploadService.requestUpload(organization.id, MediaUsageSlot.LOGO, "evil.png", "image/png", 1024, outsider)
@@ -80,10 +80,10 @@ class MediaOrganizationIsolationIntegrationTest : AbstractIntegrationTest() {
 			mediaUploadService.confirmUpload(organization.id, requested.asset.id, outsider)
 		}
 		assertFailsWith<ForbiddenException> {
-			mediaAssignmentService.assign(organization.id, MediaUsageSlot.COVER, requested.asset.id, null, outsider)
+			mediaAssignmentService.assignOrganizationMedia(organization.id, MediaUsageSlot.COVER, requested.asset.id, null, outsider)
 		}
 		assertFailsWith<ForbiddenException> {
-			mediaAssignmentService.listActive(organization.id, outsider)
+			mediaAssignmentService.listActiveOrganizationMedia(organization.id, outsider)
 		}
 	}
 

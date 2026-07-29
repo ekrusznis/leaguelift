@@ -5,7 +5,7 @@ import java.util.UUID
 
 enum class MediaAssetStatus { PENDING_UPLOAD, UPLOADED, PROCESSING, READY, FAILED, REJECTED, ARCHIVED }
 
-enum class MediaUsageSlot { LOGO, COVER }
+enum class MediaUsageSlot { LOGO, COVER, PRODUCT_DESIGN }
 
 data class MediaAsset(
 	val id: UUID,

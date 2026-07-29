@@ -19,3 +19,8 @@ leaguelift:
   stripe:
     secret-key: "test-secret-key-not-real"
     webhook-secret: "test-webhook-secret-not-real"
+  # Dummy values so the context loads — no test calls the real Printify API
+  # (PrintifyOrderClient/PrintifyCatalogClient are mocked, same pattern as Stripe above).
+  printify:
+    api-token: "test-printify-token-not-real"
+    shop-id: "test-shop-id-not-real"

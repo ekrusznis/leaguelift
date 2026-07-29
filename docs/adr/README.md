@@ -52,3 +52,8 @@ Additional, unreserved decisions:
   Stripe webhook receiver) pulled forward from Phase 5, scoped narrowly to
   confirming campaign contributions via `checkout.session.completed` — written
   as part of Phase 3's contribution-recording slice (2026-07-29)
+- ADR-016: Printify integration scope for Phase 4 slice 1 — vendor selection is
+  a US-location filter, not a price comparison (Printify's catalog exposes no
+  cost/price); a variant's real cost is learned once via product creation, not
+  guessed; fulfillment submission is draft-only (no send-to-production); no
+  auto-design/personalization (2026-07-29)

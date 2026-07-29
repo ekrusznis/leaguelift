@@ -35,6 +35,12 @@ leaguelift:
   stripe:
     secret-key: ${STRIPE_SECRET_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  # Printify catalog/orders (Phase 4 slice 1) — catalog reads only need apiToken;
+  # creating a draft order also needs shopId (a "Manual/API" Printify shop). Blank by
+  # default; calls fail with a clear error until real Printify credentials are supplied.
+  printify:
+    api-token: ${PRINTIFY_API_TOKEN:}
+    shop-id: ${PRINTIFY_SHOP_ID:}
 
 management:
   endpoint:

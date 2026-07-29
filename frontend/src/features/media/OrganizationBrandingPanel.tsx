@@ -4,11 +4,13 @@ import { LoadingState } from "../../components/states/LoadingState";
 import { OrganizationLogo } from "../../dashboard/components/OrganizationLogo";
 import { useAssignMedia, useConfirmMediaUpload, useMediaAssignments, useRequestMediaUpload } from "./api";
 import { fileSchemaFor } from "./schema";
-import type { MediaUsageSlot } from "./types";
 import { uploadToSignedUrl } from "./uploadToSignedUrl";
 
-const SLOT_LABELS: Record<MediaUsageSlot, string> = { LOGO: "Logo", COVER: "Cover image" };
-const SLOT_ACCEPT: Record<MediaUsageSlot, string> = {
+/** This panel only ever handles organization branding — LOGO/COVER, not the wider MediaUsageSlot union (e.g. PRODUCT_DESIGN belongs to the store feature). */
+type BrandingSlot = "LOGO" | "COVER";
+
+const SLOT_LABELS: Record<BrandingSlot, string> = { LOGO: "Logo", COVER: "Cover image" };
+const SLOT_ACCEPT: Record<BrandingSlot, string> = {
 	LOGO: "image/png,image/jpeg,image/webp,image/svg+xml",
 	COVER: "image/png,image/jpeg,image/webp",
 };
@@ -31,13 +33,13 @@ export function OrganizationBrandingPanel({
 	const requestUpload = useRequestMediaUpload(organizationId);
 	const confirmUpload = useConfirmMediaUpload(organizationId);
 	const assignMedia = useAssignMedia(organizationId);
-	const [slotStates, setSlotStates] = useState<Record<MediaUsageSlot, SlotState>>({
+	const [slotStates, setSlotStates] = useState<Record<BrandingSlot, SlotState>>({
 		LOGO: { status: "idle" },
 		COVER: { status: "idle" },
 	});
 	const logoInputRef = useRef<HTMLInputElement>(null);
 	const coverInputRef = useRef<HTMLInputElement>(null);
-	const inputRefs: Record<MediaUsageSlot, React.RefObject<HTMLInputElement | null>> = {
+	const inputRefs: Record<BrandingSlot, React.RefObject<HTMLInputElement | null>> = {
 		LOGO: logoInputRef,
 		COVER: coverInputRef,
 	};
@@ -51,7 +53,7 @@ export function OrganizationBrandingPanel({
 
 	const assignmentsBySlot = new Map((data?.items ?? []).map((item) => [item.usageSlot, item]));
 
-	async function handleFileSelected(usageSlot: MediaUsageSlot, file: File | undefined) {
+	async function handleFileSelected(usageSlot: BrandingSlot, file: File | undefined) {
 		if (!file) return;
 		const validation = fileSchemaFor(usageSlot).safeParse(file);
 		if (!validation.success) {

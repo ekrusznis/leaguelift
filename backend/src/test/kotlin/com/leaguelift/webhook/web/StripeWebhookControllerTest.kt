@@ -4,6 +4,9 @@ import com.leaguelift.config.StripeProperties
 import com.leaguelift.fundraising.application.ContributionService
 import com.leaguelift.fundraising.domain.Contribution
 import com.leaguelift.fundraising.domain.ContributionStatus
+import com.leaguelift.order.application.OrderService
+import com.leaguelift.order.domain.Order
+import com.leaguelift.order.domain.OrderStatus
 import com.leaguelift.webhook.domain.WebhookEvent
 import com.leaguelift.webhook.domain.WebhookProcessingStatus
 import com.leaguelift.webhook.persistence.WebhookEventRepository
@@ -32,7 +35,8 @@ class StripeWebhookControllerTest {
 	private val stripeProperties = StripeProperties(secretKey = "sk_test_unused", webhookSecret = webhookSecret)
 	private val webhookEventRepository = mockk<WebhookEventRepository>()
 	private val contributionService = mockk<ContributionService>()
-	private val controller = StripeWebhookController(stripeProperties, webhookEventRepository, contributionService)
+	private val orderService = mockk<OrderService>()
+	private val controller = StripeWebhookController(stripeProperties, webhookEventRepository, contributionService, orderService)
 
 	@Test
 	fun `an invalid signature is rejected with 400 and never reaches the repository or contribution service`() {
@@ -95,8 +99,34 @@ class StripeWebhookControllerTest {
 		verify(exactly = 0) { contributionService.confirmFromWebhook(any(), any()) }
 	}
 
+	@Test
+	fun `a checkout_session_completed event with an orderId in metadata dispatches to OrderService, not ContributionService`() {
+		val eventId = "evt_${UUID.randomUUID()}"
+		val orderId = UUID.randomUUID()
+		val payload = orderCheckoutSessionCompletedPayload(eventId, "cs_test_4", "paid", orderId)
+		val signature = sign(payload, webhookSecret)
+		val order = sampleOrder(orderId)
+		every { webhookEventRepository.findExisting("stripe", eventId) } returns null
+		every { orderService.confirmFromWebhook("cs_test_4", "paid", null) } returns order
+		every {
+			webhookEventRepository.insert(
+				"stripe", eventId, "checkout.session.completed", payload, any(), true,
+				WebhookProcessingStatus.PROCESSED, "order", order.id, null,
+			)
+		} returns sampleWebhookEvent()
+
+		val response = controller.receive(payload, signature)
+
+		assertEquals(HttpStatus.OK, response.statusCode)
+		verify(exactly = 1) { orderService.confirmFromWebhook("cs_test_4", "paid", null) }
+		verify(exactly = 0) { contributionService.confirmFromWebhook(any(), any()) }
+	}
+
 	private fun checkoutSessionCompletedPayload(eventId: String, sessionId: String, paymentStatus: String): String =
 		"""{"id":"$eventId","object":"event","api_version":"2025-03-31.basil","type":"checkout.session.completed","data":{"object":{"id":"$sessionId","object":"checkout.session","payment_status":"$paymentStatus","metadata":{}}}}"""
+
+	private fun orderCheckoutSessionCompletedPayload(eventId: String, sessionId: String, paymentStatus: String, orderId: UUID): String =
+		"""{"id":"$eventId","object":"event","api_version":"2025-03-31.basil","type":"checkout.session.completed","data":{"object":{"id":"$sessionId","object":"checkout.session","payment_status":"$paymentStatus","metadata":{"orderId":"$orderId"}}}}"""
 
 	private fun sign(payload: String, secret: String): String {
 		val timestamp = System.currentTimeMillis() / 1000
@@ -111,6 +141,12 @@ class StripeWebhookControllerTest {
 		id = UUID.randomUUID(), organizationId = UUID.randomUUID(), campaignId = UUID.randomUUID(),
 		amountMinor = 5000L, currency = "USD", supporterName = "Jane Doe", isAnonymous = false, supporterEmail = null,
 		status = ContributionStatus.CONFIRMED, stripeCheckoutSessionId = "cs_test_2", confirmedAt = Instant.now(), createdAt = Instant.now(),
+	)
+
+	private fun sampleOrder(orderId: UUID) = Order(
+		id = orderId, organizationId = UUID.randomUUID(), storeId = UUID.randomUUID(), status = OrderStatus.CONFIRMED,
+		currency = "USD", supporterName = "Jane Doe", supporterEmail = null, shippingAddress = null,
+		stripeCheckoutSessionId = "cs_test_4", confirmedAt = Instant.now(), createdAt = Instant.now(),
 	)
 
 	private fun sampleWebhookEvent() = WebhookEvent(

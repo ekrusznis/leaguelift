@@ -17,10 +17,15 @@ info:
     Phase 2's remainder (manual/offline fee payments, manual discounts/credits,
     org-wide collections listing and CSV export, and Stripe Connect Express
     onboarding-only scaffolding — DESIGN-DOC.md section 14.3, ADR-005 — no live
-    charge routing yet).
+    charge routing yet), and Phase 4 slice 1 (apparel commerce proof: stores,
+    Printify-catalog-backed products/variants with real Printify cost snapshots,
+    a Printify catalog read proxy, multi-item test-mode Stripe Checkout with US
+    shipping-address collection, and draft-only Printify order submission on
+    confirmation — ADR-016; auto-design/personalization and cross-provider price
+    comparison are explicitly out of scope, see the ADR).
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
-  version: "0.11.0"
+  version: "0.12.0"
 servers:
   - url: /api/v1
 tags:
@@ -40,6 +45,9 @@ tags:
   - name: media
   - name: payouts
   - name: webhooks
+  - name: printify
+  - name: stores
+  - name: orders
   - name: dashboard
 paths:
   /public/status:
@@ -2085,10 +2093,11 @@ paths:
       description: >
         Not authenticated with a JWT — authenticity comes from the Stripe-Signature
         header instead, verified server-side against leaguelift.stripe.webhook-secret.
-        Only checkout.session.completed is consumed this slice (campaign-contribution
-        confirmation); other event types are recorded as IGNORED. Idempotent per
-        (provider, externalEventId) — see webhook_event. Stripe Connect account-status
-        webhooks remain Phase 5.
+        Only checkout.session.completed is consumed this slice, for both campaign
+        contributions and store orders (disambiguated by the session's own metadata);
+        other event types are recorded as IGNORED. Idempotent per (provider,
+        externalEventId) — see webhook_event. Stripe Connect account-status webhooks
+        remain Phase 5.
       operationId: receiveStripeWebhook
       requestBody:
         required: true
@@ -2107,6 +2116,560 @@ paths:
             Processing failed after signature verification succeeded — Stripe will
             retry automatically per its own retry schedule; no separate retry worker
             exists for this.
+
+  # --- Printify catalog proxy (Phase 4 slice 1) ---
+  # Never expose the Printify API token to the browser — these endpoints proxy
+  # read-only catalog data through the backend. No pricing is returned here;
+  # Printify's catalog never exposes cost/price (confirmed against Printify's
+  # own OpenAPI spec) — that only appears once a product is actually created
+  # (see POST .../products/{productId}/variants below).
+
+  /organizations/{organizationId}/printify/blueprints:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [printify]
+      summary: List Printify catalog blueprints (base product types)
+      operationId: listPrintifyBlueprints
+      responses:
+        "200":
+          description: Blueprints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PrintifyBlueprintResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/PrintifyUnavailable"
+
+  /organizations/{organizationId}/printify/blueprints/{blueprintId}/print-providers:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - name: blueprintId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [printify]
+      summary: List US-located print providers for a blueprint
+      description: >
+        A location (and, where available, decoration-method) filter, not a price
+        comparison — Printify's catalog has no cost signal to rank providers by.
+        The admin picks one from this filtered list.
+      operationId: listPrintifyPrintProviders
+      responses:
+        "200":
+          description: US print providers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EligiblePrintProviderResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/PrintifyUnavailable"
+
+  /organizations/{organizationId}/printify/blueprints/{blueprintId}/print-providers/{printProviderId}/variants:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - name: blueprintId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: printProviderId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags: [printify]
+      summary: List size/color variants a print provider offers for a blueprint
+      operationId: listPrintifyCatalogVariants
+      responses:
+        "200":
+          description: Catalog variants (no pricing — see note above)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PrintifyCatalogVariantResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/PrintifyUnavailable"
+
+  # --- Stores and products (Phase 4 slice 1) ---
+
+  /organizations/{organizationId}/stores:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [stores]
+      summary: List stores for an organization
+      operationId: listStores
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of stores
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorePage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [stores]
+      summary: Create a store
+      description: Created in DRAFT status. Not publicly visible (via GET /public/stores/{slug}) until ACTIVE.
+      operationId: createStore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStoreRequest"
+      responses:
+        "201":
+          description: Store created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The requested slug is already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /organizations/{organizationId}/stores/{storeId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/StoreIdParam"
+    get:
+      tags: [stores]
+      summary: Get a store by ID
+      operationId: getStore
+      responses:
+        "200":
+          description: Store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/stores/{storeId}/status:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/StoreIdParam"
+    patch:
+      tags: [stores]
+      summary: Update a store's status
+      operationId: updateStoreStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStoreStatusRequest"
+      responses:
+        "200":
+          description: Store with updated status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/stores/{storeId}/products:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/StoreIdParam"
+    get:
+      tags: [stores]
+      summary: List products in a store
+      operationId: listProducts
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of products
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [stores]
+      summary: Create a product
+      description: Created in DRAFT status, no design or variants yet.
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductRequest"
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/products/{productId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/ProductIdParam"
+    get:
+      tags: [stores]
+      summary: Get a product by ID
+      operationId: getProduct
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/products/{productId}/status:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/ProductIdParam"
+    patch:
+      tags: [stores]
+      summary: Update a product's status
+      operationId: updateProductStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductStatusRequest"
+      responses:
+        "200":
+          description: Product with updated status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/products/{productId}/design:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/ProductIdParam"
+    put:
+      tags: [stores]
+      summary: Assign an uploaded design image to a product
+      description: >
+        The asset must already be READY via the standard media upload flow
+        (POST .../media/uploads + confirm, usageSlot=PRODUCT_DESIGN). One design
+        slot per product this slice — no front/back split, no auto-design.
+      operationId: assignProductDesign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignProductDesignRequest"
+      responses:
+        "200":
+          description: Assigned design (signed read URL)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaAssignmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/products/{productId}/variants:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/ProductIdParam"
+    get:
+      tags: [stores]
+      summary: List a product's active variants
+      operationId: listProductVariants
+      responses:
+        "200":
+          description: Active variants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductVariantResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [stores]
+      summary: Create a product variant (real Printify cost snapshot)
+      description: >
+        Calls Printify once for this specific chosen provider+variant (uploading
+        the product's design to Printify's image library first, if not already
+        done) to learn its real cost, which is snapshotted onto the variant —
+        never guessed. No cross-provider price comparison happens here.
+      operationId: createProductVariant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductVariantRequest"
+      responses:
+        "201":
+          description: Variant created, with Printify's real cost
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductVariantResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/PrintifyUnavailable"
+
+  /public/stores/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [stores]
+      summary: Get a published store's public page by slug
+      description: >
+        Public, unauthenticated. Combines the store, its ACTIVE products, their
+        active variants, and each product's public design URL into one response
+        so the storefront doesn't need N+1 calls.
+      operationId: getPublicStore
+      responses:
+        "200":
+          description: Published store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicStoreResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # --- Orders and checkout (Phase 4 slice 1) ---
+
+  /organizations/{organizationId}/stores/{storeId}/orders:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/StoreIdParam"
+    get:
+      tags: [orders]
+      summary: List an organization's confirmed orders for a store
+      operationId: listStoreOrders
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of confirmed orders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/orders/{orderId}/fulfillment:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [orders]
+      summary: Get an order's fulfillment status
+      description: >
+        Null until the order is confirmed. DRAFT_CREATED means a Printify order
+        object exists but send_to_production.json was never called this slice —
+        see ADR-016. FAILED means payment was confirmed but the Printify
+        draft-order call itself failed; the order/payment record still stands.
+      operationId: getOrderFulfillment
+      responses:
+        "200":
+          description: Fulfillment status, or null if not yet created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /public/stores/{slug}/orders:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      tags: [orders]
+      summary: Start a multi-item order checkout (test-mode Stripe Checkout)
+      description: >
+        Public, unauthenticated. No persisted cart — the browser holds line
+        items locally and submits them all at once. Creates a PENDING order and
+        a multi-line-item Stripe Checkout Session with US shipping-address
+        collection; the caller redirects the browser to the returned
+        checkoutUrl. Confirmation happens only via POST /webhooks/stripe.
+      operationId: createOrderCheckout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderCheckoutRequest"
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderCheckoutResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: The payments provider is unavailable (e.g. no Stripe test-mode key configured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /public/stores/{slug}/orders/{orderId}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [orders]
+      summary: Poll an order's status
+      description: >
+        Public, unauthenticated — used by the browser's Stripe Checkout return
+        page. Read-only: reflects what the Stripe webhook has already recorded.
+      operationId: getOrderStatus
+      responses:
+        "200":
+          description: Order status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderStatusResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /me/dashboard-context:
     get:
@@ -2847,7 +3410,21 @@ components:
       required: true
       schema:
         type: string
-        enum: [LOGO, COVER]
+        enum: [LOGO, COVER, PRODUCT_DESIGN]
+    StoreIdParam:
+      name: storeId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ProductIdParam:
+      name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     PageParam:
       name: page
       in: query
@@ -2886,6 +3463,12 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
     NotFound:
       description: Resource not found (or not visible to the caller)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    PrintifyUnavailable:
+      description: The Printify API is not available right now (e.g. no PRINTIFY_API_TOKEN configured)
       content:
         application/json:
           schema:
@@ -4367,6 +4950,497 @@ components:
           type: integer
         totalElements:
           type: integer
+
+    PrintifyBlueprintResponse:
+      type: object
+      required: [id, title]
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        brand:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+
+    PrintifyLocationResponse:
+      type: object
+      properties:
+        country:
+          type: string
+          nullable: true
+        region:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+
+    EligiblePrintProviderResponse:
+      type: object
+      required: [id, title, location]
+      description: A US-location (and, where available, decoration-method) filter result — not a price ranking. See the printify blueprints/print-providers endpoint description.
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        decorationMethods:
+          type: array
+          items:
+            type: string
+          nullable: true
+        location:
+          $ref: "#/components/schemas/PrintifyLocationResponse"
+
+    PrintifyCatalogVariantResponse:
+      type: object
+      required: [id, title]
+      description: No cost/price field — Printify's catalog never exposes pricing (confirmed against Printify's own OpenAPI spec).
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        options:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+
+    StoreStatus:
+      type: string
+      enum: [DRAFT, ACTIVE, ARCHIVED]
+
+    CreateStoreRequest:
+      type: object
+      required: [name, slug]
+      properties:
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional team attribution. Omit for an organization-wide store.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 63
+          description: Lowercase alphanumeric with optional hyphens. Globally unique.
+
+    UpdateStoreStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/StoreStatus"
+
+    StoreResponse:
+      type: object
+      required: [id, organizationId, name, slug, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+        slug:
+          type: string
+        status:
+          $ref: "#/components/schemas/StoreStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    StorePage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StoreResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+
+    ProductStatus:
+      type: string
+      enum: [DRAFT, ACTIVE, ARCHIVED]
+
+    CreateProductRequest:
+      type: object
+      required: [name, printifyBlueprintId]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+        printifyBlueprintId:
+          type: integer
+          format: int64
+        printifyPrintPosition:
+          type: string
+          default: front
+          description: Which of the blueprint's print-area placeholders (e.g. "front", "back") the single design image goes on — one design slot per product this slice.
+
+    UpdateProductStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/ProductStatus"
+
+    AssignProductDesignRequest:
+      type: object
+      required: [assetId]
+      properties:
+        assetId:
+          type: string
+          format: uuid
+        altText:
+          type: string
+          maxLength: 255
+          nullable: true
+
+    ProductResponse:
+      type: object
+      required: [id, organizationId, storeId, name, printifyBlueprintId, printifyPrintPosition, hasDesign, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        storeId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        printifyBlueprintId:
+          type: integer
+          format: int64
+        printifyPrintPosition:
+          type: string
+        hasDesign:
+          type: boolean
+          description: True once a design has been pushed to Printify's image library (first variant creation) — not just "an image was assigned" in our own system.
+        status:
+          $ref: "#/components/schemas/ProductStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProductPage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+
+    CreateProductVariantRequest:
+      type: object
+      required: [printifyPrintProviderId, printifyVariantId, label, priceMinor]
+      properties:
+        printifyPrintProviderId:
+          type: integer
+          format: int64
+        printifyVariantId:
+          type: integer
+          format: int64
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        priceMinor:
+          type: integer
+          format: int64
+          minimum: 0
+
+    ProductVariantResponse:
+      type: object
+      required: [id, productId, label, printifyPrintProviderId, printifyVariantId, currency, costMinor, priceMinor, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        label:
+          type: string
+        printifyPrintProviderId:
+          type: integer
+          format: int64
+        printifyVariantId:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        costMinor:
+          type: integer
+          format: int64
+          description: Printify's real cost for this variant/provider, in minor units — snapshotted from the create-variant call's response, never guessed.
+        priceMinor:
+          type: integer
+          format: int64
+        isActive:
+          type: boolean
+
+    PublicProductVariantResponse:
+      type: object
+      required: [id, label, priceMinor, currency]
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        priceMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+
+    PublicProductResponse:
+      type: object
+      required: [id, name, variants]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        designUrl:
+          type: string
+          nullable: true
+          description: Null until the admin has assigned a design and the product is ACTIVE (private/unpublished designs never leak here).
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicProductVariantResponse"
+
+    PublicStoreResponse:
+      type: object
+      required: [id, name, slug, products]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicProductResponse"
+
+    OrderStatus:
+      type: string
+      enum: [PENDING, CONFIRMED, CANCELED]
+
+    OrderLineItemDto:
+      type: object
+      required: [productVariantId, quantity]
+      properties:
+        productVariantId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+
+    CreateOrderCheckoutRequest:
+      type: object
+      required: [items, successUrl, cancelUrl]
+      description: >
+        Public, unauthenticated. No persisted cart — the browser holds line
+        items locally until checkout. successUrl may contain the literal
+        placeholder "{ORDER_ID}", substituted server-side with the created
+        order's id before being handed to Stripe (mirrors Stripe's own
+        "{CHECKOUT_SESSION_ID}" convention and ContributionService's
+        "{CONTRIBUTION_ID}" placeholder).
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/OrderLineItemDto"
+        supporterName:
+          type: string
+          maxLength: 120
+          nullable: true
+        supporterEmail:
+          type: string
+          format: email
+          maxLength: 254
+          nullable: true
+        successUrl:
+          type: string
+        cancelUrl:
+          type: string
+
+    OrderCheckoutResponse:
+      type: object
+      required: [orderId, checkoutUrl]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        checkoutUrl:
+          type: string
+          description: Stripe-hosted Checkout Session URL, with US shipping-address collection enabled. Redirect the browser here directly.
+
+    OrderStatusResponse:
+      type: object
+      required: [id, status, currency]
+      description: Status-poll shape for the browser's return page. No supporter contact info exposed back to the browser.
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        currency:
+          type: string
+        confirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ShippingAddressResponse:
+      type: object
+      description: Collected by Stripe Checkout's own shipping_address_collection, not a form LeagueLift built.
+      properties:
+        name:
+          type: string
+          nullable: true
+        line1:
+          type: string
+          nullable: true
+        line2:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        state:
+          type: string
+          nullable: true
+        postalCode:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+
+    OrderResponse:
+      type: object
+      required: [id, storeId, status, currency, createdAt]
+      description: Org-admin shape.
+      properties:
+        id:
+          type: string
+          format: uuid
+        storeId:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        currency:
+          type: string
+        supporterName:
+          type: string
+          nullable: true
+        supporterEmail:
+          type: string
+          nullable: true
+        shippingAddress:
+          $ref: "#/components/schemas/ShippingAddressResponse"
+        confirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    OrderPage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+
+    FulfillmentStatus:
+      type: string
+      enum: [NOT_SUBMITTED, DRAFT_CREATED, FAILED]
+
+    FulfillmentResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/FulfillmentStatus"
+        printifyOrderId:
+          type: string
+          nullable: true
+        lastError:
+          type: string
+          nullable: true
 
     DashboardRole:
       type: string

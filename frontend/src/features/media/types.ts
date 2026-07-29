@@ -1,4 +1,4 @@
-export type MediaUsageSlot = "LOGO" | "COVER";
+export type MediaUsageSlot = "LOGO" | "COVER" | "PRODUCT_DESIGN";
 
 export interface RequestUploadResponse {
 	assetId: string;

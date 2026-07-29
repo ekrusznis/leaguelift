@@ -28,7 +28,7 @@ class MediaAssignmentController(
 		@PathVariable organizationId: UUID,
 		@AuthenticationPrincipal currentUser: CurrentUser,
 	): MediaAssignmentListResponse {
-		val assignments = mediaAssignmentService.listActive(organizationId, currentUser)
+		val assignments = mediaAssignmentService.listActiveOrganizationMedia(organizationId, currentUser)
 		return MediaAssignmentListResponse(mediaReadService.describeAll(assignments).map { it.toResponse() })
 	}
 
@@ -39,7 +39,7 @@ class MediaAssignmentController(
 		@Valid @RequestBody request: AssignMediaRequest,
 		@AuthenticationPrincipal currentUser: CurrentUser,
 	): MediaAssignmentResponse {
-		val assignment = mediaAssignmentService.assign(
+		val assignment = mediaAssignmentService.assignOrganizationMedia(
 			organizationId,
 			parseUsageSlot(usageSlot),
 			request.assetId,
@@ -57,5 +57,5 @@ class MediaAssignmentController(
 		@PathVariable organizationId: UUID,
 		@PathVariable usageSlot: String,
 		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = mediaAssignmentService.remove(organizationId, parseUsageSlot(usageSlot), currentUser)
+	) = mediaAssignmentService.removeOrganizationMedia(organizationId, parseUsageSlot(usageSlot), currentUser)
 }

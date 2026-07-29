@@ -15,6 +15,7 @@ import { OrganizationProfileForm } from "../features/organizations/OrganizationP
 import { useRefreshPayoutStatus } from "../features/payouts/api";
 import { PayoutConnectPanel } from "../features/payouts/PayoutConnectPanel";
 import { PublicPagesPanel } from "../features/publicpage/PublicPagesPanel";
+import { StoreList } from "../features/store/StoreList";
 import { TeamList } from "../features/teams/TeamList";
 import { TournamentList } from "../features/tournaments/TournamentList";
 
@@ -88,6 +89,11 @@ export function OrganizationDetailPage() {
 			<section aria-label="Fundraising campaigns" className="flex flex-col gap-3">
 				<h2 className="font-heading text-lg font-semibold text-navy">Fundraising Campaigns</h2>
 				<CampaignList organizationId={organization.id} />
+			</section>
+
+			<section aria-label="Stores" className="flex flex-col gap-3">
+				<h2 className="font-heading text-lg font-semibold text-navy">Stores</h2>
+				<StoreList organizationId={organization.id} />
 			</section>
 
 			<section aria-label="Public pages" className="flex flex-col gap-3">
