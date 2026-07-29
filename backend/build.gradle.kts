@@ -42,7 +42,7 @@ dependencies {
 	runtimeOnly("org.postgresql:postgresql")
 
 	implementation("io.micrometer:micrometer-registry-prometheus")
-	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5")
+	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
 	// S3-compatible object storage client (DigitalOcean Spaces prod/staging, MinIO
 	// local/test — ADR-012). Pure Java, no Spring/Kotlin coupling; url-connection-client
