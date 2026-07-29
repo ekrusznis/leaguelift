@@ -17,6 +17,7 @@ import { ContactPage } from "../pages/marketing/ContactPage";
 import { HelpPage } from "../pages/marketing/HelpPage";
 import { HomePage } from "../pages/marketing/HomePage";
 import { HowItWorksPage } from "../pages/marketing/HowItWorksPage";
+import { LandingPreviewPage } from "../pages/marketing/LandingPreviewPage";
 import { AccessibilityPage } from "../pages/marketing/legal/AccessibilityPage";
 import { PrivacyPage } from "../pages/marketing/legal/PrivacyPage";
 import { TermsPage } from "../pages/marketing/legal/TermsPage";
@@ -67,6 +68,11 @@ export function AppRoutes() {
 				<Route path="auth/invitation" element={<InvitationPage />} />
 				<Route path="auth/error" element={<AuthErrorPage />} />
 			</Route>
+
+			{/* Single-page redesign preview — not nested under MarketingLayout since it
+			    brings its own header/footer to demo an anchor-nav IA (see sales-site
+			    redesign review). Remove once the comparison is settled. */}
+			<Route path="landing-preview" element={<LandingPreviewPage />} />
 
 			<Route path="p/:slug" element={<PublicPageView />} />
 
