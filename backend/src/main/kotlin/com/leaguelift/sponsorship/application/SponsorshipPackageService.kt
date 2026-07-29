@@ -12,8 +12,10 @@ import com.leaguelift.media.domain.MediaUsageSlot
 import com.leaguelift.media.domain.Visibility
 import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.organization.persistence.OrganizationRepository
+import com.leaguelift.sponsorship.domain.Sponsor
 import com.leaguelift.sponsorship.domain.SponsorshipPackage
 import com.leaguelift.sponsorship.domain.SponsorshipPackageStatus
+import com.leaguelift.sponsorship.infra.QrCodeGenerator
 import com.leaguelift.sponsorship.persistence.SponsorRepository
 import com.leaguelift.sponsorship.persistence.SponsorshipPackageRepository
 import org.springframework.stereotype.Service
@@ -42,7 +44,11 @@ class SponsorshipPackageService(
 	private val membershipService: MembershipService,
 	private val auditService: AuditService,
 	private val mediaAssignmentService: MediaAssignmentService,
+	private val qrCodeGenerator: QrCodeGenerator,
 ) {
+
+	/** Allow-listed URL prefixes for [buildShareLink] — a defensive check, not a real security boundary (the QR image itself carries no risk), preventing a caller from turning this into an arbitrary-text QR generator. */
+	private val allowedShareLinkPrefixes = listOf("http://", "https://")
 
 	fun list(organizationId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<SponsorshipPackage> {
 		membershipService.requireActiveMembership(organizationId, currentUser)
@@ -147,6 +153,50 @@ class SponsorshipPackageService(
 		return mediaAssignmentService.assign(organizationId, MediaEntityType.SPONSOR, sponsor.id, MediaUsageSlot.SPONSOR_LOGO, assetId, altText, currentUser) {
 			Visibility.PUBLIC
 		}
+	}
+
+	/** Sponsor-contact CRM read (Phase 6 remainder, ADR-019). */
+	fun getSponsor(organizationId: UUID, sponsorId: UUID, currentUser: CurrentUser): Sponsor {
+		membershipService.requireActiveMembership(organizationId, currentUser)
+		return sponsorRepository.findById(sponsorId, organizationId)
+			?: throw NotFoundException("SPONSOR_NOT_FOUND", "The sponsor could not be found.")
+	}
+
+	/** Sponsor-contact CRM update (Phase 6 remainder, ADR-019) — widens `sponsor` beyond name/contact-email with a small, bounded field set (phone/company name/notes), not a full multi-contact CRM table. */
+	@Transactional
+	fun updateSponsor(
+		organizationId: UUID,
+		sponsorId: UUID,
+		name: String?,
+		contactEmail: String?,
+		phone: String?,
+		companyName: String?,
+		notes: String?,
+		currentUser: CurrentUser,
+	): Sponsor {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		sponsorRepository.findById(sponsorId, organizationId)
+			?: throw NotFoundException("SPONSOR_NOT_FOUND", "The sponsor could not be found.")
+		sponsorRepository.update(sponsorId, organizationId, name, contactEmail, phone, companyName, notes)
+		auditService.record(currentUser.userId, organizationId, "sponsor.updated", "sponsor", sponsorId)
+		return sponsorRepository.findById(sponsorId, organizationId)!!
+	}
+
+	/**
+	 * A shareable QR code image + the plain URL it encodes (Phase 6 remainder,
+	 * ADR-019) — for an org admin to hand to a prospective sponsor or print in event
+	 * materials. Deliberately stateless: [url] is supplied by the caller (the frontend
+	 * already knows its own public sponsorship-page route,
+	 * `${origin}/sponsors/${organizationSlug}`), nothing is persisted, and there is no
+	 * click-through tracking — this is a convenience image generator, not an analytics
+	 * feature (see ADR-019's rationale for why no tracking table exists).
+	 */
+	fun buildShareLink(organizationId: UUID, url: String, currentUser: CurrentUser): String {
+		membershipService.requireActiveMembership(organizationId, currentUser)
+		if (url.length > 2000 || allowedShareLinkPrefixes.none { url.startsWith(it) }) {
+			throw ValidationException("A valid http(s) URL is required to generate a QR code.")
+		}
+		return qrCodeGenerator.generatePngDataUri(url)
 	}
 
 	private fun findPackage(organizationId: UUID, packageId: UUID): SponsorshipPackage =

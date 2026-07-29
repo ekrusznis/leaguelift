@@ -70,3 +70,13 @@ Additional, unreserved decisions:
   action after confirmation rather than a public self-service upload (the
   media pipeline has no anonymous-upload path today), no refunds this slice
   (2026-07-29)
+- ADR-019: Sponsorship approval workflow, refunds, renewal reminders,
+  QR/link sharing, invoices, and sponsor-CRM widening (Phase 6 remainder) —
+  a new `review_status` column gates public directory visibility separately
+  from payment status; rejecting a sponsorship atomically refunds it via the
+  same 14-day-window Stripe+ledger refund flow now built for sponsorships;
+  a `@Scheduled` renewal-reminder job (deliberately outside the still-
+  unconsumed outbox pattern) backed by a new minimal logging-only
+  `EmailProvider`; ZXing-generated QR codes with no persistence/tracking;
+  computed (not stored/numbered) invoices; `sponsor` widened with
+  phone/company_name/notes (2026-07-29)

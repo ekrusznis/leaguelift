@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/apiClient";
 import type { MediaAssignment } from "../media/types";
-import type { CreateSponsorshipCheckoutFormValues, CreateSponsorshipPackageFormValues } from "./schema";
+import type { CreateSponsorshipCheckoutFormValues, CreateSponsorshipPackageFormValues, UpdateSponsorFormValues } from "./schema";
 import type {
 	PublicSponsorshipPackage,
+	ShareLink,
+	Sponsor,
 	SponsorDirectoryEntry,
 	SponsorshipCheckout,
+	SponsorshipInvoice,
 	SponsorshipPackage,
 	SponsorshipPackagePage,
 	SponsorshipPage,
@@ -15,6 +18,7 @@ import type {
 const sponsorshipPackagesKey = (organizationId: string) => ["organizations", organizationId, "sponsorship-packages"] as const;
 const packageSponsorshipsKey = (organizationId: string, packageId: string) =>
 	["organizations", organizationId, "sponsorship-packages", packageId, "sponsorships"] as const;
+const pendingReviewKey = (organizationId: string) => ["organizations", organizationId, "sponsorships", "pending-review"] as const;
 
 export function useSponsorshipPackages(organizationId: string) {
 	return useQuery({
@@ -136,5 +140,86 @@ export function useSponsorshipStatus(packageId: string, sponsorshipId: string | 
 		queryFn: () => apiFetch<SponsorshipStatusResult>(`/public/sponsorship-packages/${packageId}/sponsorships/${sponsorshipId}`),
 		enabled: !!packageId && !!sponsorshipId,
 		refetchInterval: (query) => (query.state.data?.status === "PENDING" ? 2000 : false),
+	});
+}
+
+// ---- Phase 6 remainder (ADR-019): approval workflow, refunds, invoices, sponsor CRM, QR/link ----
+
+/** The org-admin approval queue — every confirmed sponsorship still awaiting a review decision, across all packages. Lazily enabled by the caller (matches the existing "expand to fetch" pattern `usePackageSponsorships` already uses). */
+export function usePendingReviewSponsorships(organizationId: string, enabled: boolean) {
+	return useQuery({
+		queryKey: pendingReviewKey(organizationId),
+		queryFn: () => apiFetch<SponsorshipPage>(`/organizations/${organizationId}/sponsorships/pending-review`),
+		enabled: !!organizationId && enabled,
+	});
+}
+
+function invalidateSponsorshipLists(queryClient: ReturnType<typeof useQueryClient>, organizationId: string) {
+	queryClient.invalidateQueries({ queryKey: pendingReviewKey(organizationId) });
+	queryClient.invalidateQueries({ queryKey: sponsorshipPackagesKey(organizationId) });
+	queryClient.invalidateQueries({ queryKey: ["organizations", organizationId, "sponsorship-packages"] });
+}
+
+export function useApproveSponsorship(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (sponsorshipId: string) =>
+			apiFetch<SponsorshipStatusResult>(`/organizations/${organizationId}/sponsorships/${sponsorshipId}/approve`, { method: "POST" }),
+		onSuccess: () => invalidateSponsorshipLists(queryClient, organizationId),
+	});
+}
+
+export function useRejectSponsorship(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (sponsorshipId: string) =>
+			apiFetch<SponsorshipStatusResult>(`/organizations/${organizationId}/sponsorships/${sponsorshipId}/reject`, { method: "POST" }),
+		onSuccess: () => invalidateSponsorshipLists(queryClient, organizationId),
+	});
+}
+
+/** A general org-admin-initiated refund — independent of the review workflow; within the same 14-day window ADR-017 already established for contributions/orders. */
+export function useRefundSponsorship(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (sponsorshipId: string) =>
+			apiFetch<SponsorshipStatusResult>(`/organizations/${organizationId}/sponsorships/${sponsorshipId}/refund`, { method: "POST" }),
+		onSuccess: () => invalidateSponsorshipLists(queryClient, organizationId),
+	});
+}
+
+/** A receipt-style invoice summary — lazily fetched only when an org admin opens it. */
+export function useSponsorshipInvoice(organizationId: string, sponsorshipId: string | null, enabled: boolean) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "sponsorships", sponsorshipId, "invoice"] as const,
+		queryFn: () => apiFetch<SponsorshipInvoice>(`/organizations/${organizationId}/sponsorships/${sponsorshipId}/invoice`),
+		enabled: !!organizationId && !!sponsorshipId && enabled,
+	});
+}
+
+export function useUpdateSponsor(organizationId: string, packageId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ sponsorId, values }: { sponsorId: string; values: UpdateSponsorFormValues }) =>
+			apiFetch<Sponsor>(`/organizations/${organizationId}/sponsors/${sponsorId}`, {
+				method: "PATCH",
+				body: {
+					name: values.name || null,
+					contactEmail: values.contactEmail || null,
+					phone: values.phone || null,
+					companyName: values.companyName || null,
+					notes: values.notes || null,
+				},
+			}),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: packageSponsorshipsKey(organizationId, packageId) }),
+	});
+}
+
+/** A shareable QR code + plain URL for an org admin to hand to a prospective sponsor or print in event materials. Nothing persisted, no click-through tracking (ADR-019). */
+export function useShareLinkQrCode(organizationId: string, url: string, enabled: boolean) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "sponsorship-packages", "qr-code", url] as const,
+		queryFn: () => apiFetch<ShareLink>(`/organizations/${organizationId}/sponsorship-packages/qr-code?url=${encodeURIComponent(url)}`),
+		enabled: !!organizationId && !!url && enabled,
 	});
 }

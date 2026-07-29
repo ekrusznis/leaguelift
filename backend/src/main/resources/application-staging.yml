@@ -30,6 +30,13 @@ leaguelift:
     fee-basis-points: ${PLATFORM_FEE_BASIS_POINTS:500}
   payout:
     holding-period-days: ${PAYOUT_HOLDING_PERIOD_DAYS:7}
+  # Phase 6 remainder (ADR-019) — a minimal @Scheduled reminder, not the real Phase 8
+  # notification infrastructure. Not secrets — safe defaults, overridable without a redeploy.
+  sponsorship:
+    renewal-reminder:
+      enabled: ${SPONSORSHIP_RENEWAL_REMINDER_ENABLED:true}
+      days-before: ${SPONSORSHIP_RENEWAL_REMINDER_DAYS_BEFORE:14}
+      cron: ${SPONSORSHIP_RENEWAL_REMINDER_CRON:0 0 8 * * *}
 
 management:
   endpoint:

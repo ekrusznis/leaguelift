@@ -1,6 +1,7 @@
 package com.leaguelift.sponsorship.infra
 
 import com.stripe.StripeClient
+import com.stripe.param.RefundCreateParams
 import com.stripe.param.checkout.SessionCreateParams
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -12,9 +13,9 @@ data class SponsorshipCheckoutSession(val sessionId: String, val checkoutUrl: St
  * `fundraising/infra/StripeCheckoutClient.kt` — one-time payment mode, no
  * subscriptions/saved payment methods. `sponsorshipId` is set as session metadata so
  * `webhook/web/StripeWebhookController.kt` can disambiguate this checkout from a
- * contribution/order checkout without a second Stripe API call. No refund method here
- * (unlike `StripeCheckoutClient`/`StripeOrderCheckoutClient`) — refunds are explicitly
- * out of scope for this slice (ADR-018).
+ * contribution/order checkout without a second Stripe API call. [createRefund] was
+ * added in Phase 6 remainder (ADR-019) — refunds were explicitly out of scope for
+ * Phase 6 slice 1 (ADR-018).
  */
 @Component
 class StripeSponsorshipCheckoutClient(private val stripeClient: StripeClient) {
@@ -51,5 +52,16 @@ class StripeSponsorshipCheckoutClient(private val stripeClient: StripeClient) {
 			.build()
 		val session = stripeClient.checkout().sessions().create(params)
 		return SponsorshipCheckoutSession(sessionId = session.id, checkoutUrl = session.url)
+	}
+
+	/** `reverseTransfer = false` — see `StripeCheckoutClient.createRefund`'s identical note on ADR-017's negative-balance handling, which this Phase 6 remainder refund flow reuses unmodified. */
+	fun createRefund(paymentIntentId: String): String {
+		val refund = stripeClient.refunds().create(
+			RefundCreateParams.builder()
+				.setPaymentIntent(paymentIntentId)
+				.setReverseTransfer(false)
+				.build(),
+		)
+		return refund.id
 	}
 }

@@ -30,3 +30,14 @@ export const createSponsorshipCheckoutSchema = z.object({
 });
 
 export type CreateSponsorshipCheckoutFormValues = z.infer<typeof createSponsorshipCheckoutSchema>;
+
+/** Mirrors the backend's UpdateSponsorRequest (Phase 6 remainder, ADR-019) — sponsor-contact CRM widening. Every field optional; an empty string is treated as "leave unchanged" the same way the org-admin package-edit form already works. */
+export const updateSponsorSchema = z.object({
+	name: z.string().trim().max(200).optional().or(z.literal("")),
+	contactEmail: z.string().trim().email("Enter a valid email address.").max(254).optional().or(z.literal("")),
+	phone: z.string().trim().max(40).optional().or(z.literal("")),
+	companyName: z.string().trim().max(200).optional().or(z.literal("")),
+	notes: z.string().trim().max(2000).optional().or(z.literal("")),
+});
+
+export type UpdateSponsorFormValues = z.infer<typeof updateSponsorSchema>;

@@ -68,6 +68,13 @@ dependencies {
 	// routing yet, gated behind Phase 5 per DESIGN-DOC.md section 16.
 	implementation("com.stripe:stripe-java:29.0.0")
 
+	// QR code generation for the sponsorship share-link feature (Phase 6 remainder,
+	// ADR-019) — DESIGN-DOC.md section 8.3 listed `qr_code_reference` as design-target
+	// only; ZXing is the first real QR implementation in this codebase. `javase` brings
+	// MatrixToImageWriter (bit matrix -> BufferedImage); no other ZXing modules needed.
+	implementation("com.google.zxing:core:3.5.3")
+	implementation("com.google.zxing:javase:3.5.3")
+
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.security:spring-security-test")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")

@@ -13,9 +13,11 @@ import com.leaguelift.organization.domain.Organization
 import com.leaguelift.organization.domain.OrganizationStatus
 import com.leaguelift.organization.domain.OrganizationType
 import com.leaguelift.organization.persistence.OrganizationRepository
+import com.leaguelift.sponsorship.domain.Sponsor
 import com.leaguelift.sponsorship.domain.SponsorshipPackage
 import com.leaguelift.sponsorship.domain.SponsorshipPackageStatus
 import com.leaguelift.sponsorship.domain.effectiveMaxQuantity
+import com.leaguelift.sponsorship.infra.QrCodeGenerator
 import com.leaguelift.sponsorship.persistence.SponsorRepository
 import com.leaguelift.sponsorship.persistence.SponsorshipPackageRepository
 import io.mockk.every
@@ -40,8 +42,9 @@ class SponsorshipPackageServiceTest {
 	private val membershipService = mockk<MembershipService>()
 	private val auditService = mockk<AuditService>()
 	private val mediaAssignmentService = mockk<MediaAssignmentService>()
+	private val qrCodeGenerator = mockk<QrCodeGenerator>()
 	private val service = SponsorshipPackageService(
-		sponsorshipPackageRepository, sponsorRepository, organizationRepository, membershipService, auditService, mediaAssignmentService,
+		sponsorshipPackageRepository, sponsorRepository, organizationRepository, membershipService, auditService, mediaAssignmentService, qrCodeGenerator,
 	)
 
 	private val orgId = UUID.randomUUID()
@@ -180,6 +183,54 @@ class SponsorshipPackageServiceTest {
 		assertTrue(isSoldOut(samplePackage(maxQuantity = 2), confirmedCount = 2L))
 		assertFalse(isSoldOut(samplePackage(maxQuantity = 2), confirmedCount = 1L))
 	}
+
+	@Test
+	fun `updateSponsor requires manager role, updates fields, and records audit`() {
+		val sponsor = sampleSponsor()
+		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+		every { sponsorRepository.findById(sponsor.id, orgId) } returns sponsor andThen sponsor.copy(phone = "555-1212")
+		every { sponsorRepository.update(sponsor.id, orgId, null, null, "555-1212", null, null) } returns 1
+		every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+
+		val result = service.updateSponsor(orgId, sponsor.id, null, null, "555-1212", null, null, currentUser)
+
+		assertEquals("555-1212", result.phone)
+		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "sponsor.updated", "sponsor", sponsor.id, any()) }
+	}
+
+	@Test
+	fun `updateSponsor throws NotFoundException for an unknown sponsor`() {
+		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+		every { sponsorRepository.findById(any<UUID>(), orgId) } returns null
+
+		assertFailsWith<NotFoundException> {
+			service.updateSponsor(orgId, UUID.randomUUID(), "New Name", null, null, null, null, currentUser)
+		}
+	}
+
+	@Test
+	fun `buildShareLink rejects a non-http(s) url`() {
+		every { membershipService.requireActiveMembership(orgId, currentUser) } returns managerMembership()
+
+		assertFailsWith<ValidationException> {
+			service.buildShareLink(orgId, "javascript:alert(1)", currentUser)
+		}
+	}
+
+	@Test
+	fun `buildShareLink delegates to the QR generator for a valid url`() {
+		every { membershipService.requireActiveMembership(orgId, currentUser) } returns managerMembership()
+		every { qrCodeGenerator.generatePngDataUri("https://app.local/sponsors/riverside-fc") } returns "data:image/png;base64,ABC"
+
+		val result = service.buildShareLink(orgId, "https://app.local/sponsors/riverside-fc", currentUser)
+
+		assertEquals("data:image/png;base64,ABC", result)
+	}
+
+	private fun sampleSponsor() = Sponsor(
+		id = UUID.randomUUID(), organizationId = orgId, name = "Acme Co", contactEmail = "sponsor@acme.test",
+		phone = null, companyName = null, notes = null, createdAt = Instant.now(), updatedAt = Instant.now(),
+	)
 
 	private fun isSoldOut(sponsorshipPackage: SponsorshipPackage, confirmedCount: Long): Boolean =
 		sponsorshipPackage.effectiveMaxQuantity()?.let { confirmedCount >= it } ?: false

@@ -3,8 +3,21 @@ package com.leaguelift.sponsorship.domain
 import java.time.Instant
 import java.util.UUID
 
-/** No REFUNDED-by-way-of-active-refund-flow this slice (refunds are design target — see ADR-018) — the status exists so a later slice's refund flow has somewhere to land without a schema change, mirroring how `ContributionStatus`/`OrderStatus` already carry `REFUNDED`. */
+/** Refunds are now real as of Phase 6 remainder (ADR-019) — `refund()`/`reject()` on `SponsorshipService` reach `REFUNDED`, mirroring `ContributionStatus`/`OrderStatus`. */
 enum class SponsorshipStatus { PENDING, CONFIRMED, REFUNDED }
+
+/**
+ * The org-admin approval gate added in Phase 6 remainder (ADR-019) — deliberately a
+ * separate column from [SponsorshipStatus] rather than folded into it, because payment
+ * status and review status evolve independently: a sponsorship can be CONFIRMED and
+ * still PENDING_REVIEW (paid, awaiting approval, not yet on the public directory), or
+ * CONFIRMED and REJECTED (which also triggers a refund — see
+ * `SponsorshipService.reject` — landing the sponsorship at status=REFUNDED,
+ * reviewStatus=REJECTED simultaneously). A PENDING (unpaid) sponsorship's review status
+ * is meaningless until it confirms; it simply carries the PENDING_REVIEW default until
+ * then.
+ */
+enum class SponsorshipReviewStatus { PENDING_REVIEW, APPROVED, REJECTED }
 
 /**
  * One purchased sponsorship of a [SponsorshipPackage] by a [Sponsor] — mirrors
@@ -26,5 +39,14 @@ data class Sponsorship(
 	val stripeCheckoutSessionId: String?,
 	val stripePaymentIntentId: String?,
 	val confirmedAt: Instant?,
+	// Defaults below keep pre-existing test call sites (LedgerServiceTest,
+	// StripeWebhookControllerTest — neither exercises the review/refund workflow)
+	// compiling without churn; every real write path (SponsorshipRepository) always
+	// sets these explicitly via named parameters.
+	val refundedAt: Instant? = null,
+	val reviewStatus: SponsorshipReviewStatus = SponsorshipReviewStatus.PENDING_REVIEW,
+	val reviewedAt: Instant? = null,
+	val reviewedById: UUID? = null,
+	val renewalReminderSentAt: Instant? = null,
 	val createdAt: Instant,
 )

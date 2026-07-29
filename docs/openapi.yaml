@@ -24,15 +24,19 @@ info:
     confirmation — ADR-016; auto-design/personalization and cross-provider price
     comparison are explicitly out of scope, see the ADR), Phase 5 slice 1
     (ledger, real Stripe Connect Transfer payouts, and org-admin-initiated
-    refunds — ADR-017), and Phase 6 slice 1 (sponsorships proof-of-concept:
+    refunds — ADR-017), Phase 6 slice 1 (sponsorships proof-of-concept:
     org-published fixed-price sponsorship packages, test-mode Stripe Checkout
     purchase, ledger entries reusing the CONTRIBUTION shape with a new
     SPONSORSHIP source type, a public sponsor directory, and admin-side sponsor
     logo assignment — no public self-service logo upload and no refunds this
-    slice, see ADR-018).
+    slice, see ADR-018), and Phase 6's remainder (org-admin approval workflow
+    gating public sponsor-directory visibility, refunds including an atomic
+    reject-triggers-refund flow, a minimal scheduled renewal-reminder job,
+    stateless QR/link sharing, computed receipt-style invoices, and
+    sponsor-contact CRM widening — ADR-019).
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
-  version: "0.13.0"
+  version: "0.14.0"
 servers:
   - url: /api/v1
 tags:
@@ -3029,6 +3033,245 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /organizations/{organizationId}/sponsors/{sponsorId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/SponsorIdParam"
+    get:
+      tags: [sponsorships]
+      summary: Get a sponsor's CRM details
+      description: Sponsor-contact CRM read (Phase 6 remainder, ADR-019). Any active org member.
+      operationId: getSponsor
+      responses:
+        "200":
+          description: Sponsor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [sponsorships]
+      summary: Update a sponsor's CRM details
+      description: >
+        Sponsor-contact CRM update (Phase 6 remainder, ADR-019) — widens
+        sponsor beyond name/contact-email with phone/company name/notes.
+        Manager-role only.
+      operationId: updateSponsor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSponsorRequest"
+      responses:
+        "200":
+          description: Updated sponsor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/sponsorship-packages/qr-code:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [sponsorships]
+      summary: Generate a shareable QR code for a URL
+      description: >
+        Stateless (Phase 6 remainder, ADR-019) — no persistence, no
+        click-through tracking. The frontend supplies the org's own public
+        sponsorship-page URL (${origin}/sponsors/${organizationSlug}); this
+        endpoint just encodes it as a QR code image. Any active org member.
+      operationId: getSponsorshipShareLinkQrCode
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 2000
+      responses:
+        "200":
+          description: Share link + QR code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShareLinkResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/sponsorships/pending-review:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [sponsorships]
+      summary: List confirmed sponsorships awaiting org-admin review
+      description: The approval queue (Phase 6 remainder, ADR-019) — across all of the organization's packages, oldest-confirmed-first. Any active org member.
+      operationId: listPendingReviewSponsorships
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of confirmed, still-pending-review sponsorships
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorshipPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/sponsorships/{sponsorshipId}/approve:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/SponsorshipIdParam"
+    post:
+      tags: [sponsorships]
+      summary: Approve a confirmed, pending-review sponsorship
+      description: >
+        Manager-role only. Only action that makes a sponsorship appear on the
+        public sponsor directory (Phase 6 remainder approval workflow,
+        ADR-019). Rejected (400) if the sponsorship isn't CONFIRMED or was
+        already reviewed.
+      operationId: approveSponsorship
+      responses:
+        "200":
+          description: Approved sponsorship
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorshipResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/sponsorships/{sponsorshipId}/reject:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/SponsorshipIdParam"
+    post:
+      tags: [sponsorships]
+      summary: Reject a confirmed, pending-review sponsorship (atomically refunds it)
+      description: >
+        Manager-role only. Rejection is never charged-but-hidden — this
+        atomically (same transaction) issues the same Stripe refund + ledger
+        reversal POST .../refund performs (Phase 6 remainder, ADR-019).
+        Subject to the same 14-day refund window as a general refund.
+        Rejected (400) if the sponsorship isn't CONFIRMED, was already
+        reviewed, or falls outside the refund window.
+      operationId: rejectSponsorship
+      responses:
+        "200":
+          description: Rejected (and refunded) sponsorship
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorshipResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: The payments provider is unavailable (e.g. no Stripe test-mode key configured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /organizations/{organizationId}/sponsorships/{sponsorshipId}/refund:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/SponsorshipIdParam"
+    post:
+      tags: [sponsorships]
+      summary: Refund a confirmed sponsorship
+      description: >
+        Manager-role only. Independent of the review workflow — a
+        sponsorship can be refunded whether or not it was ever approved.
+        Within a 14-day window of confirmedAt, mirroring ADR-017's
+        contribution/order refund exactly (Phase 6 remainder, ADR-019).
+        Rejected (400) if the sponsorship isn't CONFIRMED or the window has
+        elapsed.
+      operationId: refundSponsorship
+      responses:
+        "200":
+          description: Refunded sponsorship
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorshipResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: The payments provider is unavailable (e.g. no Stripe test-mode key configured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /organizations/{organizationId}/sponsorships/{sponsorshipId}/invoice:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/SponsorshipIdParam"
+    get:
+      tags: [sponsorships]
+      summary: Get a receipt-style invoice for a confirmed sponsorship
+      description: >
+        Computed on read, not a stored/numbered invoice document (Phase 6
+        remainder, ADR-019). Available for any sponsorship that reached
+        CONFIRMED (including one since REFUNDED). Any active org member.
+      operationId: getSponsorshipInvoice
+      responses:
+        "200":
+          description: Invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorshipInvoiceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /public/organizations/{slug}/sponsorship-packages:
     get:
       tags: [sponsorships]
@@ -3055,7 +3298,13 @@ paths:
   /public/organizations/{slug}/sponsors:
     get:
       tags: [sponsorships]
-      summary: Public sponsor directory — confirmed sponsors and their logos for an organization
+      summary: Public sponsor directory — confirmed AND org-admin-approved sponsors and their logos for an organization
+      description: >
+        Only sponsorships that are both status=CONFIRMED and
+        reviewStatus=APPROVED appear here (Phase 6 remainder approval
+        workflow, ADR-019) — a newly confirmed sponsorship stays off this
+        list until an org admin approves it via
+        POST .../sponsorships/{sponsorshipId}/approve.
       operationId: listPublicSponsorDirectory
       parameters:
         - name: slug
@@ -6189,10 +6438,23 @@ components:
           type: string
           format: date-time
           nullable: true
+    SponsorshipReviewStatus:
+      type: string
+      enum: [PENDING_REVIEW, APPROVED, REJECTED]
+      description: >
+        The org-admin approval gate (Phase 6 remainder, ADR-019) — kept
+        conceptually separate from SponsorshipStatus (payment lifecycle): a
+        sponsorship can be CONFIRMED and still PENDING_REVIEW, or CONFIRMED
+        and REJECTED simultaneously with status=REFUNDED (rejecting
+        atomically refunds).
     SponsorshipResponse:
       type: object
-      required: [id, status, amountMinor, currency, sponsorId, sponsorName, createdAt]
-      description: Org-admin list shape — sponsorships that were confirmed at some point (CONFIRMED or REFUNDED).
+      required: [id, status, amountMinor, currency, sponsorId, sponsorName, reviewStatus, createdAt]
+      description: >
+        Org-admin list shape — sponsorships that were confirmed at some point
+        (CONFIRMED or REFUNDED). Used by
+        GET .../sponsorship-packages/{packageId}/sponsorships and
+        GET .../sponsorships/pending-review (ADR-019).
       properties:
         id:
           type: string
@@ -6213,6 +6475,16 @@ components:
           type: string
           nullable: true
         confirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+        refundedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewStatus:
+          $ref: "#/components/schemas/SponsorshipReviewStatus"
+        reviewedAt:
           type: string
           format: date-time
           nullable: true
@@ -6252,6 +6524,109 @@ components:
           type: string
           nullable: true
           description: Null until an org admin assigns a logo for this sponsor (ADR-018).
+
+    SponsorResponse:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      description: Sponsor-contact CRM shape (Phase 6 remainder, ADR-019) — a small, bounded field set, not a full multi-contact CRM.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        contactEmail:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        companyName:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    UpdateSponsorRequest:
+      type: object
+      description: Every field optional — only supplied fields are updated (ADR-019).
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        contactEmail:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 40
+        companyName:
+          type: string
+          maxLength: 200
+        notes:
+          type: string
+          maxLength: 2000
+    SponsorshipInvoiceResponse:
+      type: object
+      required:
+        [sponsorshipId, status, amountMinor, currency, sponsorName, packageId, packageName, organizationId, organizationName]
+      description: >
+        A downloadable/viewable receipt-style summary of one confirmed
+        sponsorship (Phase 6 remainder, ADR-019) — computed on read, not a
+        stored/numbered invoice document.
+      properties:
+        sponsorshipId:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/SponsorshipStatus"
+        amountMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        confirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+        sponsorName:
+          type: string
+        sponsorContactEmail:
+          type: string
+          nullable: true
+        sponsorCompanyName:
+          type: string
+          nullable: true
+        packageId:
+          type: string
+          format: uuid
+        packageName:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+    ShareLinkResponse:
+      type: object
+      required: [url, qrCodeDataUri]
+      description: >
+        A shareable QR code image (data:image/png;base64,... ready to render
+        in an <img src>) plus the plain URL it encodes (Phase 6 remainder,
+        ADR-019). Nothing persisted, no click-through tracking.
+      properties:
+        url:
+          type: string
+        qrCodeDataUri:
+          type: string
 
     DashboardRole:
       type: string

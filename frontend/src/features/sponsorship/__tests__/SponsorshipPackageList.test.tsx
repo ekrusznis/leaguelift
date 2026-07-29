@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../../test/testUtils";
 import { SponsorshipPackageList } from "../SponsorshipPackageList";
-import type { SponsorshipPackage, SponsorshipPackagePage } from "../types";
+import type { Sponsorship, SponsorshipPackage, SponsorshipPackagePage, SponsorshipPage } from "../types";
 
 const organizationId = "11111111-1111-1111-1111-111111111111";
 
@@ -100,5 +100,93 @@ describe("SponsorshipPackageList", () => {
 
 		expect(await screen.findByText(/sold out/i)).toBeInTheDocument();
 		expect(screen.queryByRole("button", { name: /publish/i })).not.toBeInTheDocument();
+	});
+
+	const pendingReviewSponsorship: Sponsorship = {
+		id: "33333333-3333-3333-3333-333333333333",
+		status: "CONFIRMED",
+		amountMinor: 50000,
+		currency: "USD",
+		sponsorId: "44444444-4444-4444-4444-444444444444",
+		sponsorName: "Acme Co",
+		sponsorContactEmail: "sponsor@acme.test",
+		confirmedAt: new Date().toISOString(),
+		refundedAt: null,
+		reviewStatus: "PENDING_REVIEW",
+		reviewedAt: null,
+		createdAt: new Date().toISOString(),
+	};
+	const pendingReviewPage: SponsorshipPage = { items: [pendingReviewSponsorship], page: 0, size: 20, totalElements: 1 };
+
+	it("approves a pending-review sponsorship from the review queue", async () => {
+		const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+			if (url.includes("/pending-review")) return Promise.resolve(jsonResponse(pendingReviewPage));
+			if (url.includes("/approve")) return Promise.resolve(jsonResponse({ ...pendingReviewSponsorship, reviewStatus: "APPROVED" }));
+			if (init?.method === "POST") return Promise.resolve(jsonResponse(draftPackage, 201));
+			return Promise.resolve(jsonResponse(emptyPackages));
+		});
+		vi.stubGlobal("fetch", fetchMock);
+		const user = userEvent.setup();
+
+		renderWithProviders(<SponsorshipPackageList organizationId={organizationId} />);
+		await screen.findByText(/no sponsorship packages yet/i);
+
+		await user.click(screen.getByRole("button", { name: /review pending sponsorships/i }));
+		await screen.findByText("Acme Co");
+
+		await user.click(screen.getByRole("button", { name: /^approve$/i }));
+
+		await waitFor(() =>
+			expect(fetchMock).toHaveBeenCalledWith(
+				expect.stringContaining(`/organizations/${organizationId}/sponsorships/${pendingReviewSponsorship.id}/approve`),
+				expect.objectContaining({ method: "POST" }),
+			),
+		);
+	});
+
+	it("rejects a pending-review sponsorship after confirmation", async () => {
+		const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+			if (url.includes("/pending-review")) return Promise.resolve(jsonResponse(pendingReviewPage));
+			if (url.includes("/reject")) return Promise.resolve(jsonResponse({ ...pendingReviewSponsorship, reviewStatus: "REJECTED", status: "REFUNDED" }));
+			if (init?.method === "POST") return Promise.resolve(jsonResponse(draftPackage, 201));
+			return Promise.resolve(jsonResponse(emptyPackages));
+		});
+		vi.stubGlobal("fetch", fetchMock);
+		vi.spyOn(window, "confirm").mockReturnValue(true);
+		const user = userEvent.setup();
+
+		renderWithProviders(<SponsorshipPackageList organizationId={organizationId} />);
+		await screen.findByText(/no sponsorship packages yet/i);
+
+		await user.click(screen.getByRole("button", { name: /review pending sponsorships/i }));
+		await screen.findByText("Acme Co");
+
+		await user.click(screen.getByRole("button", { name: /reject & refund/i }));
+
+		await waitFor(() =>
+			expect(fetchMock).toHaveBeenCalledWith(
+				expect.stringContaining(`/organizations/${organizationId}/sponsorships/${pendingReviewSponsorship.id}/reject`),
+				expect.objectContaining({ method: "POST" }),
+			),
+		);
+	});
+
+	it("shows a QR code and shareable link when Share is clicked", async () => {
+		const fetchMock = vi.fn((url: string) => {
+			if (url.includes("/qr-code")) {
+				return Promise.resolve(jsonResponse({ url: `${window.location.origin}/sponsors/riverside-fc`, qrCodeDataUri: "data:image/png;base64,ABC" }));
+			}
+			return Promise.resolve(jsonResponse({ items: [draftPackage], page: 0, size: 20, totalElements: 1 }));
+		});
+		vi.stubGlobal("fetch", fetchMock);
+		const user = userEvent.setup();
+
+		renderWithProviders(<SponsorshipPackageList organizationId={organizationId} organizationSlug="riverside-fc" />);
+		await screen.findByText(/gold sponsor/i);
+
+		await user.click(screen.getByRole("button", { name: /^share$/i }));
+
+		expect(await screen.findByAltText(/qr code/i)).toBeInTheDocument();
+		expect(screen.getByDisplayValue(`${window.location.origin}/sponsors/riverside-fc`)).toBeInTheDocument();
 	});
 });

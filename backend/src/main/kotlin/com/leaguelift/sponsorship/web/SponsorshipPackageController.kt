@@ -7,6 +7,7 @@ import com.leaguelift.media.web.MediaAssignmentResponse
 import com.leaguelift.media.web.toResponse
 import com.leaguelift.sponsorship.application.SponsorshipPackageService
 import com.leaguelift.sponsorship.application.SponsorshipService
+import com.leaguelift.sponsorship.application.SponsorshipWithSponsor
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -134,4 +135,84 @@ class SponsorshipPackageController(
 			?: error("Newly assigned sponsor logo asset ${assignment.assetId} must exist.")
 		return descriptor.toResponse()
 	}
+
+	// ---- Sponsor-contact CRM (Phase 6 remainder, ADR-019) ----
+
+	@GetMapping("/sponsors/{sponsorId}")
+	fun getSponsor(
+		@PathVariable organizationId: UUID,
+		@PathVariable sponsorId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): SponsorResponse = sponsorshipPackageService.getSponsor(organizationId, sponsorId, currentUser).toResponse()
+
+	@PatchMapping("/sponsors/{sponsorId}")
+	fun updateSponsor(
+		@PathVariable organizationId: UUID,
+		@PathVariable sponsorId: UUID,
+		@Valid @RequestBody request: UpdateSponsorRequest,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): SponsorResponse = sponsorshipPackageService.updateSponsor(
+		organizationId, sponsorId, request.name, request.contactEmail, request.phone, request.companyName, request.notes, currentUser,
+	).toResponse()
+
+	// ---- Approval workflow, refunds, invoices (Phase 6 remainder, ADR-019) ----
+
+	@GetMapping("/sponsorships/pending-review")
+	fun listPendingReview(
+		@PathVariable organizationId: UUID,
+		@RequestParam(defaultValue = "0") page: Int,
+		@RequestParam(defaultValue = "20") size: Int,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): PageResponse<SponsorshipResponse> {
+		val offset = page * size
+		val items = sponsorshipService.listPendingReview(organizationId, currentUser, offset, size).map { it.toResponse() }
+		val total = sponsorshipService.countPendingReview(organizationId, currentUser)
+		return PageResponse(items, page, size, total)
+	}
+
+	@PostMapping("/sponsorships/{sponsorshipId}/approve")
+	fun approveSponsorship(
+		@PathVariable organizationId: UUID,
+		@PathVariable sponsorshipId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): SponsorshipResponse {
+		val sponsorship = sponsorshipService.approve(organizationId, sponsorshipId, currentUser)
+		return SponsorshipWithSponsor(sponsorship, sponsorshipPackageService.getSponsor(organizationId, sponsorship.sponsorId, currentUser)).toResponse()
+	}
+
+	@PostMapping("/sponsorships/{sponsorshipId}/reject")
+	fun rejectSponsorship(
+		@PathVariable organizationId: UUID,
+		@PathVariable sponsorshipId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): SponsorshipResponse {
+		val sponsorship = sponsorshipService.reject(organizationId, sponsorshipId, currentUser)
+		return SponsorshipWithSponsor(sponsorship, sponsorshipPackageService.getSponsor(organizationId, sponsorship.sponsorId, currentUser)).toResponse()
+	}
+
+	@PostMapping("/sponsorships/{sponsorshipId}/refund")
+	fun refundSponsorship(
+		@PathVariable organizationId: UUID,
+		@PathVariable sponsorshipId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): SponsorshipResponse {
+		val sponsorship = sponsorshipService.refund(organizationId, sponsorshipId, currentUser)
+		return SponsorshipWithSponsor(sponsorship, sponsorshipPackageService.getSponsor(organizationId, sponsorship.sponsorId, currentUser)).toResponse()
+	}
+
+	@GetMapping("/sponsorships/{sponsorshipId}/invoice")
+	fun getInvoice(
+		@PathVariable organizationId: UUID,
+		@PathVariable sponsorshipId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): SponsorshipInvoiceResponse = sponsorshipService.getInvoice(organizationId, sponsorshipId, currentUser).toResponse()
+
+	// ---- QR/link sharing (Phase 6 remainder, ADR-019 — no click-through tracking) ----
+
+	@GetMapping("/sponsorship-packages/qr-code")
+	fun getShareLinkQrCode(
+		@PathVariable organizationId: UUID,
+		@RequestParam url: String,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): ShareLinkResponse = ShareLinkResponse(url, sponsorshipPackageService.buildShareLink(organizationId, url, currentUser))
 }

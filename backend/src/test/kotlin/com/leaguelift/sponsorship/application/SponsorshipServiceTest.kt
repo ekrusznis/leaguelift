@@ -4,15 +4,24 @@ import com.leaguelift.audit.application.AuditService
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.error.ServiceUnavailableException
 import com.leaguelift.common.error.ValidationException
+import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.ledger.application.LedgerService
+import com.leaguelift.ledger.domain.LedgerSourceType
 import com.leaguelift.media.application.MediaAssignmentService
 import com.leaguelift.media.application.MediaReadService
 import com.leaguelift.membership.application.MembershipService
+import com.leaguelift.membership.domain.MembershipRole
+import com.leaguelift.membership.domain.MembershipStatus
+import com.leaguelift.membership.domain.OrganizationMembership
+import com.leaguelift.organization.domain.Organization
+import com.leaguelift.organization.domain.OrganizationStatus
+import com.leaguelift.organization.domain.OrganizationType
 import com.leaguelift.organization.persistence.OrganizationRepository
 import com.leaguelift.sponsorship.domain.Sponsor
 import com.leaguelift.sponsorship.domain.Sponsorship
 import com.leaguelift.sponsorship.domain.SponsorshipPackage
 import com.leaguelift.sponsorship.domain.SponsorshipPackageStatus
+import com.leaguelift.sponsorship.domain.SponsorshipReviewStatus
 import com.leaguelift.sponsorship.domain.SponsorshipStatus
 import com.leaguelift.sponsorship.infra.SponsorshipCheckoutSession
 import com.leaguelift.sponsorship.infra.StripeSponsorshipCheckoutClient
@@ -25,6 +34,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
@@ -183,6 +193,188 @@ class SponsorshipServiceTest {
 
 		assertEquals(null, result)
 	}
+
+	private val currentUser = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
+
+	@Test
+	fun `approve requires manager role, moves PENDING_REVIEW to APPROVED, and records audit`() {
+		val pkg = sponsorshipPackage()
+		val sponsor = sampleSponsor(pkg.organizationId)
+		val confirmed = pendingSponsorship(pkg, sponsor).copy(status = SponsorshipStatus.CONFIRMED, confirmedAt = Instant.now())
+		val approved = confirmed.copy(reviewStatus = SponsorshipReviewStatus.APPROVED)
+		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+		every { sponsorshipRepository.findById(confirmed.id) } returns confirmed andThen approved
+		every { sponsorshipRepository.updateReviewStatus(confirmed.id, SponsorshipReviewStatus.APPROVED, currentUser.userId) } returns 1
+		every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+
+		val result = service.approve(orgId, confirmed.id, currentUser)
+
+		assertEquals(SponsorshipReviewStatus.APPROVED, result.reviewStatus)
+		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "sponsorship.approved", "sponsorship", confirmed.id) }
+	}
+
+	@Test
+	fun `approve rejects a sponsorship that isn't CONFIRMED yet`() {
+		val pkg = sponsorshipPackage()
+		val sponsor = sampleSponsor(pkg.organizationId)
+		val pending = pendingSponsorship(pkg, sponsor)
+		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+		every { sponsorshipRepository.findById(pending.id) } returns pending
+
+		assertFailsWith<ValidationException> {
+			service.approve(orgId, pending.id, currentUser)
+		}
+	}
+
+	@Test
+	fun `approve rejects a sponsorship that was already reviewed`() {
+		val pkg = sponsorshipPackage()
+		val sponsor = sampleSponsor(pkg.organizationId)
+		val alreadyApproved = pendingSponsorship(pkg, sponsor)
+			.copy(status = SponsorshipStatus.CONFIRMED, confirmedAt = Instant.now(), reviewStatus = SponsorshipReviewStatus.APPROVED)
+		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+		every { sponsorshipRepository.findById(alreadyApproved.id) } returns alreadyApproved
+
+		assertFailsWith<ValidationException> {
+			service.approve(orgId, alreadyApproved.id, currentUser)
+		}
+	}
+
+	@Test
+	fun `approve throws NotFoundException for a sponsorship in another organization`() {
+		val pkg = sponsorshipPackage()
+		val sponsor = sampleSponsor(pkg.organizationId)
+		val confirmed = pendingSponsorship(pkg, sponsor).copy(status = SponsorshipStatus.CONFIRMED, confirmedAt = Instant.now())
+		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+		every { sponsorshipRepository.findById(confirmed.id) } returns confirmed.copy(organizationId = UUID.randomUUID())
+
+		assertFailsWith<NotFoundException> {
+			service.approve(orgId, confirmed.id, currentUser)
+		}
+	}
+
+	@Test
+	fun `reject moves PENDING_REVIEW to REJECTED and atomically refunds via Stripe and the ledger`() {
+		val pkg = sponsorshipPackage()
+		val sponsor = sampleSponsor(pkg.organizationId)
+		val confirmed = pendingSponsorship(pkg, sponsor).copy(
+			status = SponsorshipStatus.CONFIRMED, confirmedAt = Instant.now(), stripePaymentIntentId = "pi_test_123",
+		)
+		val rejectedRefunded = confirmed.copy(status = SponsorshipStatus.REFUNDED, reviewStatus = SponsorshipReviewStatus.REJECTED)
+		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+		every { sponsorshipRepository.findById(confirmed.id) } returns confirmed andThen rejectedRefunded
+		every { sponsorshipRepository.updateReviewStatus(confirmed.id, SponsorshipReviewStatus.REJECTED, currentUser.userId) } returns 1
+		every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+		every { stripeSponsorshipCheckoutClient.createRefund("pi_test_123") } returns "re_test_123"
+		every { sponsorshipRepository.markRefunded(confirmed.id) } returns 1
+		every { ledgerService.recordRefund(orgId, LedgerSourceType.SPONSORSHIP, confirmed.id, confirmed.amountMinor, confirmed.currency, "re_test_123") } just runs
+
+		val result = service.reject(orgId, confirmed.id, currentUser)
+
+		assertEquals(SponsorshipReviewStatus.REJECTED, result.reviewStatus)
+		assertEquals(SponsorshipStatus.REFUNDED, result.status)
+		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "sponsorship.rejected", "sponsorship", confirmed.id) }
+		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "sponsorship.refunded", "sponsorship", confirmed.id) }
+		verify(exactly = 1) { stripeSponsorshipCheckoutClient.createRefund("pi_test_123") }
+	}
+
+	@Test
+	fun `refund is rejected outside the 14-day window`() {
+		val pkg = sponsorshipPackage()
+		val sponsor = sampleSponsor(pkg.organizationId)
+		val old = pendingSponsorship(pkg, sponsor).copy(
+			status = SponsorshipStatus.CONFIRMED, confirmedAt = Instant.now().minus(Duration.ofDays(15)), stripePaymentIntentId = "pi_test_999",
+		)
+		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+		every { sponsorshipRepository.findById(old.id) } returns old
+
+		assertFailsWith<ValidationException> {
+			service.refund(orgId, old.id, currentUser)
+		}
+		verify(exactly = 0) { stripeSponsorshipCheckoutClient.createRefund(any()) }
+	}
+
+	@Test
+	fun `refund rejects a sponsorship that was never confirmed`() {
+		val pkg = sponsorshipPackage()
+		val sponsor = sampleSponsor(pkg.organizationId)
+		val pending = pendingSponsorship(pkg, sponsor)
+		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+		every { sponsorshipRepository.findById(pending.id) } returns pending
+
+		assertFailsWith<ValidationException> {
+			service.refund(orgId, pending.id, currentUser)
+		}
+	}
+
+	@Test
+	fun `refund translates a Stripe failure into ServiceUnavailableException`() {
+		val pkg = sponsorshipPackage()
+		val sponsor = sampleSponsor(pkg.organizationId)
+		val confirmed = pendingSponsorship(pkg, sponsor).copy(
+			status = SponsorshipStatus.CONFIRMED, confirmedAt = Instant.now(), stripePaymentIntentId = "pi_test_123",
+		)
+		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+		every { sponsorshipRepository.findById(confirmed.id) } returns confirmed
+		every { stripeSponsorshipCheckoutClient.createRefund("pi_test_123") } throws ApiConnectionException("no network")
+
+		assertFailsWith<ServiceUnavailableException> {
+			service.refund(orgId, confirmed.id, currentUser)
+		}
+	}
+
+	@Test
+	fun `listPublicDirectory only reflects the repository's already-approved filter (unit-level trust boundary)`() {
+		every { organizationRepository.findBySlug("riverside-fc") } returns sampleOrganization()
+		every { sponsorshipRepository.findConfirmedForOrganization(orgId) } returns emptyList()
+
+		val result = service.listPublicDirectory("riverside-fc")
+
+		assertEquals(emptyList(), result)
+		verify(exactly = 1) { sponsorshipRepository.findConfirmedForOrganization(orgId) }
+	}
+
+	@Test
+	fun `getInvoice returns a receipt-style summary for a confirmed sponsorship`() {
+		val pkg = sponsorshipPackage()
+		val sponsor = sampleSponsor(pkg.organizationId)
+		val confirmed = pendingSponsorship(pkg, sponsor).copy(status = SponsorshipStatus.CONFIRMED, confirmedAt = Instant.now())
+		every { membershipService.requireActiveMembership(orgId, currentUser) } returns managerMembership()
+		every { sponsorshipRepository.findById(confirmed.id) } returns confirmed
+		every { sponsorRepository.findById(sponsor.id) } returns sponsor
+		every { sponsorshipPackageRepository.findById(pkg.id, orgId) } returns pkg
+		every { organizationRepository.findById(orgId) } returns sampleOrganization()
+
+		val invoice = service.getInvoice(orgId, confirmed.id, currentUser)
+
+		assertEquals(confirmed.id, invoice.sponsorship.id)
+		assertEquals(sponsor.name, invoice.sponsor.name)
+		assertEquals(pkg.name, invoice.sponsorshipPackage.name)
+	}
+
+	@Test
+	fun `getInvoice rejects a sponsorship that was never confirmed`() {
+		val pkg = sponsorshipPackage()
+		val sponsor = sampleSponsor(pkg.organizationId)
+		val pending = pendingSponsorship(pkg, sponsor)
+		every { membershipService.requireActiveMembership(orgId, currentUser) } returns managerMembership()
+		every { sponsorshipRepository.findById(pending.id) } returns pending
+
+		assertFailsWith<ValidationException> {
+			service.getInvoice(orgId, pending.id, currentUser)
+		}
+	}
+
+	private fun managerMembership() = OrganizationMembership(
+		id = UUID.randomUUID(), organizationId = orgId, userId = currentUser.userId, role = MembershipRole.ADMINISTRATOR,
+		status = MembershipStatus.ACTIVE, createdAt = Instant.now(), updatedAt = Instant.now(),
+	)
+
+	private fun sampleOrganization() = Organization(
+		id = orgId, name = "Riverside FC", slug = "riverside-fc", organizationType = OrganizationType.RECREATIONAL_LEAGUE,
+		status = OrganizationStatus.ACTIVE, sports = emptyList(), contactEmail = null, contactPhone = null,
+		createdAt = Instant.now(), updatedAt = Instant.now(),
+	)
 
 	private fun sponsorshipPackage(status: SponsorshipPackageStatus = SponsorshipPackageStatus.PUBLISHED, maxQuantity: Int? = null) = SponsorshipPackage(
 		id = UUID.randomUUID(), organizationId = orgId, name = "Gold Sponsor", description = null,

@@ -101,7 +101,7 @@ export function OrganizationDetailPage() {
 
 			<section aria-label="Sponsorship packages" className="flex flex-col gap-3">
 				<h2 className="font-heading text-lg font-semibold text-navy">Sponsorship Packages</h2>
-				<SponsorshipPackageList organizationId={organization.id} />
+				<SponsorshipPackageList organizationId={organization.id} organizationSlug={organization.slug} />
 			</section>
 
 			<section aria-label="Public pages" className="flex flex-col gap-3">

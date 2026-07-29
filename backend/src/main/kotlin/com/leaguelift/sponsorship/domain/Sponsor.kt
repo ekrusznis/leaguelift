@@ -20,6 +20,10 @@ data class Sponsor(
 	val organizationId: UUID,
 	val name: String,
 	val contactEmail: String?,
+	/** CRM widening (Phase 6 remainder, ADR-019) — a small, bounded field set an org admin would actually want; not a full multi-contact-per-sponsor CRM. Defaulted to null so pre-existing test call sites keep compiling. */
+	val phone: String? = null,
+	val companyName: String? = null,
+	val notes: String? = null,
 	val createdAt: Instant,
 	val updatedAt: Instant,
 )

@@ -2,7 +2,9 @@ package com.leaguelift.sponsorship.web
 
 import com.leaguelift.sponsorship.application.SponsorDirectoryEntry
 import com.leaguelift.sponsorship.application.SponsorshipCheckout
+import com.leaguelift.sponsorship.application.SponsorshipInvoice
 import com.leaguelift.sponsorship.application.SponsorshipWithSponsor
+import com.leaguelift.sponsorship.domain.Sponsor
 import com.leaguelift.sponsorship.domain.Sponsorship
 import com.leaguelift.sponsorship.domain.SponsorshipPackage
 import com.leaguelift.sponsorship.domain.SponsorshipPackageStatus
@@ -109,7 +111,7 @@ data class SponsorshipStatusResponse(
 
 fun Sponsorship.toStatusResponse() = SponsorshipStatusResponse(id, status.name, amountMinor, currency, confirmedAt)
 
-/** Org-admin list shape (`GET /organizations/{id}/sponsorship-packages/{packageId}/sponsorships`). */
+/** Org-admin list shape (`GET /organizations/{id}/sponsorship-packages/{packageId}/sponsorships`, `GET /organizations/{id}/sponsorships/pending-review`). */
 data class SponsorshipResponse(
 	val id: UUID,
 	val status: String,
@@ -119,13 +121,73 @@ data class SponsorshipResponse(
 	val sponsorName: String,
 	val sponsorContactEmail: String?,
 	val confirmedAt: Instant?,
+	val refundedAt: Instant?,
+	val reviewStatus: String,
+	val reviewedAt: Instant?,
 	val createdAt: Instant,
 )
 
 fun SponsorshipWithSponsor.toResponse() = SponsorshipResponse(
 	sponsorship.id, sponsorship.status.name, sponsorship.amountMinor, sponsorship.currency,
-	sponsor.id, sponsor.name, sponsor.contactEmail, sponsorship.confirmedAt, sponsorship.createdAt,
+	sponsor.id, sponsor.name, sponsor.contactEmail, sponsorship.confirmedAt, sponsorship.refundedAt,
+	sponsorship.reviewStatus.name, sponsorship.reviewedAt, sponsorship.createdAt,
 )
+
+/** Sponsor-contact CRM shape (Phase 6 remainder, ADR-019). */
+data class SponsorResponse(
+	val id: UUID,
+	val name: String,
+	val contactEmail: String?,
+	val phone: String?,
+	val companyName: String?,
+	val notes: String?,
+	val createdAt: Instant,
+	val updatedAt: Instant,
+)
+
+fun Sponsor.toResponse() = SponsorResponse(id, name, contactEmail, phone, companyName, notes, createdAt, updatedAt)
+
+data class UpdateSponsorRequest(
+	@field:Size(min = 1, max = 200) val name: String? = null,
+	@field:Email @field:Size(max = 254) val contactEmail: String? = null,
+	@field:Size(max = 40) val phone: String? = null,
+	@field:Size(max = 200) val companyName: String? = null,
+	@field:Size(max = 2000) val notes: String? = null,
+)
+
+/** A downloadable/viewable receipt-style summary of one confirmed sponsorship (Phase 6 remainder, ADR-019) — no invoice numbering sequence. */
+data class SponsorshipInvoiceResponse(
+	val sponsorshipId: UUID,
+	val status: String,
+	val amountMinor: Long,
+	val currency: String,
+	val confirmedAt: Instant?,
+	val sponsorName: String,
+	val sponsorContactEmail: String?,
+	val sponsorCompanyName: String?,
+	val packageId: UUID,
+	val packageName: String,
+	val organizationId: UUID,
+	val organizationName: String,
+)
+
+fun SponsorshipInvoice.toResponse() = SponsorshipInvoiceResponse(
+	sponsorshipId = sponsorship.id,
+	status = sponsorship.status.name,
+	amountMinor = sponsorship.amountMinor,
+	currency = sponsorship.currency,
+	confirmedAt = sponsorship.confirmedAt,
+	sponsorName = sponsor.name,
+	sponsorContactEmail = sponsor.contactEmail,
+	sponsorCompanyName = sponsor.companyName,
+	packageId = sponsorshipPackage.id,
+	packageName = sponsorshipPackage.name,
+	organizationId = organization.id,
+	organizationName = organization.name,
+)
+
+/** `GET /organizations/{id}/sponsorship-packages/qr-code` response — a plain URL plus a ready-to-render `data:image/png;base64,...` QR code image of that same URL (Phase 6 remainder, ADR-019; no click-through tracking, nothing persisted). */
+data class ShareLinkResponse(val url: String, val qrCodeDataUri: String)
 
 data class SponsorDirectoryEntryResponse(
 	val sponsorId: UUID,

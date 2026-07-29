@@ -6,15 +6,19 @@ import com.leaguelift.common.error.ServiceUnavailableException
 import com.leaguelift.common.error.ValidationException
 import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.ledger.application.LedgerService
+import com.leaguelift.ledger.domain.LedgerSourceType
 import com.leaguelift.media.application.MediaAssignmentService
 import com.leaguelift.media.application.MediaReadService
 import com.leaguelift.media.domain.MediaEntityType
 import com.leaguelift.media.domain.MediaUsageSlot
 import com.leaguelift.membership.application.MembershipService
+import com.leaguelift.organization.domain.Organization
 import com.leaguelift.organization.persistence.OrganizationRepository
 import com.leaguelift.sponsorship.domain.Sponsor
+import com.leaguelift.sponsorship.domain.SponsorshipPackage
 import com.leaguelift.sponsorship.domain.SponsorshipPackageStatus
 import com.leaguelift.sponsorship.domain.Sponsorship
+import com.leaguelift.sponsorship.domain.SponsorshipReviewStatus
 import com.leaguelift.sponsorship.domain.SponsorshipStatus
 import com.leaguelift.sponsorship.domain.effectiveMaxQuantity
 import com.leaguelift.sponsorship.infra.StripeSponsorshipCheckoutClient
@@ -25,12 +29,17 @@ import com.stripe.exception.StripeException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 
 private val log = LoggerFactory.getLogger(SponsorshipService::class.java)
 
 /** Mirrors `ContributionService.CONTRIBUTION_ID_PLACEHOLDER` — the frontend can't know the sponsorship id until this call returns. */
 const val SPONSORSHIP_ID_PLACEHOLDER = "{SPONSORSHIP_ID}"
+
+/** Org-admin-initiated sponsorship refunds — including the refund `reject()` triggers — are only allowed within this window of confirmation (mirrors ADR-017's contribution/order refund window; Phase 6 remainder, ADR-019). */
+val SPONSORSHIP_REFUND_WINDOW: Duration = Duration.ofDays(14)
 
 /** A directory entry combining a confirmed sponsorship with its sponsor's display name/logo — the public sponsor directory's response shape. */
 data class SponsorDirectoryEntry(
@@ -41,13 +50,21 @@ data class SponsorDirectoryEntry(
 	val logoUrl: String?,
 )
 
+/** A downloadable/viewable receipt-style summary of one confirmed sponsorship (Phase 6 remainder, ADR-019) — no invoice numbering sequence, no formal accounting-invoice system. */
+data class SponsorshipInvoice(
+	val sponsorship: Sponsorship,
+	val sponsor: Sponsor,
+	val sponsorshipPackage: SponsorshipPackage,
+	val organization: Organization,
+)
+
 /**
- * Sponsorship checkout (Phase 6 slice 1) — mirrors
- * `fundraising/application/ContributionService.kt` closely: confirmation happens only
- * via the Stripe webhook, never a sync refresh-on-return, for the same reason (a sponsor
- * who pays and closes the tab shouldn't leave Stripe holding confirmed money LeagueLift
- * never records). Refunds, approval workflow, and renewal reminders are explicitly out
- * of scope this slice (ADR-018, DESIGN-DOC.md section 14.1).
+ * Sponsorship checkout (Phase 6 slice 1, ADR-018) plus the Phase 6 remainder additions
+ * (ADR-019): an org-admin approval workflow gating public directory visibility, refunds
+ * (including a rejection-triggered refund), and invoices. Confirmation still happens
+ * only via the Stripe webhook — see [confirmFromWebhook] — but confirmation alone no
+ * longer grants public visibility; an org admin must separately [approve] a confirmed
+ * sponsorship first.
  */
 @Service
 class SponsorshipService(
@@ -109,7 +126,7 @@ class SponsorshipService(
 		}
 	}
 
-	/** Idempotent: a duplicate webhook delivery or an already-confirmed sponsorship is a safe no-op. */
+	/** Idempotent: a duplicate webhook delivery or an already-confirmed sponsorship is a safe no-op. Confirmation leaves `reviewStatus` at its PENDING_REVIEW default — an org admin must separately [approve] before this sponsor appears on the public directory (Phase 6 remainder approval workflow, ADR-019). */
 	@Transactional
 	fun confirmFromWebhook(stripeSessionId: String, stripePaymentStatus: String, stripePaymentIntentId: String?): Sponsorship? {
 		val sponsorship = sponsorshipRepository.findByStripeCheckoutSessionId(stripeSessionId) ?: return null
@@ -136,14 +153,21 @@ class SponsorshipService(
 		membershipService.requireActiveMembership(organizationId, currentUser)
 		val sponsorshipPackage = sponsorshipPackageRepository.findById(packageId, organizationId)
 			?: throw NotFoundException("SPONSORSHIP_PACKAGE_NOT_FOUND", "The sponsorship package could not be found.")
-		return sponsorshipRepository.listConfirmedForPackage(sponsorshipPackage.id, offset, limit).map { sponsorship ->
-			val sponsor = sponsorRepository.findById(sponsorship.sponsorId)
-				?: error("sponsorship ${sponsorship.id} references a missing sponsor")
-			SponsorshipWithSponsor(sponsorship, sponsor)
-		}
+		return sponsorshipRepository.listConfirmedForPackage(sponsorshipPackage.id, offset, limit).map(::withSponsor)
 	}
 
-	/** Public sponsor directory (DESIGN-DOC.md section 14.1 scope) — every confirmed sponsor for an organization, with logo if one has been assigned. */
+	/** The org-admin approval queue (Phase 6 remainder, ADR-019) — every confirmed sponsorship across the organization still awaiting a review decision, oldest first (first paid, first reviewed). */
+	fun listPendingReview(organizationId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<SponsorshipWithSponsor> {
+		membershipService.requireActiveMembership(organizationId, currentUser)
+		return sponsorshipRepository.listPendingReview(organizationId, offset, limit).map(::withSponsor)
+	}
+
+	fun countPendingReview(organizationId: UUID, currentUser: CurrentUser): Long {
+		membershipService.requireActiveMembership(organizationId, currentUser)
+		return sponsorshipRepository.countPendingReview(organizationId)
+	}
+
+	/** Public sponsor directory (DESIGN-DOC.md section 14.1 scope) — every confirmed AND approved sponsor for an organization, with logo if one has been assigned. */
 	fun listPublicDirectory(organizationSlug: String): List<SponsorDirectoryEntry> {
 		val organization = organizationRepository.findBySlug(organizationSlug)
 			?: throw NotFoundException("ORGANIZATION_NOT_FOUND", "The organization could not be found.")
@@ -154,6 +178,103 @@ class SponsorshipService(
 				?.let { mediaReadService.describe(it)?.url }
 			SponsorDirectoryEntry(sponsor.id, sponsor.name, sponsorshipPackage.id, sponsorshipPackage.name, logoUrl)
 		}
+	}
+
+	/** Org-admin approves a confirmed, still-pending-review sponsorship — the only action that makes it appear on the public directory (Phase 6 remainder approval workflow, ADR-019). */
+	@Transactional
+	fun approve(organizationId: UUID, sponsorshipId: UUID, currentUser: CurrentUser): Sponsorship {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		val sponsorship = findOwnedSponsorship(organizationId, sponsorshipId)
+		requireReviewable(sponsorship)
+		sponsorshipRepository.updateReviewStatus(sponsorship.id, SponsorshipReviewStatus.APPROVED, currentUser.userId)
+		auditService.record(currentUser.userId, organizationId, "sponsorship.approved", "sponsorship", sponsorship.id)
+		return sponsorshipRepository.findById(sponsorship.id)!!
+	}
+
+	/**
+	 * Org-admin rejects a confirmed, still-pending-review sponsorship. Per the founder's
+	 * decision, rejection is never "charged but hidden" — it atomically (same
+	 * transaction) triggers the same Stripe refund + ledger reversal [refund] performs.
+	 * If the Stripe refund call fails, the whole rejection rolls back (including the
+	 * review-status change) rather than leaving a rejected-but-still-charged sponsorship.
+	 */
+	@Transactional
+	fun reject(organizationId: UUID, sponsorshipId: UUID, currentUser: CurrentUser): Sponsorship {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		val sponsorship = findOwnedSponsorship(organizationId, sponsorshipId)
+		requireReviewable(sponsorship)
+		sponsorshipRepository.updateReviewStatus(sponsorship.id, SponsorshipReviewStatus.REJECTED, currentUser.userId)
+		auditService.record(currentUser.userId, organizationId, "sponsorship.rejected", "sponsorship", sponsorship.id)
+		return performRefund(organizationId, sponsorship, currentUser, auditAction = "sponsorship.refunded")
+	}
+
+	/** A general org-admin-initiated refund (Phase 6 remainder, ADR-019) — independent of the review workflow; a sponsorship can be refunded whether or not it was ever approved. */
+	@Transactional
+	fun refund(organizationId: UUID, sponsorshipId: UUID, currentUser: CurrentUser): Sponsorship {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		val sponsorship = findOwnedSponsorship(organizationId, sponsorshipId)
+		return performRefund(organizationId, sponsorship, currentUser, auditAction = "sponsorship.refunded")
+	}
+
+	/** A receipt-style summary of one confirmed (or since-refunded) sponsorship (Phase 6 remainder, ADR-019). */
+	fun getInvoice(organizationId: UUID, sponsorshipId: UUID, currentUser: CurrentUser): SponsorshipInvoice {
+		membershipService.requireActiveMembership(organizationId, currentUser)
+		val sponsorship = findOwnedSponsorship(organizationId, sponsorshipId)
+		if (sponsorship.status == SponsorshipStatus.PENDING) {
+			throw ValidationException("An invoice is only available once a sponsorship has been confirmed.")
+		}
+		val sponsor = sponsorRepository.findById(sponsorship.sponsorId)
+			?: error("sponsorship ${sponsorship.id} references a missing sponsor")
+		val sponsorshipPackage = sponsorshipPackageRepository.findById(sponsorship.packageId, organizationId)
+			?: error("sponsorship ${sponsorship.id} references a missing package")
+		val organization = organizationRepository.findById(organizationId)
+			?: error("sponsorship ${sponsorship.id} references a missing organization")
+		return SponsorshipInvoice(sponsorship, sponsor, sponsorshipPackage, organization)
+	}
+
+	private fun performRefund(organizationId: UUID, sponsorship: Sponsorship, currentUser: CurrentUser, auditAction: String): Sponsorship {
+		if (sponsorship.status != SponsorshipStatus.CONFIRMED || sponsorship.stripePaymentIntentId == null) {
+			throw ValidationException("Only a confirmed sponsorship with a recorded payment can be refunded.")
+		}
+		val confirmedAt = sponsorship.confirmedAt ?: throw ValidationException("This sponsorship has no confirmation date on record.")
+		if (Duration.between(confirmedAt, Instant.now()) > SPONSORSHIP_REFUND_WINDOW) {
+			throw ValidationException(
+				"This sponsorship can no longer be refunded — it was confirmed more than ${SPONSORSHIP_REFUND_WINDOW.toDays()} days ago.",
+			)
+		}
+		val stripeRefundId = try {
+			stripeSponsorshipCheckoutClient.createRefund(sponsorship.stripePaymentIntentId)
+		} catch (e: StripeException) {
+			log.warn("Stripe refund failed for sponsorship {}: {}", sponsorship.id, e.message, e)
+			throw ServiceUnavailableException(
+				"SPONSORSHIP_PROVIDER_UNAVAILABLE",
+				"Payments provider is not available right now. If this is local/staging, confirm STRIPE_SECRET_KEY is set.",
+			)
+		}
+		sponsorshipRepository.markRefunded(sponsorship.id)
+		ledgerService.recordRefund(organizationId, LedgerSourceType.SPONSORSHIP, sponsorship.id, sponsorship.amountMinor, sponsorship.currency, stripeRefundId)
+		auditService.record(currentUser.userId, organizationId, auditAction, "sponsorship", sponsorship.id)
+		return sponsorshipRepository.findById(sponsorship.id)!!
+	}
+
+	private fun requireReviewable(sponsorship: Sponsorship) {
+		if (sponsorship.status != SponsorshipStatus.CONFIRMED) {
+			throw ValidationException("Only a confirmed sponsorship can be reviewed.")
+		}
+		if (sponsorship.reviewStatus != SponsorshipReviewStatus.PENDING_REVIEW) {
+			throw ValidationException("This sponsorship has already been reviewed.")
+		}
+	}
+
+	private fun findOwnedSponsorship(organizationId: UUID, sponsorshipId: UUID): Sponsorship =
+		sponsorshipRepository.findById(sponsorshipId)
+			?.takeIf { it.organizationId == organizationId }
+			?: throw NotFoundException("SPONSORSHIP_NOT_FOUND", "The sponsorship could not be found.")
+
+	private fun withSponsor(sponsorship: Sponsorship): SponsorshipWithSponsor {
+		val sponsor = sponsorRepository.findById(sponsorship.sponsorId)
+			?: error("sponsorship ${sponsorship.id} references a missing sponsor")
+		return SponsorshipWithSponsor(sponsorship, sponsor)
 	}
 }
 

@@ -76,10 +76,79 @@ class SponsorshipIntegrationTest : AbstractIntegrationTest() {
 		val publicPackages = sponsorshipPackageService.listPublic(organization.slug)
 		assertEquals(sponsorshipPackage.id, publicPackages.single().id)
 
+		// A newly confirmed sponsorship is NOT yet on the public directory — it's
+		// awaiting org-admin review (Phase 6 remainder approval workflow, ADR-019).
+		assertEquals(0, sponsorshipService.listPublicDirectory(organization.slug).size)
+		assertEquals(1L, sponsorshipService.countPendingReview(organization.id, owner))
+
+		sponsorshipService.approve(organization.id, confirmed!!.id, owner)
+
 		val directory = sponsorshipService.listPublicDirectory(organization.slug)
 		assertEquals(1, directory.size)
 		assertEquals("Acme Co", directory.single().sponsorName)
 		assertEquals(checkout.sponsorId, directory.single().sponsorId)
+		assertEquals(0L, sponsorshipService.countPendingReview(organization.id, owner))
+	}
+
+	@Test
+	fun `rejecting a confirmed sponsorship atomically refunds it via Stripe and the ledger, and it never reaches the public directory`() {
+		val fixedSessionId = "cs_test_${System.nanoTime()}"
+		every { stripeSponsorshipCheckoutClient.createSponsorshipCheckoutSession(any(), any(), any(), any(), any(), any()) } returns
+			SponsorshipCheckoutSession(fixedSessionId, "https://checkout.stripe.com/test")
+		every { stripeSponsorshipCheckoutClient.createRefund(any()) } returns "re_test_${System.nanoTime()}"
+
+		val owner = registerUser("sponsorship-reject-owner")
+		val organization = organizationService.create(
+			"Eastside Baseball", "eastside-baseball-sponsorship-${System.nanoTime()}", OrganizationType.RECREATIONAL_LEAGUE, owner,
+		)
+		val sponsorshipPackage = sponsorshipPackageService.create(
+			organization.id, "Bronze Sponsor", null, 10_000L, "USD", null, false, null, null, owner,
+		)
+		sponsorshipPackageService.publish(organization.id, sponsorshipPackage.id, owner)
+		sponsorshipService.createCheckoutSession(sponsorshipPackage.id, "Shady Co", "shady@example.test", "https://app.local/success", "https://app.local/cancel")
+		val confirmed = sponsorshipService.confirmFromWebhook(fixedSessionId, "paid", "pi_test_${System.nanoTime()}")!!
+
+		val rejected = sponsorshipService.reject(organization.id, confirmed.id, owner)
+
+		assertEquals("REJECTED", rejected.reviewStatus.name)
+		assertEquals("REFUNDED", rejected.status.name)
+		assertEquals(0, sponsorshipService.listPublicDirectory(organization.slug).size)
+
+		// A rejected (and thus refunded) sponsorship cannot be reviewed again.
+		assertFailsWith<com.leaguelift.common.error.ValidationException> {
+			sponsorshipService.approve(organization.id, confirmed.id, owner)
+		}
+	}
+
+	@Test
+	fun `a general refund of an approved sponsorship removes it from the public directory's future listings but preserves its own record`() {
+		val fixedSessionId = "cs_test_${System.nanoTime()}"
+		every { stripeSponsorshipCheckoutClient.createSponsorshipCheckoutSession(any(), any(), any(), any(), any(), any()) } returns
+			SponsorshipCheckoutSession(fixedSessionId, "https://checkout.stripe.com/test")
+		every { stripeSponsorshipCheckoutClient.createRefund(any()) } returns "re_test_${System.nanoTime()}"
+
+		val owner = registerUser("sponsorship-refund-owner")
+		val organization = organizationService.create(
+			"Northshore Swim", "northshore-swim-sponsorship-${System.nanoTime()}", OrganizationType.RECREATIONAL_LEAGUE, owner,
+		)
+		val sponsorshipPackage = sponsorshipPackageService.create(
+			organization.id, "Silver Sponsor", null, 20_000L, "USD", null, false, null, null, owner,
+		)
+		sponsorshipPackageService.publish(organization.id, sponsorshipPackage.id, owner)
+		sponsorshipService.createCheckoutSession(sponsorshipPackage.id, "Good Co", "good@example.test", "https://app.local/success", "https://app.local/cancel")
+		val confirmed = sponsorshipService.confirmFromWebhook(fixedSessionId, "paid", "pi_test_${System.nanoTime()}")!!
+		sponsorshipService.approve(organization.id, confirmed.id, owner)
+		assertEquals(1, sponsorshipService.listPublicDirectory(organization.slug).size)
+
+		val invoice = sponsorshipService.getInvoice(organization.id, confirmed.id, owner)
+		assertEquals("Good Co", invoice.sponsor.name)
+		assertEquals(sponsorshipPackage.name, invoice.sponsorshipPackage.name)
+
+		val refunded = sponsorshipService.refund(organization.id, confirmed.id, owner)
+
+		assertEquals("REFUNDED", refunded.status.name)
+		assertEquals("APPROVED", refunded.reviewStatus.name, "a refund does not itself revoke a prior approval decision")
+		assertEquals(0, sponsorshipService.listPublicDirectory(organization.slug).size, "a refunded sponsorship is no longer CONFIRMED, so it drops off the directory")
 	}
 
 	@Test
