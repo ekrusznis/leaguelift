@@ -22,6 +22,7 @@ import { PrivacyPage } from "../pages/marketing/legal/PrivacyPage";
 import { TermsPage } from "../pages/marketing/legal/TermsPage";
 import { PricingPage } from "../pages/marketing/PricingPage";
 import { PublicCampaignView } from "../pages/marketing/PublicCampaignView";
+import { PublicSponsorshipView } from "../pages/marketing/PublicSponsorshipView";
 import { PublicStoreView } from "../pages/marketing/PublicStoreView";
 import { SecurityPage } from "../pages/marketing/SecurityPage";
 import { SolutionDetailPage } from "../pages/marketing/SolutionDetailPage";
@@ -54,6 +55,7 @@ export function AppRoutes() {
 				<Route path="accessibility" element={<AccessibilityPage />} />
 				<Route path="campaigns/:slug" element={<PublicCampaignView />} />
 				<Route path="stores/:slug" element={<PublicStoreView />} />
+				<Route path="sponsors/:slug" element={<PublicSponsorshipView />} />
 				<Route path="404" element={<NotFoundPage />} />
 			</Route>
 

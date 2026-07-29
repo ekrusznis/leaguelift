@@ -3,8 +3,8 @@ package com.leaguelift.media.domain
 import java.time.Instant
 import java.util.UUID
 
-/** ORGANIZATION (branding) and PRODUCT (Phase 4 store design) — team/tournament logos remain an intentional fast-follow (DESIGN-DOC.md section 11.3). */
-enum class MediaEntityType { ORGANIZATION, PRODUCT }
+/** ORGANIZATION (branding), PRODUCT (Phase 4 store design), and SPONSOR (Phase 6 slice 1 sponsor logo) — team/tournament logos remain an intentional fast-follow (DESIGN-DOC.md section 11.3). */
+enum class MediaEntityType { ORGANIZATION, PRODUCT, SPONSOR }
 
 enum class PublicationStatus { PRIVATE, APPROVED, PUBLISHED, RETIRED }
 

@@ -62,3 +62,11 @@ Additional, unreserved decisions:
   period (default 7 days) with manual-trigger-only firing (no automatic
   scheduler yet), org-admin-initiated refunds within a 14-day window,
   negative balances deducted from an org's next payout (2026-07-29)
+- ADR-018: Sponsorship scope and charge model for Phase 6 slice 1 — reuses the
+  existing separate-charges-and-transfers model with no separate sponsorship
+  payment account (resolves §19.3 open question #19 for this slice), reuses
+  CONTRIBUTION-shaped ledger entries with a new SPONSORSHIP source type
+  rather than a new entry type, sponsor logo assignment is an org-admin
+  action after confirmation rather than a public self-service upload (the
+  media pipeline has no anonymous-upload path today), no refunds this slice
+  (2026-07-29)

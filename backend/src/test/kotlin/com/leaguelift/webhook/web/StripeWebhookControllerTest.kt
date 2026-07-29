@@ -7,6 +7,9 @@ import com.leaguelift.fundraising.domain.ContributionStatus
 import com.leaguelift.order.application.OrderService
 import com.leaguelift.order.domain.Order
 import com.leaguelift.order.domain.OrderStatus
+import com.leaguelift.sponsorship.application.SponsorshipService
+import com.leaguelift.sponsorship.domain.Sponsorship
+import com.leaguelift.sponsorship.domain.SponsorshipStatus
 import com.leaguelift.webhook.domain.WebhookEvent
 import com.leaguelift.webhook.domain.WebhookProcessingStatus
 import com.leaguelift.webhook.persistence.WebhookEventRepository
@@ -36,7 +39,8 @@ class StripeWebhookControllerTest {
 	private val webhookEventRepository = mockk<WebhookEventRepository>()
 	private val contributionService = mockk<ContributionService>()
 	private val orderService = mockk<OrderService>()
-	private val controller = StripeWebhookController(stripeProperties, webhookEventRepository, contributionService, orderService)
+	private val sponsorshipService = mockk<SponsorshipService>()
+	private val controller = StripeWebhookController(stripeProperties, webhookEventRepository, contributionService, orderService, sponsorshipService)
 
 	@Test
 	fun `an invalid signature is rejected with 400 and never reaches the repository or contribution service`() {
@@ -122,11 +126,38 @@ class StripeWebhookControllerTest {
 		verify(exactly = 0) { contributionService.confirmFromWebhook(any(), any(), any()) }
 	}
 
+	@Test
+	fun `a checkout_session_completed event with a sponsorshipId in metadata dispatches to SponsorshipService, not ContributionService or OrderService`() {
+		val eventId = "evt_${UUID.randomUUID()}"
+		val sponsorshipId = UUID.randomUUID()
+		val payload = sponsorshipCheckoutSessionCompletedPayload(eventId, "cs_test_5", "paid", sponsorshipId)
+		val signature = sign(payload, webhookSecret)
+		val sponsorship = sampleSponsorship(sponsorshipId)
+		every { webhookEventRepository.findExisting("stripe", eventId) } returns null
+		every { sponsorshipService.confirmFromWebhook("cs_test_5", "paid", null) } returns sponsorship
+		every {
+			webhookEventRepository.insert(
+				"stripe", eventId, "checkout.session.completed", payload, any(), true,
+				WebhookProcessingStatus.PROCESSED, "sponsorship", sponsorship.id, null,
+			)
+		} returns sampleWebhookEvent()
+
+		val response = controller.receive(payload, signature)
+
+		assertEquals(HttpStatus.OK, response.statusCode)
+		verify(exactly = 1) { sponsorshipService.confirmFromWebhook("cs_test_5", "paid", null) }
+		verify(exactly = 0) { contributionService.confirmFromWebhook(any(), any(), any()) }
+		verify(exactly = 0) { orderService.confirmFromWebhook(any(), any(), any(), any()) }
+	}
+
 	private fun checkoutSessionCompletedPayload(eventId: String, sessionId: String, paymentStatus: String): String =
 		"""{"id":"$eventId","object":"event","api_version":"2025-03-31.basil","type":"checkout.session.completed","data":{"object":{"id":"$sessionId","object":"checkout.session","payment_status":"$paymentStatus","metadata":{}}}}"""
 
 	private fun orderCheckoutSessionCompletedPayload(eventId: String, sessionId: String, paymentStatus: String, orderId: UUID): String =
 		"""{"id":"$eventId","object":"event","api_version":"2025-03-31.basil","type":"checkout.session.completed","data":{"object":{"id":"$sessionId","object":"checkout.session","payment_status":"$paymentStatus","metadata":{"orderId":"$orderId"}}}}"""
+
+	private fun sponsorshipCheckoutSessionCompletedPayload(eventId: String, sessionId: String, paymentStatus: String, sponsorshipId: UUID): String =
+		"""{"id":"$eventId","object":"event","api_version":"2025-03-31.basil","type":"checkout.session.completed","data":{"object":{"id":"$sessionId","object":"checkout.session","payment_status":"$paymentStatus","metadata":{"sponsorshipId":"$sponsorshipId"}}}}"""
 
 	private fun sign(payload: String, secret: String): String {
 		val timestamp = System.currentTimeMillis() / 1000
@@ -148,6 +179,12 @@ class StripeWebhookControllerTest {
 		id = orderId, organizationId = UUID.randomUUID(), storeId = UUID.randomUUID(), status = OrderStatus.CONFIRMED,
 		currency = "USD", supporterName = "Jane Doe", supporterEmail = null, shippingAddress = null,
 		stripeCheckoutSessionId = "cs_test_4", stripePaymentIntentId = null, confirmedAt = Instant.now(), refundedAt = null, createdAt = Instant.now(),
+	)
+
+	private fun sampleSponsorship(sponsorshipId: UUID) = Sponsorship(
+		id = sponsorshipId, organizationId = UUID.randomUUID(), packageId = UUID.randomUUID(), sponsorId = UUID.randomUUID(),
+		amountMinor = 25_000L, currency = "USD", status = SponsorshipStatus.CONFIRMED,
+		stripeCheckoutSessionId = "cs_test_5", stripePaymentIntentId = null, confirmedAt = Instant.now(), createdAt = Instant.now(),
 	)
 
 	private fun sampleWebhookEvent() = WebhookEvent(

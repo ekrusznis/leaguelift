@@ -10,6 +10,7 @@ import com.leaguelift.ledger.domain.LedgerSourceType
 import com.leaguelift.ledger.persistence.LedgerEntryRepository
 import com.leaguelift.order.domain.Order
 import com.leaguelift.order.domain.OrderItem
+import com.leaguelift.sponsorship.domain.Sponsorship
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
@@ -79,6 +80,58 @@ class LedgerService(
 			sourceId = contribution.id,
 			externalReference = null,
 			description = "Organization earning from confirmed contribution",
+		)
+	}
+
+	/**
+	 * Structurally identical to [recordConfirmedContribution] — a sponsorship purchase is,
+	 * accounting-wise, the same shape as a campaign contribution (a single gross payment,
+	 * no separate production cost the way an order has). Reuses `LedgerEntryType.CONTRIBUTION`
+	 * rather than introducing a distinct `SPONSORSHIP` entry type this slice (ADR-018):
+	 * `LedgerSourceType.SPONSORSHIP` on [Sponsorship]'s own `sourceType` already gives full
+	 * traceability back to the sponsorship without proliferating entry types for a category
+	 * that behaves identically to an existing one.
+	 */
+	@Transactional
+	fun recordConfirmedSponsorship(sponsorship: Sponsorship) {
+		val gross = sponsorship.amountMinor
+		val fee = platformFeeProperties.feeMinorOf(gross)
+		val net = gross - fee
+		ledgerEntryRepository.insert(
+			organizationId = sponsorship.organizationId,
+			accountCode = LedgerEntryType.CONTRIBUTION.name,
+			entryType = LedgerEntryType.CONTRIBUTION,
+			direction = LedgerDirection.CREDIT,
+			amountMinor = gross,
+			currency = sponsorship.currency,
+			sourceType = LedgerSourceType.SPONSORSHIP,
+			sourceId = sponsorship.id,
+			externalReference = null,
+			description = "Confirmed sponsorship purchase",
+		)
+		ledgerEntryRepository.insert(
+			organizationId = sponsorship.organizationId,
+			accountCode = LedgerEntryType.LEAGUELIFT_PLATFORM_FEE.name,
+			entryType = LedgerEntryType.LEAGUELIFT_PLATFORM_FEE,
+			direction = LedgerDirection.DEBIT,
+			amountMinor = fee,
+			currency = sponsorship.currency,
+			sourceType = LedgerSourceType.SPONSORSHIP,
+			sourceId = sponsorship.id,
+			externalReference = null,
+			description = "Platform fee (${platformFeeProperties.feeBasisPoints} bps)",
+		)
+		ledgerEntryRepository.insert(
+			organizationId = sponsorship.organizationId,
+			accountCode = LedgerEntryType.ORGANIZATION_EARNING.name,
+			entryType = LedgerEntryType.ORGANIZATION_EARNING,
+			direction = LedgerDirection.CREDIT,
+			amountMinor = net,
+			currency = sponsorship.currency,
+			sourceType = LedgerSourceType.SPONSORSHIP,
+			sourceId = sponsorship.id,
+			externalReference = null,
+			description = "Organization earning from confirmed sponsorship",
 		)
 	}
 

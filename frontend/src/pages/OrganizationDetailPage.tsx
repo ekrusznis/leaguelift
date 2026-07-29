@@ -16,6 +16,7 @@ import { useRefreshPayoutStatus } from "../features/payouts/api";
 import { PayoutConnectPanel } from "../features/payouts/PayoutConnectPanel";
 import { PayoutSummaryPanel } from "../features/payouts/PayoutSummaryPanel";
 import { PublicPagesPanel } from "../features/publicpage/PublicPagesPanel";
+import { SponsorshipPackageList } from "../features/sponsorship/SponsorshipPackageList";
 import { StoreList } from "../features/store/StoreList";
 import { TeamList } from "../features/teams/TeamList";
 import { TournamentList } from "../features/tournaments/TournamentList";
@@ -96,6 +97,11 @@ export function OrganizationDetailPage() {
 			<section aria-label="Stores" className="flex flex-col gap-3">
 				<h2 className="font-heading text-lg font-semibold text-navy">Stores</h2>
 				<StoreList organizationId={organization.id} />
+			</section>
+
+			<section aria-label="Sponsorship packages" className="flex flex-col gap-3">
+				<h2 className="font-heading text-lg font-semibold text-navy">Sponsorship Packages</h2>
+				<SponsorshipPackageList organizationId={organization.id} />
 			</section>
 
 			<section aria-label="Public pages" className="flex flex-col gap-3">

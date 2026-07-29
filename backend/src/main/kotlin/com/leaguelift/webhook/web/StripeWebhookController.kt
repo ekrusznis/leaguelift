@@ -4,6 +4,7 @@ import com.leaguelift.config.StripeProperties
 import com.leaguelift.fundraising.application.ContributionService
 import com.leaguelift.order.application.OrderService
 import com.leaguelift.order.domain.ShippingAddress
+import com.leaguelift.sponsorship.application.SponsorshipService
 import com.leaguelift.webhook.domain.WebhookProcessingStatus
 import com.leaguelift.webhook.persistence.WebhookEventRepository
 import com.stripe.exception.SignatureVerificationException
@@ -26,14 +27,15 @@ private const val PROVIDER = "stripe"
 /**
  * Inbound Stripe webhook receiver (DESIGN-DOC.md section 17). Only
  * `checkout.session.completed` is consumed this slice, to confirm campaign
- * contributions (`fundraising/application/ContributionService.kt`) and store
- * orders (`order/application/OrderService.kt`) — Stripe Connect account-status
- * webhooks remain Phase 5. A session's own metadata (`orderId` present or not)
- * disambiguates which one a given event is for, since both use the same event
- * type. Processed synchronously inline (no outbox-consumer worker exists yet,
- * and doesn't need to for one lightweight event type): a genuine processing
- * failure returns 500 so Stripe's own automatic retry schedule covers it, rather
- * than us building a retry worker for this.
+ * contributions (`fundraising/application/ContributionService.kt`), store
+ * orders (`order/application/OrderService.kt`), and sponsorship purchases
+ * (`sponsorship/application/SponsorshipService.kt`) — Stripe Connect account-status
+ * webhooks remain Phase 5. A session's own metadata (`orderId`/`sponsorshipId`
+ * present or not) disambiguates which one a given event is for, since all three use
+ * the same event type. Processed synchronously inline (no outbox-consumer worker
+ * exists yet, and doesn't need to for one lightweight event type): a genuine
+ * processing failure returns 500 so Stripe's own automatic retry schedule covers
+ * it, rather than us building a retry worker for this.
  */
 @RestController
 @RequestMapping("/api/v1/webhooks/stripe")
@@ -42,6 +44,7 @@ class StripeWebhookController(
 	private val webhookEventRepository: WebhookEventRepository,
 	private val contributionService: ContributionService,
 	private val orderService: OrderService,
+	private val sponsorshipService: SponsorshipService,
 ) {
 
 	@PostMapping
@@ -75,6 +78,9 @@ class StripeWebhookController(
 					if (session.metadata?.containsKey("orderId") == true) {
 						relatedEntityType = "order"
 						relatedEntityId = orderService.confirmFromWebhook(session.id, session.paymentStatus, shippingAddressOf(session), session.paymentIntent)?.id
+					} else if (session.metadata?.containsKey("sponsorshipId") == true) {
+						relatedEntityType = "sponsorship"
+						relatedEntityId = sponsorshipService.confirmFromWebhook(session.id, session.paymentStatus, session.paymentIntent)?.id
 					} else {
 						relatedEntityType = "contribution"
 						relatedEntityId = contributionService.confirmFromWebhook(session.id, session.paymentStatus, session.paymentIntent)?.id

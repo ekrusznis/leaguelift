@@ -22,10 +22,17 @@ info:
     a Printify catalog read proxy, multi-item test-mode Stripe Checkout with US
     shipping-address collection, and draft-only Printify order submission on
     confirmation — ADR-016; auto-design/personalization and cross-provider price
-    comparison are explicitly out of scope, see the ADR).
+    comparison are explicitly out of scope, see the ADR), Phase 5 slice 1
+    (ledger, real Stripe Connect Transfer payouts, and org-admin-initiated
+    refunds — ADR-017), and Phase 6 slice 1 (sponsorships proof-of-concept:
+    org-published fixed-price sponsorship packages, test-mode Stripe Checkout
+    purchase, ledger entries reusing the CONTRIBUTION shape with a new
+    SPONSORSHIP source type, a public sponsor directory, and admin-side sponsor
+    logo assignment — no public self-service logo upload and no refunds this
+    slice, see ADR-018).
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
-  version: "0.12.0"
+  version: "0.13.0"
 servers:
   - url: /api/v1
 tags:
@@ -48,6 +55,7 @@ tags:
   - name: printify
   - name: stores
   - name: orders
+  - name: sponsorships
   - name: dashboard
 paths:
   /public/status:
@@ -2191,11 +2199,11 @@ paths:
       description: >
         Not authenticated with a JWT — authenticity comes from the Stripe-Signature
         header instead, verified server-side against leaguelift.stripe.webhook-secret.
-        Only checkout.session.completed is consumed this slice, for both campaign
-        contributions and store orders (disambiguated by the session's own metadata);
-        other event types are recorded as IGNORED. Idempotent per (provider,
-        externalEventId) — see webhook_event. Stripe Connect account-status webhooks
-        remain Phase 5.
+        Only checkout.session.completed is consumed this slice, for campaign
+        contributions, store orders, and sponsorship purchases (disambiguated by
+        the session's own metadata); other event types are recorded as IGNORED.
+        Idempotent per (provider, externalEventId) — see webhook_event. Stripe
+        Connect account-status webhooks remain Phase 5.
       operationId: receiveStripeWebhook
       requestBody:
         required: true
@@ -2804,6 +2812,326 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrderStatusResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # --- Sponsorships (Phase 6 slice 1, ADR-018) ---
+
+  /organizations/{organizationId}/sponsorship-packages:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [sponsorships]
+      summary: List sponsorship packages for an organization
+      operationId: listSponsorshipPackages
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of sponsorship packages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorshipPackagePage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [sponsorships]
+      summary: Create a sponsorship package
+      description: >
+        Manager-role (OWNER/ADMINISTRATOR) only. Packages are created in DRAFT
+        status. They are not publicly visible (via GET
+        /public/organizations/{slug}/sponsorship-packages) until published.
+      operationId: createSponsorshipPackage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSponsorshipPackageRequest"
+      responses:
+        "201":
+          description: Sponsorship package created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorshipPackageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/sponsorship-packages/{packageId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/SponsorshipPackageIdParam"
+    get:
+      tags: [sponsorships]
+      summary: Get a sponsorship package by ID
+      operationId: getSponsorshipPackage
+      responses:
+        "200":
+          description: Sponsorship package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorshipPackageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [sponsorships]
+      summary: Update a sponsorship package
+      operationId: updateSponsorshipPackage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSponsorshipPackageRequest"
+      responses:
+        "200":
+          description: Updated sponsorship package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorshipPackageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/sponsorship-packages/{packageId}/publish:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/SponsorshipPackageIdParam"
+    post:
+      tags: [sponsorships]
+      summary: Publish a sponsorship package
+      description: Transitions a DRAFT package to PUBLISHED and makes it visible via GET /public/organizations/{slug}/sponsorship-packages.
+      operationId: publishSponsorshipPackage
+      responses:
+        "200":
+          description: Published sponsorship package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorshipPackageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/sponsorship-packages/{packageId}/status:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/SponsorshipPackageIdParam"
+    patch:
+      tags: [sponsorships]
+      summary: Update a sponsorship package's status
+      description: For transitions other than the initial publish, e.g. marking a package ARCHIVED.
+      operationId: updateSponsorshipPackageStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSponsorshipPackageStatusRequest"
+      responses:
+        "200":
+          description: Sponsorship package with updated status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorshipPackageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/sponsorship-packages/{packageId}/sponsorships:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/SponsorshipPackageIdParam"
+    get:
+      tags: [sponsorships]
+      summary: List an organization's confirmed sponsorships for a package
+      operationId: listPackageSponsorships
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of confirmed sponsorships, each with its sponsor's name/contact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorshipPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/sponsors/{sponsorId}/logo:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/SponsorIdParam"
+    put:
+      tags: [sponsorships]
+      summary: Assign an uploaded logo image to a sponsor
+      description: >
+        The asset must already be READY via the standard media upload flow
+        (POST .../media/uploads + confirm, usageSlot=SPONSOR_LOGO). Manager-role
+        only — an org admin performs this after a sponsorship confirms; there is
+        no public/self-service logo upload during checkout (ADR-018).
+      operationId: assignSponsorLogo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignSponsorLogoRequest"
+      responses:
+        "200":
+          description: Assigned logo (signed read URL)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaAssignmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /public/organizations/{slug}/sponsorship-packages:
+    get:
+      tags: [sponsorships]
+      summary: List an organization's published sponsorship packages by org slug
+      operationId: listPublicSponsorshipPackages
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Published sponsorship packages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PublicSponsorshipPackageResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /public/organizations/{slug}/sponsors:
+    get:
+      tags: [sponsorships]
+      summary: Public sponsor directory — confirmed sponsors and their logos for an organization
+      operationId: listPublicSponsorDirectory
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Confirmed sponsors (logoUrl is null until an org admin assigns one)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SponsorDirectoryEntryResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /public/sponsorship-packages/{packageId}/sponsorships:
+    parameters:
+      - $ref: "#/components/parameters/SponsorshipPackageIdParam"
+    post:
+      tags: [sponsorships]
+      summary: Start a sponsorship purchase checkout (test-mode Stripe Checkout)
+      description: >
+        Public, unauthenticated. Creates a sponsor record, a PENDING
+        sponsorship, and a Stripe Checkout Session; the caller redirects the
+        browser to the returned checkoutUrl. Confirmation happens only via
+        POST /webhooks/stripe, not this response — see SponsorshipService.
+        Rejected (400) if the package isn't PUBLISHED or is sold out
+        (confirmedCount >= effective max quantity).
+      operationId: createSponsorshipCheckout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSponsorshipCheckoutRequest"
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorshipCheckoutResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: The payments provider is unavailable (e.g. no Stripe test-mode key configured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /public/sponsorship-packages/{packageId}/sponsorships/{sponsorshipId}:
+    parameters:
+      - $ref: "#/components/parameters/SponsorshipPackageIdParam"
+      - $ref: "#/components/parameters/SponsorshipIdParam"
+    get:
+      tags: [sponsorships]
+      summary: Poll a sponsorship's status
+      description: >
+        Public, unauthenticated — used by the browser's Stripe Checkout return
+        page. Read-only: this never flips status itself, it only reflects what
+        the Stripe webhook has already recorded.
+      operationId: getSponsorshipStatus
+      responses:
+        "200":
+          description: Sponsorship status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SponsorshipStatusResponse"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -3546,7 +3874,28 @@ components:
       required: true
       schema:
         type: string
-        enum: [LOGO, COVER, PRODUCT_DESIGN]
+        enum: [LOGO, COVER, PRODUCT_DESIGN, SPONSOR_LOGO]
+    SponsorshipPackageIdParam:
+      name: packageId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SponsorIdParam:
+      name: sponsorId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SponsorshipIdParam:
+      name: sponsorshipId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     StoreIdParam:
       name: storeId
       in: path
@@ -5588,6 +5937,322 @@ components:
           type: string
           nullable: true
 
+    SponsorshipPackageStatus:
+      type: string
+      enum: [DRAFT, PUBLISHED, ARCHIVED]
+    CreateSponsorshipPackageRequest:
+      type: object
+      required: [name, priceMinor]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+        priceMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Fixed sponsorship price in minor currency units (e.g. cents for USD).
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          default: USD
+        maxQuantity:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Null means uncapped. Overridden to an effective max of 1 when exclusive is true.
+        exclusive:
+          type: boolean
+          default: false
+          description: Forces an effective max of 1 regardless of maxQuantity — only one sponsor can ever hold an exclusive package.
+        placementStartDate:
+          type: string
+          format: date
+          nullable: true
+        placementEndDate:
+          type: string
+          format: date
+          nullable: true
+    UpdateSponsorshipPackageRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          nullable: true
+        priceMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        maxQuantity:
+          type: integer
+          minimum: 1
+          nullable: true
+        exclusive:
+          type: boolean
+        placementStartDate:
+          type: string
+          format: date
+          nullable: true
+        placementEndDate:
+          type: string
+          format: date
+          nullable: true
+    UpdateSponsorshipPackageStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/SponsorshipPackageStatus"
+    SponsorshipPackageResponse:
+      type: object
+      required: [id, organizationId, name, priceMinor, currency, exclusive, status, createdAt, updatedAt, confirmedCount, soldOut]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        priceMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        maxQuantity:
+          type: integer
+          nullable: true
+        exclusive:
+          type: boolean
+        placementStartDate:
+          type: string
+          format: date
+          nullable: true
+        placementEndDate:
+          type: string
+          format: date
+          nullable: true
+        status:
+          $ref: "#/components/schemas/SponsorshipPackageStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        confirmedCount:
+          type: integer
+          format: int64
+          description: Sum of CONFIRMED (+ REFUNDED, still "was confirmed") sponsorships (real data, not a demo placeholder).
+        soldOut:
+          type: boolean
+          description: confirmedCount >= effective max quantity (exclusive forces an effective max of 1).
+    SponsorshipPackagePage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SponsorshipPackageResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+    PublicSponsorshipPackageResponse:
+      type: object
+      required: [id, organizationId, name, priceMinor, currency, exclusive, confirmedCount, soldOut]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        priceMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        maxQuantity:
+          type: integer
+          nullable: true
+        exclusive:
+          type: boolean
+        placementStartDate:
+          type: string
+          format: date
+          nullable: true
+        placementEndDate:
+          type: string
+          format: date
+          nullable: true
+        confirmedCount:
+          type: integer
+          format: int64
+        soldOut:
+          type: boolean
+
+    AssignSponsorLogoRequest:
+      type: object
+      required: [assetId]
+      properties:
+        assetId:
+          type: string
+          format: uuid
+        altText:
+          type: string
+          maxLength: 255
+          nullable: true
+
+    SponsorshipStatus:
+      type: string
+      enum: [PENDING, CONFIRMED, REFUNDED]
+    CreateSponsorshipCheckoutRequest:
+      type: object
+      required: [sponsorName, successUrl, cancelUrl]
+      description: >
+        Public, unauthenticated — a sponsor purchasing a package is never a
+        LeagueLift user. Confirmation happens only via the Stripe webhook
+        (POST /webhooks/stripe), not this call's response. No logo upload here —
+        see AssignSponsorLogoRequest; an org admin assigns the sponsor's logo
+        after the sponsorship confirms (ADR-018).
+      properties:
+        sponsorName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        sponsorContactEmail:
+          type: string
+          format: email
+          maxLength: 254
+          nullable: true
+        successUrl:
+          type: string
+          description: >
+            May contain the literal placeholder "{SPONSORSHIP_ID}", substituted
+            server-side with the created sponsorship's id before being handed to
+            Stripe as the Checkout Session's success_url (mirrors
+            ContributionService's "{CONTRIBUTION_ID}" convention).
+        cancelUrl:
+          type: string
+    SponsorshipCheckoutResponse:
+      type: object
+      required: [sponsorshipId, sponsorId, checkoutUrl]
+      properties:
+        sponsorshipId:
+          type: string
+          format: uuid
+        sponsorId:
+          type: string
+          format: uuid
+        checkoutUrl:
+          type: string
+          description: Stripe-hosted Checkout Session URL. Redirect the browser here directly.
+    SponsorshipStatusResponse:
+      type: object
+      required: [id, status, amountMinor, currency]
+      description: Status-poll shape for the browser's return page. No sponsor contact info exposed back to the browser.
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/SponsorshipStatus"
+        amountMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        confirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+    SponsorshipResponse:
+      type: object
+      required: [id, status, amountMinor, currency, sponsorId, sponsorName, createdAt]
+      description: Org-admin list shape — sponsorships that were confirmed at some point (CONFIRMED or REFUNDED).
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/SponsorshipStatus"
+        amountMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        sponsorId:
+          type: string
+          format: uuid
+        sponsorName:
+          type: string
+        sponsorContactEmail:
+          type: string
+          nullable: true
+        confirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    SponsorshipPage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SponsorshipResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+    SponsorDirectoryEntryResponse:
+      type: object
+      required: [sponsorId, sponsorName, packageId, packageName]
+      description: One row of the public sponsor directory (GET /public/organizations/{slug}/sponsors).
+      properties:
+        sponsorId:
+          type: string
+          format: uuid
+        sponsorName:
+          type: string
+        packageId:
+          type: string
+          format: uuid
+        packageName:
+          type: string
+        logoUrl:
+          type: string
+          nullable: true
+          description: Null until an org admin assigns a logo for this sponsor (ADR-018).
+
     DashboardRole:
       type: string
       enum: [OWNER, COACH, PARENT, ATHLETE]
@@ -6098,7 +6763,7 @@ components:
       properties:
         usageSlot:
           type: string
-          enum: [LOGO, COVER]
+          enum: [LOGO, COVER, PRODUCT_DESIGN, SPONSOR_LOGO]
         assetId:
           type: string
           format: uuid

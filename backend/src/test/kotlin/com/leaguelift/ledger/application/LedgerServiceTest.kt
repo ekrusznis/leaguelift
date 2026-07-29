@@ -12,6 +12,8 @@ import com.leaguelift.ledger.persistence.LedgerEntryRepository
 import com.leaguelift.order.domain.Order
 import com.leaguelift.order.domain.OrderItem
 import com.leaguelift.order.domain.OrderStatus
+import com.leaguelift.sponsorship.domain.Sponsorship
+import com.leaguelift.sponsorship.domain.SponsorshipStatus
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -52,6 +54,35 @@ class LedgerServiceTest {
 		assertEquals(LedgerEntryType.ORGANIZATION_EARNING, earning.entryType)
 		assertEquals(LedgerDirection.CREDIT, earning.direction)
 		assertEquals(9_500L, earning.amountMinor)
+	}
+
+	@Test
+	fun `recordConfirmedSponsorship writes a gross credit, a 5% fee debit, and a net earning credit, sourced to SPONSORSHIP`() {
+		val sponsorship = confirmedSponsorship(amountMinor = 50_000L)
+		val captured = mutableListOf<InsertCall>()
+		stubInsert(captured)
+
+		service.recordConfirmedSponsorship(sponsorship)
+
+		assertEquals(3, captured.size)
+		val gross = captured[0]
+		assertEquals(LedgerEntryType.CONTRIBUTION, gross.entryType)
+		assertEquals(LedgerDirection.CREDIT, gross.direction)
+		assertEquals(50_000L, gross.amountMinor)
+		assertEquals(LedgerSourceType.SPONSORSHIP, gross.sourceType)
+		assertEquals(sponsorship.id, gross.sourceId)
+
+		val fee = captured[1]
+		assertEquals(LedgerEntryType.LEAGUELIFT_PLATFORM_FEE, fee.entryType)
+		assertEquals(LedgerDirection.DEBIT, fee.direction)
+		assertEquals(2_500L, fee.amountMinor) // 5% of 50,000
+		assertEquals(LedgerSourceType.SPONSORSHIP, fee.sourceType)
+
+		val earning = captured[2]
+		assertEquals(LedgerEntryType.ORGANIZATION_EARNING, earning.entryType)
+		assertEquals(LedgerDirection.CREDIT, earning.direction)
+		assertEquals(47_500L, earning.amountMinor)
+		assertEquals(LedgerSourceType.SPONSORSHIP, earning.sourceType)
 	}
 
 	@Test
@@ -218,6 +249,12 @@ class LedgerServiceTest {
 		currency = "usd", supporterName = "Jane Doe", isAnonymous = false, supporterEmail = null,
 		status = ContributionStatus.CONFIRMED, stripeCheckoutSessionId = "cs_test_1", stripePaymentIntentId = "pi_test_1",
 		confirmedAt = Instant.now(), refundedAt = null, createdAt = Instant.now(),
+	)
+
+	private fun confirmedSponsorship(amountMinor: Long) = Sponsorship(
+		id = UUID.randomUUID(), organizationId = orgId, packageId = UUID.randomUUID(), sponsorId = UUID.randomUUID(),
+		amountMinor = amountMinor, currency = "usd", status = SponsorshipStatus.CONFIRMED,
+		stripeCheckoutSessionId = "cs_test_3", stripePaymentIntentId = "pi_test_3", confirmedAt = Instant.now(), createdAt = Instant.now(),
 	)
 
 	private fun confirmedOrder() = Order(
