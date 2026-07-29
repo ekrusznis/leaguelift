@@ -5,6 +5,7 @@ import type {
 	Campaign,
 	CampaignPage,
 	CampaignStatus,
+	Contribution,
 	ContributionCheckout,
 	ContributionPage,
 	ContributionStatusResult,
@@ -112,10 +113,25 @@ export function useContributionStatus(slug: string, contributionId: string | nul
 	});
 }
 
+const orgContributionsKey = (organizationId: string, campaignId: string) =>
+	["organizations", organizationId, "campaigns", campaignId, "contributions"] as const;
+
 export function useOrgContributions(organizationId: string, campaignId: string) {
 	return useQuery({
-		queryKey: ["organizations", organizationId, "campaigns", campaignId, "contributions"] as const,
+		queryKey: orgContributionsKey(organizationId, campaignId),
 		queryFn: () => apiFetch<ContributionPage>(`/organizations/${organizationId}/campaigns/${campaignId}/contributions`),
 		enabled: !!organizationId && !!campaignId,
+	});
+}
+
+/** Org-admin-initiated, within a 14-day window of confirmation (ADR-017) — the backend enforces both. */
+export function useRefundContribution(organizationId: string, campaignId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (contributionId: string) =>
+			apiFetch<Contribution>(`/organizations/${organizationId}/campaigns/${campaignId}/contributions/${contributionId}/refund`, {
+				method: "POST",
+			}),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: orgContributionsKey(organizationId, campaignId) }),
 	});
 }

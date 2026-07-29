@@ -57,3 +57,8 @@ Additional, unreserved decisions:
   cost/price); a variant's real cost is learned once via product creation, not
   guessed; fulfillment submission is draft-only (no send-to-production); no
   auto-design/personalization (2026-07-29)
+- ADR-017: Phase 5 financial model — 5% flat platform fee (configurable,
+  starting value not final), payout transfers gated by a configurable holding
+  period (default 7 days) with manual-trigger-only firing (no automatic
+  scheduler yet), org-admin-initiated refunds within a 14-day window,
+  negative balances deducted from an org's next payout (2026-07-29)

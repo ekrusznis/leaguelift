@@ -6,6 +6,7 @@ import com.leaguelift.order.application.OrderService
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -35,4 +36,11 @@ class OrderController(private val orderService: OrderService) {
 		@PathVariable orderId: UUID,
 		@AuthenticationPrincipal currentUser: CurrentUser,
 	): FulfillmentResponse? = orderService.getFulfillment(organizationId, orderId, currentUser)?.toResponse()
+
+	@PostMapping("/orders/{orderId}/refund")
+	fun refund(
+		@PathVariable organizationId: UUID,
+		@PathVariable orderId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): OrderResponse = orderService.refund(organizationId, orderId, currentUser).toResponse()
 }

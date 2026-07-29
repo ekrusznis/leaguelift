@@ -3,7 +3,14 @@ package com.leaguelift.payout.application
 import com.leaguelift.audit.application.AuditService
 import com.leaguelift.common.error.ForbiddenException
 import com.leaguelift.common.error.NotFoundException
+import com.leaguelift.common.error.ValidationException
 import com.leaguelift.common.web.CurrentUser
+import com.leaguelift.ledger.application.LedgerService
+import com.leaguelift.ledger.application.PayoutSummary
+import com.leaguelift.ledger.domain.LedgerDirection
+import com.leaguelift.ledger.domain.LedgerEntry
+import com.leaguelift.ledger.domain.LedgerEntryType
+import com.leaguelift.ledger.domain.LedgerSourceType
 import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.membership.domain.MembershipRole
 import com.leaguelift.membership.domain.MembershipStatus
@@ -29,7 +36,8 @@ class PayoutAccountServiceTest {
 	private val stripeConnectClient = mockk<StripeConnectClient>()
 	private val membershipService = mockk<MembershipService>()
 	private val auditService = mockk<AuditService>()
-	private val service = PayoutAccountService(payoutAccountRepository, stripeConnectClient, membershipService, auditService)
+	private val ledgerService = mockk<LedgerService>()
+	private val service = PayoutAccountService(payoutAccountRepository, stripeConnectClient, membershipService, auditService, ledgerService)
 
 	private val orgId = UUID.randomUUID()
 	private val owner = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")
@@ -107,6 +115,102 @@ class PayoutAccountServiceTest {
 
 		assertEquals(true, result.isFullyConnected)
 	}
+
+	@Test
+	fun `triggerTransfer requires manager role, not just active membership`() {
+		every { membershipService.requireManagerRole(orgId, manager) } throws ForbiddenException("MEMBERSHIP_MANAGEMENT_DENIED", "Only organization owners and administrators can manage members.")
+
+		assertFailsWith<ForbiddenException> {
+			service.triggerTransfer(orgId, manager)
+		}
+		verify(exactly = 0) { stripeConnectClient.createTransfer(any(), any(), any()) }
+	}
+
+	@Test
+	fun `triggerTransfer throws NotFoundException when onboarding was never started`() {
+		every { membershipService.requireManagerRole(orgId, owner) } returns ownerMembership()
+		every { payoutAccountRepository.findByOrganizationId(orgId) } returns null
+
+		assertFailsWith<NotFoundException> {
+			service.triggerTransfer(orgId, owner)
+		}
+	}
+
+	@Test
+	fun `triggerTransfer rejects an account not yet enabled for payouts`() {
+		every { membershipService.requireManagerRole(orgId, owner) } returns ownerMembership()
+		every { payoutAccountRepository.findByOrganizationId(orgId) } returns samplePayoutAccount().copy(payoutsEnabled = false)
+
+		assertFailsWith<ValidationException> {
+			service.triggerTransfer(orgId, owner)
+		}
+		verify(exactly = 0) { stripeConnectClient.createTransfer(any(), any(), any()) }
+	}
+
+	@Test
+	fun `triggerTransfer no-ops when nothing is eligible to transfer`() {
+		every { membershipService.requireManagerRole(orgId, owner) } returns ownerMembership()
+		every { payoutAccountRepository.findByOrganizationId(orgId) } returns samplePayoutAccount().copy(payoutsEnabled = true)
+		every { ledgerService.getTransferableEntries(orgId) } returns emptyList()
+		every { ledgerService.getPayoutSummary(orgId) } returns PayoutSummary(0, 0, 0, 0)
+
+		val result = service.triggerTransfer(orgId, owner)
+
+		assertEquals(0L, result.netAvailableMinor)
+		verify(exactly = 0) { stripeConnectClient.createTransfer(any(), any(), any()) }
+	}
+
+	@Test
+	fun `triggerTransfer no-ops when pending debits exceed eligible earnings`() {
+		every { membershipService.requireManagerRole(orgId, owner) } returns ownerMembership()
+		every { payoutAccountRepository.findByOrganizationId(orgId) } returns samplePayoutAccount().copy(payoutsEnabled = true)
+		every { ledgerService.getTransferableEntries(orgId) } returns listOf(
+			earningEntry(LedgerDirection.CREDIT, 1_000L),
+			earningEntry(LedgerDirection.DEBIT, 5_000L),
+		)
+		every { ledgerService.getPayoutSummary(orgId) } returns PayoutSummary(1_000, 0, 5_000, -4_000)
+
+		val result = service.triggerTransfer(orgId, owner)
+
+		assertEquals(-4_000L, result.netAvailableMinor)
+		verify(exactly = 0) { stripeConnectClient.createTransfer(any(), any(), any()) }
+	}
+
+	@Test
+	fun `triggerTransfer calls Stripe and records the transfer when net available is positive`() {
+		val account = samplePayoutAccount().copy(payoutsEnabled = true)
+		val eligible = earningEntry(LedgerDirection.CREDIT, 9_500L)
+		every { membershipService.requireManagerRole(orgId, owner) } returns ownerMembership()
+		every { payoutAccountRepository.findByOrganizationId(orgId) } returns account
+		every { ledgerService.getTransferableEntries(orgId) } returns listOf(eligible)
+		every { stripeConnectClient.createTransfer(account.stripeAccountId, 9_500L, "usd") } returns "tr_test_123"
+		every { ledgerService.recordTransfer(orgId, 9_500L, "usd", "tr_test_123", listOf(eligible.id)) } returns eligible
+		every { auditService.record(any(), any(), any(), any(), any()) } just runs
+		every { ledgerService.getPayoutSummary(orgId) } returns PayoutSummary(0, 0, 0, 0)
+
+		service.triggerTransfer(orgId, owner)
+
+		verify(exactly = 1) { stripeConnectClient.createTransfer(account.stripeAccountId, 9_500L, "usd") }
+		verify(exactly = 1) { ledgerService.recordTransfer(orgId, 9_500L, "usd", "tr_test_123", listOf(eligible.id)) }
+		verify(exactly = 1) { auditService.record(owner.userId, orgId, "payout.transfer_triggered", "organization_payout_account", account.id) }
+	}
+
+	private fun earningEntry(direction: LedgerDirection, amountMinor: Long) = LedgerEntry(
+		id = UUID.randomUUID(),
+		organizationId = orgId,
+		accountCode = LedgerEntryType.ORGANIZATION_EARNING.name,
+		entryType = LedgerEntryType.ORGANIZATION_EARNING,
+		direction = direction,
+		amountMinor = amountMinor,
+		currency = "usd",
+		sourceType = LedgerSourceType.CONTRIBUTION,
+		sourceId = UUID.randomUUID(),
+		externalReference = null,
+		description = null,
+		includedInTransferEntryId = null,
+		effectiveAt = Instant.now(),
+		createdAt = Instant.now(),
+	)
 
 	private fun samplePayoutAccount() = OrganizationPayoutAccount(
 		id = UUID.randomUUID(),

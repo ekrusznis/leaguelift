@@ -24,3 +24,7 @@ leaguelift:
   printify:
     api-token: "test-printify-token-not-real"
     shop-id: "test-shop-id-not-real"
+  platform:
+    fee-basis-points: 500
+  payout:
+    holding-period-days: 7

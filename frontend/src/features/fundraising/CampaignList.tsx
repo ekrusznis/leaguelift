@@ -8,6 +8,7 @@ import { LoadingState } from "../../components/states/LoadingState";
 import { formatMoneyMinorUnits } from "../../lib/money";
 import { useTeams } from "../teams/api";
 import { useCampaigns, useCreateCampaign, usePublishCampaign } from "./api";
+import { ContributionList } from "./ContributionList";
 import { CAMPAIGN_TYPES, createCampaignSchema, type CreateCampaignFormValues } from "./schema";
 import type { CampaignType } from "./types";
 
@@ -31,6 +32,7 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 	const createCampaign = useCreateCampaign(organizationId);
 	const publishCampaign = usePublishCampaign(organizationId);
 	const [showForm, setShowForm] = useState(false);
+	const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null);
 
 	const {
 		register,
@@ -212,31 +214,44 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 			{data && data.items.length > 0 && (
 				<ul className="flex flex-col gap-2" aria-label="Fundraising campaigns">
 					{data.items.map((campaign) => (
-						<li
-							key={campaign.id}
-							className="flex items-center justify-between rounded-lg border border-slate-gray/20 bg-pure-white p-3"
-						>
-							<div>
-								<p className="font-medium text-navy">
-									{campaign.name}
-									<span className="ml-2 rounded-full bg-ice-white px-2 py-0.5 text-xs font-medium text-slate-gray">
-										{campaign.status}
-									</span>
-								</p>
-								<p className="text-sm text-slate-gray">
-									{formatMoneyMinorUnits(campaign.raisedMinor, campaign.currency)} raised of{" "}
-									{formatMoneyMinorUnits(campaign.goalAmountMinor, campaign.currency)} goal &middot; /{campaign.slug}
-								</p>
+						<li key={campaign.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+							<div className="flex items-center justify-between">
+								<div>
+									<p className="font-medium text-navy">
+										{campaign.name}
+										<span className="ml-2 rounded-full bg-ice-white px-2 py-0.5 text-xs font-medium text-slate-gray">
+											{campaign.status}
+										</span>
+									</p>
+									<p className="text-sm text-slate-gray">
+										{formatMoneyMinorUnits(campaign.raisedMinor, campaign.currency)} raised of{" "}
+										{formatMoneyMinorUnits(campaign.goalAmountMinor, campaign.currency)} goal &middot; /{campaign.slug}
+									</p>
+								</div>
+								<div className="flex items-center gap-2">
+									<Button
+										type="button"
+										variant="secondary"
+										onClick={() => setExpandedCampaignId((current) => (current === campaign.id ? null : campaign.id))}
+									>
+										{expandedCampaignId === campaign.id ? "Hide contributions" : "View contributions"}
+									</Button>
+									{campaign.status === "DRAFT" && (
+										<Button
+											type="button"
+											variant="secondary"
+											onClick={() => publishCampaign.mutate(campaign.id)}
+											disabled={publishCampaign.isPending}
+										>
+											Publish
+										</Button>
+									)}
+								</div>
 							</div>
-							{campaign.status === "DRAFT" && (
-								<Button
-									type="button"
-									variant="secondary"
-									onClick={() => publishCampaign.mutate(campaign.id)}
-									disabled={publishCampaign.isPending}
-								>
-									Publish
-								</Button>
+							{expandedCampaignId === campaign.id && (
+								<div className="mt-3 border-t border-slate-gray/20 pt-3">
+									<ContributionList organizationId={organizationId} campaignId={campaign.id} />
+								</div>
 							)}
 						</li>
 					))}

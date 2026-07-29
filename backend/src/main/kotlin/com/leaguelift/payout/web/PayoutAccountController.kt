@@ -37,4 +37,16 @@ class PayoutAccountController(private val payoutAccountService: PayoutAccountSer
 		@PathVariable organizationId: UUID,
 		@AuthenticationPrincipal currentUser: CurrentUser,
 	): PayoutAccountResponse = payoutAccountService.refreshStatus(organizationId, currentUser).toResponse()
+
+	@GetMapping("/summary")
+	fun getPayoutSummary(
+		@PathVariable organizationId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): PayoutSummaryResponse = payoutAccountService.getPayoutSummary(organizationId, currentUser).toResponse()
+
+	@PostMapping("/transfer")
+	fun triggerTransfer(
+		@PathVariable organizationId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): PayoutSummaryResponse = payoutAccountService.triggerTransfer(organizationId, currentUser).toResponse()
 }

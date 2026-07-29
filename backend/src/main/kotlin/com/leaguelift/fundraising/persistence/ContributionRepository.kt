@@ -8,7 +8,7 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
-private const val COLUMNS = "id, organization_id, campaign_id, amount_minor, currency, supporter_name, is_anonymous, supporter_email, status, stripe_checkout_session_id, confirmed_at, created_at"
+private const val COLUMNS = "id, organization_id, campaign_id, amount_minor, currency, supporter_name, is_anonymous, supporter_email, status, stripe_checkout_session_id, stripe_payment_intent_id, confirmed_at, refunded_at, created_at"
 
 @Repository
 class ContributionRepository(private val jdbcClient: JdbcClient) {
@@ -27,11 +27,12 @@ class ContributionRepository(private val jdbcClient: JdbcClient) {
 			.optional()
 			.orElse(null)
 
+	/** "Confirmed" here means "was ever confirmed" — a later refund still shows in this admin-facing history, just with status REFUNDED. */
 	fun listConfirmedForCampaign(campaignId: UUID, offset: Int, limit: Int): List<Contribution> =
 		jdbcClient.sql(
 			"""
 			select $COLUMNS from contribution
-			where campaign_id = :campaignId and status = 'CONFIRMED'
+			where campaign_id = :campaignId and status in ('CONFIRMED', 'REFUNDED')
 			order by confirmed_at desc
 			offset :offset limit :limit
 			""".trimIndent(),
@@ -43,7 +44,7 @@ class ContributionRepository(private val jdbcClient: JdbcClient) {
 			.list()
 
 	fun countConfirmedForCampaign(campaignId: UUID): Long =
-		jdbcClient.sql("select count(*) from contribution where campaign_id = :campaignId and status = 'CONFIRMED'")
+		jdbcClient.sql("select count(*) from contribution where campaign_id = :campaignId and status in ('CONFIRMED', 'REFUNDED')")
 			.param("campaignId", campaignId)
 			.query(Long::class.java)
 			.single()
@@ -105,7 +106,7 @@ class ContributionRepository(private val jdbcClient: JdbcClient) {
 			.update()
 		return Contribution(
 			id, organizationId, campaignId, amountMinor, currency, supporterName, isAnonymous,
-			supporterEmail, ContributionStatus.PENDING, null, null, now,
+			supporterEmail, ContributionStatus.PENDING, null, null, null, null, now,
 		)
 	}
 
@@ -116,9 +117,24 @@ class ContributionRepository(private val jdbcClient: JdbcClient) {
 			.update()
 
 	/** Only flips PENDING -> CONFIRMED. Returns rows affected (0 if already confirmed/canceled — the idempotency guard). */
-	fun markConfirmed(id: UUID): Int {
+	fun markConfirmed(id: UUID, stripePaymentIntentId: String?): Int {
 		val now = Instant.now()
-		return jdbcClient.sql("update contribution set status = 'CONFIRMED', confirmed_at = :now where id = :id and status = 'PENDING'")
+		return jdbcClient.sql(
+			"""
+			update contribution set status = 'CONFIRMED', confirmed_at = :now, stripe_payment_intent_id = :paymentIntentId
+			where id = :id and status = 'PENDING'
+			""".trimIndent(),
+		)
+			.param("now", Timestamp.from(now))
+			.param("paymentIntentId", stripePaymentIntentId)
+			.param("id", id)
+			.update()
+	}
+
+	/** Only flips CONFIRMED -> REFUNDED. Returns rows affected (0 if not confirmed or already refunded — the idempotency guard). */
+	fun markRefunded(id: UUID): Int {
+		val now = Instant.now()
+		return jdbcClient.sql("update contribution set status = 'REFUNDED', refunded_at = :now where id = :id and status = 'CONFIRMED'")
 			.param("now", Timestamp.from(now))
 			.param("id", id)
 			.update()
@@ -136,7 +152,9 @@ class ContributionRepository(private val jdbcClient: JdbcClient) {
 			supporterEmail = rs.getString("supporter_email"),
 			status = ContributionStatus.valueOf(rs.getString("status")),
 			stripeCheckoutSessionId = rs.getString("stripe_checkout_session_id"), // nullable; JDBC getString already returns null cleanly
+			stripePaymentIntentId = rs.getString("stripe_payment_intent_id"),
 			confirmedAt = rs.getTimestamp("confirmed_at")?.toInstant(),
+			refundedAt = rs.getTimestamp("refunded_at")?.toInstant(),
 			createdAt = rs.getTimestamp("created_at").toInstant(),
 		)
 }

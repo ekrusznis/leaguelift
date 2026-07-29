@@ -3,12 +3,19 @@ package com.leaguelift.order.application
 import com.leaguelift.audit.application.AuditService
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.error.ValidationException
+import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.integration.printify.infra.PrintifyDraftOrder
 import com.leaguelift.integration.printify.infra.PrintifyOrderClient
+import com.leaguelift.ledger.application.LedgerService
+import com.leaguelift.ledger.domain.LedgerSourceType
 import com.leaguelift.media.application.MediaAssignmentService
 import com.leaguelift.media.application.MediaReadService
 import com.leaguelift.membership.application.MembershipService
+import com.leaguelift.membership.domain.MembershipRole
+import com.leaguelift.membership.domain.MembershipStatus
+import com.leaguelift.membership.domain.OrganizationMembership
 import com.leaguelift.order.domain.Order
+import com.leaguelift.order.domain.OrderItem
 import com.leaguelift.order.domain.OrderStatus
 import com.leaguelift.order.domain.FulfillmentStatus
 import com.leaguelift.order.infra.OrderCheckoutSession
@@ -30,6 +37,7 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
 import io.mockk.verify
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
@@ -50,10 +58,11 @@ class OrderServiceTest {
 	private val mediaReadService = mockk<MediaReadService>()
 	private val membershipService = mockk<MembershipService>()
 	private val auditService = mockk<AuditService>()
+	private val ledgerService = mockk<LedgerService>()
 	private val service = OrderService(
 		orderRepository, orderItemRepository, fulfillmentRepository, storeRepository, productRepository,
 		productVariantRepository, stripeOrderCheckoutClient, printifyOrderClient, mediaAssignmentService,
-		mediaReadService, membershipService, auditService,
+		mediaReadService, membershipService, auditService, ledgerService,
 	)
 
 	private val orgId = UUID.randomUUID()
@@ -111,10 +120,10 @@ class OrderServiceTest {
 		val order = pendingOrder(store())
 		every { orderRepository.findByStripeCheckoutSessionId("cs_test_123") } returns order
 
-		val result = service.confirmFromWebhook("cs_test_123", "unpaid", null)
+		val result = service.confirmFromWebhook("cs_test_123", "unpaid", null, null)
 
 		assertEquals(OrderStatus.PENDING, result?.status)
-		verify(exactly = 0) { orderRepository.markConfirmed(any(), any()) }
+		verify(exactly = 0) { orderRepository.markConfirmed(any(), any(), any()) }
 	}
 
 	@Test
@@ -125,11 +134,12 @@ class OrderServiceTest {
 		val order = pendingOrder(store)
 		val confirmed = order.copy(status = OrderStatus.CONFIRMED, confirmedAt = Instant.now())
 		every { orderRepository.findByStripeCheckoutSessionId("cs_test_123") } returns order
-		every { orderRepository.markConfirmed(order.id, null) } returns 1
+		every { orderRepository.markConfirmed(order.id, null, null) } returns 1
 		every { auditService.record(null, orgId, "order.confirmed", "order", order.id) } just runs
 		every { orderItemRepository.findByOrder(order.id) } returns listOf(
 			com.leaguelift.order.domain.OrderItem(UUID.randomUUID(), order.id, variant.id, 1, variant.priceMinor, variant.costMinor),
 		)
+		every { ledgerService.recordConfirmedOrder(any(), any()) } just runs
 		every { productVariantRepository.findById(variant.id, orgId) } returns variant
 		every { productRepository.findById(product.id, orgId) } returns product
 		val designAssignment = mockk<com.leaguelift.media.domain.MediaAssignment>()
@@ -139,7 +149,7 @@ class OrderServiceTest {
 		every { fulfillmentRepository.insert(order.id, FulfillmentStatus.DRAFT_CREATED, "printify_order_1", null) } returns mockk()
 		every { orderRepository.findById(order.id, orgId) } returns confirmed
 
-		val result = service.confirmFromWebhook("cs_test_123", "paid", null)
+		val result = service.confirmFromWebhook("cs_test_123", "paid", null, null)
 
 		assertEquals(OrderStatus.CONFIRMED, result?.status)
 		verify(exactly = 1) { fulfillmentRepository.insert(order.id, FulfillmentStatus.DRAFT_CREATED, "printify_order_1", null) }
@@ -149,15 +159,71 @@ class OrderServiceTest {
 	fun `confirmFromWebhook is idempotent — re-confirming doesn't resubmit fulfillment`() {
 		val confirmed = pendingOrder(store()).copy(status = OrderStatus.CONFIRMED, confirmedAt = Instant.now())
 		every { orderRepository.findByStripeCheckoutSessionId("cs_test_123") } returns confirmed
-		every { orderRepository.markConfirmed(confirmed.id, null) } returns 0
+		every { orderRepository.markConfirmed(confirmed.id, null, null) } returns 0
 		every { orderRepository.findById(confirmed.id, orgId) } returns confirmed
 
-		val result = service.confirmFromWebhook("cs_test_123", "paid", null)
+		val result = service.confirmFromWebhook("cs_test_123", "paid", null, null)
 
 		assertEquals(OrderStatus.CONFIRMED, result?.status)
 		verify(exactly = 0) { printifyOrderClient.createDraftOrder(any(), any()) }
 		verify(exactly = 0) { auditService.record(any(), any(), any(), any(), any()) }
 	}
+
+	@Test
+	fun `refund calls Stripe, marks REFUNDED, and records a ledger reversal for the gross sale amount`() {
+		val store = store()
+		val order = pendingOrder(store).copy(status = OrderStatus.CONFIRMED, stripePaymentIntentId = "pi_test_123", confirmedAt = Instant.now())
+		val manager = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
+		every { membershipService.requireManagerRole(orgId, manager) } returns managerMembership(manager)
+		every { orderRepository.findById(order.id, orgId) } returns order
+		every { orderItemRepository.findByOrder(order.id) } returns listOf(
+			OrderItem(UUID.randomUUID(), order.id, UUID.randomUUID(), 2, 2_500L, 1_200L),
+		)
+		every { stripeOrderCheckoutClient.createRefund("pi_test_123") } returns "re_test_123"
+		every { orderRepository.markRefunded(order.id) } returns 1
+		every { ledgerService.recordRefund(orgId, LedgerSourceType.ORDER, order.id, 5_000L, order.currency, "re_test_123") } just runs
+		every { auditService.record(manager.userId, orgId, "order.refunded", "order", order.id) } just runs
+
+		service.refund(orgId, order.id, manager)
+
+		verify(exactly = 1) { stripeOrderCheckoutClient.createRefund("pi_test_123") }
+		verify(exactly = 1) { ledgerService.recordRefund(orgId, LedgerSourceType.ORDER, order.id, 5_000L, order.currency, "re_test_123") }
+	}
+
+	@Test
+	fun `refund rejects an order that was never confirmed`() {
+		val order = pendingOrder(store())
+		val manager = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
+		every { membershipService.requireManagerRole(orgId, manager) } returns managerMembership(manager)
+		every { orderRepository.findById(order.id, orgId) } returns order
+
+		assertFailsWith<ValidationException> {
+			service.refund(orgId, order.id, manager)
+		}
+		verify(exactly = 0) { stripeOrderCheckoutClient.createRefund(any()) }
+	}
+
+	@Test
+	fun `refund rejects an order confirmed more than 14 days ago`() {
+		val stale = pendingOrder(store()).copy(
+			status = OrderStatus.CONFIRMED,
+			stripePaymentIntentId = "pi_test_123",
+			confirmedAt = Instant.now().minus(Duration.ofDays(15)),
+		)
+		val manager = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
+		every { membershipService.requireManagerRole(orgId, manager) } returns managerMembership(manager)
+		every { orderRepository.findById(stale.id, orgId) } returns stale
+
+		assertFailsWith<ValidationException> {
+			service.refund(orgId, stale.id, manager)
+		}
+		verify(exactly = 0) { stripeOrderCheckoutClient.createRefund(any()) }
+	}
+
+	private fun managerMembership(manager: CurrentUser) = OrganizationMembership(
+		id = UUID.randomUUID(), organizationId = orgId, userId = manager.userId, role = MembershipRole.ADMINISTRATOR,
+		status = MembershipStatus.ACTIVE, createdAt = Instant.now(), updatedAt = Instant.now(),
+	)
 
 	private fun store(status: StoreStatus = StoreStatus.ACTIVE) = Store(
 		id = UUID.randomUUID(), organizationId = orgId, teamId = null, name = "Spring Store", slug = "spring-store",
@@ -179,6 +245,6 @@ class OrderServiceTest {
 	private fun pendingOrder(store: Store) = Order(
 		id = UUID.randomUUID(), organizationId = orgId, storeId = store.id, status = OrderStatus.PENDING, currency = "USD",
 		supporterName = "Jane Doe", supporterEmail = null, shippingAddress = null, stripeCheckoutSessionId = "cs_test_123",
-		confirmedAt = null, createdAt = Instant.now(),
+		stripePaymentIntentId = null, confirmedAt = null, refundedAt = null, createdAt = Instant.now(),
 	)
 }

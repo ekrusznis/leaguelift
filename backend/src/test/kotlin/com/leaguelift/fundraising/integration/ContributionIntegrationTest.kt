@@ -64,12 +64,12 @@ class ContributionIntegrationTest : AbstractIntegrationTest() {
 		)
 		assertEquals(0L, contributionService.getConfirmedTotal(campaign.id), "not confirmed yet — still PENDING")
 
-		val confirmed = contributionService.confirmFromWebhook(fixedSessionId, "paid")
+		val confirmed = contributionService.confirmFromWebhook(fixedSessionId, "paid", "pi_test_${System.nanoTime()}")
 		assertEquals("CONFIRMED", confirmed?.status?.name)
 		assertEquals(5_000L, contributionService.getConfirmedTotal(campaign.id))
 
 		// A replayed webhook for the same session must not double-count the contribution.
-		val replayed = contributionService.confirmFromWebhook(fixedSessionId, "paid")
+		val replayed = contributionService.confirmFromWebhook(fixedSessionId, "paid", "pi_test_${System.nanoTime()}")
 		assertEquals("CONFIRMED", replayed?.status?.name)
 		assertEquals(5_000L, contributionService.getConfirmedTotal(campaign.id), "replaying confirmation must not double-count")
 

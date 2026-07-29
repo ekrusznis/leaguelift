@@ -3,7 +3,11 @@ package com.leaguelift.payout.application
 import com.leaguelift.audit.application.AuditService
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.error.ServiceUnavailableException
+import com.leaguelift.common.error.ValidationException
 import com.leaguelift.common.web.CurrentUser
+import com.leaguelift.ledger.application.LedgerService
+import com.leaguelift.ledger.application.PayoutSummary
+import com.leaguelift.ledger.domain.signedAmountMinor
 import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.payout.domain.OrganizationPayoutAccount
 import com.leaguelift.payout.infra.StripeConnectClient
@@ -16,11 +20,14 @@ import java.util.UUID
 
 private val log = LoggerFactory.getLogger(PayoutAccountService::class.java)
 
+/** LeagueLift is USD-only today (see FeeService.formatMinor's same assumption) — revisit if a non-USD currency is ever supported. */
+private const val PAYOUT_CURRENCY = "usd"
+
 /**
- * Stripe Connect Express onboarding only (ADR-005) — creating the connected account,
- * generating a hosted onboarding link, and syncing status back from Stripe on return.
- * No charge/transfer/payout-execution logic exists here; that's Phase 5's job once a
- * live-payments ADR gate is cleared (DESIGN-DOC.md section 16).
+ * Stripe Connect Express onboarding (ADR-005), plus — as of Phase 5 slice 1
+ * (ADR-017) — real transfers out of LeagueLift's Stripe balance into an org's
+ * connected account. Manual-trigger-only this phase: no scheduler exists that
+ * fires transfers automatically, an OWNER/ADMINISTRATOR must call [triggerTransfer].
  */
 @Service
 class PayoutAccountService(
@@ -28,6 +35,7 @@ class PayoutAccountService(
 	private val stripeConnectClient: StripeConnectClient,
 	private val membershipService: MembershipService,
 	private val auditService: AuditService,
+	private val ledgerService: LedgerService,
 ) {
 
 	/** Null means onboarding has never been started — a legitimate "not started" state, not an error. */
@@ -60,6 +68,38 @@ class PayoutAccountService(
 			val status = stripeConnectClient.retrieveAccountStatus(account.stripeAccountId)
 			payoutAccountRepository.updateStatus(organizationId, status.detailsSubmitted, status.chargesEnabled, status.payoutsEnabled)
 			payoutAccountRepository.findByOrganizationId(organizationId)!!
+		}
+	}
+
+	fun getPayoutSummary(organizationId: UUID, currentUser: CurrentUser): PayoutSummary {
+		membershipService.requireActiveMembership(organizationId, currentUser)
+		return ledgerService.getPayoutSummary(organizationId)
+	}
+
+	/**
+	 * Manual-trigger-only (ADR-017) — computes the currently-transferable amount
+	 * (eligible earnings past the holding period, net of any pending refund/negative-
+	 * balance debits), calls Stripe, then records the TRANSFER entry. A zero or negative
+	 * amount is a clean no-op, not an error — there may simply be nothing eligible yet.
+	 */
+	@Transactional
+	fun triggerTransfer(organizationId: UUID, currentUser: CurrentUser): PayoutSummary {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		val account = payoutAccountRepository.findByOrganizationId(organizationId)
+			?: throw NotFoundException("PAYOUT_ACCOUNT_NOT_FOUND", "Payout onboarding hasn't been started for this organization.")
+		if (!account.payoutsEnabled) {
+			throw ValidationException("This organization's connected account isn't yet enabled to receive payouts.")
+		}
+		val entries = ledgerService.getTransferableEntries(organizationId)
+		val amountMinor = entries.sumOf { it.signedAmountMinor() }
+		if (amountMinor <= 0) {
+			return ledgerService.getPayoutSummary(organizationId)
+		}
+		return withStripeErrorTranslation {
+			val stripeTransferId = stripeConnectClient.createTransfer(account.stripeAccountId, amountMinor, PAYOUT_CURRENCY)
+			ledgerService.recordTransfer(organizationId, amountMinor, PAYOUT_CURRENCY, stripeTransferId, entries.map { it.id })
+			auditService.record(currentUser.userId, organizationId, "payout.transfer_triggered", "organization_payout_account", account.id)
+			ledgerService.getPayoutSummary(organizationId)
 		}
 	}
 

@@ -74,10 +74,10 @@ class StripeWebhookController(
 					} as Session
 					if (session.metadata?.containsKey("orderId") == true) {
 						relatedEntityType = "order"
-						relatedEntityId = orderService.confirmFromWebhook(session.id, session.paymentStatus, shippingAddressOf(session))?.id
+						relatedEntityId = orderService.confirmFromWebhook(session.id, session.paymentStatus, shippingAddressOf(session), session.paymentIntent)?.id
 					} else {
 						relatedEntityType = "contribution"
-						relatedEntityId = contributionService.confirmFromWebhook(session.id, session.paymentStatus)?.id
+						relatedEntityId = contributionService.confirmFromWebhook(session.id, session.paymentStatus, session.paymentIntent)?.id
 					}
 					WebhookProcessingStatus.PROCESSED
 				}

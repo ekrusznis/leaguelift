@@ -3,7 +3,7 @@ package com.leaguelift.order.domain
 import java.time.Instant
 import java.util.UUID
 
-enum class OrderStatus { PENDING, CONFIRMED, CANCELED }
+enum class OrderStatus { PENDING, CONFIRMED, CANCELED, REFUNDED }
 
 /** Collected by Stripe Checkout's own shipping_address_collection, not a form we built (see order/application/OrderService.kt). */
 data class ShippingAddress(
@@ -26,6 +26,8 @@ data class Order(
 	val supporterEmail: String?,
 	val shippingAddress: ShippingAddress?,
 	val stripeCheckoutSessionId: String?,
+	val stripePaymentIntentId: String?,
 	val confirmedAt: Instant?,
+	val refundedAt: Instant?,
 	val createdAt: Instant,
 )

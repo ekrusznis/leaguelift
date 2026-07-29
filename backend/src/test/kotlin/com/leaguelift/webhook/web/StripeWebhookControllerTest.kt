@@ -46,7 +46,7 @@ class StripeWebhookControllerTest {
 
 		assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
 		verify(exactly = 0) { webhookEventRepository.findExisting(any(), any()) }
-		verify(exactly = 0) { contributionService.confirmFromWebhook(any(), any()) }
+		verify(exactly = 0) { contributionService.confirmFromWebhook(any(), any(), any()) }
 	}
 
 	@Test
@@ -56,7 +56,7 @@ class StripeWebhookControllerTest {
 		val signature = sign(payload, webhookSecret)
 		val contribution = sampleContribution()
 		every { webhookEventRepository.findExisting("stripe", eventId) } returns null
-		every { contributionService.confirmFromWebhook("cs_test_2", "paid") } returns contribution
+		every { contributionService.confirmFromWebhook("cs_test_2", "paid", null) } returns contribution
 		every {
 			webhookEventRepository.insert(
 				"stripe", eventId, "checkout.session.completed", payload, any(), true,
@@ -67,7 +67,7 @@ class StripeWebhookControllerTest {
 		val response = controller.receive(payload, signature)
 
 		assertEquals(HttpStatus.OK, response.statusCode)
-		verify(exactly = 1) { contributionService.confirmFromWebhook("cs_test_2", "paid") }
+		verify(exactly = 1) { contributionService.confirmFromWebhook("cs_test_2", "paid", null) }
 	}
 
 	@Test
@@ -80,7 +80,7 @@ class StripeWebhookControllerTest {
 		val response = controller.receive(payload, signature)
 
 		assertEquals(HttpStatus.OK, response.statusCode)
-		verify(exactly = 0) { contributionService.confirmFromWebhook(any(), any()) }
+		verify(exactly = 0) { contributionService.confirmFromWebhook(any(), any(), any()) }
 	}
 
 	@Test
@@ -96,7 +96,7 @@ class StripeWebhookControllerTest {
 		val response = controller.receive(payload, signature)
 
 		assertEquals(HttpStatus.OK, response.statusCode)
-		verify(exactly = 0) { contributionService.confirmFromWebhook(any(), any()) }
+		verify(exactly = 0) { contributionService.confirmFromWebhook(any(), any(), any()) }
 	}
 
 	@Test
@@ -107,7 +107,7 @@ class StripeWebhookControllerTest {
 		val signature = sign(payload, webhookSecret)
 		val order = sampleOrder(orderId)
 		every { webhookEventRepository.findExisting("stripe", eventId) } returns null
-		every { orderService.confirmFromWebhook("cs_test_4", "paid", null) } returns order
+		every { orderService.confirmFromWebhook("cs_test_4", "paid", null, null) } returns order
 		every {
 			webhookEventRepository.insert(
 				"stripe", eventId, "checkout.session.completed", payload, any(), true,
@@ -118,8 +118,8 @@ class StripeWebhookControllerTest {
 		val response = controller.receive(payload, signature)
 
 		assertEquals(HttpStatus.OK, response.statusCode)
-		verify(exactly = 1) { orderService.confirmFromWebhook("cs_test_4", "paid", null) }
-		verify(exactly = 0) { contributionService.confirmFromWebhook(any(), any()) }
+		verify(exactly = 1) { orderService.confirmFromWebhook("cs_test_4", "paid", null, null) }
+		verify(exactly = 0) { contributionService.confirmFromWebhook(any(), any(), any()) }
 	}
 
 	private fun checkoutSessionCompletedPayload(eventId: String, sessionId: String, paymentStatus: String): String =
@@ -140,13 +140,14 @@ class StripeWebhookControllerTest {
 	private fun sampleContribution() = Contribution(
 		id = UUID.randomUUID(), organizationId = UUID.randomUUID(), campaignId = UUID.randomUUID(),
 		amountMinor = 5000L, currency = "USD", supporterName = "Jane Doe", isAnonymous = false, supporterEmail = null,
-		status = ContributionStatus.CONFIRMED, stripeCheckoutSessionId = "cs_test_2", confirmedAt = Instant.now(), createdAt = Instant.now(),
+		status = ContributionStatus.CONFIRMED, stripeCheckoutSessionId = "cs_test_2", stripePaymentIntentId = null,
+		confirmedAt = Instant.now(), refundedAt = null, createdAt = Instant.now(),
 	)
 
 	private fun sampleOrder(orderId: UUID) = Order(
 		id = orderId, organizationId = UUID.randomUUID(), storeId = UUID.randomUUID(), status = OrderStatus.CONFIRMED,
 		currency = "USD", supporterName = "Jane Doe", supporterEmail = null, shippingAddress = null,
-		stripeCheckoutSessionId = "cs_test_4", confirmedAt = Instant.now(), createdAt = Instant.now(),
+		stripeCheckoutSessionId = "cs_test_4", stripePaymentIntentId = null, confirmedAt = Instant.now(), refundedAt = null, createdAt = Instant.now(),
 	)
 
 	private fun sampleWebhookEvent() = WebhookEvent(

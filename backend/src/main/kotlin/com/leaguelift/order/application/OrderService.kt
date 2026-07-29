@@ -7,6 +7,8 @@ import com.leaguelift.common.error.ValidationException
 import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.integration.printify.infra.PrintifyOrderClient
 import com.leaguelift.integration.printify.infra.PrintifyOrderLineItem
+import com.leaguelift.ledger.application.LedgerService
+import com.leaguelift.ledger.domain.LedgerSourceType
 import com.leaguelift.media.application.MediaAssignmentService
 import com.leaguelift.media.application.MediaReadService
 import com.leaguelift.media.domain.MediaEntityType
@@ -15,6 +17,7 @@ import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.order.domain.Fulfillment
 import com.leaguelift.order.domain.FulfillmentStatus
 import com.leaguelift.order.domain.Order
+import com.leaguelift.order.domain.OrderStatus
 import com.leaguelift.order.domain.ShippingAddress
 import com.leaguelift.order.infra.OrderCheckoutLineItem
 import com.leaguelift.order.infra.StripeOrderCheckoutClient
@@ -31,12 +34,17 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.client.RestClientException
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 
 private val log = LoggerFactory.getLogger(OrderService::class.java)
 
 /** Mirrors Stripe's own `{CHECKOUT_SESSION_ID}` success-url placeholder convention — the frontend can't know the order id until this call returns, so it asks for it to be filled in server-side instead (same pattern as ContributionService.CONTRIBUTION_ID_PLACEHOLDER). */
 const val ORDER_ID_PLACEHOLDER = "{ORDER_ID}"
+
+/** Org-admin-initiated refunds are only allowed within this window of confirmation (ADR-017, 2026-07-29 founder decision; same policy as ContributionService.REFUND_WINDOW). */
+val ORDER_REFUND_WINDOW: Duration = Duration.ofDays(14)
 
 data class OrderLineItemRequest(val productVariantId: UUID, val quantity: Int)
 data class OrderCheckout(val orderId: UUID, val checkoutUrl: String)
@@ -65,6 +73,7 @@ class OrderService(
 	private val mediaReadService: MediaReadService,
 	private val membershipService: MembershipService,
 	private val auditService: AuditService,
+	private val ledgerService: LedgerService,
 ) {
 
 	@Transactional
@@ -121,12 +130,13 @@ class OrderService(
 
 	/** Idempotent: a duplicate webhook delivery or an already-confirmed order is a safe no-op. */
 	@Transactional
-	fun confirmFromWebhook(stripeSessionId: String, stripePaymentStatus: String, shippingAddress: ShippingAddress?): Order? {
+	fun confirmFromWebhook(stripeSessionId: String, stripePaymentStatus: String, shippingAddress: ShippingAddress?, stripePaymentIntentId: String?): Order? {
 		val order = orderRepository.findByStripeCheckoutSessionId(stripeSessionId) ?: return null
 		if (stripePaymentStatus != "paid") return order
-		val updated = orderRepository.markConfirmed(order.id, shippingAddress)
+		val updated = orderRepository.markConfirmed(order.id, shippingAddress, stripePaymentIntentId)
 		if (updated > 0) {
 			auditService.record(null, order.organizationId, "order.confirmed", "order", order.id)
+			ledgerService.recordConfirmedOrder(order.copy(status = OrderStatus.CONFIRMED), orderItemRepository.findByOrder(order.id))
 			submitFulfillment(order.id, order.organizationId)
 		}
 		return orderRepository.findById(order.id, order.organizationId)
@@ -156,6 +166,35 @@ class OrderService(
 		membershipService.requireActiveMembership(organizationId, currentUser)
 		orderRepository.findById(orderId, organizationId) ?: throw NotFoundException("ORDER_NOT_FOUND", "The order could not be found.")
 		return fulfillmentRepository.findByOrder(orderId)
+	}
+
+	/** Refunds the gross sale amount; production cost already spent with Printify is not returned (see LedgerService.recordRefund). */
+	@Transactional
+	fun refund(organizationId: UUID, orderId: UUID, currentUser: CurrentUser): Order {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		val order = orderRepository.findById(orderId, organizationId)
+			?: throw NotFoundException("ORDER_NOT_FOUND", "The order could not be found.")
+		if (order.status != OrderStatus.CONFIRMED || order.stripePaymentIntentId == null) {
+			throw ValidationException("Only a confirmed order with a recorded payment can be refunded.")
+		}
+		val confirmedAt = order.confirmedAt ?: throw ValidationException("This order has no confirmation date on record.")
+		if (Duration.between(confirmedAt, Instant.now()) > ORDER_REFUND_WINDOW) {
+			throw ValidationException("This order can no longer be refunded — it was confirmed more than ${ORDER_REFUND_WINDOW.toDays()} days ago.")
+		}
+		val stripeRefundId = try {
+			stripeOrderCheckoutClient.createRefund(order.stripePaymentIntentId)
+		} catch (e: StripeException) {
+			log.warn("Stripe refund failed for order {}: {}", orderId, e.message, e)
+			throw ServiceUnavailableException(
+				"ORDER_PROVIDER_UNAVAILABLE",
+				"Payments provider is not available right now. If this is local/staging, confirm STRIPE_SECRET_KEY is set.",
+			)
+		}
+		val grossAmountMinor = orderItemRepository.findByOrder(order.id).sumOf { it.unitPriceMinor * it.quantity }
+		orderRepository.markRefunded(order.id)
+		ledgerService.recordRefund(organizationId, LedgerSourceType.ORDER, order.id, grossAmountMinor, order.currency, stripeRefundId)
+		auditService.record(currentUser.userId, organizationId, "order.refunded", "order", order.id)
+		return orderRepository.findById(order.id, organizationId)!!
 	}
 
 	private fun submitFulfillment(orderId: UUID, organizationId: UUID) {

@@ -53,10 +53,11 @@ data class OrderResponse(
 	val supporterEmail: String?,
 	val shippingAddress: ShippingAddressResponse?,
 	val confirmedAt: Instant?,
+	val refundedAt: Instant?,
 	val createdAt: Instant,
 )
 
-fun Order.toResponse() = OrderResponse(id, storeId, status.name, currency, supporterName, supporterEmail, shippingAddress?.toResponse(), confirmedAt, createdAt)
+fun Order.toResponse() = OrderResponse(id, storeId, status.name, currency, supporterName, supporterEmail, shippingAddress?.toResponse(), confirmedAt, refundedAt, createdAt)
 
 data class FulfillmentResponse(val status: String, val printifyOrderId: String?, val lastError: String?)
 

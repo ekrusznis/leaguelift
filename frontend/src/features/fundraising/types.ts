@@ -58,7 +58,7 @@ export interface PublicCampaign {
 	raisedMinor: number;
 }
 
-export type ContributionStatus = "PENDING" | "CONFIRMED" | "CANCELED";
+export type ContributionStatus = "PENDING" | "CONFIRMED" | "CANCELED" | "REFUNDED";
 
 /** Response from POST /public/campaigns/{slug}/contributions. */
 export interface ContributionCheckout {
@@ -78,12 +78,14 @@ export interface ContributionStatusResult {
 /** Org-admin list shape from GET /organizations/{id}/campaigns/{campaignId}/contributions. */
 export interface Contribution {
 	id: string;
+	status: ContributionStatus;
 	amountMinor: number;
 	currency: string;
 	supporterName: string | null;
 	isAnonymous: boolean;
 	supporterEmail: string | null;
 	confirmedAt: string | null;
+	refundedAt: string | null;
 	createdAt: string;
 }
 

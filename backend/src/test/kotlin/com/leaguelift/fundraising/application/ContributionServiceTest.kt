@@ -3,6 +3,7 @@ package com.leaguelift.fundraising.application
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.error.ServiceUnavailableException
 import com.leaguelift.common.error.ValidationException
+import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.fundraising.domain.Campaign
 import com.leaguelift.fundraising.domain.CampaignStatus
 import com.leaguelift.fundraising.domain.CampaignType
@@ -12,7 +13,12 @@ import com.leaguelift.fundraising.infra.CheckoutSession
 import com.leaguelift.fundraising.infra.StripeCheckoutClient
 import com.leaguelift.fundraising.persistence.CampaignRepository
 import com.leaguelift.fundraising.persistence.ContributionRepository
+import com.leaguelift.ledger.application.LedgerService
+import com.leaguelift.ledger.domain.LedgerSourceType
 import com.leaguelift.membership.application.MembershipService
+import com.leaguelift.membership.domain.MembershipRole
+import com.leaguelift.membership.domain.MembershipStatus
+import com.leaguelift.membership.domain.OrganizationMembership
 import com.leaguelift.audit.application.AuditService
 import com.stripe.exception.ApiConnectionException
 import io.mockk.every
@@ -20,6 +26,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
@@ -33,7 +40,8 @@ class ContributionServiceTest {
 	private val stripeCheckoutClient = mockk<StripeCheckoutClient>()
 	private val membershipService = mockk<MembershipService>()
 	private val auditService = mockk<AuditService>()
-	private val service = ContributionService(contributionRepository, campaignRepository, stripeCheckoutClient, membershipService, auditService)
+	private val ledgerService = mockk<LedgerService>()
+	private val service = ContributionService(contributionRepository, campaignRepository, stripeCheckoutClient, membershipService, auditService, ledgerService)
 
 	private val orgId = UUID.randomUUID()
 
@@ -109,10 +117,10 @@ class ContributionServiceTest {
 		val contribution = pendingContribution(campaign)
 		every { contributionRepository.findByStripeCheckoutSessionId("cs_test_123") } returns contribution
 
-		val result = service.confirmFromWebhook("cs_test_123", "unpaid")
+		val result = service.confirmFromWebhook("cs_test_123", "unpaid", "pi_test_123")
 
 		assertEquals(ContributionStatus.PENDING, result?.status)
-		verify(exactly = 0) { contributionRepository.markConfirmed(any()) }
+		verify(exactly = 0) { contributionRepository.markConfirmed(any(), any()) }
 	}
 
 	@Test
@@ -121,14 +129,16 @@ class ContributionServiceTest {
 		val contribution = pendingContribution(campaign)
 		val confirmed = contribution.copy(status = ContributionStatus.CONFIRMED, confirmedAt = Instant.now())
 		every { contributionRepository.findByStripeCheckoutSessionId("cs_test_123") } returns contribution
-		every { contributionRepository.markConfirmed(contribution.id) } returns 1
+		every { contributionRepository.markConfirmed(contribution.id, "pi_test_123") } returns 1
 		every { contributionRepository.findById(contribution.id) } returns confirmed
 		every { auditService.record(null, campaign.organizationId, "contribution.confirmed", "contribution", contribution.id) } just runs
+		every { ledgerService.recordConfirmedContribution(any()) } just runs
 
-		val result = service.confirmFromWebhook("cs_test_123", "paid")
+		val result = service.confirmFromWebhook("cs_test_123", "paid", "pi_test_123")
 
 		assertEquals(ContributionStatus.CONFIRMED, result?.status)
 		verify(exactly = 1) { auditService.record(null, campaign.organizationId, "contribution.confirmed", "contribution", contribution.id) }
+		verify(exactly = 1) { ledgerService.recordConfirmedContribution(any()) }
 	}
 
 	@Test
@@ -136,23 +146,79 @@ class ContributionServiceTest {
 		val campaign = campaign()
 		val confirmed = pendingContribution(campaign).copy(status = ContributionStatus.CONFIRMED, confirmedAt = Instant.now())
 		every { contributionRepository.findByStripeCheckoutSessionId("cs_test_123") } returns confirmed
-		every { contributionRepository.markConfirmed(confirmed.id) } returns 0 // already CONFIRMED, WHERE status = 'PENDING' matched nothing
+		every { contributionRepository.markConfirmed(confirmed.id, "pi_test_123") } returns 0 // already CONFIRMED, WHERE status = 'PENDING' matched nothing
 		every { contributionRepository.findById(confirmed.id) } returns confirmed
 
-		val result = service.confirmFromWebhook("cs_test_123", "paid")
+		val result = service.confirmFromWebhook("cs_test_123", "paid", "pi_test_123")
 
 		assertEquals(ContributionStatus.CONFIRMED, result?.status)
 		verify(exactly = 0) { auditService.record(any(), any(), any(), any(), any()) }
+		verify(exactly = 0) { ledgerService.recordConfirmedContribution(any()) }
 	}
 
 	@Test
 	fun `confirmFromWebhook returns null when no contribution matches the session id`() {
 		every { contributionRepository.findByStripeCheckoutSessionId("cs_unknown") } returns null
 
-		val result = service.confirmFromWebhook("cs_unknown", "paid")
+		val result = service.confirmFromWebhook("cs_unknown", "paid", "pi_test_123")
 
 		assertEquals(null, result)
 	}
+
+	@Test
+	fun `refund calls Stripe, marks REFUNDED, and records a ledger reversal`() {
+		val campaign = campaign()
+		val confirmed = pendingContribution(campaign).copy(status = ContributionStatus.CONFIRMED, stripePaymentIntentId = "pi_test_123", confirmedAt = Instant.now())
+		val manager = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
+		every { membershipService.requireManagerRole(orgId, manager) } returns managerMembership(manager)
+		every { contributionRepository.findById(confirmed.id) } returns confirmed
+		every { stripeCheckoutClient.createRefund("pi_test_123") } returns "re_test_123"
+		every { contributionRepository.markRefunded(confirmed.id) } returns 1
+		every { ledgerService.recordRefund(orgId, LedgerSourceType.CONTRIBUTION, confirmed.id, confirmed.amountMinor, confirmed.currency, "re_test_123") } just runs
+		every { auditService.record(manager.userId, orgId, "contribution.refunded", "contribution", confirmed.id) } just runs
+
+		service.refund(orgId, confirmed.id, manager)
+
+		verify(exactly = 1) { stripeCheckoutClient.createRefund("pi_test_123") }
+		verify(exactly = 1) { ledgerService.recordRefund(orgId, LedgerSourceType.CONTRIBUTION, confirmed.id, confirmed.amountMinor, confirmed.currency, "re_test_123") }
+	}
+
+	@Test
+	fun `refund rejects a contribution that was never confirmed`() {
+		val campaign = campaign()
+		val pending = pendingContribution(campaign)
+		val manager = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
+		every { membershipService.requireManagerRole(orgId, manager) } returns managerMembership(manager)
+		every { contributionRepository.findById(pending.id) } returns pending
+
+		assertFailsWith<ValidationException> {
+			service.refund(orgId, pending.id, manager)
+		}
+		verify(exactly = 0) { stripeCheckoutClient.createRefund(any()) }
+	}
+
+	@Test
+	fun `refund rejects a contribution confirmed more than 14 days ago`() {
+		val campaign = campaign()
+		val stale = pendingContribution(campaign).copy(
+			status = ContributionStatus.CONFIRMED,
+			stripePaymentIntentId = "pi_test_123",
+			confirmedAt = Instant.now().minus(Duration.ofDays(15)),
+		)
+		val manager = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
+		every { membershipService.requireManagerRole(orgId, manager) } returns managerMembership(manager)
+		every { contributionRepository.findById(stale.id) } returns stale
+
+		assertFailsWith<ValidationException> {
+			service.refund(orgId, stale.id, manager)
+		}
+		verify(exactly = 0) { stripeCheckoutClient.createRefund(any()) }
+	}
+
+	private fun managerMembership(manager: CurrentUser) = OrganizationMembership(
+		id = UUID.randomUUID(), organizationId = orgId, userId = manager.userId, role = MembershipRole.ADMINISTRATOR,
+		status = MembershipStatus.ACTIVE, createdAt = Instant.now(), updatedAt = Instant.now(),
+	)
 
 	private fun campaign(status: CampaignStatus = CampaignStatus.ACTIVE) = Campaign(
 		id = UUID.randomUUID(), organizationId = orgId, teamId = null, name = "Spring Trip Fund",
@@ -164,6 +230,7 @@ class ContributionServiceTest {
 	private fun pendingContribution(campaign: Campaign) = Contribution(
 		id = UUID.randomUUID(), organizationId = campaign.organizationId, campaignId = campaign.id,
 		amountMinor = 5000L, currency = "USD", supporterName = null, isAnonymous = false, supporterEmail = null,
-		status = ContributionStatus.PENDING, stripeCheckoutSessionId = "cs_test_123", confirmedAt = null, createdAt = Instant.now(),
+		status = ContributionStatus.PENDING, stripeCheckoutSessionId = "cs_test_123", stripePaymentIntentId = null,
+		confirmedAt = null, refundedAt = null, createdAt = Instant.now(),
 	)
 }

@@ -1,6 +1,7 @@
 package com.leaguelift.payout.web
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.leaguelift.ledger.application.PayoutSummary
 import com.leaguelift.payout.domain.OrganizationPayoutAccount
 import jakarta.validation.constraints.NotBlank
 import java.time.Instant
@@ -31,4 +32,18 @@ fun OrganizationPayoutAccount.toResponse() = PayoutAccountResponse(
 	payoutsEnabled = payoutsEnabled,
 	isFullyConnected = isFullyConnected,
 	updatedAt = updatedAt,
+)
+
+data class PayoutSummaryResponse(
+	val eligibleMinor: Long,
+	val heldMinor: Long,
+	val pendingDebitsMinor: Long,
+	val netAvailableMinor: Long,
+)
+
+fun PayoutSummary.toResponse() = PayoutSummaryResponse(
+	eligibleMinor = eligibleMinor,
+	heldMinor = heldMinor,
+	pendingDebitsMinor = pendingDebitsMinor,
+	netAvailableMinor = netAvailableMinor,
 )

@@ -412,6 +412,65 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /organizations/{organizationId}/payout-account/summary:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [payouts]
+      summary: Get the organization's current payout ledger summary
+      description: >
+        Phase 5 slice 1 (ADR-017). netAvailableMinor can be negative — a refund
+        that exceeds what's currently eligible is shown honestly, never hidden,
+        and is deducted from the next transfer.
+      operationId: getPayoutSummary
+      responses:
+        "200":
+          description: Payout summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayoutSummaryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/payout-account/transfer:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [payouts]
+      summary: Trigger a payout transfer
+      description: >
+        Manager-role (OWNER/ADMINISTRATOR) only. Manual-trigger-only this phase
+        (ADR-017) — no scheduler exists yet. Transfers the currently-eligible net
+        amount to the organization's connected Stripe account; a zero or negative
+        net amount is a clean no-op, not an error.
+      operationId: triggerPayoutTransfer
+      responses:
+        "200":
+          description: Updated payout summary (after the transfer, if one occurred)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayoutSummaryResponse"
+        "400":
+          description: The connected account isn't yet enabled to receive payouts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Onboarding hasn't been started for this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /organizations/{organizationId}/invitations:
     parameters:
       - $ref: "#/components/parameters/OrganizationIdParam"
@@ -1865,6 +1924,45 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /organizations/{organizationId}/campaigns/{campaignId}/contributions/{contributionId}/refund:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/CampaignIdParam"
+      - name: contributionId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [fundraising]
+      summary: Refund a confirmed contribution
+      description: >
+        Manager-role (OWNER/ADMINISTRATOR) only, within 14 days of confirmation
+        (ADR-017). Reverses the Stripe charge and records a REFUND ledger entry;
+        the organization's earning portion is reversed net of the platform fee,
+        which is not returned.
+      operationId: refundContribution
+      responses:
+        "200":
+          description: The refunded contribution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributionResponse"
+        "400":
+          description: Not confirmed, no payment on record, or outside the 14-day refund window
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   # --- Media (organization logo/cover upload — DESIGN-DOC.md section 11, ADR-012) ---
 
   /organizations/{organizationId}/media/uploads:
@@ -2593,6 +2691,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FulfillmentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/orders/{orderId}/refund:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [orders]
+      summary: Refund a confirmed order
+      description: >
+        Manager-role (OWNER/ADMINISTRATOR) only, within 14 days of confirmation
+        (ADR-017). Reverses the Stripe charge for the gross sale amount and
+        records a REFUND ledger entry; Printify production cost already spent is
+        not returned, and the platform fee is not returned either.
+      operationId: refundOrder
+      responses:
+        "200":
+          description: The refunded order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+        "400":
+          description: Not confirmed, no payment on record, or outside the 14-day refund window
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -4842,7 +4978,7 @@ components:
 
     ContributionStatus:
       type: string
-      enum: [PENDING, CONFIRMED, CANCELED]
+      enum: [PENDING, CONFIRMED, CANCELED, REFUNDED]
     CreateContributionCheckoutRequest:
       type: object
       required: [amountMinor, successUrl, cancelUrl]
@@ -4910,12 +5046,14 @@ components:
           nullable: true
     ContributionResponse:
       type: object
-      required: [id, amountMinor, currency, isAnonymous, createdAt]
-      description: Org-admin list shape — confirmed contributions only.
+      required: [id, status, amountMinor, currency, isAnonymous, createdAt]
+      description: Org-admin list shape — contributions that were confirmed at some point (CONFIRMED or REFUNDED).
       properties:
         id:
           type: string
           format: uuid
+        status:
+          $ref: "#/components/schemas/ContributionStatus"
         amountMinor:
           type: integer
           format: int64
@@ -4930,6 +5068,10 @@ components:
           type: string
           nullable: true
         confirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+        refundedAt:
           type: string
           format: date-time
           nullable: true
@@ -5282,7 +5424,7 @@ components:
 
     OrderStatus:
       type: string
-      enum: [PENDING, CONFIRMED, CANCELED]
+      enum: [PENDING, CONFIRMED, CANCELED, REFUNDED]
 
     OrderLineItemDto:
       type: object
@@ -5403,6 +5545,10 @@ components:
         shippingAddress:
           $ref: "#/components/schemas/ShippingAddressResponse"
         confirmedAt:
+          type: string
+          format: date-time
+          nullable: true
+        refundedAt:
           type: string
           format: date-time
           nullable: true
@@ -6036,6 +6182,28 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    PayoutSummaryResponse:
+      type: object
+      required: [eligibleMinor, heldMinor, pendingDebitsMinor, netAvailableMinor]
+      description: Phase 5 slice 1 (ADR-017) ledger summary backing PayoutSummaryPanel.
+      properties:
+        eligibleMinor:
+          type: integer
+          format: int64
+          description: ORGANIZATION_EARNING credits past the holding period, not yet transferred.
+        heldMinor:
+          type: integer
+          format: int64
+          description: ORGANIZATION_EARNING credits still within the holding period.
+        pendingDebitsMinor:
+          type: integer
+          format: int64
+          description: Reversal debits (refunds, below-cost orders) not yet netted against a transfer — counted immediately, no holding period.
+        netAvailableMinor:
+          type: integer
+          format: int64
+          description: eligibleMinor minus pendingDebitsMinor. Can be negative.
 
 security:
   - bearerAuth: []

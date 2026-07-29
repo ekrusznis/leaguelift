@@ -159,6 +159,15 @@ export function useOrderFulfillment(organizationId: string, orderId: string | nu
 	});
 }
 
+/** Org-admin-initiated, within a 14-day window of confirmation (ADR-017) — the backend enforces both. */
+export function useRefundOrder(organizationId: string, storeId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (orderId: string) => apiFetch<Order>(`/organizations/${organizationId}/orders/${orderId}/refund`, { method: "POST" }),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ordersKey(organizationId, storeId) }),
+	});
+}
+
 export function usePublicStore(slug: string) {
 	return useQuery({
 		queryKey: ["public", "stores", slug] as const,

@@ -111,4 +111,12 @@ class CampaignController(
         val total = contributionService.getConfirmedCount(campaignId)
         return PageResponse(items, page, size, total)
     }
+
+    @PostMapping("/{campaignId}/contributions/{contributionId}/refund")
+    fun refundContribution(
+        @PathVariable organizationId: UUID,
+        @PathVariable campaignId: UUID,
+        @PathVariable contributionId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): ContributionResponse = contributionService.refund(organizationId, contributionId, currentUser).toResponse()
 }

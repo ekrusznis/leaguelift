@@ -1,6 +1,7 @@
 package com.leaguelift.fundraising.infra
 
 import com.stripe.StripeClient
+import com.stripe.param.RefundCreateParams
 import com.stripe.param.checkout.SessionCreateParams
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -51,5 +52,21 @@ class StripeCheckoutClient(private val stripeClient: StripeClient) {
 			.build()
 		val session = stripeClient.checkout().sessions().create(params)
 		return CheckoutSession(sessionId = session.id, checkoutUrl = session.url)
+	}
+
+	/**
+	 * `reverseTransfer = false` — this slice's negative-balance handling
+	 * (ADR-017) nets a refund against the org's own next payout entirely through
+	 * our own ledger, so Stripe must not also automatically claw the transferred
+	 * amount back from the connected account itself, which would double-count it.
+	 */
+	fun createRefund(paymentIntentId: String): String {
+		val refund = stripeClient.refunds().create(
+			RefundCreateParams.builder()
+				.setPaymentIntent(paymentIntentId)
+				.setReverseTransfer(false)
+				.build(),
+		)
+		return refund.id
 	}
 }

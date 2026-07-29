@@ -3,7 +3,7 @@ package com.leaguelift.fundraising.domain
 import java.time.Instant
 import java.util.UUID
 
-enum class ContributionStatus { PENDING, CONFIRMED, CANCELED }
+enum class ContributionStatus { PENDING, CONFIRMED, CANCELED, REFUNDED }
 
 data class Contribution(
 	val id: UUID,
@@ -16,7 +16,9 @@ data class Contribution(
 	val supporterEmail: String?,
 	val status: ContributionStatus,
 	val stripeCheckoutSessionId: String?,
+	val stripePaymentIntentId: String?,
 	val confirmedAt: Instant?,
+	val refundedAt: Instant?,
 	val createdAt: Instant,
 )
 

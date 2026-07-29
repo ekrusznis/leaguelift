@@ -118,7 +118,7 @@ export interface PublicStore {
 	products: PublicProduct[];
 }
 
-export type OrderStatus = "PENDING" | "CONFIRMED" | "CANCELED";
+export type OrderStatus = "PENDING" | "CONFIRMED" | "CANCELED" | "REFUNDED";
 
 export interface OrderCheckout {
 	orderId: string;
@@ -151,6 +151,7 @@ export interface Order {
 	supporterEmail: string | null;
 	shippingAddress: ShippingAddress | null;
 	confirmedAt: string | null;
+	refundedAt: string | null;
 	createdAt: string;
 }
 

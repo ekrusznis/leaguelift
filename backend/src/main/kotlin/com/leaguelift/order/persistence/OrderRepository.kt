@@ -12,7 +12,8 @@ import java.util.UUID
 
 private const val COLUMNS = """
     id, organization_id, store_id, status, currency, supporter_name, supporter_email,
-    shipping_address, stripe_checkout_session_id, confirmed_at, created_at
+    shipping_address, stripe_checkout_session_id, stripe_payment_intent_id, confirmed_at,
+    refunded_at, created_at
 """
 
 @Repository
@@ -33,11 +34,12 @@ class OrderRepository(private val jdbcClient: JdbcClient, private val objectMapp
 			.optional()
 			.orElse(null)
 
+	/** "Confirmed" here means "was ever confirmed" — a later refund still shows in this admin-facing history, just with status REFUNDED. */
 	fun findByStore(storeId: UUID, offset: Int, limit: Int): List<Order> =
 		jdbcClient.sql(
 			"""
 			select $COLUMNS from "order"
-			where store_id = :storeId and status = 'CONFIRMED'
+			where store_id = :storeId and status in ('CONFIRMED', 'REFUNDED')
 			order by confirmed_at desc
 			offset :offset limit :limit
 			""".trimIndent(),
@@ -49,7 +51,7 @@ class OrderRepository(private val jdbcClient: JdbcClient, private val objectMapp
 			.list()
 
 	fun countConfirmedByStore(storeId: UUID): Long =
-		jdbcClient.sql("""select count(*) from "order" where store_id = :storeId and status = 'CONFIRMED'""")
+		jdbcClient.sql("""select count(*) from "order" where store_id = :storeId and status in ('CONFIRMED', 'REFUNDED')""")
 			.param("storeId", storeId)
 			.query(Long::class.java)
 			.single()
@@ -71,7 +73,7 @@ class OrderRepository(private val jdbcClient: JdbcClient, private val objectMapp
 			.param("supporterEmail", supporterEmail)
 			.param("now", Timestamp.from(now))
 			.update()
-		return Order(id, organizationId, storeId, OrderStatus.PENDING, currency, supporterName, supporterEmail, null, null, null, now)
+		return Order(id, organizationId, storeId, OrderStatus.PENDING, currency, supporterName, supporterEmail, null, null, null, null, null, now)
 	}
 
 	fun attachStripeSession(id: UUID, stripeCheckoutSessionId: String): Int =
@@ -81,16 +83,27 @@ class OrderRepository(private val jdbcClient: JdbcClient, private val objectMapp
 			.update()
 
 	/** Only flips PENDING -> CONFIRMED. Returns rows affected (0 if already confirmed/canceled — the idempotency guard, same pattern as ContributionRepository.markConfirmed). */
-	fun markConfirmed(id: UUID, shippingAddress: ShippingAddress?): Int {
+	fun markConfirmed(id: UUID, shippingAddress: ShippingAddress?, stripePaymentIntentId: String?): Int {
 		val now = Instant.now()
 		return jdbcClient.sql(
 			"""
-			update "order" set status = 'CONFIRMED', confirmed_at = :now, shipping_address = cast(:shippingAddress as jsonb)
+			update "order" set status = 'CONFIRMED', confirmed_at = :now, shipping_address = cast(:shippingAddress as jsonb),
+			  stripe_payment_intent_id = :paymentIntentId
 			where id = :id and status = 'PENDING'
 			""".trimIndent(),
 		)
 			.param("now", Timestamp.from(now))
 			.param("shippingAddress", shippingAddress?.let { objectMapper.writeValueAsString(it) })
+			.param("paymentIntentId", stripePaymentIntentId)
+			.param("id", id)
+			.update()
+	}
+
+	/** Only flips CONFIRMED -> REFUNDED. Returns rows affected (0 if not confirmed or already refunded — the idempotency guard). */
+	fun markRefunded(id: UUID): Int {
+		val now = Instant.now()
+		return jdbcClient.sql("""update "order" set status = 'REFUNDED', refunded_at = :now where id = :id and status = 'CONFIRMED'""")
+			.param("now", Timestamp.from(now))
 			.param("id", id)
 			.update()
 	}
@@ -106,7 +119,9 @@ class OrderRepository(private val jdbcClient: JdbcClient, private val objectMapp
 			supporterEmail = rs.getString("supporter_email"),
 			shippingAddress = rs.getString("shipping_address")?.let { objectMapper.readValue(it, ShippingAddress::class.java) },
 			stripeCheckoutSessionId = rs.getString("stripe_checkout_session_id"),
+			stripePaymentIntentId = rs.getString("stripe_payment_intent_id"),
 			confirmedAt = rs.getTimestamp("confirmed_at")?.toInstant(),
+			refundedAt = rs.getTimestamp("refunded_at")?.toInstant(),
 			createdAt = rs.getTimestamp("created_at").toInstant(),
 		)
 }

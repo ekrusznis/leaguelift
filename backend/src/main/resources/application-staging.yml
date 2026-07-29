@@ -25,6 +25,11 @@ leaguelift:
   printify:
     api-token: ${PRINTIFY_API_TOKEN}
     shop-id: ${PRINTIFY_SHOP_ID}
+  # Not secrets — safe defaults, overridable without a redeploy (ADR-017, starting pilot values, not final pricing).
+  platform:
+    fee-basis-points: ${PLATFORM_FEE_BASIS_POINTS:500}
+  payout:
+    holding-period-days: ${PAYOUT_HOLDING_PERIOD_DAYS:7}
 
 management:
   endpoint:

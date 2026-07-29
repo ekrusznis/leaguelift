@@ -12,17 +12,24 @@ import com.leaguelift.fundraising.domain.CampaignStatus
 import com.leaguelift.fundraising.infra.StripeCheckoutClient
 import com.leaguelift.fundraising.persistence.CampaignRepository
 import com.leaguelift.fundraising.persistence.ContributionRepository
+import com.leaguelift.ledger.application.LedgerService
+import com.leaguelift.ledger.domain.LedgerSourceType
 import com.leaguelift.membership.application.MembershipService
 import com.stripe.exception.StripeException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Duration
+import java.time.Instant
 import java.util.UUID
 
 private val log = LoggerFactory.getLogger(ContributionService::class.java)
 
 /** Mirrors Stripe's own `{CHECKOUT_SESSION_ID}` success-url placeholder convention — the frontend can't know the contribution id until this call returns, so it asks for it to be filled in server-side instead. */
 const val CONTRIBUTION_ID_PLACEHOLDER = "{CONTRIBUTION_ID}"
+
+/** Org-admin-initiated refunds are only allowed within this window of confirmation (ADR-017, 2026-07-29 founder decision). */
+val REFUND_WINDOW = Duration.ofDays(14)
 
 /**
  * Campaign contribution checkout (Phase 3 remainder). Confirmation happens only
@@ -43,6 +50,7 @@ class ContributionService(
 	private val stripeCheckoutClient: StripeCheckoutClient,
 	private val membershipService: MembershipService,
 	private val auditService: AuditService,
+	private val ledgerService: LedgerService,
 ) {
 
 	@Transactional
@@ -92,12 +100,13 @@ class ContributionService(
 
 	/** Idempotent: a duplicate webhook delivery or an already-confirmed contribution is a safe no-op. */
 	@Transactional
-	fun confirmFromWebhook(stripeSessionId: String, stripePaymentStatus: String): Contribution? {
+	fun confirmFromWebhook(stripeSessionId: String, stripePaymentStatus: String, stripePaymentIntentId: String?): Contribution? {
 		val contribution = contributionRepository.findByStripeCheckoutSessionId(stripeSessionId) ?: return null
 		if (stripePaymentStatus != "paid") return contribution
-		val updated = contributionRepository.markConfirmed(contribution.id)
+		val updated = contributionRepository.markConfirmed(contribution.id, stripePaymentIntentId)
 		if (updated > 0) {
 			auditService.record(null, contribution.organizationId, "contribution.confirmed", "contribution", contribution.id)
+			ledgerService.recordConfirmedContribution(contribution.copy(status = ContributionStatus.CONFIRMED))
 		}
 		return contributionRepository.findById(contribution.id)
 	}
@@ -120,6 +129,34 @@ class ContributionService(
 		val campaign = campaignRepository.findById(campaignId, organizationId)
 			?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
 		return contributionRepository.listConfirmedForCampaign(campaign.id, offset, limit)
+	}
+
+	@Transactional
+	fun refund(organizationId: UUID, contributionId: UUID, currentUser: CurrentUser): Contribution {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		val contribution = contributionRepository.findById(contributionId)
+			?.takeIf { it.organizationId == organizationId }
+			?: throw NotFoundException("CONTRIBUTION_NOT_FOUND", "The contribution could not be found.")
+		if (contribution.status != ContributionStatus.CONFIRMED || contribution.stripePaymentIntentId == null) {
+			throw ValidationException("Only a confirmed contribution with a recorded payment can be refunded.")
+		}
+		val confirmedAt = contribution.confirmedAt ?: throw ValidationException("This contribution has no confirmation date on record.")
+		if (Duration.between(confirmedAt, Instant.now()) > REFUND_WINDOW) {
+			throw ValidationException("This contribution can no longer be refunded — it was confirmed more than ${REFUND_WINDOW.toDays()} days ago.")
+		}
+		val stripeRefundId = try {
+			stripeCheckoutClient.createRefund(contribution.stripePaymentIntentId)
+		} catch (e: StripeException) {
+			log.warn("Stripe refund failed for contribution {}: {}", contributionId, e.message, e)
+			throw ServiceUnavailableException(
+				"CONTRIBUTION_PROVIDER_UNAVAILABLE",
+				"Payments provider is not available right now. If this is local/staging, confirm STRIPE_SECRET_KEY is set.",
+			)
+		}
+		contributionRepository.markRefunded(contribution.id)
+		ledgerService.recordRefund(organizationId, LedgerSourceType.CONTRIBUTION, contribution.id, contribution.amountMinor, contribution.currency, stripeRefundId)
+		auditService.record(currentUser.userId, organizationId, "contribution.refunded", "contribution", contribution.id)
+		return contributionRepository.findById(contribution.id)!!
 	}
 }
 

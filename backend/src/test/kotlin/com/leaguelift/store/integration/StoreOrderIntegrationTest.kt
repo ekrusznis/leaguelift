@@ -108,7 +108,7 @@ class StoreOrderIntegrationTest : AbstractIntegrationTest() {
 
 		every { printifyOrderClient.createDraftOrder(any(), any()) } returns PrintifyDraftOrder("printify_order_1")
 
-		val confirmed = orderService.confirmFromWebhook(fixedSessionId, "paid", null)
+		val confirmed = orderService.confirmFromWebhook(fixedSessionId, "paid", null, "pi_test_${System.nanoTime()}")
 		assertEquals("CONFIRMED", confirmed?.status?.name)
 
 		val fulfillment = orderService.getFulfillment(organization.id, confirmed!!.id, owner)
@@ -116,7 +116,7 @@ class StoreOrderIntegrationTest : AbstractIntegrationTest() {
 		assertEquals("printify_order_1", fulfillment?.printifyOrderId)
 
 		// A replayed webhook must not resubmit fulfillment or double-process the order.
-		val replayed = orderService.confirmFromWebhook(fixedSessionId, "paid", null)
+		val replayed = orderService.confirmFromWebhook(fixedSessionId, "paid", null, "pi_test_${System.nanoTime()}")
 		assertEquals("CONFIRMED", replayed?.status?.name)
 
 		val confirmedOrders = orderService.listForStore(organization.id, store.id, owner, 0, 20)

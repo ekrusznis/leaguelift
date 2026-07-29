@@ -14,6 +14,7 @@ import { OnboardingChecklist } from "../features/organizations/OnboardingCheckli
 import { OrganizationProfileForm } from "../features/organizations/OrganizationProfileForm";
 import { useRefreshPayoutStatus } from "../features/payouts/api";
 import { PayoutConnectPanel } from "../features/payouts/PayoutConnectPanel";
+import { PayoutSummaryPanel } from "../features/payouts/PayoutSummaryPanel";
 import { PublicPagesPanel } from "../features/publicpage/PublicPagesPanel";
 import { StoreList } from "../features/store/StoreList";
 import { TeamList } from "../features/teams/TeamList";
@@ -54,6 +55,7 @@ export function OrganizationDetailPage() {
 				<h2 className="font-heading text-lg font-semibold text-navy">Payouts</h2>
 				<PayoutStripeReturnHandler organizationId={organization.id} />
 				<PayoutConnectPanel organizationId={organization.id} />
+				<PayoutSummaryPanel organizationId={organization.id} />
 			</section>
 
 			<section aria-label="Organization profile" className="flex flex-col gap-3">
