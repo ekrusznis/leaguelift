@@ -1,7 +1,12 @@
 package com.leaguelift.dashboard.web
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import java.time.LocalDate
 import java.util.UUID
+
+// See AthleteDashboardDto.kt for why every isXxx boolean field in this file needs
+// @get:JsonProperty — otherwise Jackson's standard JavaBean introspection strips the
+// "is" prefix and silently serializes e.g. isDemoData as "demoData".
 
 data class HouseholdOverviewResponse(val householdName: String)
 
@@ -9,24 +14,36 @@ data class HouseholdOverviewResponse(val householdName: String)
 data class AthleteSummary(val participantId: UUID, val name: String, val teamNames: List<String>)
 
 /**
- * Real, but approximate: summed from `fee_assignment.original_amount_minor` for
- * assignments not yet PAID/WAIVED/CANCELLED. There is no payment/credit ledger yet
- * (DESIGN-DOC.md section 14.1), so this is the assigned amount still outstanding, not a
- * balance net of partial payments — [isApproximate] tells the frontend to caveat it.
+ * Real: summed from each outstanding fee assignment's computed balance (original
+ * amount minus active manual payments/adjustments — `fee_payment`/`fee_adjustment`,
+ * DESIGN-DOC.md section 14.3, Phase 2 remainder). No longer approximate now that a
+ * real payment/adjustment ledger exists to net against.
  */
 data class OutstandingBalance(
 	val totalOutstandingMinor: Long,
 	val currency: String,
-	val isApproximate: Boolean,
 	val lineItems: List<FeeLineItem>,
 )
 
-data class FeeLineItem(val description: String, val amountMinor: Long, val status: String, val dueDate: LocalDate?)
+data class FeeLineItem(val description: String, val balanceMinor: Long, val status: String, val dueDate: LocalDate?)
 
 /** Demo: no credit_event/credit_application tables exist yet. */
-data class FamilyCredits(val isDemoData: Boolean, val currency: String, val pendingMinor: Long, val availableMinor: Long, val appliedThisSeasonMinor: Long)
+data class FamilyCredits(
+	@get:JsonProperty("isDemoData") val isDemoData: Boolean,
+	val currency: String,
+	val pendingMinor: Long,
+	val availableMinor: Long,
+	val appliedThisSeasonMinor: Long,
+)
 
 /** Real: the organization's active campaigns. Contribution totals are demo. */
-data class FundraiserSummary(val campaignId: UUID, val name: String, val isRaisedDemoData: Boolean, val raisedMinor: Long, val goalMinor: Long, val currency: String)
+data class FundraiserSummary(
+	val campaignId: UUID,
+	val name: String,
+	@get:JsonProperty("isRaisedDemoData") val isRaisedDemoData: Boolean,
+	val raisedMinor: Long,
+	val goalMinor: Long,
+	val currency: String,
+)
 
 data class UpdateItem(val id: String, val title: String, val body: String, val postedLabel: String)

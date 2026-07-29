@@ -1,10 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/apiClient";
-import type { CreateFeeAssignmentFormValues, CreateFeeTemplateFormValues } from "./schema";
-import type { FeeAssignmentPage, FeeAssignmentStatus, FeeTemplatePage } from "./types";
+import type {
+	ApplyAdjustmentFormValues,
+	CreateFeeAssignmentFormValues,
+	CreateFeeTemplateFormValues,
+	RecordPaymentFormValues,
+	VoidFormValues,
+} from "./schema";
+import type { FeeAdjustment, FeeAssignment, FeeAssignmentPage, FeeAssignmentStatus, FeePayment, FeeTemplatePage } from "./types";
 
 const templatesKey = (orgId: string) => ["organizations", orgId, "fee-templates"] as const;
 const assignmentsKey = (orgId: string, householdId: string) => ["organizations", orgId, "households", householdId, "fee-assignments"] as const;
+const paymentsKey = (orgId: string, assignmentId: string) => ["organizations", orgId, "fee-assignments", assignmentId, "payments"] as const;
+const adjustmentsKey = (orgId: string, assignmentId: string) => ["organizations", orgId, "fee-assignments", assignmentId, "adjustments"] as const;
 
 export function useFeeTemplates(organizationId: string) {
 	return useQuery({
@@ -79,6 +87,86 @@ export function useUpdateFeeAssignmentStatus(organizationId: string, householdId
 			}),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: assignmentsKey(organizationId, householdId) });
+		},
+	});
+}
+
+// --- Payments ---
+
+export function useFeePayments(organizationId: string, assignmentId: string) {
+	return useQuery({
+		queryKey: paymentsKey(organizationId, assignmentId),
+		queryFn: () => apiFetch<FeePayment[]>(`/organizations/${organizationId}/fee-assignments/${assignmentId}/payments`),
+		enabled: !!organizationId && !!assignmentId,
+	});
+}
+
+export function useRecordPayment(organizationId: string, householdId: string, assignmentId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (values: RecordPaymentFormValues) =>
+			apiFetch<FeeAssignment>(`/organizations/${organizationId}/fee-assignments/${assignmentId}/payments`, {
+				method: "POST",
+				body: { ...values, note: values.note || null },
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: assignmentsKey(organizationId, householdId) });
+			queryClient.invalidateQueries({ queryKey: paymentsKey(organizationId, assignmentId) });
+		},
+	});
+}
+
+export function useVoidPayment(organizationId: string, householdId: string, assignmentId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ paymentId, reason }: { paymentId: string } & VoidFormValues) =>
+			apiFetch<FeeAssignment>(`/organizations/${organizationId}/fee-assignments/${assignmentId}/payments/${paymentId}`, {
+				method: "DELETE",
+				body: { reason },
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: assignmentsKey(organizationId, householdId) });
+			queryClient.invalidateQueries({ queryKey: paymentsKey(organizationId, assignmentId) });
+		},
+	});
+}
+
+// --- Adjustments (manual discounts/credits) ---
+
+export function useFeeAdjustments(organizationId: string, assignmentId: string) {
+	return useQuery({
+		queryKey: adjustmentsKey(organizationId, assignmentId),
+		queryFn: () => apiFetch<FeeAdjustment[]>(`/organizations/${organizationId}/fee-assignments/${assignmentId}/adjustments`),
+		enabled: !!organizationId && !!assignmentId,
+	});
+}
+
+export function useApplyAdjustment(organizationId: string, householdId: string, assignmentId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (values: ApplyAdjustmentFormValues) =>
+			apiFetch<FeeAssignment>(`/organizations/${organizationId}/fee-assignments/${assignmentId}/adjustments`, {
+				method: "POST",
+				body: { ...values, reason: values.reason || null },
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: assignmentsKey(organizationId, householdId) });
+			queryClient.invalidateQueries({ queryKey: adjustmentsKey(organizationId, assignmentId) });
+		},
+	});
+}
+
+export function useVoidAdjustment(organizationId: string, householdId: string, assignmentId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ adjustmentId, reason }: { adjustmentId: string } & VoidFormValues) =>
+			apiFetch<FeeAssignment>(`/organizations/${organizationId}/fee-assignments/${assignmentId}/adjustments/${adjustmentId}`, {
+				method: "DELETE",
+				body: { reason },
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: assignmentsKey(organizationId, householdId) });
+			queryClient.invalidateQueries({ queryKey: adjustmentsKey(organizationId, assignmentId) });
 		},
 	});
 }

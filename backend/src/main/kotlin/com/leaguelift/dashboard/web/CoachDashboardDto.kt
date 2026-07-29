@@ -1,6 +1,11 @@
 package com.leaguelift.dashboard.web
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import java.util.UUID
+
+// See AthleteDashboardDto.kt for why every isXxx boolean field here needs
+// @get:JsonProperty — otherwise Jackson's standard JavaBean introspection strips the
+// "is" prefix and silently serializes e.g. isDemoData as "demoData".
 
 /** Real: from team + participant_team. There is no per-team coach role-assignment yet
  * (DESIGN-DOC.md section 4.4 capability tiers), so this lists every team in the
@@ -10,7 +15,7 @@ data class CoachTeamSummary(val teamId: UUID, val name: String, val sport: Strin
 /** Team/coach/manager counts are real; attendance/availability are demo (no attendance model exists). */
 data class RosterSummary(
 	val athletes: Long,
-	val isAttendanceDemoData: Boolean,
+	@get:JsonProperty("isAttendanceDemoData") val isAttendanceDemoData: Boolean,
 	val attendanceRatePercent: Int,
 	val availabilityResponsePercent: Int,
 )
@@ -26,8 +31,14 @@ data class FundraisingProgress(
 	val status: String,
 	val goalAmountMinor: Long,
 	val currency: String,
-	val isRaisedDemoData: Boolean,
+	@get:JsonProperty("isRaisedDemoData") val isRaisedDemoData: Boolean,
 	val raisedMinor: Long,
 )
 
-data class AnnouncementItem(val id: String, val title: String, val body: String, val postedLabel: String, val isNew: Boolean)
+data class AnnouncementItem(
+	val id: String,
+	val title: String,
+	val body: String,
+	val postedLabel: String,
+	@get:JsonProperty("isNew") val isNew: Boolean,
+)

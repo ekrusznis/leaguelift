@@ -9,6 +9,17 @@ leaguelift:
     # tokens with a guessable key. Generate with e.g. `openssl rand -base64 48`.
     # Must be a different value from staging's secret.
     secret: ${JWT_SECRET}
+  # DigitalOcean Spaces — no defaults, startup fails if unset (ADR-012).
+  spaces:
+    endpoint: ${SPACES_ENDPOINT}
+    access-key: ${SPACES_ACCESS_KEY}
+    secret-key: ${SPACES_SECRET_KEY}
+    bucket: ${SPACES_BUCKET}
+    region: ${SPACES_REGION}
+  # No default — startup fails if unset. Live-mode routing is NOT enabled by this key
+  # alone; ADR-005 explicitly scopes this phase to Connect onboarding only.
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY}
 
 management:
   endpoint:

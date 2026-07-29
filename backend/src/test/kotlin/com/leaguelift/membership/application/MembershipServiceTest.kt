@@ -91,6 +91,28 @@ class MembershipServiceTest {
 	}
 
 	@Test
+	fun `administrator is denied owner-only actions`() {
+		val organizationId = UUID.randomUUID()
+		val admin = CurrentUser(UUID.randomUUID(), "admin5@example.com", "Admin5")
+		every { membershipRepository.findActiveMembership(organizationId, admin.userId) } returns membership(organizationId, admin.userId, MembershipRole.ADMINISTRATOR)
+
+		assertFailsWith<ForbiddenException> {
+			service.requireOwnerRole(organizationId, admin)
+		}
+	}
+
+	@Test
+	fun `owner can perform owner-only actions`() {
+		val organizationId = UUID.randomUUID()
+		val owner = CurrentUser(UUID.randomUUID(), "owner2@example.com", "Owner2")
+		every { membershipRepository.findActiveMembership(organizationId, owner.userId) } returns membership(organizationId, owner.userId, MembershipRole.OWNER)
+
+		val result = service.requireOwnerRole(organizationId, owner)
+
+		assertEquals(MembershipRole.OWNER, result.role)
+	}
+
+	@Test
 	fun `the owner membership cannot be revoked`() {
 		val organizationId = UUID.randomUUID()
 		val owner = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")

@@ -44,6 +44,18 @@ dependencies {
 	implementation("io.micrometer:micrometer-registry-prometheus")
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5")
 
+	// S3-compatible object storage client (DigitalOcean Spaces prod/staging, MinIO
+	// local/test — ADR-012). Pure Java, no Spring/Kotlin coupling; url-connection-client
+	// is the lightest sync HTTP client, sufficient since the backend's own S3 traffic is
+	// low-volume (presign + head/get during upload confirmation, no byte-proxying).
+	implementation(platform("software.amazon.awssdk:bom:2.29.52"))
+	implementation("software.amazon.awssdk:s3")
+	implementation("software.amazon.awssdk:url-connection-client")
+
+	// Stripe Connect Express onboarding scaffolding only (ADR-005) — no live charge
+	// routing yet, gated behind Phase 5 per DESIGN-DOC.md section 16.
+	implementation("com.stripe:stripe-java:29.0.0")
+
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.security:spring-security-test")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
@@ -52,6 +64,7 @@ dependencies {
 	testImplementation(platform("org.testcontainers:testcontainers-bom:1.20.4"))
 	testImplementation("org.testcontainers:junit-jupiter")
 	testImplementation("org.testcontainers:postgresql")
+	testImplementation("org.testcontainers:minio")
 }
 
 kotlin {

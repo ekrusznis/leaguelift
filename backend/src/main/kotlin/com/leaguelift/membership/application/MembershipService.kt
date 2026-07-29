@@ -46,6 +46,23 @@ class MembershipService(private val membershipRepository: MembershipRepository) 
 		return membership
 	}
 
+	/**
+	 * OWNER only — for the owner-only actions DESIGN-DOC.md section 10.2 calls out
+	 * explicitly (payout onboarding, change payout account, transfer ownership,
+	 * suspend/close org, high-risk financial settings). Platform admins still get the
+	 * same synthetic-membership bypass as [requireActiveMembership]/[requireManagerRole].
+	 */
+	fun requireOwnerRole(organizationId: UUID, currentUser: CurrentUser): OrganizationMembership {
+		val membership = requireActiveMembership(organizationId, currentUser)
+		if (membership.role != MembershipRole.OWNER) {
+			throw ForbiddenException(
+				code = "OWNER_ACTION_DENIED",
+				message = "Only the organization owner can perform this action.",
+			)
+		}
+		return membership
+	}
+
 	@Transactional
 	fun updateRole(organizationId: UUID, membershipId: UUID, newRole: MembershipRole, currentUser: CurrentUser) {
 		requireManagerRole(organizationId, currentUser)

@@ -16,6 +16,41 @@ services:
       timeout: 5s
       retries: 10
 
+  # S3-compatible object storage for local dev/test (media pipeline, DESIGN-DOC.md
+  # section 11, ADR-012). DigitalOcean Spaces is the equivalent in staging/prod —
+  # same S3 API, so the backend's storage code never differs by environment, only
+  # the leaguelift.spaces.* endpoint/credentials config does.
+  minio:
+    image: minio/minio:RELEASE.2024-11-07T00-52-20Z
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${SPACES_ACCESS_KEY:-leaguelift}
+      MINIO_ROOT_PASSWORD: ${SPACES_SECRET_KEY:-leaguelift_local_password}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - leaguelift-minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot job that creates the local bucket on startup; not a long-running service.
+  minio-init:
+    image: minio/mc:RELEASE.2024-11-05T11-29-45Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${SPACES_ACCESS_KEY:-leaguelift} ${SPACES_SECRET_KEY:-leaguelift_local_password} &&
+      mc mb -p local/${SPACES_BUCKET:-leaguelift-local} || true
+      "
+
   backend:
     build:
       context: ./backend
@@ -24,11 +59,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     environment:
       SPRING_PROFILES_ACTIVE: local
       DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-leaguelift}
       POSTGRES_USER: ${POSTGRES_USER:-leaguelift}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-leaguelift_local_password}
+      SPACES_ENDPOINT: http://minio:9000
+      SPACES_ACCESS_KEY: ${SPACES_ACCESS_KEY:-leaguelift}
+      SPACES_SECRET_KEY: ${SPACES_SECRET_KEY:-leaguelift_local_password}
+      SPACES_BUCKET: ${SPACES_BUCKET:-leaguelift-local}
+      SPACES_REGION: ${SPACES_REGION:-us-east-1}
     ports:
       - "8080:8080"
 
@@ -46,3 +88,4 @@ services:
 
 volumes:
   leaguelift-postgres-data:
+  leaguelift-minio-data:

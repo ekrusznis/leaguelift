@@ -9,6 +9,7 @@ import { RegisterPage } from "../pages/auth/RegisterPage";
 import { ResetPasswordPage } from "../pages/auth/ResetPasswordPage";
 import { SignInPage } from "../pages/auth/SignInPage";
 import { DashboardPage } from "../pages/DashboardPage";
+import { CollectionsPage } from "../features/collections/CollectionsPage";
 import { HouseholdDetailPage } from "../pages/HouseholdDetailPage";
 import { AboutPage } from "../pages/marketing/AboutPage";
 import { BookDemoPage } from "../pages/marketing/BookDemoPage";
@@ -72,6 +73,7 @@ export function AppRoutes() {
 				<Route element={<AppShell />}>
 					<Route path="organizations" element={<OrganizationsPage />} />
 					<Route path="organizations/:organizationId" element={<OrganizationDetailPage />} />
+					<Route path="organizations/:organizationId/collections" element={<CollectionsPage />} />
 					<Route path="organizations/:organizationId/households/:householdId" element={<HouseholdDetailPage />} />
 				</Route>
 			</Route>

@@ -7,11 +7,17 @@ info:
     onboarding, teams, tournaments, and public pages), Phase 2 (households,
     participants, fee templates, and fee assignments), Phase 3 slice 11
     (fundraising campaigns and their public pages — contribution/payment recording
-    is a later slice), and traditional email/password authentication (superseding
+    is a later slice), traditional email/password authentication (superseding
     the originally planned external-IdP/Auth0 approach — see DESIGN-DOC.md section
-    11.5). Endpoints are added milestone by milestone — do not add backend endpoints
+    11.5), Phase 1's remaining file-upload/branding slice (organization logo/cover
+    image via S3-compatible object storage — DESIGN-DOC.md section 11, ADR-012), and
+    Phase 2's remainder (manual/offline fee payments, manual discounts/credits,
+    org-wide collections listing and CSV export, and Stripe Connect Express
+    onboarding-only scaffolding — DESIGN-DOC.md section 14.3, ADR-005 — no live
+    charge routing yet).
+    Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
-  version: "0.7.0"
+  version: "0.10.0"
 servers:
   - url: /api/v1
 tags:
@@ -28,6 +34,8 @@ tags:
   - name: participants
   - name: fees
   - name: fundraising
+  - name: media
+  - name: payouts
   - name: dashboard
 paths:
   /public/status:
@@ -310,6 +318,87 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  # --- Payouts (Stripe Connect Express onboarding only — ADR-005, Phase 2 remainder) ---
+
+  /organizations/{organizationId}/payout-account:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [payouts]
+      summary: Get the organization's payout-account status
+      description: Returns null if onboarding has never been started — a legitimate "not started" state, not an error.
+      operationId: getPayoutAccountStatus
+      responses:
+        "200":
+          description: Payout account status, or null if onboarding hasn't started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayoutAccountResponse"
+                nullable: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/payout-account/onboarding-link:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [payouts]
+      summary: Start (or resume) Stripe Connect Express onboarding
+      description: Owner-only. Creates the Stripe Express account on first call, reuses it after; always returns a fresh onboarding link.
+      operationId: startPayoutOnboarding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartOnboardingRequest"
+      responses:
+        "200":
+          description: Onboarding link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingLinkResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not the organization owner, or not a member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /organizations/{organizationId}/payout-account/refresh:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [payouts]
+      summary: Re-sync payout-account status from Stripe
+      description: Called when the browser returns from Stripe's hosted onboarding flow.
+      operationId: refreshPayoutAccountStatus
+      responses:
+        "200":
+          description: Updated payout account status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayoutAccountResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Onboarding hasn't been started for this organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /organizations/{organizationId}/invitations:
     parameters:
@@ -1349,6 +1438,235 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # --- Fee payments/adjustments and collections (Phase 2 remainder) ---
+
+  /organizations/{organizationId}/fee-assignments:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [fees]
+      summary: List fee assignments org-wide (collections dashboard)
+      description: Manager-only. Balance-augmented, filterable by status and overdue.
+      operationId: listOrganizationFeeAssignments
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/FeeAssignmentStatus"
+        - name: overdueOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of fee assignments with computed balances
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeAssignmentSummaryPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/fee-assignments/export:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [fees]
+      summary: Export collections as CSV
+      operationId: exportFeeAssignmentsCsv
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/FeeAssignmentStatus"
+        - name: overdueOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/fee-assignments/{assignmentId}/payments:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/FeeAssignmentIdParam"
+    get:
+      tags: [fees]
+      summary: List payments recorded against a fee assignment
+      operationId: listFeePayments
+      responses:
+        "200":
+          description: Payment history (including voided entries)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeePaymentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [fees]
+      summary: Record a manual/offline payment against a fee assignment
+      description: Cash/check/Venmo/etc. — independent of live Stripe charges (Phase 5). Auto-recomputes balance and status.
+      operationId: recordFeePayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordPaymentRequest"
+      responses:
+        "201":
+          description: Updated fee assignment (with new balance)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeAssignmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/fee-assignments/{assignmentId}/payments/{paymentId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/FeeAssignmentIdParam"
+      - $ref: "#/components/parameters/PaymentIdParam"
+    delete:
+      tags: [fees]
+      summary: Void a payment
+      description: Immutable-with-void — the row is kept for audit history, excluded from balance math.
+      operationId: voidFeePayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoidRequest"
+      responses:
+        "200":
+          description: Updated fee assignment (with recomputed balance)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeAssignmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/fee-assignments/{assignmentId}/adjustments:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/FeeAssignmentIdParam"
+    get:
+      tags: [fees]
+      summary: List adjustments (manual discounts/credits) applied to a fee assignment
+      operationId: listFeeAdjustments
+      responses:
+        "200":
+          description: Adjustment history (including voided entries)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeeAdjustmentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [fees]
+      summary: Apply a manual discount/credit to a fee assignment
+      description: >
+        Manual/admin-issued only — not the full attribution-sourced Family Credits
+        system (DESIGN-DOC.md section 13), which depends on fundraising/apparel data
+        that doesn't exist yet.
+      operationId: applyFeeAdjustment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplyAdjustmentRequest"
+      responses:
+        "201":
+          description: Updated fee assignment (with new balance)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeAssignmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/fee-assignments/{assignmentId}/adjustments/{adjustmentId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/FeeAssignmentIdParam"
+      - $ref: "#/components/parameters/AdjustmentIdParam"
+    delete:
+      tags: [fees]
+      summary: Void an adjustment
+      operationId: voidFeeAdjustment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoidRequest"
+      responses:
+        "200":
+          description: Updated fee assignment (with recomputed balance)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeAssignmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   # --- Fundraising Campaigns (Phase 3 slice 11) ---
 
   /organizations/{organizationId}/campaigns:
@@ -1503,6 +1821,133 @@ paths:
                 $ref: "#/components/schemas/CampaignResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # --- Media (organization logo/cover upload — DESIGN-DOC.md section 11, ADR-012) ---
+
+  /organizations/{organizationId}/media/uploads:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [media]
+      summary: Request a presigned upload URL
+      description: >
+        Creates a PENDING_UPLOAD media asset and returns a short-lived presigned PUT
+        URL. The browser uploads directly to object storage; the API never proxies
+        file bytes.
+      operationId: requestMediaUpload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestUploadRequest"
+      responses:
+        "201":
+          description: Upload requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestUploadResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/media/uploads/{assetId}/confirm:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/AssetIdParam"
+    post:
+      tags: [media]
+      summary: Confirm an upload
+      description: >
+        Validates the uploaded bytes (size, magic-byte content-type sniff, image
+        decode/dimension check) and transitions the asset to READY or REJECTED.
+      operationId: confirmMediaUpload
+      responses:
+        "200":
+          description: Confirmation result (asset may be READY or REJECTED)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfirmUploadResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/media/assignments:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [media]
+      summary: List active media assignments
+      description: Returns the organization's currently assigned LOGO/COVER, each with a freshly-signed read URL.
+      operationId: listMediaAssignments
+      responses:
+        "200":
+          description: Active media assignments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaAssignmentListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/media/assignments/{usageSlot}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/UsageSlotParam"
+    put:
+      tags: [media]
+      summary: Assign a READY asset to a usage slot
+      description: >
+        Retires the slot's prior active assignment (and archives its asset, if any)
+        and assigns the given asset. Visibility is computed from the organization's
+        public-page status (PUBLIC once published, else ORGANIZATION_PRIVATE).
+      operationId: assignMedia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignMediaRequest"
+      responses:
+        "200":
+          description: Updated assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaAssignmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [media]
+      summary: Retire the active assignment for a usage slot
+      operationId: removeMediaAssignment
+      responses:
+        "204":
+          description: Assignment retired
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2236,6 +2681,20 @@ components:
       schema:
         type: string
         format: uuid
+    PaymentIdParam:
+      name: paymentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AdjustmentIdParam:
+      name: adjustmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     CampaignIdParam:
       name: campaignId
       in: path
@@ -2243,6 +2702,20 @@ components:
       schema:
         type: string
         format: uuid
+    AssetIdParam:
+      name: assetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UsageSlotParam:
+      name: usageSlot
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [LOGO, COVER]
     PageParam:
       name: page
       in: query
@@ -2515,7 +2988,7 @@ components:
           $ref: "#/components/schemas/MembershipRole"
     OnboardingProgressResponse:
       type: object
-      required: [profileComplete, hasAdditionalAdministrator]
+      required: [profileComplete, hasAdditionalAdministrator, payoutsConnected]
       properties:
         profileComplete:
           type: boolean
@@ -2523,6 +2996,9 @@ components:
         hasAdditionalAdministrator:
           type: boolean
           description: The organization has more than just its original owner as a member.
+        payoutsConnected:
+          type: boolean
+          description: Stripe Connect Express onboarding is complete (chargesEnabled and payoutsEnabled both true — ADR-005).
     InvitableMembershipRole:
       type: string
       description: MembershipRole minus OWNER — ownership transfer is a separate workflow.
@@ -3277,6 +3753,18 @@ components:
         status:
           type: string
           enum: [OPEN, PARTIALLY_PAID, PAID, WAIVED, CANCELLED]
+        paidMinor:
+          type: integer
+          format: int64
+          description: Sum of active (non-voided) payments, in minor currency units
+        adjustedMinor:
+          type: integer
+          format: int64
+          description: Sum of active (non-voided) discounts/credits, in minor currency units
+        balanceMinor:
+          type: integer
+          format: int64
+          description: max(0, original - paid - adjusted)
         createdAt:
           type: string
           format: date-time
@@ -3297,6 +3785,146 @@ components:
           type: integer
         totalElements:
           type: integer
+    FeeAssignmentStatus:
+      type: string
+      enum: [OPEN, PARTIALLY_PAID, PAID, WAIVED, CANCELLED]
+    FeeAssignmentSummaryResponse:
+      allOf:
+        - $ref: "#/components/schemas/FeeAssignmentResponse"
+        - type: object
+          required: [householdName]
+          properties:
+            householdName:
+              type: string
+            participantName:
+              type: string
+              nullable: true
+    FeeAssignmentSummaryPage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeeAssignmentSummaryResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+    RecordPaymentRequest:
+      type: object
+      required: [amountMinor, method, paidAt]
+      properties:
+        amountMinor:
+          type: integer
+          format: int64
+          minimum: 1
+        method:
+          type: string
+          enum: [CASH, CHECK, VENMO, ZELLE, OTHER]
+        paidAt:
+          type: string
+          format: date
+        note:
+          type: string
+          maxLength: 500
+          nullable: true
+    VoidRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+    FeePaymentResponse:
+      type: object
+      required: [id, feeAssignmentId, amountMinor, currency, method, paidAt, recordedByUserId, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        feeAssignmentId:
+          type: string
+          format: uuid
+        amountMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        method:
+          type: string
+          enum: [CASH, CHECK, VENMO, ZELLE, OTHER]
+        paidAt:
+          type: string
+          format: date
+        note:
+          type: string
+          nullable: true
+        recordedByUserId:
+          type: string
+          format: uuid
+        voidedAt:
+          type: string
+          format: date-time
+          nullable: true
+        voidReason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    ApplyAdjustmentRequest:
+      type: object
+      required: [adjustmentType, amountMinor]
+      properties:
+        adjustmentType:
+          type: string
+          enum: [DISCOUNT, CREDIT, CORRECTION]
+        amountMinor:
+          type: integer
+          format: int64
+          minimum: 1
+        reason:
+          type: string
+          maxLength: 500
+          nullable: true
+    FeeAdjustmentResponse:
+      type: object
+      required: [id, feeAssignmentId, adjustmentType, amountMinor, currency, createdByUserId, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        feeAssignmentId:
+          type: string
+          format: uuid
+        adjustmentType:
+          type: string
+          enum: [DISCOUNT, CREDIT, CORRECTION]
+        amountMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        reason:
+          type: string
+          nullable: true
+        createdByUserId:
+          type: string
+          format: uuid
+        voidedAt:
+          type: string
+          format: date-time
+          nullable: true
+        voidReason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
     CreateCampaignRequest:
       type: object
       required: [name, slug, campaignType, goalAmountMinor]
@@ -3593,10 +4221,14 @@ components:
           format: int64
     FinancialOverviewResponse:
       type: object
-      required: [isDemoData, currency, feesAssignedMinor, feesCollectedMinor, outstandingMinor, fundraisingMinor, apparelSalesMinor, pendingPayoutMinor]
+      required: [isFeesDemoData, isFundraisingDemoData, currency, feesAssignedMinor, feesCollectedMinor, outstandingMinor, fundraisingMinor, apparelSalesMinor, pendingPayoutMinor]
       properties:
-        isDemoData:
+        isFeesDemoData:
           type: boolean
+          description: Always false — fee figures are real (DESIGN-DOC.md section 14.3, Phase 2 remainder).
+        isFundraisingDemoData:
+          type: boolean
+          description: Always true until contribution recording exists (fundraisingMinor/apparelSalesMinor/pendingPayoutMinor).
         currency:
           type: string
         feesAssignedMinor:
@@ -3771,13 +4403,14 @@ components:
             type: string
     FeeLineItem:
       type: object
-      required: [description, amountMinor, status]
+      required: [description, balanceMinor, status]
       properties:
         description:
           type: string
-        amountMinor:
+        balanceMinor:
           type: integer
           format: int64
+          description: Real remaining balance (original amount minus active payments/adjustments), not the original amount.
         status:
           type: string
         dueDate:
@@ -3786,15 +4419,14 @@ components:
           nullable: true
     OutstandingBalance:
       type: object
-      required: [totalOutstandingMinor, currency, isApproximate, lineItems]
+      required: [totalOutstandingMinor, currency, lineItems]
       properties:
         totalOutstandingMinor:
           type: integer
           format: int64
+          description: Real, netted against active payments/adjustments (DESIGN-DOC.md section 14.3, Phase 2 remainder) — no longer approximate.
         currency:
           type: string
-        isApproximate:
-          type: boolean
         lineItems:
           type: array
           items:
@@ -3916,6 +4548,169 @@ components:
         nextEvent:
           $ref: "#/components/schemas/NextEventSummary"
           nullable: true
+
+    # --- Media ---
+    RequestUploadRequest:
+      type: object
+      required: [usageSlot, fileName, contentType, fileSizeBytes]
+      properties:
+        usageSlot:
+          type: string
+          enum: [LOGO, COVER]
+        fileName:
+          type: string
+        contentType:
+          type: string
+          example: image/png
+        fileSizeBytes:
+          type: integer
+          format: int64
+    RequestUploadResponse:
+      type: object
+      required: [assetId, uploadUrl, uploadMethod, requiredHeaders, expiresAt]
+      properties:
+        assetId:
+          type: string
+          format: uuid
+        uploadUrl:
+          type: string
+        uploadMethod:
+          type: string
+          example: PUT
+        requiredHeaders:
+          type: object
+          additionalProperties:
+            type: string
+        expiresAt:
+          type: string
+          format: date-time
+    ConfirmUploadResponse:
+      type: object
+      required: [assetId, status]
+      properties:
+        assetId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [READY, REJECTED]
+        contentType:
+          type: string
+          nullable: true
+        byteSize:
+          type: integer
+          format: int64
+          nullable: true
+        widthPx:
+          type: integer
+          nullable: true
+        heightPx:
+          type: integer
+          nullable: true
+        rejectionReason:
+          type: string
+          nullable: true
+    AssignMediaRequest:
+      type: object
+      required: [assetId]
+      properties:
+        assetId:
+          type: string
+          format: uuid
+        altText:
+          type: string
+          nullable: true
+    MediaAssignmentResponse:
+      type: object
+      required:
+        [usageSlot, assetId, url, visibility, publicationStatus, updatedAt]
+      properties:
+        usageSlot:
+          type: string
+          enum: [LOGO, COVER]
+        assetId:
+          type: string
+          format: uuid
+        url:
+          type: string
+        altText:
+          type: string
+          nullable: true
+        contentType:
+          type: string
+          nullable: true
+        widthPx:
+          type: integer
+          nullable: true
+        heightPx:
+          type: integer
+          nullable: true
+        byteSizeBytes:
+          type: integer
+          format: int64
+          nullable: true
+        visibility:
+          type: string
+          enum:
+            [
+              PUBLIC,
+              AUTHENTICATED,
+              ORGANIZATION_PRIVATE,
+              TEAM_PRIVATE,
+              HOUSEHOLD_PRIVATE,
+              SELF_PRIVATE,
+              PLATFORM_PRIVATE,
+            ]
+        publicationStatus:
+          type: string
+          enum: [PRIVATE, APPROVED, PUBLISHED, RETIRED]
+        updatedAt:
+          type: string
+          format: date-time
+    MediaAssignmentListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaAssignmentResponse"
+
+    # --- Payouts ---
+    StartOnboardingRequest:
+      type: object
+      required: [refreshUrl, returnUrl]
+      properties:
+        refreshUrl:
+          type: string
+          description: Where Stripe sends the browser back to if the onboarding link expires mid-flow.
+        returnUrl:
+          type: string
+          description: Where Stripe sends the browser back to after the hosted onboarding flow completes.
+    OnboardingLinkResponse:
+      type: object
+      required: [onboardingUrl]
+      properties:
+        onboardingUrl:
+          type: string
+    PayoutAccountResponse:
+      type: object
+      required: [stripeAccountId, detailsSubmitted, chargesEnabled, payoutsEnabled, isFullyConnected, updatedAt]
+      properties:
+        stripeAccountId:
+          type: string
+        detailsSubmitted:
+          type: boolean
+        chargesEnabled:
+          type: boolean
+        payoutsEnabled:
+          type: boolean
+        isFullyConnected:
+          type: boolean
+          description: chargesEnabled and payoutsEnabled both true.
+        updatedAt:
+          type: string
+          format: date-time
 
 security:
   - bearerAuth: []

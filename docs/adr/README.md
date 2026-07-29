@@ -33,7 +33,12 @@ Numbers reserved by `DESIGN-DOC.md` section 22:
 - ADR-012: File storage and upload security
 
 ADR-001 through ADR-004 are written (Accepted) as part of the Phase 0 foundation.
-ADR-005 through ADR-012 are proposed later in `DESIGN-DOC.md` (fundraising, commerce,
+ADR-012 is written (Accepted) as part of Phase 1's file-upload/branding slice
+(2026-07-28, organization logo/cover only — see the ADR itself).
+ADR-005 is written (Accepted) as part of Phase 2's remainder slice (2026-07-28,
+separate-charges-and-transfers; Connect Express onboarding only, no live charge
+routing yet — see the ADR itself).
+ADR-006 through ADR-011 are proposed later in `DESIGN-DOC.md` (fundraising, commerce,
 ledger, and infra phases) and should be written when those milestones begin — they are
 intentionally not pre-written here to avoid locking in unresolved product questions
 (see `DESIGN-DOC.md` section 19.3).

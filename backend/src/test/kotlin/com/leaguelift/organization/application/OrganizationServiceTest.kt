@@ -12,6 +12,8 @@ import com.leaguelift.organization.domain.Organization
 import com.leaguelift.organization.domain.OrganizationStatus
 import com.leaguelift.organization.domain.OrganizationType
 import com.leaguelift.organization.persistence.OrganizationRepository
+import com.leaguelift.payout.domain.OrganizationPayoutAccount
+import com.leaguelift.payout.persistence.OrganizationPayoutAccountRepository
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -28,7 +30,8 @@ class OrganizationServiceTest {
 	private val organizationRepository = mockk<OrganizationRepository>()
 	private val membershipService = mockk<MembershipService>()
 	private val auditService = mockk<AuditService>()
-	private val service = OrganizationService(organizationRepository, membershipService, auditService)
+	private val payoutAccountRepository = mockk<OrganizationPayoutAccountRepository>()
+	private val service = OrganizationService(organizationRepository, membershipService, auditService, payoutAccountRepository)
 
 	private val currentUser = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")
 
@@ -111,30 +114,45 @@ class OrganizationServiceTest {
 	}
 
 	@Test
-	fun `onboarding is incomplete until profile and a second administrator exist`() {
+	fun `onboarding is incomplete until profile, a second administrator, and payouts exist`() {
 		val organization = existingOrganization()
 		every { membershipService.requireActiveMembership(organization.id, currentUser) } returns ownerMembership(organization.id, currentUser.userId)
 		every { organizationRepository.findById(organization.id) } returns organization
 		every { membershipService.countMembers(organization.id) } returns 1
+		every { payoutAccountRepository.findByOrganizationId(organization.id) } returns null
 
 		val progress = service.onboardingProgress(organization.id, currentUser)
 
 		assertEquals(false, progress.profileComplete)
 		assertEquals(false, progress.hasAdditionalAdministrator)
+		assertEquals(false, progress.payoutsConnected)
 	}
 
 	@Test
-	fun `onboarding is complete once profile and a second administrator exist`() {
+	fun `onboarding is complete once profile, a second administrator, and payouts all exist`() {
 		val organization = existingOrganization().copy(sports = listOf("Soccer"), contactEmail = "ops@example.com")
 		every { membershipService.requireActiveMembership(organization.id, currentUser) } returns ownerMembership(organization.id, currentUser.userId)
 		every { organizationRepository.findById(organization.id) } returns organization
 		every { membershipService.countMembers(organization.id) } returns 2
+		every { payoutAccountRepository.findByOrganizationId(organization.id) } returns fullyConnectedPayoutAccount(organization.id)
 
 		val progress = service.onboardingProgress(organization.id, currentUser)
 
 		assertEquals(true, progress.profileComplete)
 		assertEquals(true, progress.hasAdditionalAdministrator)
+		assertEquals(true, progress.payoutsConnected)
 	}
+
+	private fun fullyConnectedPayoutAccount(organizationId: UUID) = OrganizationPayoutAccount(
+		id = UUID.randomUUID(),
+		organizationId = organizationId,
+		stripeAccountId = "acct_123",
+		detailsSubmitted = true,
+		chargesEnabled = true,
+		payoutsEnabled = true,
+		createdAt = Instant.now(),
+		updatedAt = Instant.now(),
+	)
 
 	private fun ownerMembership(organizationId: UUID, userId: UUID) = OrganizationMembership(
 		id = UUID.randomUUID(),

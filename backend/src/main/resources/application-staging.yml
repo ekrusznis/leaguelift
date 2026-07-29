@@ -8,6 +8,17 @@ leaguelift:
     # No default — startup fails if this isn't set, rather than silently signing
     # tokens with a guessable key. Generate with e.g. `openssl rand -base64 48`.
     secret: ${JWT_SECRET}
+  # DigitalOcean Spaces — no defaults, startup fails if unset (ADR-012).
+  spaces:
+    endpoint: ${SPACES_ENDPOINT}
+    access-key: ${SPACES_ACCESS_KEY}
+    secret-key: ${SPACES_SECRET_KEY}
+    bucket: ${SPACES_BUCKET}
+    region: ${SPACES_REGION}
+  # No default — startup fails if unset. Test-mode key expected here (ADR-005 scopes
+  # this phase to Connect onboarding only, never live charge routing).
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY}
 
 management:
   endpoint:

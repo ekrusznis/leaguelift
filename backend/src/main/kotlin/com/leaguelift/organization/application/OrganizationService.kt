@@ -11,6 +11,7 @@ import com.leaguelift.organization.domain.OrganizationType
 import com.leaguelift.organization.domain.isValidContactEmail
 import com.leaguelift.organization.domain.isValidSlug
 import com.leaguelift.organization.persistence.OrganizationRepository
+import com.leaguelift.payout.persistence.OrganizationPayoutAccountRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -20,6 +21,7 @@ class OrganizationService(
 	private val organizationRepository: OrganizationRepository,
 	private val membershipService: MembershipService,
 	private val auditService: AuditService,
+	private val payoutAccountRepository: OrganizationPayoutAccountRepository,
 ) {
 
 	@Transactional
@@ -101,6 +103,7 @@ class OrganizationService(
 		return OnboardingProgress(
 			profileComplete = profileComplete,
 			hasAdditionalAdministrator = membershipService.countMembers(organizationId) > 1,
+			payoutsConnected = payoutAccountRepository.findByOrganizationId(organizationId)?.isFullyConnected ?: false,
 		)
 	}
 }
@@ -108,4 +111,5 @@ class OrganizationService(
 data class OnboardingProgress(
 	val profileComplete: Boolean,
 	val hasAdditionalAdministrator: Boolean,
+	val payoutsConnected: Boolean,
 )

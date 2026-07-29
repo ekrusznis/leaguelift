@@ -30,6 +30,7 @@ export function OnboardingChecklist({ organizationId }: { organizationId: string
 			<ul className="mt-2 flex flex-col gap-1">
 				<ChecklistItem done={data.profileComplete} label="Complete organization profile (sports + contact email)" />
 				<ChecklistItem done={data.hasAdditionalAdministrator} label="Invite a second administrator" />
+				<ChecklistItem done={data.payoutsConnected} label="Connect payouts (Stripe)" />
 			</ul>
 		</div>
 	);

@@ -2,8 +2,10 @@ package com.leaguelift.fee.persistence
 
 import com.leaguelift.fee.domain.FeeAssignment
 import com.leaguelift.fee.domain.FeeAssignmentStatus
+import com.leaguelift.fee.domain.FeeAssignmentSummary
 import com.leaguelift.fee.domain.FeeTemplate
 import com.leaguelift.fee.domain.FeeTemplateStatus
+import com.leaguelift.fee.domain.OrganizationFeeFinancialSummary
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import java.sql.Date
@@ -139,6 +141,97 @@ class FeeRepository(private val jdbcClient: JdbcClient) {
         )
             .param("status", status.name).param("now", Timestamp.from(now))
             .param("id", id).param("organizationId", organizationId).update()
+    }
+
+    // --- Org-wide (collections dashboard / CSV export) ---
+
+    /**
+     * Joined with household/participant display names and payment/adjustment sums via
+     * subquery joins (one SQL round trip, not N+1) — acceptable at pilot list-page
+     * sizes; revisit with a materialized view if this becomes a bottleneck.
+     */
+    private val summarySelect = """
+        select fa.id, fa.organization_id, fa.household_id, h.display_name as household_name,
+               fa.participant_id, p.first_name as participant_first_name, p.last_name as participant_last_name,
+               fa.fee_template_id, fa.description, fa.original_amount_minor, fa.currency, fa.due_date,
+               fa.status, fa.created_at, fa.updated_at,
+               coalesce(fp.paid_minor, 0) as paid_minor, coalesce(fadj.adjusted_minor, 0) as adjusted_minor
+        from fee_assignment fa
+        join household h on h.id = fa.household_id
+        left join participant p on p.id = fa.participant_id
+        left join (select fee_assignment_id, sum(amount_minor) as paid_minor from fee_payment where voided_at is null group by fee_assignment_id) fp
+            on fp.fee_assignment_id = fa.id
+        left join (select fee_assignment_id, sum(amount_minor) as adjusted_minor from fee_adjustment where voided_at is null group by fee_assignment_id) fadj
+            on fadj.fee_assignment_id = fa.id
+        where fa.organization_id = :organizationId
+          and (:status::text is null or fa.status = :status)
+          and (:overdueOnly = false or (fa.due_date < current_date
+               and (fa.original_amount_minor - coalesce(fp.paid_minor, 0) - coalesce(fadj.adjusted_minor, 0)) > 0))
+    """.trimIndent()
+
+    fun findAllForOrganization(
+        organizationId: UUID,
+        status: FeeAssignmentStatus?,
+        overdueOnly: Boolean,
+        offset: Int,
+        limit: Int,
+    ): List<FeeAssignmentSummary> =
+        jdbcClient.sql("$summarySelect order by fa.due_date asc nulls last, fa.created_at desc limit :limit offset :offset")
+            .param("organizationId", organizationId).param("status", status?.name)
+            .param("overdueOnly", overdueOnly).param("limit", limit).param("offset", offset)
+            .query(::mapSummary).list()
+
+    fun countAllForOrganization(organizationId: UUID, status: FeeAssignmentStatus?, overdueOnly: Boolean): Long =
+        jdbcClient.sql("select count(*) from ($summarySelect) counted")
+            .param("organizationId", organizationId).param("status", status?.name).param("overdueOnly", overdueOnly)
+            .query(Long::class.java).single()
+
+    fun getFinancialSummary(organizationId: UUID): OrganizationFeeFinancialSummary =
+        jdbcClient.sql(
+            """
+            select
+                coalesce(sum(fa.original_amount_minor), 0) as fees_assigned_minor,
+                coalesce(sum(coalesce(fp.paid_minor, 0)), 0) as fees_collected_minor,
+                coalesce(sum(greatest(0, fa.original_amount_minor - coalesce(fp.paid_minor, 0) - coalesce(fadj.adjusted_minor, 0))), 0) as outstanding_minor
+            from fee_assignment fa
+            left join (select fee_assignment_id, sum(amount_minor) as paid_minor from fee_payment where voided_at is null group by fee_assignment_id) fp
+                on fp.fee_assignment_id = fa.id
+            left join (select fee_assignment_id, sum(amount_minor) as adjusted_minor from fee_adjustment where voided_at is null group by fee_assignment_id) fadj
+                on fadj.fee_assignment_id = fa.id
+            where fa.organization_id = :organizationId and fa.status != 'CANCELLED'
+            """.trimIndent(),
+        )
+            .param("organizationId", organizationId)
+            .query { rs, _ ->
+                OrganizationFeeFinancialSummary(
+                    feesAssignedMinor = rs.getLong("fees_assigned_minor"),
+                    feesCollectedMinor = rs.getLong("fees_collected_minor"),
+                    outstandingMinor = rs.getLong("outstanding_minor"),
+                )
+            }
+            .single()
+
+    private fun mapSummary(rs: java.sql.ResultSet, row: Int): FeeAssignmentSummary {
+        val firstName = rs.getString("participant_first_name")
+        val lastName = rs.getString("participant_last_name")
+        return FeeAssignmentSummary(
+            id = rs.getObject("id", UUID::class.java),
+            organizationId = rs.getObject("organization_id", UUID::class.java),
+            householdId = rs.getObject("household_id", UUID::class.java),
+            householdName = rs.getString("household_name"),
+            participantId = rs.getObject("participant_id", UUID::class.java),
+            participantName = if (firstName != null) "$firstName $lastName" else null,
+            feeTemplateId = rs.getObject("fee_template_id", UUID::class.java),
+            description = rs.getString("description"),
+            originalAmountMinor = rs.getLong("original_amount_minor"),
+            currency = rs.getString("currency"),
+            dueDate = rs.getDate("due_date")?.toLocalDate(),
+            status = FeeAssignmentStatus.valueOf(rs.getString("status")),
+            paidMinor = rs.getLong("paid_minor"),
+            adjustedMinor = rs.getLong("adjusted_minor"),
+            createdAt = rs.getTimestamp("created_at").toInstant(),
+            updatedAt = rs.getTimestamp("updated_at").toInstant(),
+        )
     }
 
     private fun mapTemplate(rs: java.sql.ResultSet, row: Int) = FeeTemplate(

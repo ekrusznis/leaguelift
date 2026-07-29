@@ -63,11 +63,13 @@ fun Organization.toResponse() = OrganizationResponse(
 data class OnboardingProgressResponse(
 	val profileComplete: Boolean,
 	val hasAdditionalAdministrator: Boolean,
+	val payoutsConnected: Boolean,
 )
 
 fun OnboardingProgress.toResponse() = OnboardingProgressResponse(
 	profileComplete = profileComplete,
 	hasAdditionalAdministrator = hasAdditionalAdministrator,
+	payoutsConnected = payoutsConnected,
 )
 
 typealias OrganizationPageResponse = PageResponse<OrganizationResponse>

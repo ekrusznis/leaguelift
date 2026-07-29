@@ -1,6 +1,16 @@
 package com.leaguelift.dashboard.web
 
-data class AthleteOverviewResponse(val displayName: String, val isDemoData: Boolean, val nextEvent: NextEventSummary?)
+import com.fasterxml.jackson.annotation.JsonProperty
+
+// Kotlin's `val isFoo: Boolean` generates a getter literally named `isFoo()`; standard
+// JavaBean introspection (which Jackson follows) then strips the "is" prefix, silently
+// serializing it as "foo" instead of "isFoo" — @get:JsonProperty pins the wire name so
+// isDemoData-style flags actually reach the frontend as isDemoData, not demoData.
+data class AthleteOverviewResponse(
+	val displayName: String,
+	@get:JsonProperty("isDemoData") val isDemoData: Boolean,
+	val nextEvent: NextEventSummary?,
+)
 
 data class NextEventSummary(val title: String, val subtitle: String, val dateLabel: String, val location: String)
 

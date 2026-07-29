@@ -51,7 +51,8 @@ export interface OwnerSummary {
 }
 
 export interface FinancialOverview {
-	isDemoData: boolean;
+	isFeesDemoData: boolean;
+	isFundraisingDemoData: boolean;
 	currency: string;
 	feesAssignedMinor: number;
 	feesCollectedMinor: number;
@@ -148,7 +149,7 @@ export interface AthleteSummary {
 
 export interface FeeLineItem {
 	description: string;
-	amountMinor: number;
+	balanceMinor: number;
 	status: string;
 	dueDate: string | null;
 }
@@ -156,7 +157,6 @@ export interface FeeLineItem {
 export interface OutstandingBalance {
 	totalOutstandingMinor: number;
 	currency: string;
-	isApproximate: boolean;
 	lineItems: FeeLineItem[];
 }
 

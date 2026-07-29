@@ -30,6 +30,9 @@ export interface FeeAssignment {
 	currency: string;
 	dueDate: string | null;
 	status: FeeAssignmentStatus;
+	paidMinor: number;
+	adjustedMinor: number;
+	balanceMinor: number;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -39,4 +42,35 @@ export interface FeeAssignmentPage {
 	page: number;
 	size: number;
 	totalElements: number;
+}
+
+export type PaymentMethod = "CASH" | "CHECK" | "VENMO" | "ZELLE" | "OTHER";
+
+export interface FeePayment {
+	id: string;
+	feeAssignmentId: string;
+	amountMinor: number;
+	currency: string;
+	method: PaymentMethod;
+	paidAt: string;
+	note: string | null;
+	recordedByUserId: string;
+	voidedAt: string | null;
+	voidReason: string | null;
+	createdAt: string;
+}
+
+export type AdjustmentType = "DISCOUNT" | "CREDIT" | "CORRECTION";
+
+export interface FeeAdjustment {
+	id: string;
+	feeAssignmentId: string;
+	adjustmentType: AdjustmentType;
+	amountMinor: number;
+	currency: string;
+	reason: string | null;
+	createdByUserId: string;
+	voidedAt: string | null;
+	voidReason: string | null;
+	createdAt: string;
 }

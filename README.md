@@ -12,22 +12,32 @@ making non-trivial changes.
 
 ## Current status
 
-Phase 0, Phase 1, and the core of Phase 2 are implemented and running locally.
+Phase 0, Phase 1, and Phase 2 are fully implemented; all running locally.
 
 | Phase | What's done |
 |-------|-------------|
 | **Phase 0** | Repository, Spring Boot / React scaffold, PostgreSQL + Flyway, auth integration, organization CRUD, membership model, audit events, CI pipeline |
-| **Phase 1** | Organization profile & onboarding checklist, administrator invitations, teams, tournaments, public pages (DRAFT → PUBLISHED, public `/p/:slug` route), organization isolation integration test |
-| **Phase 2** | Households with adults, participants with team assignments, fee templates, fee assignments with status tracking |
+| **Phase 1** | Organization profile & onboarding checklist, administrator invitations, teams, tournaments, public pages (DRAFT → PUBLISHED, public `/p/:slug` route), organization isolation integration test, file upload/branding (organization logo/cover image, ADR-012 — real DigitalOcean Spaces credentials still needed before a real staging/prod deploy; local/test run against MinIO) |
+| **Phase 2** | Households with adults, participants with team assignments, fee templates, fee assignments with status tracking, manual/offline payment recording, manual discounts/credits, org-wide collections dashboard + CSV export, real (non-demo) outstanding-balance/financial-overview data, Stripe Connect Express onboarding (ADR-005 — onboarding only, no live charge routing; real Stripe test-mode keys still needed to exercise the actual Stripe flow, everything else runs local) |
 
 **Still to do** (approximate priority order):
 
-- Phase 1: File upload / branding (logo, cover image — requires DigitalOcean Spaces credentials)
-- Phase 2: Outstanding-balance aggregation, parent-facing dashboard, collections dashboard, CSV export, manual discounts/credits, payment history model
 - Phase 3: Fundraising campaigns, attribution, credits applied to fees, live payment processing
-- Phase 4+: Apparel commerce, sponsorship packages, reporting
+- Phase 4: Apparel commerce
+- Phase 5: Financial controls and live pilot
+- Phase 6: Sponsorships and automation
+- Phase 7: Capability-based authorization model + real (non-static-preview) persona dashboards, document storage, activity feed, global search
+- Phase 8: Notifications infrastructure — outbox worker, email delivery, one-way SMS (no chat/voice)
+- Phase 9: Reporting module and analytics integration
+- Phase 10 (post-pilot): Native mobile app, standalone registration workflows
 
-See `DESIGN-DOC.md` sections 10 and 30 for full milestone acceptance criteria, and
+Phases 7-10 were added 2026-07-28 while reconciling the roadmap against
+`frontend/src/assets/demos/LLdiagram.png` (a marketing/vision asset, not a
+picture of current or committed-near-term scope). Full team scheduling,
+two-way team chat, voice calling, and a Redis caching layer remain
+indefinitely out of scope — see `DESIGN-DOC.md` §14.2.
+
+See `DESIGN-DOC.md` sections 10 and 14 for full milestone acceptance criteria, and
 `docs/openapi.yaml` for the current API contract.
 
 ## Repository layout

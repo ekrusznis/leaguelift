@@ -27,6 +27,10 @@ class ForbiddenException(code: String, message: String) :
 class UnauthorizedException(code: String, message: String) :
 	ApiException(code, message, HttpStatus.UNAUTHORIZED)
 
+/** An external provider (Stripe, DigitalOcean Spaces, etc.) rejected the request or is unreachable — not the caller's fault. */
+class ServiceUnavailableException(code: String, message: String) :
+	ApiException(code, message, HttpStatus.SERVICE_UNAVAILABLE)
+
 class ValidationException(
 	message: String,
 	fieldErrors: List<FieldError> = emptyList(),

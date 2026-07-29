@@ -11,6 +11,7 @@ import com.leaguelift.dashboard.web.OwnerSummaryResponse
 import com.leaguelift.dashboard.web.ReportMetric
 import com.leaguelift.dashboard.web.ScheduleItem
 import com.leaguelift.dashboard.web.TeamPerformanceRow
+import com.leaguelift.fee.persistence.FeeRepository
 import com.leaguelift.household.persistence.HouseholdRepository
 import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.organization.persistence.OrganizationRepository
@@ -43,6 +44,7 @@ class OwnerDashboardService(
 	private val participantRepository: ParticipantRepository,
 	private val tournamentRepository: TournamentRepository,
 	private val auditEventRepository: AuditEventRepository,
+	private val feeRepository: FeeRepository,
 ) {
 
 	fun getSummary(organizationId: UUID, currentUser: CurrentUser): OwnerSummaryResponse {
@@ -60,12 +62,14 @@ class OwnerDashboardService(
 
 	fun getFinancialOverview(organizationId: UUID, currentUser: CurrentUser): FinancialOverviewResponse {
 		membershipService.requireActiveMembership(organizationId, currentUser)
+		val fees = feeRepository.getFinancialSummary(organizationId)
 		return FinancialOverviewResponse(
-			isDemoData = true,
+			isFeesDemoData = false,
+			isFundraisingDemoData = true,
 			currency = "USD",
-			feesAssignedMinor = 28_475_000,
-			feesCollectedMinor = 21_243_000,
-			outstandingMinor = 7_232_000,
+			feesAssignedMinor = fees.feesAssignedMinor,
+			feesCollectedMinor = fees.feesCollectedMinor,
+			outstandingMinor = fees.outstandingMinor,
 			fundraisingMinor = 3_468_000,
 			apparelSalesMinor = 1_892_000,
 			pendingPayoutMinor = 784_500,

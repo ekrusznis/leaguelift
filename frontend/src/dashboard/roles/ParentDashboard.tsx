@@ -133,7 +133,10 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 					</CardQuery>
 				</DashCard>
 
-				<DashCard title="Outstanding Balance" action={{ label: "View details & pay" }}>
+				<DashCard
+					title="Outstanding Balance"
+					action={{ label: "View details", to: `/app/organizations/${organizationId}/households/${householdId}` }}
+				>
 					<CardQuery query={outstandingBalance} loadingLabel="Loading balance…">
 						{(data) => (
 							<>
@@ -149,14 +152,13 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 										{data.lineItems.map((line, index) => (
 											<li key={index} className="flex justify-between text-sm text-slate-600">
 												<span>{line.description}</span>
-												<span className="font-medium text-navy-900">{formatMoneyMinorUnits(line.amountMinor, data.currency)}</span>
+												<span className="font-medium text-navy-900">{formatMoneyMinorUnits(line.balanceMinor, data.currency)}</span>
 											</li>
 										))}
 									</ul>
 								) : (
 									<p className="mt-4 border-t border-slate-200 pt-3 text-sm text-slate-500">No fees outstanding.</p>
 								)}
-								{data.isApproximate && <p className="mt-3 text-xs text-slate-400">Approximate — not yet net of partial payments.</p>}
 							</>
 						)}
 					</CardQuery>

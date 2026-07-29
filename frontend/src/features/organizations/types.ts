@@ -34,6 +34,7 @@ export interface OrganizationPage {
 export interface OnboardingProgress {
 	profileComplete: boolean;
 	hasAdditionalAdministrator: boolean;
+	payoutsConnected: boolean;
 }
 
 export const INVITABLE_ROLES = [

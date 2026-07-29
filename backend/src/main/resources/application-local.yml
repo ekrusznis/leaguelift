@@ -21,6 +21,19 @@ leaguelift:
   # 32 bytes for HS256 (see JwtProperties.secretKey).
   jwt:
     secret: "local-dev-only-jwt-signing-secret-do-not-use-in-prod!!"
+  # S3-compatible object storage — MinIO via compose locally (ADR-012). Defaults match
+  # compose.yaml's minio/minio-init services.
+  spaces:
+    endpoint: ${SPACES_ENDPOINT:http://localhost:9000}
+    access-key: ${SPACES_ACCESS_KEY:leaguelift}
+    secret-key: ${SPACES_SECRET_KEY:leaguelift_local_password}
+    bucket: ${SPACES_BUCKET:leaguelift-local}
+    region: ${SPACES_REGION:us-east-1}
+  # Stripe Connect Express onboarding only (ADR-005) — no live charge routing. Blank by
+  # default since no real Stripe account exists yet; onboarding calls fail with a clear
+  # error until STRIPE_SECRET_KEY (a test-mode secret key) is supplied in .env.
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY:}
 
 management:
   endpoint:

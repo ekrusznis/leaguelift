@@ -2,10 +2,21 @@ package com.leaguelift.fee.application
 
 import com.leaguelift.audit.application.AuditService
 import com.leaguelift.common.error.NotFoundException
+import com.leaguelift.common.error.ValidationException
 import com.leaguelift.common.web.CurrentUser
+import com.leaguelift.fee.domain.AdjustmentType
+import com.leaguelift.fee.domain.FeeAdjustment
 import com.leaguelift.fee.domain.FeeAssignment
 import com.leaguelift.fee.domain.FeeAssignmentStatus
+import com.leaguelift.fee.domain.FeeAssignmentSummary
+import com.leaguelift.fee.domain.FeeAssignmentWithBalance
+import com.leaguelift.fee.domain.FeePayment
 import com.leaguelift.fee.domain.FeeTemplate
+import com.leaguelift.fee.domain.PaymentMethod
+import com.leaguelift.fee.domain.computeFeeBalance
+import com.leaguelift.fee.domain.resolveStatusAfterBalanceChange
+import com.leaguelift.fee.persistence.FeeAdjustmentRepository
+import com.leaguelift.fee.persistence.FeePaymentRepository
 import com.leaguelift.fee.persistence.FeeRepository
 import com.leaguelift.household.persistence.HouseholdRepository
 import com.leaguelift.membership.application.MembershipService
@@ -17,6 +28,8 @@ import java.util.UUID
 @Service
 class FeeService(
     private val feeRepository: FeeRepository,
+    private val feePaymentRepository: FeePaymentRepository,
+    private val feeAdjustmentRepository: FeeAdjustmentRepository,
     private val householdRepository: HouseholdRepository,
     private val membershipService: MembershipService,
     private val auditService: AuditService,
@@ -82,11 +95,11 @@ class FeeService(
 
     // --- Fee Assignments ---
 
-    fun listForHousehold(organizationId: UUID, householdId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<FeeAssignment> {
+    fun listForHousehold(organizationId: UUID, householdId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<FeeAssignmentWithBalance> {
         membershipService.requireActiveMembership(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
-        return feeRepository.findByHousehold(householdId, organizationId, offset, limit)
+        return feeRepository.findByHousehold(householdId, organizationId, offset, limit).map(::withBalance)
     }
 
     fun countForHousehold(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): Long {
@@ -96,10 +109,11 @@ class FeeService(
         return feeRepository.countByHousehold(householdId, organizationId)
     }
 
-    fun getAssignment(organizationId: UUID, assignmentId: UUID, currentUser: CurrentUser): FeeAssignment {
+    fun getAssignment(organizationId: UUID, assignmentId: UUID, currentUser: CurrentUser): FeeAssignmentWithBalance {
         membershipService.requireActiveMembership(organizationId, currentUser)
-        return feeRepository.findAssignmentById(assignmentId, organizationId)
+        val assignment = feeRepository.findAssignmentById(assignmentId, organizationId)
             ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
+        return withBalance(assignment)
     }
 
     @Transactional
@@ -113,13 +127,13 @@ class FeeService(
         currency: String,
         dueDate: LocalDate?,
         currentUser: CurrentUser,
-    ): FeeAssignment {
+    ): FeeAssignmentWithBalance {
         membershipService.requireManagerRole(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
         val assignment = feeRepository.insertAssignment(organizationId, householdId, participantId, feeTemplateId, description, originalAmountMinor, currency, dueDate)
         auditService.record(currentUser.userId, organizationId, "fee_assignment.created", "fee_assignment", assignment.id)
-        return assignment
+        return withBalance(assignment)
     }
 
     @Transactional
@@ -128,12 +142,184 @@ class FeeService(
         assignmentId: UUID,
         status: FeeAssignmentStatus,
         currentUser: CurrentUser,
-    ): FeeAssignment {
+    ): FeeAssignmentWithBalance {
         membershipService.requireManagerRole(organizationId, currentUser)
         feeRepository.findAssignmentById(assignmentId, organizationId)
             ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
         feeRepository.updateAssignmentStatus(assignmentId, organizationId, status)
         auditService.record(currentUser.userId, organizationId, "fee_assignment.status_updated", "fee_assignment", assignmentId)
-        return feeRepository.findAssignmentById(assignmentId, organizationId)!!
+        return withBalance(feeRepository.findAssignmentById(assignmentId, organizationId)!!)
+    }
+
+    // --- Payments ---
+
+    @Transactional
+    fun recordPayment(
+        organizationId: UUID,
+        assignmentId: UUID,
+        amountMinor: Long,
+        method: PaymentMethod,
+        paidAt: LocalDate,
+        note: String?,
+        currentUser: CurrentUser,
+    ): FeeAssignmentWithBalance {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        val assignment = requireOpenAssignment(organizationId, assignmentId)
+        feePaymentRepository.insert(organizationId, assignmentId, assignment.householdId, amountMinor, assignment.currency, method, paidAt, note, currentUser.userId)
+        val result = recomputeStatus(organizationId, assignment)
+        auditService.record(currentUser.userId, organizationId, "fee_assignment.payment_recorded", "fee_assignment", assignmentId)
+        return result
+    }
+
+    @Transactional
+    fun voidPayment(organizationId: UUID, assignmentId: UUID, paymentId: UUID, voidReason: String, currentUser: CurrentUser): FeeAssignmentWithBalance {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        val assignment = feeRepository.findAssignmentById(assignmentId, organizationId)
+            ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
+        val payment = feePaymentRepository.findById(paymentId, organizationId)
+            ?.takeIf { it.feeAssignmentId == assignmentId }
+            ?: throw NotFoundException("FEE_PAYMENT_NOT_FOUND", "The payment could not be found.")
+        if (payment.isVoided) throw ValidationException("This payment has already been voided.")
+        feePaymentRepository.void(paymentId, organizationId, currentUser.userId, voidReason)
+        val result = recomputeStatus(organizationId, assignment)
+        auditService.record(currentUser.userId, organizationId, "fee_assignment.payment_voided", "fee_assignment", assignmentId)
+        return result
+    }
+
+    fun listPayments(organizationId: UUID, assignmentId: UUID, currentUser: CurrentUser): List<FeePayment> {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        feeRepository.findAssignmentById(assignmentId, organizationId)
+            ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
+        return feePaymentRepository.findAllByAssignment(assignmentId, organizationId)
+    }
+
+    // --- Adjustments (manual discounts/credits) ---
+
+    @Transactional
+    fun applyAdjustment(
+        organizationId: UUID,
+        assignmentId: UUID,
+        adjustmentType: AdjustmentType,
+        amountMinor: Long,
+        reason: String?,
+        currentUser: CurrentUser,
+    ): FeeAssignmentWithBalance {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        val assignment = requireOpenAssignment(organizationId, assignmentId)
+        feeAdjustmentRepository.insert(organizationId, assignmentId, assignment.householdId, adjustmentType, amountMinor, assignment.currency, reason, currentUser.userId)
+        val result = recomputeStatus(organizationId, assignment)
+        auditService.record(currentUser.userId, organizationId, "fee_assignment.adjustment_applied", "fee_assignment", assignmentId)
+        return result
+    }
+
+    @Transactional
+    fun voidAdjustment(organizationId: UUID, assignmentId: UUID, adjustmentId: UUID, voidReason: String, currentUser: CurrentUser): FeeAssignmentWithBalance {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        val assignment = feeRepository.findAssignmentById(assignmentId, organizationId)
+            ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
+        val adjustment = feeAdjustmentRepository.findById(adjustmentId, organizationId)
+            ?.takeIf { it.feeAssignmentId == assignmentId }
+            ?: throw NotFoundException("FEE_ADJUSTMENT_NOT_FOUND", "The adjustment could not be found.")
+        if (adjustment.isVoided) throw ValidationException("This adjustment has already been voided.")
+        feeAdjustmentRepository.void(adjustmentId, organizationId, currentUser.userId, voidReason)
+        val result = recomputeStatus(organizationId, assignment)
+        auditService.record(currentUser.userId, organizationId, "fee_assignment.adjustment_voided", "fee_assignment", assignmentId)
+        return result
+    }
+
+    fun listAdjustments(organizationId: UUID, assignmentId: UUID, currentUser: CurrentUser): List<FeeAdjustment> {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        feeRepository.findAssignmentById(assignmentId, organizationId)
+            ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
+        return feeAdjustmentRepository.findAllByAssignment(assignmentId, organizationId)
+    }
+
+    // --- Org-wide (collections dashboard, CSV export, owner dashboard) ---
+
+    fun listForOrganization(
+        organizationId: UUID,
+        status: FeeAssignmentStatus?,
+        overdueOnly: Boolean,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<FeeAssignmentSummary> {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        return feeRepository.findAllForOrganization(organizationId, status, overdueOnly, offset, limit)
+    }
+
+    fun countForOrganization(organizationId: UUID, status: FeeAssignmentStatus?, overdueOnly: Boolean, currentUser: CurrentUser): Long {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        return feeRepository.countAllForOrganization(organizationId, status, overdueOnly)
+    }
+
+    /** Capped at 5000 rows — a hard export size ceiling, not pagination; revisit if a real org ever needs more. */
+    fun exportCollectionsCsv(organizationId: UUID, status: FeeAssignmentStatus?, overdueOnly: Boolean, currentUser: CurrentUser): String {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        val rows = feeRepository.findAllForOrganization(organizationId, status, overdueOnly, 0, 5000)
+        return buildCsv(rows)
+    }
+
+    // --- Internal helpers ---
+
+    private fun requireOpenAssignment(organizationId: UUID, assignmentId: UUID): FeeAssignment {
+        val assignment = feeRepository.findAssignmentById(assignmentId, organizationId)
+            ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
+        if (assignment.status == FeeAssignmentStatus.WAIVED || assignment.status == FeeAssignmentStatus.CANCELLED) {
+            throw ValidationException("Cannot record a payment or adjustment against a ${assignment.status} fee.")
+        }
+        return assignment
+    }
+
+    private fun withBalance(assignment: FeeAssignment): FeeAssignmentWithBalance {
+        val paid = feePaymentRepository.sumActiveByAssignment(assignment.id, assignment.organizationId)
+        val adjusted = feeAdjustmentRepository.sumActiveByAssignment(assignment.id, assignment.organizationId)
+        return FeeAssignmentWithBalance(assignment, computeFeeBalance(assignment.originalAmountMinor, paid, adjusted))
+    }
+
+    private fun recomputeStatus(organizationId: UUID, assignment: FeeAssignment): FeeAssignmentWithBalance {
+        val paid = feePaymentRepository.sumActiveByAssignment(assignment.id, organizationId)
+        val adjusted = feeAdjustmentRepository.sumActiveByAssignment(assignment.id, organizationId)
+        val balance = computeFeeBalance(assignment.originalAmountMinor, paid, adjusted)
+        val newStatus = resolveStatusAfterBalanceChange(assignment.status, balance, paid > 0 || adjusted > 0)
+        if (newStatus != assignment.status) {
+            feeRepository.updateAssignmentStatus(assignment.id, organizationId, newStatus)
+        }
+        val finalAssignment = feeRepository.findAssignmentById(assignment.id, organizationId)!!
+        return FeeAssignmentWithBalance(finalAssignment, balance)
+    }
+
+    private fun buildCsv(rows: List<FeeAssignmentSummary>): String {
+        val header = listOf("Household", "Participant", "Description", "Original", "Paid", "Adjusted", "Balance", "Currency", "Due Date", "Status")
+        val lines = mutableListOf(header.joinToString(",") { csvEscape(it) })
+        for (row in rows) {
+            lines += listOf(
+                row.householdName,
+                row.participantName ?: "",
+                row.description,
+                formatMinor(row.originalAmountMinor),
+                formatMinor(row.paidMinor),
+                formatMinor(row.adjustedMinor),
+                formatMinor(row.balance.balanceMinor),
+                row.currency,
+                row.dueDate?.toString() ?: "",
+                row.status.name,
+            ).joinToString(",") { csvEscape(it) }
+        }
+        return lines.joinToString("\r\n")
+    }
+
+    private fun csvEscape(value: String): String =
+        if (value.contains(',') || value.contains('"') || value.contains('\n') || value.contains('\r')) {
+            "\"${value.replace("\"", "\"\"")}\""
+        } else {
+            value
+        }
+
+    /** Assumes a 2-decimal-place currency (USD, the only currency in use today) — revisit if a non-USD currency is ever supported. */
+    private fun formatMinor(minor: Long): String {
+        val whole = minor / 100
+        val fraction = kotlin.math.abs(minor % 100)
+        return "$whole.${fraction.toString().padStart(2, '0')}"
     }
 }

@@ -111,8 +111,8 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 				description="Manage your club, finances, teams, and operations in one place."
 				actions={
 					<>
-						<SecondaryLightButton icon="none">
-							<DownloadIcon className="size-4" /> Export Report
+						<SecondaryLightButton icon="none" to={`/app/organizations/${organizationId}/collections`}>
+							<DownloadIcon className="size-4" /> Collections &amp; Export
 						</SecondaryLightButton>
 						<SecondaryLightButton icon="none">
 							<UserPlusIcon className="size-4" /> Invite Member
@@ -145,7 +145,7 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 
 				<DashCard
 					title="Financial Overview"
-					action={{ label: financialOverview.data?.isDemoData ? "Demo data" : "View finance center" }}
+					action={{ label: "View collections", to: `/app/organizations/${organizationId}/collections` }}
 				>
 					<CardQuery query={financialOverview} loadingLabel="Loading financials…">
 						{(data) => (
@@ -174,7 +174,9 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 									<p className="text-xs text-slate-500">Pending Payout</p>
 									<p className="font-heading text-lg font-bold text-navy-900">{formatMoneyMinorUnits(data.pendingPayoutMinor, data.currency)}</p>
 								</div>
-								{data.isDemoData && <p className="col-span-3 text-xs text-slate-400">Demo data — not yet backed by real payments.</p>}
+								{data.isFundraisingDemoData && (
+									<p className="col-span-3 text-xs text-slate-400">Fundraising/apparel/payout figures are demo data — fees are real.</p>
+								)}
 							</div>
 						)}
 					</CardQuery>

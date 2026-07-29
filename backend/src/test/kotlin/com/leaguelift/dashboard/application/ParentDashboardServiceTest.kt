@@ -3,6 +3,10 @@ package com.leaguelift.dashboard.application
 import com.leaguelift.common.error.ForbiddenException
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.web.CurrentUser
+import com.leaguelift.fee.domain.FeeAssignment
+import com.leaguelift.fee.domain.FeeAssignmentStatus
+import com.leaguelift.fee.persistence.FeeAdjustmentRepository
+import com.leaguelift.fee.persistence.FeePaymentRepository
 import com.leaguelift.fee.persistence.FeeRepository
 import com.leaguelift.fundraising.persistence.CampaignRepository
 import com.leaguelift.household.domain.AdultStatus
@@ -28,10 +32,13 @@ class ParentDashboardServiceTest {
 	private val participantRepository = mockk<ParticipantRepository>()
 	private val teamRepository = mockk<TeamRepository>()
 	private val feeRepository = mockk<FeeRepository>()
+	private val feePaymentRepository = mockk<FeePaymentRepository>()
+	private val feeAdjustmentRepository = mockk<FeeAdjustmentRepository>()
 	private val campaignRepository = mockk<CampaignRepository>()
 
 	private val service = ParentDashboardService(
-		householdRepository, membershipRepository, participantRepository, teamRepository, feeRepository, campaignRepository,
+		householdRepository, membershipRepository, participantRepository, teamRepository,
+		feeRepository, feePaymentRepository, feeAdjustmentRepository, campaignRepository,
 	)
 
 	private val orgId = UUID.randomUUID()
@@ -70,7 +77,7 @@ class ParentDashboardServiceTest {
 	}
 
 	@Test
-	fun `getOutstandingBalance sums only open and partially-paid assignments`() {
+	fun `getOutstandingBalance is zero with no fee assignments`() {
 		every { householdRepository.findById(householdId, orgId) } returns household()
 		every { membershipRepository.findActiveMembership(orgId, guardian.userId) } returns null
 		every { householdRepository.listAdults(householdId, orgId) } returns listOf(adult(guardian.email))
@@ -79,7 +86,25 @@ class ParentDashboardServiceTest {
 		val result = service.getOutstandingBalance(orgId, householdId, guardian)
 
 		assertEquals(0, result.totalOutstandingMinor)
-		assertEquals(true, result.isApproximate)
+		assertEquals(0, result.lineItems.size)
+	}
+
+	@Test
+	fun `getOutstandingBalance nets real payments and adjustments, excludes PAID assignments`() {
+		val openAssignment = feeAssignment(status = FeeAssignmentStatus.OPEN, originalAmountMinor = 15000L)
+		val paidAssignment = feeAssignment(status = FeeAssignmentStatus.PAID, originalAmountMinor = 5000L)
+		every { householdRepository.findById(householdId, orgId) } returns household()
+		every { membershipRepository.findActiveMembership(orgId, guardian.userId) } returns null
+		every { householdRepository.listAdults(householdId, orgId) } returns listOf(adult(guardian.email))
+		every { feeRepository.findByHousehold(householdId, orgId, 0, 50) } returns listOf(openAssignment, paidAssignment)
+		every { feePaymentRepository.sumActiveByAssignment(openAssignment.id, orgId) } returns 5000L
+		every { feeAdjustmentRepository.sumActiveByAssignment(openAssignment.id, orgId) } returns 2000L
+
+		val result = service.getOutstandingBalance(orgId, householdId, guardian)
+
+		assertEquals(8000L, result.totalOutstandingMinor)
+		assertEquals(1, result.lineItems.size, "the PAID assignment must not appear")
+		assertEquals(8000L, result.lineItems.single().balanceMinor)
 	}
 
 	@Test
@@ -93,6 +118,21 @@ class ParentDashboardServiceTest {
 
 		assertEquals(0, result.size)
 	}
+
+	private fun feeAssignment(status: FeeAssignmentStatus, originalAmountMinor: Long) = FeeAssignment(
+		id = UUID.randomUUID(),
+		organizationId = orgId,
+		householdId = householdId,
+		participantId = null,
+		feeTemplateId = null,
+		description = "Spring Registration",
+		originalAmountMinor = originalAmountMinor,
+		currency = "USD",
+		dueDate = null,
+		status = status,
+		createdAt = Instant.now(),
+		updatedAt = Instant.now(),
+	)
 
 	private fun household() = Household(
 		id = householdId,

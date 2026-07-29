@@ -24,31 +24,33 @@ import {
 	type CreateParticipantFormValues,
 } from "../features/households/schema";
 import type { Participant } from "../features/households/types";
-import { useCreateFeeAssignment, useFeeAssignments, useUpdateFeeAssignmentStatus } from "../features/fees/api";
-import { createFeeAssignmentSchema, type CreateFeeAssignmentFormValues } from "../features/fees/schema";
-import type { FeeAssignmentStatus } from "../features/fees/types";
+import {
+	useApplyAdjustment,
+	useCreateFeeAssignment,
+	useFeeAdjustments,
+	useFeeAssignments,
+	useFeePayments,
+	useRecordPayment,
+	useUpdateFeeAssignmentStatus,
+	useVoidAdjustment,
+	useVoidPayment,
+} from "../features/fees/api";
+import {
+	applyAdjustmentSchema,
+	createFeeAssignmentSchema,
+	recordPaymentSchema,
+	type ApplyAdjustmentFormValues,
+	type CreateFeeAssignmentFormValues,
+	type RecordPaymentFormValues,
+} from "../features/fees/schema";
+import { STATUS_COLORS, STATUS_LABELS } from "../features/fees/statusLabels";
+import type { FeeAssignment, FeeAssignmentStatus } from "../features/fees/types";
 import { useFeeTemplates } from "../features/fees/api";
 import { useTeams } from "../features/teams/api";
 
 function formatAmount(amountMinor: number, currency: string) {
 	return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amountMinor / 100);
 }
-
-const STATUS_LABELS: Record<FeeAssignmentStatus, string> = {
-	OPEN: "Open",
-	PARTIALLY_PAID: "Partially paid",
-	PAID: "Paid",
-	WAIVED: "Waived",
-	CANCELLED: "Cancelled",
-};
-
-const STATUS_COLORS: Record<FeeAssignmentStatus, string> = {
-	OPEN: "bg-amber-100 text-amber-800",
-	PARTIALLY_PAID: "bg-blue-100 text-blue-800",
-	PAID: "bg-green-100 text-green-800",
-	WAIVED: "bg-slate-100 text-slate-600",
-	CANCELLED: "bg-red-100 text-red-700",
-};
 
 // --- Adults Panel ---
 
@@ -302,6 +304,206 @@ function ParticipantsPanel({ organizationId, householdId }: { organizationId: st
 	);
 }
 
+// --- Fee Payment / Adjustment Detail ---
+
+function RecordPaymentForm({ organizationId, householdId, assignmentId, onDone }: { organizationId: string; householdId: string; assignmentId: string; onDone: () => void }) {
+	const recordPayment = useRecordPayment(organizationId, householdId, assignmentId);
+	const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<RecordPaymentFormValues>({
+		resolver: zodResolver(recordPaymentSchema) as Resolver<RecordPaymentFormValues>,
+		defaultValues: { amountMinor: 0, method: "CASH", paidAt: new Date().toISOString().slice(0, 10), note: "" },
+	});
+
+	const onSubmit = handleSubmit(async (values) => {
+		await recordPayment.mutateAsync(values);
+		reset();
+		onDone();
+	});
+
+	return (
+		<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-3" noValidate aria-label="Record a payment">
+			<div className="flex flex-wrap gap-3">
+				<div className="flex flex-col gap-1">
+					<label htmlFor={`payment-amount-${assignmentId}`} className="text-sm font-medium text-navy">Amount (cents) <span aria-hidden>*</span></label>
+					<input id={`payment-amount-${assignmentId}`} type="number" min={1} step={1} {...register("amountMinor")} aria-invalid={!!errors.amountMinor} className="min-h-11 w-32 rounded-md border border-slate-gray/30 px-3 py-2" />
+					{errors.amountMinor && <p role="alert" className="text-sm text-error-red">{errors.amountMinor.message}</p>}
+				</div>
+				<div className="flex flex-col gap-1">
+					<label htmlFor={`payment-method-${assignmentId}`} className="text-sm font-medium text-navy">Method</label>
+					<select id={`payment-method-${assignmentId}`} {...register("method")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
+						<option value="CASH">Cash</option>
+						<option value="CHECK">Check</option>
+						<option value="VENMO">Venmo</option>
+						<option value="ZELLE">Zelle</option>
+						<option value="OTHER">Other</option>
+					</select>
+				</div>
+				<div className="flex flex-col gap-1">
+					<label htmlFor={`payment-date-${assignmentId}`} className="text-sm font-medium text-navy">Date paid</label>
+					<input id={`payment-date-${assignmentId}`} type="date" {...register("paidAt")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+				</div>
+				<div className="flex flex-col gap-1">
+					<label htmlFor={`payment-note-${assignmentId}`} className="text-sm font-medium text-navy">Note</label>
+					<input id={`payment-note-${assignmentId}`} type="text" {...register("note")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+				</div>
+			</div>
+			<div className="flex justify-end gap-2">
+				<Button type="button" variant="secondary" onClick={onDone}>Cancel</Button>
+				<Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Recording…" : "Record payment"}</Button>
+			</div>
+		</form>
+	);
+}
+
+function ApplyAdjustmentForm({ organizationId, householdId, assignmentId, onDone }: { organizationId: string; householdId: string; assignmentId: string; onDone: () => void }) {
+	const applyAdjustment = useApplyAdjustment(organizationId, householdId, assignmentId);
+	const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<ApplyAdjustmentFormValues>({
+		resolver: zodResolver(applyAdjustmentSchema) as Resolver<ApplyAdjustmentFormValues>,
+		defaultValues: { adjustmentType: "DISCOUNT", amountMinor: 0, reason: "" },
+	});
+
+	const onSubmit = handleSubmit(async (values) => {
+		await applyAdjustment.mutateAsync(values);
+		reset();
+		onDone();
+	});
+
+	return (
+		<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-3" noValidate aria-label="Apply a discount or credit">
+			<div className="flex flex-wrap gap-3">
+				<div className="flex flex-col gap-1">
+					<label htmlFor={`adj-type-${assignmentId}`} className="text-sm font-medium text-navy">Type</label>
+					<select id={`adj-type-${assignmentId}`} {...register("adjustmentType")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
+						<option value="DISCOUNT">Discount</option>
+						<option value="CREDIT">Credit</option>
+						<option value="CORRECTION">Correction</option>
+					</select>
+				</div>
+				<div className="flex flex-col gap-1">
+					<label htmlFor={`adj-amount-${assignmentId}`} className="text-sm font-medium text-navy">Amount (cents) <span aria-hidden>*</span></label>
+					<input id={`adj-amount-${assignmentId}`} type="number" min={1} step={1} {...register("amountMinor")} aria-invalid={!!errors.amountMinor} className="min-h-11 w-32 rounded-md border border-slate-gray/30 px-3 py-2" />
+					{errors.amountMinor && <p role="alert" className="text-sm text-error-red">{errors.amountMinor.message}</p>}
+				</div>
+				<div className="flex flex-col gap-1">
+					<label htmlFor={`adj-reason-${assignmentId}`} className="text-sm font-medium text-navy">Reason</label>
+					<input id={`adj-reason-${assignmentId}`} type="text" {...register("reason")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+				</div>
+			</div>
+			<div className="flex justify-end gap-2">
+				<Button type="button" variant="secondary" onClick={onDone}>Cancel</Button>
+				<Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Applying…" : "Apply"}</Button>
+			</div>
+		</form>
+	);
+}
+
+function FeeDetailPanel({ organizationId, householdId, fee }: { organizationId: string; householdId: string; fee: FeeAssignment }) {
+	const { data: payments, isLoading: paymentsLoading } = useFeePayments(organizationId, fee.id);
+	const { data: adjustments, isLoading: adjustmentsLoading } = useFeeAdjustments(organizationId, fee.id);
+	const voidPayment = useVoidPayment(organizationId, householdId, fee.id);
+	const voidAdjustment = useVoidAdjustment(organizationId, householdId, fee.id);
+	const [activeForm, setActiveForm] = useState<"payment" | "adjustment" | null>(null);
+	const locked = fee.status === "WAIVED" || fee.status === "CANCELLED";
+
+	function handleVoidPayment(paymentId: string) {
+		const reason = window.prompt("Reason for voiding this payment?");
+		if (reason && reason.trim()) {
+			voidPayment.mutate({ paymentId, reason: reason.trim() });
+		}
+	}
+
+	function handleVoidAdjustment(adjustmentId: string) {
+		const reason = window.prompt("Reason for voiding this adjustment?");
+		if (reason && reason.trim()) {
+			voidAdjustment.mutate({ adjustmentId, reason: reason.trim() });
+		}
+	}
+
+	return (
+		<div className="mt-2 flex flex-col gap-3 border-l border-slate-gray/20 pl-4">
+			<dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
+				<div>
+					<dt className="text-slate-gray">Original</dt>
+					<dd className="font-medium text-navy">{formatAmount(fee.originalAmountMinor, fee.currency)}</dd>
+				</div>
+				<div>
+					<dt className="text-slate-gray">Paid</dt>
+					<dd className="font-medium text-navy">{formatAmount(fee.paidMinor, fee.currency)}</dd>
+				</div>
+				<div>
+					<dt className="text-slate-gray">Adjusted</dt>
+					<dd className="font-medium text-navy">{formatAmount(fee.adjustedMinor, fee.currency)}</dd>
+				</div>
+				<div>
+					<dt className="text-slate-gray">Balance</dt>
+					<dd className="font-semibold text-navy">{formatAmount(fee.balanceMinor, fee.currency)}</dd>
+				</div>
+			</dl>
+
+			{!locked && (
+				<div className="flex gap-2">
+					<Button type="button" variant="secondary" onClick={() => setActiveForm((f) => (f === "payment" ? null : "payment"))}>
+						{activeForm === "payment" ? "Cancel" : "Record payment"}
+					</Button>
+					<Button type="button" variant="secondary" onClick={() => setActiveForm((f) => (f === "adjustment" ? null : "adjustment"))}>
+						{activeForm === "adjustment" ? "Cancel" : "Apply discount/credit"}
+					</Button>
+				</div>
+			)}
+			{activeForm === "payment" && (
+				<RecordPaymentForm organizationId={organizationId} householdId={householdId} assignmentId={fee.id} onDone={() => setActiveForm(null)} />
+			)}
+			{activeForm === "adjustment" && (
+				<ApplyAdjustmentForm organizationId={organizationId} householdId={householdId} assignmentId={fee.id} onDone={() => setActiveForm(null)} />
+			)}
+
+			{paymentsLoading && <p className="text-sm text-slate-gray">Loading payment history…</p>}
+			{payments && payments.length > 0 && (
+				<div>
+					<h3 className="text-sm font-semibold text-navy">Payments</h3>
+					<ul className="flex flex-col gap-1">
+						{payments.map((payment) => (
+							<li key={payment.id} className="flex items-center justify-between text-sm">
+								<span className={payment.voidedAt ? "text-slate-gray line-through" : "text-slate-gray"}>
+									{formatAmount(payment.amountMinor, payment.currency)} · {payment.method} · {payment.paidAt}
+									{payment.voidedAt ? ` · voided (${payment.voidReason})` : ""}
+								</span>
+								{!payment.voidedAt && (
+									<button type="button" className="text-azure-blue hover:underline" onClick={() => handleVoidPayment(payment.id)}>
+										Void
+									</button>
+								)}
+							</li>
+						))}
+					</ul>
+				</div>
+			)}
+
+			{adjustmentsLoading && <p className="text-sm text-slate-gray">Loading adjustment history…</p>}
+			{adjustments && adjustments.length > 0 && (
+				<div>
+					<h3 className="text-sm font-semibold text-navy">Discounts &amp; Credits</h3>
+					<ul className="flex flex-col gap-1">
+						{adjustments.map((adjustment) => (
+							<li key={adjustment.id} className="flex items-center justify-between text-sm">
+								<span className={adjustment.voidedAt ? "text-slate-gray line-through" : "text-slate-gray"}>
+									{formatAmount(adjustment.amountMinor, adjustment.currency)} · {adjustment.adjustmentType}
+									{adjustment.reason ? ` · ${adjustment.reason}` : ""}
+									{adjustment.voidedAt ? ` · voided (${adjustment.voidReason})` : ""}
+								</span>
+								{!adjustment.voidedAt && (
+									<button type="button" className="text-azure-blue hover:underline" onClick={() => handleVoidAdjustment(adjustment.id)}>
+										Void
+									</button>
+								)}
+							</li>
+						))}
+					</ul>
+				</div>
+			)}
+		</div>
+	);
+}
+
 // --- Fee Assignments Panel ---
 
 function AddFeeAssignmentForm({
@@ -396,6 +598,10 @@ function FeeAssignmentsPanel({ organizationId, householdId }: { organizationId: 
 	const { data: participants } = useParticipants(organizationId, householdId);
 	const updateStatus = useUpdateFeeAssignmentStatus(organizationId, householdId);
 	const [showForm, setShowForm] = useState(false);
+	const [expandedFeeId, setExpandedFeeId] = useState<string | null>(null);
+
+	const totalBalanceMinor = data?.items.reduce((sum, fee) => sum + fee.balanceMinor, 0) ?? 0;
+	const currency = data?.items[0]?.currency ?? "USD";
 
 	return (
 		<section aria-label="Fee assignments" className="flex flex-col gap-3">
@@ -405,6 +611,11 @@ function FeeAssignmentsPanel({ organizationId, householdId }: { organizationId: 
 					{showForm ? "Cancel" : "Add fee"}
 				</Button>
 			</div>
+			{data && data.items.length > 0 && (
+				<p className="text-sm text-slate-gray">
+					Household balance: <span className="font-semibold text-navy">{formatAmount(totalBalanceMinor, currency)}</span>
+				</p>
+			)}
 			{showForm && (
 				<AddFeeAssignmentForm organizationId={organizationId} householdId={householdId} onDone={() => setShowForm(false)} />
 			)}
@@ -418,38 +629,48 @@ function FeeAssignmentsPanel({ organizationId, householdId }: { organizationId: 
 					{data.items.map((fee) => {
 						const participant = participants?.find((p) => p.id === fee.participantId);
 						return (
-							<li key={fee.id} className="flex items-center justify-between rounded-lg border border-slate-gray/20 bg-pure-white p-3">
-								<div>
-									<p className="font-medium text-navy">{fee.description}</p>
-									<p className="text-sm text-slate-gray">
-										{formatAmount(fee.originalAmountMinor, fee.currency)}
-										{fee.dueDate ? ` · Due ${fee.dueDate}` : ""}
-										{participant ? ` · ${participant.firstName} ${participant.lastName}` : ""}
-									</p>
-								</div>
-								<div className="flex items-center gap-2">
-									<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[fee.status]}`}>
-										{STATUS_LABELS[fee.status]}
-									</span>
-									{fee.status !== "PAID" && fee.status !== "WAIVED" && fee.status !== "CANCELLED" && (
-										<select
-											value=""
-											onChange={(e) => {
-												if (e.target.value) {
-													updateStatus.mutate({ assignmentId: fee.id, status: e.target.value as FeeAssignmentStatus });
-												}
-											}}
-											className="rounded-md border border-slate-gray/30 px-2 py-1 text-sm"
-											aria-label="Update fee status"
+							<li key={fee.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+								<div className="flex items-center justify-between">
+									<div>
+										<p className="font-medium text-navy">{fee.description}</p>
+										<p className="text-sm text-slate-gray">
+											{formatAmount(fee.balanceMinor, fee.currency)} due of {formatAmount(fee.originalAmountMinor, fee.currency)}
+											{fee.dueDate ? ` · Due ${fee.dueDate}` : ""}
+											{participant ? ` · ${participant.firstName} ${participant.lastName}` : ""}
+										</p>
+									</div>
+									<div className="flex items-center gap-2">
+										<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[fee.status]}`}>
+											{STATUS_LABELS[fee.status]}
+										</span>
+										{fee.status !== "PAID" && fee.status !== "WAIVED" && fee.status !== "CANCELLED" && (
+											<select
+												value=""
+												onChange={(e) => {
+													if (e.target.value) {
+														updateStatus.mutate({ assignmentId: fee.id, status: e.target.value as FeeAssignmentStatus });
+													}
+												}}
+												className="rounded-md border border-slate-gray/30 px-2 py-1 text-sm"
+												aria-label="Update fee status"
+											>
+												<option value="">Update status…</option>
+												<option value="WAIVED">Waive</option>
+												<option value="CANCELLED">Cancel</option>
+											</select>
+										)}
+										<button
+											type="button"
+											className="text-sm text-azure-blue hover:underline"
+											onClick={() => setExpandedFeeId((id) => (id === fee.id ? null : fee.id))}
 										>
-											<option value="">Update status…</option>
-											<option value="PARTIALLY_PAID">Partially paid</option>
-											<option value="PAID">Mark paid</option>
-											<option value="WAIVED">Waive</option>
-											<option value="CANCELLED">Cancel</option>
-										</select>
-									)}
+											{expandedFeeId === fee.id ? "Hide details" : "Details"}
+										</button>
+									</div>
 								</div>
+								{expandedFeeId === fee.id && (
+									<FeeDetailPanel organizationId={organizationId} householdId={householdId} fee={fee} />
+								)}
 							</li>
 						);
 					})}

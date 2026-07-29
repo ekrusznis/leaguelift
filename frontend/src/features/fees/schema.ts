@@ -19,3 +19,26 @@ export const createFeeAssignmentSchema = z.object({
 });
 
 export type CreateFeeAssignmentFormValues = z.infer<typeof createFeeAssignmentSchema>;
+
+export const recordPaymentSchema = z.object({
+	amountMinor: z.coerce.number().int("Amount must be a whole number of cents.").min(1, "Amount must be greater than 0."),
+	method: z.enum(["CASH", "CHECK", "VENMO", "ZELLE", "OTHER"]),
+	paidAt: z.string().min(1, "Date is required."),
+	note: z.string().trim().max(500).optional().or(z.literal("")),
+});
+
+export type RecordPaymentFormValues = z.infer<typeof recordPaymentSchema>;
+
+export const applyAdjustmentSchema = z.object({
+	adjustmentType: z.enum(["DISCOUNT", "CREDIT", "CORRECTION"]),
+	amountMinor: z.coerce.number().int("Amount must be a whole number of cents.").min(1, "Amount must be greater than 0."),
+	reason: z.string().trim().max(500).optional().or(z.literal("")),
+});
+
+export type ApplyAdjustmentFormValues = z.infer<typeof applyAdjustmentSchema>;
+
+export const voidSchema = z.object({
+	reason: z.string().trim().min(1, "A reason is required.").max(500),
+});
+
+export type VoidFormValues = z.infer<typeof voidSchema>;

@@ -1,0 +1,82 @@
+package com.leaguelift.payout.application
+
+import com.leaguelift.audit.application.AuditService
+import com.leaguelift.common.error.NotFoundException
+import com.leaguelift.common.error.ServiceUnavailableException
+import com.leaguelift.common.web.CurrentUser
+import com.leaguelift.membership.application.MembershipService
+import com.leaguelift.payout.domain.OrganizationPayoutAccount
+import com.leaguelift.payout.infra.StripeConnectClient
+import com.leaguelift.payout.persistence.OrganizationPayoutAccountRepository
+import com.stripe.exception.StripeException
+import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
+
+private val log = LoggerFactory.getLogger(PayoutAccountService::class.java)
+
+/**
+ * Stripe Connect Express onboarding only (ADR-005) — creating the connected account,
+ * generating a hosted onboarding link, and syncing status back from Stripe on return.
+ * No charge/transfer/payout-execution logic exists here; that's Phase 5's job once a
+ * live-payments ADR gate is cleared (DESIGN-DOC.md section 16).
+ */
+@Service
+class PayoutAccountService(
+	private val payoutAccountRepository: OrganizationPayoutAccountRepository,
+	private val stripeConnectClient: StripeConnectClient,
+	private val membershipService: MembershipService,
+	private val auditService: AuditService,
+) {
+
+	/** Null means onboarding has never been started — a legitimate "not started" state, not an error. */
+	fun getStatus(organizationId: UUID, currentUser: CurrentUser): OrganizationPayoutAccount? {
+		membershipService.requireActiveMembership(organizationId, currentUser)
+		return payoutAccountRepository.findByOrganizationId(organizationId)
+	}
+
+	@Transactional
+	fun startOnboarding(organizationId: UUID, refreshUrl: String, returnUrl: String, currentUser: CurrentUser): String {
+		membershipService.requireOwnerRole(organizationId, currentUser)
+		return withStripeErrorTranslation {
+			val existing = payoutAccountRepository.findByOrganizationId(organizationId)
+			val account = existing ?: run {
+				val stripeAccountId = stripeConnectClient.createExpressAccount()
+				payoutAccountRepository.insert(organizationId, stripeAccountId)
+			}
+			val onboardingUrl = stripeConnectClient.createOnboardingLink(account.stripeAccountId, refreshUrl, returnUrl)
+			auditService.record(currentUser.userId, organizationId, "payout.onboarding_started", "organization_payout_account", account.id)
+			onboardingUrl
+		}
+	}
+
+	@Transactional
+	fun refreshStatus(organizationId: UUID, currentUser: CurrentUser): OrganizationPayoutAccount {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		val account = payoutAccountRepository.findByOrganizationId(organizationId)
+			?: throw NotFoundException("PAYOUT_ACCOUNT_NOT_FOUND", "Payout onboarding hasn't been started for this organization.")
+		return withStripeErrorTranslation {
+			val status = stripeConnectClient.retrieveAccountStatus(account.stripeAccountId)
+			payoutAccountRepository.updateStatus(organizationId, status.detailsSubmitted, status.chargesEnabled, status.payoutsEnabled)
+			payoutAccountRepository.findByOrganizationId(organizationId)!!
+		}
+	}
+
+	/**
+	 * Translates a raw Stripe SDK failure (most commonly: no test-mode key configured
+	 * yet, since STRIPE_SECRET_KEY is blank by default locally) into a clean, stable
+	 * client error instead of the generic 500 an unhandled StripeException would
+	 * otherwise produce. Full detail still reaches server logs via the exception cause.
+	 */
+	private fun <T> withStripeErrorTranslation(block: () -> T): T =
+		try {
+			block()
+		} catch (e: StripeException) {
+			log.warn("Stripe API call failed: {}", e.message, e)
+			throw ServiceUnavailableException(
+				"PAYOUT_PROVIDER_UNAVAILABLE",
+				"Payments provider is not available right now. If this is local/staging, confirm STRIPE_SECRET_KEY is set.",
+			)
+		}
+}

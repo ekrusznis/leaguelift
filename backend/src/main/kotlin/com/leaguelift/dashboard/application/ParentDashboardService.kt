@@ -14,6 +14,9 @@ import com.leaguelift.dashboard.web.RequiredActionItem
 import com.leaguelift.dashboard.web.ScheduleItem
 import com.leaguelift.dashboard.web.UpdateItem
 import com.leaguelift.fee.domain.FeeAssignmentStatus
+import com.leaguelift.fee.domain.computeFeeBalance
+import com.leaguelift.fee.persistence.FeeAdjustmentRepository
+import com.leaguelift.fee.persistence.FeePaymentRepository
 import com.leaguelift.fee.persistence.FeeRepository
 import com.leaguelift.fundraising.domain.CampaignStatus
 import com.leaguelift.fundraising.persistence.CampaignRepository
@@ -49,6 +52,8 @@ class ParentDashboardService(
 	private val participantRepository: ParticipantRepository,
 	private val teamRepository: TeamRepository,
 	private val feeRepository: FeeRepository,
+	private val feePaymentRepository: FeePaymentRepository,
+	private val feeAdjustmentRepository: FeeAdjustmentRepository,
 	private val campaignRepository: CampaignRepository,
 ) {
 
@@ -77,13 +82,20 @@ class ParentDashboardService(
 	fun getOutstandingBalance(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): OutstandingBalance {
 		requireHousehold(organizationId, householdId, currentUser)
 		val feeAssignments = feeRepository.findByHousehold(householdId, organizationId, offset = 0, limit = FEE_ASSIGNMENT_LIMIT)
-		val outstanding = feeAssignments.filter { it.status in OUTSTANDING_STATUSES }
-		val currency = outstanding.firstOrNull()?.currency ?: feeAssignments.firstOrNull()?.currency ?: "USD"
+		val currency = feeAssignments.firstOrNull()?.currency ?: "USD"
+		val lineItems = feeAssignments
+			.filter { it.status in OUTSTANDING_STATUSES }
+			.map { assignment ->
+				val paid = feePaymentRepository.sumActiveByAssignment(assignment.id, organizationId)
+				val adjusted = feeAdjustmentRepository.sumActiveByAssignment(assignment.id, organizationId)
+				val balance = computeFeeBalance(assignment.originalAmountMinor, paid, adjusted)
+				FeeLineItem(assignment.description, balance.balanceMinor, assignment.status.name, assignment.dueDate)
+			}
+			.filter { it.balanceMinor > 0 }
 		return OutstandingBalance(
-			totalOutstandingMinor = outstanding.sumOf { it.originalAmountMinor },
+			totalOutstandingMinor = lineItems.sumOf { it.balanceMinor },
 			currency = currency,
-			isApproximate = true,
-			lineItems = outstanding.map { FeeLineItem(it.description, it.originalAmountMinor, it.status.name, it.dueDate) },
+			lineItems = lineItems,
 		)
 	}
 

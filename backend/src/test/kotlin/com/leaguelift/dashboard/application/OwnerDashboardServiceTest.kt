@@ -11,6 +11,8 @@ import com.leaguelift.membership.domain.OrganizationMembership
 import com.leaguelift.organization.domain.Organization
 import com.leaguelift.organization.domain.OrganizationStatus
 import com.leaguelift.organization.domain.OrganizationType
+import com.leaguelift.fee.domain.OrganizationFeeFinancialSummary
+import com.leaguelift.fee.persistence.FeeRepository
 import com.leaguelift.organization.persistence.OrganizationRepository
 import com.leaguelift.participant.persistence.ParticipantRepository
 import com.leaguelift.team.domain.Team
@@ -35,10 +37,11 @@ class OwnerDashboardServiceTest {
 	private val participantRepository = mockk<ParticipantRepository>()
 	private val tournamentRepository = mockk<TournamentRepository>()
 	private val auditEventRepository = mockk<AuditEventRepository>()
+	private val feeRepository = mockk<FeeRepository>()
 
 	private val service = OwnerDashboardService(
 		membershipService, organizationRepository, teamRepository,
-		householdRepository, participantRepository, tournamentRepository, auditEventRepository,
+		householdRepository, participantRepository, tournamentRepository, auditEventRepository, feeRepository,
 	)
 
 	private val orgId = UUID.randomUUID()
@@ -72,12 +75,19 @@ class OwnerDashboardServiceTest {
 	}
 
 	@Test
-	fun `getFinancialOverview requires membership and is tagged demo data`() {
+	fun `getFinancialOverview returns real fee figures but keeps fundraising demo-tagged`() {
 		every { membershipService.requireActiveMembership(orgId, currentUser) } returns membership()
+		every { feeRepository.getFinancialSummary(orgId) } returns OrganizationFeeFinancialSummary(
+			feesAssignedMinor = 15000L, feesCollectedMinor = 5000L, outstandingMinor = 10000L,
+		)
 
 		val result = service.getFinancialOverview(orgId, currentUser)
 
-		assertEquals(true, result.isDemoData)
+		assertEquals(false, result.isFeesDemoData)
+		assertEquals(true, result.isFundraisingDemoData)
+		assertEquals(15000L, result.feesAssignedMinor)
+		assertEquals(5000L, result.feesCollectedMinor)
+		assertEquals(10000L, result.outstandingMinor)
 		verify(exactly = 1) { membershipService.requireActiveMembership(orgId, currentUser) }
 	}
 

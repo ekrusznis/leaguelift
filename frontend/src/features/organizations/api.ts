@@ -4,7 +4,8 @@ import type { CreateInvitationFormValues, CreateOrganizationFormValues, UpdateOr
 import type { InvitationPage, OnboardingProgress, Organization, OrganizationPage } from "./types";
 
 const organizationsQueryKey = (page: number, size: number) => ["organizations", { page, size }] as const;
-const organizationQueryKey = (id: string) => ["organizations", id] as const;
+/** Exported so other feature modules (e.g. media) can invalidate the organization detail view after a related change. */
+export const organizationQueryKey = (id: string) => ["organizations", id] as const;
 const onboardingQueryKey = (id: string) => ["organizations", id, "onboarding"] as const;
 const invitationsQueryKey = (organizationId: string) => ["organizations", organizationId, "invitations"] as const;
 
