@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm } from "react-hook-form";
+import type { z } from "zod";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { useArchiveFeeTemplate, useCreateFeeTemplate, useFeeTemplates } from "./api";
-import { createFeeTemplateSchema, type CreateFeeTemplateFormValues } from "./schema";
+import { createFeeTemplateSchema } from "./schema";
 
 function formatAmount(amountMinor: number, currency: string) {
 	return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amountMinor / 100);
@@ -23,11 +24,12 @@ export function FeeTemplateList({ organizationId }: { organizationId: string }) 
 		handleSubmit,
 		reset,
 		formState: { errors, isSubmitting },
-	} = useForm<CreateFeeTemplateFormValues>({
-		// z.coerce.number() (amountMinor) makes zodResolver's inferred input type
-		// diverge from CreateFeeTemplateFormValues's output type — a known
-		// zod/react-hook-form generic mismatch (see CampaignList.tsx).
-		resolver: zodResolver(createFeeTemplateSchema) as Resolver<CreateFeeTemplateFormValues>,
+	} = useForm<
+		z.input<typeof createFeeTemplateSchema>,
+		unknown,
+		z.output<typeof createFeeTemplateSchema>
+	>({
+		resolver: zodResolver(createFeeTemplateSchema),
 		defaultValues: { name: "", description: "", amountMinor: 0, currency: "USD" },
 	});
 

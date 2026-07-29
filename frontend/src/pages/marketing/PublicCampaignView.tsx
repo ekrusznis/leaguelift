@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm } from "react-hook-form";
+import type { z } from "zod";
 import { useParams, useSearchParams } from "react-router-dom";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { useContributionStatus, useCreateContributionCheckout, usePublicCampaign } from "../../features/fundraising/api";
-import { createContributionSchema, type CreateContributionFormValues } from "../../features/fundraising/schema";
+import { createContributionSchema } from "../../features/fundraising/schema";
 import type { CampaignType } from "../../features/fundraising/types";
 import { PageContainer } from "../../marketing/components/PageContainer";
 import { Seo } from "../../marketing/components/Seo";
@@ -85,11 +86,12 @@ function ContributionForm({ slug, campaignName }: { slug: string; campaignName: 
 		handleSubmit,
 		watch,
 		formState: { errors, isSubmitting },
-	} = useForm<CreateContributionFormValues>({
-		// z.coerce.number() (amountMinor) makes zodResolver's inferred input type
-		// diverge from CreateContributionFormValues's output type — the same known
-		// zod/react-hook-form generic mismatch as CampaignList's goalAmountMinor field.
-		resolver: zodResolver(createContributionSchema) as Resolver<CreateContributionFormValues>,
+	} = useForm<
+		z.input<typeof createContributionSchema>,
+		unknown,
+		z.output<typeof createContributionSchema>
+	>({
+		resolver: zodResolver(createContributionSchema),
 		defaultValues: { amountMinor: 2500, supporterName: "", isAnonymous: false, supporterEmail: "" },
 	});
 	const isAnonymous = watch("isAnonymous");

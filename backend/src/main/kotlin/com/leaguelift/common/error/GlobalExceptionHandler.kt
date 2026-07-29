@@ -4,6 +4,7 @@ import com.leaguelift.common.web.RequestIdProvider
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -39,6 +40,23 @@ class GlobalExceptionHandler(
 			message = "One or more fields are invalid.",
 			requestId = requestIdProvider.currentRequestId(),
 			fieldErrors = fieldErrors,
+		)
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body)
+	}
+
+	@ExceptionHandler(HttpMessageNotReadableException::class)
+	fun handleMalformedBody(ex: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> {
+		// A request body Jackson cannot bind (missing required field, wrong type,
+		// malformed JSON) is a client-input problem, not a server error. As with
+		// handleUnexpected, the real cause is logged server-side keyed by requestId only —
+		// never surfaced in the response body, which could leak internal exception/class
+		// details.
+		val requestId = requestIdProvider.currentRequestId()
+		log.warn("Malformed request body for requestId={}", requestId, ex)
+		val body = ErrorResponse(
+			code = "MALFORMED_REQUEST_BODY",
+			message = "The request body could not be read. Check for missing or invalid fields.",
+			requestId = requestId,
 		)
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body)
 	}

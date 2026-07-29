@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm } from "react-hook-form";
+import type { z } from "zod";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/states/EmptyState";
 import { ErrorState } from "../components/states/ErrorState";
@@ -20,7 +21,6 @@ import {
 import {
 	addAdultSchema,
 	createParticipantSchema,
-	type AddAdultFormValues,
 	type CreateParticipantFormValues,
 } from "../features/households/schema";
 import type { Participant } from "../features/households/types";
@@ -39,9 +39,6 @@ import {
 	applyAdjustmentSchema,
 	createFeeAssignmentSchema,
 	recordPaymentSchema,
-	type ApplyAdjustmentFormValues,
-	type CreateFeeAssignmentFormValues,
-	type RecordPaymentFormValues,
 } from "../features/fees/schema";
 import { STATUS_COLORS, STATUS_LABELS } from "../features/fees/statusLabels";
 import type { FeeAssignment, FeeAssignmentStatus } from "../features/fees/types";
@@ -56,11 +53,12 @@ function formatAmount(amountMinor: number, currency: string) {
 
 function AddAdultForm({ organizationId, householdId, onDone }: { organizationId: string; householdId: string; onDone: () => void }) {
 	const addAdult = useAddAdult(organizationId, householdId);
-	const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<AddAdultFormValues>({
-		// isPrimary's schema default makes zodResolver's inferred input type diverge
-		// from AddAdultFormValues's output type — a known zod/react-hook-form
-		// generic mismatch (see CampaignList.tsx).
-		resolver: zodResolver(addAdultSchema) as Resolver<AddAdultFormValues>,
+	const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<
+		z.input<typeof addAdultSchema>,
+		unknown,
+		z.output<typeof addAdultSchema>
+	>({
+		resolver: zodResolver(addAdultSchema),
 		defaultValues: { firstName: "", lastName: "", email: "", phone: "", relationship: "", isPrimary: false },
 	});
 
@@ -308,8 +306,12 @@ function ParticipantsPanel({ organizationId, householdId }: { organizationId: st
 
 function RecordPaymentForm({ organizationId, householdId, assignmentId, onDone }: { organizationId: string; householdId: string; assignmentId: string; onDone: () => void }) {
 	const recordPayment = useRecordPayment(organizationId, householdId, assignmentId);
-	const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<RecordPaymentFormValues>({
-		resolver: zodResolver(recordPaymentSchema) as Resolver<RecordPaymentFormValues>,
+	const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<
+		z.input<typeof recordPaymentSchema>,
+		unknown,
+		z.output<typeof recordPaymentSchema>
+	>({
+		resolver: zodResolver(recordPaymentSchema),
 		defaultValues: { amountMinor: 0, method: "CASH", paidAt: new Date().toISOString().slice(0, 10), note: "" },
 	});
 
@@ -356,8 +358,12 @@ function RecordPaymentForm({ organizationId, householdId, assignmentId, onDone }
 
 function ApplyAdjustmentForm({ organizationId, householdId, assignmentId, onDone }: { organizationId: string; householdId: string; assignmentId: string; onDone: () => void }) {
 	const applyAdjustment = useApplyAdjustment(organizationId, householdId, assignmentId);
-	const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<ApplyAdjustmentFormValues>({
-		resolver: zodResolver(applyAdjustmentSchema) as Resolver<ApplyAdjustmentFormValues>,
+	const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<
+		z.input<typeof applyAdjustmentSchema>,
+		unknown,
+		z.output<typeof applyAdjustmentSchema>
+	>({
+		resolver: zodResolver(applyAdjustmentSchema),
 		defaultValues: { adjustmentType: "DISCOUNT", amountMinor: 0, reason: "" },
 	});
 
@@ -519,11 +525,12 @@ function AddFeeAssignmentForm({
 	const { data: participants } = useParticipants(organizationId, householdId);
 	const createAssignment = useCreateFeeAssignment(organizationId, householdId);
 
-	const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<CreateFeeAssignmentFormValues>({
-		// z.coerce.number() (originalAmountMinor) makes zodResolver's inferred input
-		// type diverge from CreateFeeAssignmentFormValues's output type — the same
-		// known zod/react-hook-form generic mismatch as FeeTemplateList's amountMinor field.
-		resolver: zodResolver(createFeeAssignmentSchema) as Resolver<CreateFeeAssignmentFormValues>,
+	const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<
+		z.input<typeof createFeeAssignmentSchema>,
+		unknown,
+		z.output<typeof createFeeAssignmentSchema>
+	>({
+		resolver: zodResolver(createFeeAssignmentSchema),
 		defaultValues: { description: "", originalAmountMinor: 0, currency: "USD", dueDate: "", feeTemplateId: "", participantId: "" },
 	});
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm } from "react-hook-form";
+import type { z } from "zod";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
@@ -9,7 +10,7 @@ import { formatMoneyMinorUnits } from "../../lib/money";
 import { useTeams } from "../teams/api";
 import { useCampaigns, useCreateCampaign, usePublishCampaign } from "./api";
 import { ContributionList } from "./ContributionList";
-import { CAMPAIGN_TYPES, createCampaignSchema, type CreateCampaignFormValues } from "./schema";
+import { CAMPAIGN_TYPES, createCampaignSchema } from "./schema";
 import type { CampaignType } from "./types";
 
 const CAMPAIGN_TYPE_LABELS: Record<CampaignType, string> = {
@@ -39,11 +40,12 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 		handleSubmit,
 		reset,
 		formState: { errors, isSubmitting },
-	} = useForm<CreateCampaignFormValues>({
-		// z.coerce.number() (goalAmountMinor) makes zodResolver's inferred input type
-		// diverge from CreateCampaignFormValues's output type — the same known
-		// zod/react-hook-form generic mismatch as FeeTemplateList's amountMinor field.
-		resolver: zodResolver(createCampaignSchema) as Resolver<CreateCampaignFormValues>,
+	} = useForm<
+		z.input<typeof createCampaignSchema>,
+		unknown,
+		z.output<typeof createCampaignSchema>
+	>({
+		resolver: zodResolver(createCampaignSchema),
 		defaultValues: {
 			teamId: "",
 			name: "",

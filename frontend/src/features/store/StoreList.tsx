@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
@@ -22,7 +22,7 @@ export function StoreList({ organizationId }: { organizationId: string }) {
 		reset,
 		formState: { errors, isSubmitting },
 	} = useForm<CreateStoreFormValues>({
-		resolver: zodResolver(createStoreSchema) as Resolver<CreateStoreFormValues>,
+		resolver: zodResolver(createStoreSchema),
 		defaultValues: { teamId: "", name: "", slug: "" },
 	});
 

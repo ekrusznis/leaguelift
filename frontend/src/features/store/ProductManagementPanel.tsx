@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm } from "react-hook-form";
+import type { z } from "zod";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
@@ -20,7 +21,7 @@ import {
 	useUpdateProductStatus,
 	useVariants,
 } from "./api";
-import { createProductSchema, createProductVariantSchema, type CreateProductFormValues, type CreateProductVariantFormValues } from "./schema";
+import { createProductSchema, createProductVariantSchema } from "./schema";
 import { OrderList } from "./OrderList";
 
 export function ProductManagementPanel({ organizationId, storeId }: { organizationId: string; storeId: string }) {
@@ -36,8 +37,12 @@ export function ProductManagementPanel({ organizationId, storeId }: { organizati
 		handleSubmit,
 		reset,
 		formState: { errors, isSubmitting },
-	} = useForm<CreateProductFormValues>({
-		resolver: zodResolver(createProductSchema) as Resolver<CreateProductFormValues>,
+	} = useForm<
+		z.input<typeof createProductSchema>,
+		unknown,
+		z.output<typeof createProductSchema>
+	>({
+		resolver: zodResolver(createProductSchema),
 		defaultValues: { name: "", description: "", printifyBlueprintId: 0, printifyPrintPosition: "front" },
 	});
 
@@ -251,8 +256,12 @@ function ProductVariantManagement({
 		handleSubmit,
 		reset,
 		formState: { errors, isSubmitting },
-	} = useForm<CreateProductVariantFormValues>({
-		resolver: zodResolver(createProductVariantSchema) as Resolver<CreateProductVariantFormValues>,
+	} = useForm<
+		z.input<typeof createProductVariantSchema>,
+		unknown,
+		z.output<typeof createProductVariantSchema>
+	>({
+		resolver: zodResolver(createProductVariantSchema),
 		defaultValues: { printifyPrintProviderId: 0, printifyVariantId: 0, label: "", priceMinor: 0 },
 	});
 

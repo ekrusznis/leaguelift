@@ -35,7 +35,19 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-jdbc")
 
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
+	// Jackson 2.x Kotlin module — used only by the Jackson 2 `ObjectMapper` bean
+	// (JacksonConfig.objectMapper()), which backs JSONB (de)serialization in repositories
+	// like OrganizationRepository. Spring Boot 4.1's HTTP message conversion runs on
+	// Jackson 3.x (`tools.jackson`) instead — see the second dependency below.
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+	// Jackson 3.x Kotlin module (relocated coordinates: tools.jackson.module, not
+	// com.fasterxml.jackson.module) — required so Spring Boot 4.1's auto-configured
+	// tools.jackson.databind.json.JsonMapper (the one actually used by
+	// AbstractJacksonHttpMessageConverter for request/response bodies) understands Kotlin
+	// data class constructors and default parameter values. Without this, Jackson 3's
+	// bean deserializer treats every constructor parameter as required, even ones with a
+	// Kotlin default, and omitting them throws instead of falling back to the default.
+	implementation("tools.jackson.module:jackson-module-kotlin:3.0.3")
 
 	implementation("org.flywaydb:flyway-core")
 	implementation("org.flywaydb:flyway-database-postgresql")
