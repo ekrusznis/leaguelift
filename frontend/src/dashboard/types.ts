@@ -1,9 +1,58 @@
-export type DashboardRole = "OWNER" | "COACH" | "PARENT" | "ATHLETE";
+export type DashboardRole = "OWNER" | "COACH" | "PARENT" | "ATHLETE" | "TOURNAMENT_ADMIN" | "PLATFORM_ADMIN";
 
 export interface DashboardContext {
 	role: DashboardRole;
 	organizationId: string | null;
 	householdId: string | null;
+	tournamentId: string | null;
+}
+
+// --- Tournament ---
+
+export interface TournamentSummary {
+	tournamentId: string;
+	name: string;
+	sport: string | null;
+	status: string;
+	startDate: string | null;
+	endDate: string | null;
+	location: string | null;
+}
+
+export interface TournamentPageStatusItem {
+	tournamentId: string;
+	tournamentName: string;
+	status: string;
+	slug: string | null;
+}
+
+// --- Platform Admin ---
+
+export interface PlatformSummary {
+	organizationCount: number;
+	userCount: number;
+}
+
+export interface PlatformOrganizationRow {
+	organizationId: string;
+	name: string;
+	slug: string;
+	organizationType: string;
+	status: string;
+}
+
+export interface WebhookHealth {
+	processed: number;
+	failed: number;
+	ignored: number;
+}
+
+export interface OutboxHealth {
+	pending: number;
+	processing: number;
+	processed: number;
+	failed: number;
+	deadLetter: number;
 }
 
 export interface ScheduleItem {

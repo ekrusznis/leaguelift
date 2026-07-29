@@ -65,6 +65,13 @@ class WebhookEventRepository(private val jdbcClient: JdbcClient) {
 		)
 	}
 
+	/** Platform-admin-only health aggregate (DESIGN-DOC.md section 10.2/18.2 webhook backlog/failures). */
+	fun countByProcessingStatus(status: WebhookProcessingStatus): Long =
+		jdbcClient.sql("select count(*) from webhook_event where processing_status = :status")
+			.param("status", status.name)
+			.query(Long::class.java)
+			.single()
+
 	private fun mapRow(rs: java.sql.ResultSet, rowNum: Int): WebhookEvent =
 		WebhookEvent(
 			id = rs.getObject("id", UUID::class.java),

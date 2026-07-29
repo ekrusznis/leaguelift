@@ -6,6 +6,8 @@ import com.leaguelift.dashboard.application.CoachDashboardService
 import com.leaguelift.dashboard.application.DashboardContextService
 import com.leaguelift.dashboard.application.OwnerDashboardService
 import com.leaguelift.dashboard.application.ParentDashboardService
+import com.leaguelift.dashboard.application.PlatformAdminDashboardService
+import com.leaguelift.dashboard.application.TournamentDashboardService
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -28,6 +30,8 @@ class DashboardController(
 	private val coachDashboardService: CoachDashboardService,
 	private val parentDashboardService: ParentDashboardService,
 	private val athleteDashboardService: AthleteDashboardService,
+	private val tournamentDashboardService: TournamentDashboardService,
+	private val platformAdminDashboardService: PlatformAdminDashboardService,
 ) {
 
 	@GetMapping("/me/dashboard-context")
@@ -182,4 +186,34 @@ class DashboardController(
 		@PathVariable householdId: UUID,
 		@AuthenticationPrincipal currentUser: CurrentUser,
 	) = parentDashboardService.getOrganizationUpdates(organizationId, householdId, currentUser)
+
+	// --- Tournament ---
+
+	@GetMapping("/organizations/{organizationId}/dashboard/tournament/{tournamentId}/summary")
+	fun tournamentSummary(
+		@PathVariable organizationId: UUID,
+		@PathVariable tournamentId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	) = tournamentDashboardService.getSummary(organizationId, tournamentId, currentUser)
+
+	@GetMapping("/organizations/{organizationId}/dashboard/tournament/{tournamentId}/page-status")
+	fun tournamentPageStatus(
+		@PathVariable organizationId: UUID,
+		@PathVariable tournamentId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	) = tournamentDashboardService.getPageStatus(organizationId, tournamentId, currentUser)
+
+	// --- Platform Admin ---
+
+	@GetMapping("/platform/dashboard/summary")
+	fun platformSummary(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.getSummary(currentUser)
+
+	@GetMapping("/platform/dashboard/organizations")
+	fun platformOrganizations(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.listOrganizations(currentUser)
+
+	@GetMapping("/platform/dashboard/webhook-health")
+	fun platformWebhookHealth(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.getWebhookHealth(currentUser)
+
+	@GetMapping("/platform/dashboard/outbox-health")
+	fun platformOutboxHealth(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.getOutboxHealth(currentUser)
 }

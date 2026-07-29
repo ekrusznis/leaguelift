@@ -2,6 +2,8 @@ import { AthleteDashboard } from "../dashboard/roles/AthleteDashboard";
 import { CoachDashboard } from "../dashboard/roles/CoachDashboard";
 import { OwnerDashboard } from "../dashboard/roles/OwnerDashboard";
 import { ParentDashboard } from "../dashboard/roles/ParentDashboard";
+import { PlatformAdminDashboard } from "../dashboard/roles/PlatformAdminDashboard";
+import { TournamentDashboard } from "../dashboard/roles/TournamentDashboard";
 import { useDashboardContext } from "../dashboard/api";
 import { LoadingState } from "../components/states/LoadingState";
 import { ErrorState } from "../components/states/ErrorState";
@@ -42,5 +44,13 @@ export function DashboardPage() {
 			);
 		case "ATHLETE":
 			return <AthleteDashboard />;
+		case "TOURNAMENT_ADMIN":
+			return data.organizationId && data.tournamentId ? (
+				<TournamentDashboard organizationId={data.organizationId} tournamentId={data.tournamentId} />
+			) : (
+				<UnauthorizedState message="No tournament found for your account." />
+			);
+		case "PLATFORM_ADMIN":
+			return <PlatformAdminDashboard />;
 	}
 }

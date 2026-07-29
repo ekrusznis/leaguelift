@@ -8,6 +8,7 @@ data class DashboardContextResponse(
 	val role: DashboardRole,
 	val organizationId: UUID?,
 	val householdId: UUID?,
+	val tournamentId: UUID?,
 )
 
-fun DashboardContext.toResponse() = DashboardContextResponse(role, organizationId, householdId)
+fun DashboardContext.toResponse() = DashboardContextResponse(role, organizationId, householdId, tournamentId)

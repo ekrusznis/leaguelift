@@ -70,6 +70,25 @@ class MembershipRepository(private val jdbcClient: JdbcClient) {
 			.optional()
 			.orElse(null)
 
+	/**
+	 * Every ACTIVE organization_membership for this user, across all organizations —
+	 * unlike [findAnyActiveMembershipForUser] (which returns just one, for dashboard
+	 * routing), this backs `GET /me/contexts` (AuthorizationService), which must
+	 * enumerate every ORGANIZATION context a user holds.
+	 */
+	fun listActiveForUser(userId: UUID): List<OrganizationMembership> =
+		jdbcClient.sql(
+			"""
+			select id, organization_id, user_id, role, status, created_at, updated_at
+			from organization_membership
+			where user_id = :userId and status = 'ACTIVE'
+			order by created_at asc
+			""".trimIndent(),
+		)
+			.param("userId", userId)
+			.query(::mapRow)
+			.list()
+
 	fun findById(membershipId: UUID): OrganizationMembership? =
 		jdbcClient.sql(
 			"""

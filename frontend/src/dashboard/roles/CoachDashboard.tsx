@@ -10,6 +10,9 @@ import { PrimaryButton, SecondaryLightButton } from "../../marketing/components/
 import { adultAvatars, sidebarPromoBackground } from "../demoAssets";
 import { useAuth } from "../../auth/AuthContext";
 import { formatMoneyMinorUnits } from "../../lib/money";
+import { useContexts } from "../../authorization/api";
+import { capabilitiesFor } from "../../authorization/capabilities";
+import { navItemsFor } from "../registry/navRegistry";
 import {
 	useCoachAnnouncements,
 	useCoachFundraisingProgress,
@@ -19,30 +22,7 @@ import {
 	useCoachTeamSchedule,
 	useCoachTeams,
 } from "../api";
-import {
-	CalendarIcon,
-	CheckCircleIcon,
-	FileTextIcon,
-	HeartHandshakeIcon,
-	HomeIcon,
-	LayoutIcon,
-	MegaphoneIcon,
-	PlusIcon,
-	ShirtIcon,
-	UserIcon,
-	UsersIcon,
-} from "../icons";
-
-const NAV_ITEMS: DashNavItem[] = [
-	{ icon: <HomeIcon className="size-5" />, label: "Overview", active: true },
-	{ icon: <UsersIcon className="size-5" />, label: "My Teams" },
-	{ icon: <CalendarIcon className="size-5" />, label: "Schedule" },
-	{ icon: <UserIcon className="size-5" />, label: "Roster" },
-	{ icon: <LayoutIcon className="size-5" />, label: "Team Page" },
-	{ icon: <HeartHandshakeIcon className="size-5" />, label: "Fundraising" },
-	{ icon: <ShirtIcon className="size-5" />, label: "Apparel" },
-	{ icon: <MegaphoneIcon className="size-5" />, label: "Announcements" },
-];
+import { CheckCircleIcon, FileTextIcon, MegaphoneIcon, PlusIcon, UsersIcon } from "../icons";
 
 /** Coach dashboard, wired to real per-card API calls (DESIGN-DOC.md section 10.1/10.2). */
 export function CoachDashboard({ organizationId }: { organizationId: string }) {
@@ -55,13 +35,26 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 	const announcements = useCoachAnnouncements(organizationId);
 	const requiredActions = useCoachRequiredActions(organizationId);
 
+	// Nav items are a registry filtered by real capabilities for the caller's primary
+	// team (DESIGN-DOC.md section 10.2/10.3) — not a hardcoded array. A coach with
+	// multiple teams sees capabilities for the first (a team selector is deferred, see
+	// ADR-020 consequences); Fees/Members/Settings only appear at TEAM_MANAGER tier.
+	const contexts = useContexts();
+	const primaryTeamId = teams.data?.[0]?.teamId ?? null;
+	const teamCapabilities = capabilitiesFor(contexts.data, "TEAM", primaryTeamId);
+	const navItems: DashNavItem[] = navItemsFor("TEAM", teamCapabilities).map((item, index) => ({
+		icon: item.icon,
+		label: item.label,
+		active: index === 0,
+	}));
+
 	return (
 		<DashboardShell
 			contextIcon={<UsersIcon className="size-4" />}
 			contextIconTone="bg-navy-900"
 			contextName="My Teams"
 			contextRole="Coach"
-			navItems={NAV_ITEMS}
+			navItems={navItems}
 			userName={user?.displayName ?? "Account"}
 			userAvatarSrc={adultAvatars.coachJordan}
 			promo={{

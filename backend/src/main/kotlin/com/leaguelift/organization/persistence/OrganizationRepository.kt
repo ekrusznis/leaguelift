@@ -69,6 +69,32 @@ class OrganizationRepository(
 			.query(Long::class.java)
 			.single()
 
+	/**
+	 * Every organization on the platform, regardless of the caller's membership —
+	 * unlike [findForUser], which is the organization-isolation boundary every
+	 * org-scoped feature must use. Only for the Platform Admin dashboard/context,
+	 * which is gated by [com.leaguelift.authorization.application.AuthorizationService]
+	 * requiring a real `platform.organization.view` capability, never by omission of a
+	 * membership filter alone (DESIGN-DOC.md section 7.2 — platform access is a
+	 * separate permission, checked at the service layer, not inferred from which query
+	 * ran).
+	 */
+	fun findAllForPlatformAdmin(offset: Int, limit: Int): List<Organization> =
+		jdbcClient.sql(
+			"""
+			select $ORGANIZATION_COLUMNS from organization
+			order by created_at desc
+			offset :offset limit :limit
+			""".trimIndent(),
+		)
+			.param("offset", offset)
+			.param("limit", limit)
+			.query(::mapRow)
+			.list()
+
+	fun countAllForPlatformAdmin(): Long =
+		jdbcClient.sql("select count(*) from organization").query(Long::class.java).single()
+
 	fun insert(name: String, slug: String, organizationType: OrganizationType): Organization {
 		val now = Instant.now()
 		val id = UUID.randomUUID()

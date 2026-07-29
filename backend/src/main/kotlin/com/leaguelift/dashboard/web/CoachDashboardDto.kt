@@ -7,9 +7,9 @@ import java.util.UUID
 // @get:JsonProperty — otherwise Jackson's standard JavaBean introspection strips the
 // "is" prefix and silently serializes e.g. isDemoData as "demoData".
 
-/** Real: from team + participant_team. There is no per-team coach role-assignment yet
- * (DESIGN-DOC.md section 4.4 capability tiers), so this lists every team in the
- * organization rather than a coach-scoped subset. */
+/** Real: from team + participant_team, scoped to the caller's actual assigned teams
+ * via `role_assignment`/org-owner-admin inheritance (Phase 7/ADR-020,
+ * AuthorizationService.listAccessibleTeamIds) — not every team in the organization. */
 data class CoachTeamSummary(val teamId: UUID, val name: String, val sport: String, val participants: Long)
 
 /** Team/coach/manager counts are real; attendance/availability are demo (no attendance model exists). */
@@ -23,8 +23,7 @@ data class RosterSummary(
 /** Real, when a public page exists for the team. */
 data class TeamPageStatusItem(val teamId: UUID, val teamName: String, val status: String, val slug: String?)
 
-/** Real, when the organization has a campaign. Contribution totals are demo — contribution
- * recording is not built yet (DESIGN-DOC.md section 14.1, Phase 3). */
+/** Real, when the caller's team has an active campaign — raised amount is real (Phase 3/ADR-015). */
 data class FundraisingProgress(
 	val campaignId: UUID,
 	val name: String,

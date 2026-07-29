@@ -71,4 +71,25 @@ describe("DashboardPage", () => {
 
 		expect(await screen.findByText(/no organization found/i)).toBeInTheDocument();
 	});
+
+	it("routes to the Tournament Admin dashboard", async () => {
+		mockDashboardContext("TOURNAMENT_ADMIN", { organizationId: "org-1", tournamentId: "tournament-1" });
+		renderWithProviders(<DashboardPage />);
+
+		expect(await screen.findByRole("heading", { name: /tournament overview/i })).toBeInTheDocument();
+	});
+
+	it("shows an unauthorized state when Tournament Admin context is missing a tournamentId", async () => {
+		mockDashboardContext("TOURNAMENT_ADMIN", { organizationId: "org-1", tournamentId: null });
+		renderWithProviders(<DashboardPage />);
+
+		expect(await screen.findByText(/no tournament found/i)).toBeInTheDocument();
+	});
+
+	it("routes to the Platform Admin dashboard", async () => {
+		mockDashboardContext("PLATFORM_ADMIN");
+		renderWithProviders(<DashboardPage />);
+
+		expect(await screen.findByRole("heading", { name: /platform overview/i })).toBeInTheDocument();
+	});
 });

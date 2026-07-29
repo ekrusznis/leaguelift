@@ -37,6 +37,10 @@ class AppUserRepository(private val jdbcClient: JdbcClient) {
 			.optional()
 			.orElse(null)
 
+	/** Platform-admin-only aggregate (DESIGN-DOC.md section 10.2's Platform Admin "Users" nav item). */
+	fun countAll(): Long =
+		jdbcClient.sql("select count(*) from app_user").query(Long::class.java).single()
+
 	/**
 	 * Creates a new app_user with an already-hashed password. Throws
 	 * [org.springframework.dao.DuplicateKeyException] if `email` is already taken —

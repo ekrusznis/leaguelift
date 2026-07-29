@@ -1,5 +1,6 @@
 package com.leaguelift.dashboard.application
 
+import com.leaguelift.authorization.persistence.GuardianRelationshipRepository
 import com.leaguelift.common.error.ForbiddenException
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.web.CurrentUser
@@ -40,16 +41,17 @@ private const val CAMPAIGN_LIMIT = 25
  * required actions, and organization updates, which have no backing table yet. See
  * [OwnerDashboardService] for the same real/demo split pattern.
  *
- * Authorization has no real `guardian_relationship` FK to check yet (DESIGN-DOC.md
- * section 4.2/8.3), so every method allows either: the caller is an active
- * organization member (staff support case), or the caller's email matches an active
- * `household_adult` on this household — the same interim rule
- * [DashboardContextService] uses to resolve the Parent role in the first place.
+ * Authorization (Phase 7/ADR-020): the caller is authorized if they're an active
+ * organization member (staff support case), hold a real `guardian_relationship` to
+ * this household, or — the pre-Phase-7 fallback, kept for households not yet linked —
+ * their email matches an active `household_adult` on this household (the same interim
+ * rule [DashboardContextService] still falls back to when resolving the Parent role).
  */
 @Service
 class ParentDashboardService(
 	private val householdRepository: HouseholdRepository,
 	private val membershipRepository: MembershipRepository,
+	private val guardianRelationshipRepository: GuardianRelationshipRepository,
 	private val participantRepository: ParticipantRepository,
 	private val teamRepository: TeamRepository,
 	private val feeRepository: FeeRepository,
@@ -148,6 +150,8 @@ class ParentDashboardService(
 		if (currentUser.platformAdministrator) return
 		val hasOrgMembership = membershipRepository.findActiveMembership(organizationId, currentUser.userId) != null
 		if (hasOrgMembership) return
+		val hasGuardianRelationship = guardianRelationshipRepository.findActiveForHousehold(currentUser.userId, householdId) != null
+		if (hasGuardianRelationship) return
 		val isHouseholdAdult = householdRepository.listAdults(householdId, organizationId)
 			.any { it.email?.equals(currentUser.email, ignoreCase = true) == true }
 		if (isHouseholdAdult) return

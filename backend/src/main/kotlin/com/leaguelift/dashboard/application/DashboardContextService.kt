@@ -1,5 +1,8 @@
 package com.leaguelift.dashboard.application
 
+import com.leaguelift.authorization.domain.RoleAssignmentContextType
+import com.leaguelift.authorization.persistence.GuardianRelationshipRepository
+import com.leaguelift.authorization.persistence.RoleAssignmentRepository
 import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.dashboard.domain.DashboardContext
 import com.leaguelift.dashboard.domain.DashboardRole
@@ -11,36 +14,78 @@ import org.springframework.stereotype.Service
 /**
  * Resolves which dashboard a signed-in user should land on. This is the real,
  * production role check the frontend routes on (DESIGN-DOC.md section 10.1) — not a
- * dev-only switcher — but it is deliberately a simple three-step lookup against
- * today's schema, not the full capability/context model in DESIGN-DOC.md section 4.2
- * (no `role_assignment` or `guardian_relationship` tables exist yet).
+ * dev-only switcher. As of Phase 7/ADR-020 it consults both the original interim
+ * lookups (organization_membership, household_adult-by-email — kept for backward
+ * compatibility, see ADR-020 consequences) and the new capability model
+ * (role_assignment, guardian_relationship), so a user whose *only* access is a
+ * team/tournament/platform/athlete-self grant (no organization_membership row at all)
+ * still routes correctly.
  *
- * Resolution order:
- * 1. Real organization_membership -> OWNER or COACH dashboard.
- * 2. Real household_adult matched by email (an interim stand-in for the not-yet-built
- *    guardian_relationship FK — see [HouseholdRepository.findActiveAdultByEmail]) ->
- *    PARENT dashboard.
- * 3. Otherwise -> ATHLETE dashboard. There is no product-sanctioned way to resolve a
- *    real participant link for a login (DESIGN-DOC.md section 4.6: no participant
- *    login concept exists), so this is a deliberate fallback rather than an attempt to
- *    fuzzy-match participant records by name.
+ * Resolution order (first match wins):
+ * 1. Real `role_assignment(PLATFORM)` -> Platform Admin dashboard.
+ * 2. Real organization_membership -> Owner, Coach, or Tournament Admin dashboard
+ *    depending on role (routing only — the dashboard's own endpoints still enforce
+ *    real per-resource capability via AuthorizationService, this is just "which
+ *    dashboard do you land on").
+ * 3. Real `role_assignment(TEAM)` with no organization_membership -> Coach dashboard
+ *    (a team-only coach).
+ * 4. Real `role_assignment(TOURNAMENT)` with no organization_membership -> Tournament
+ *    Admin dashboard (a tournament-only admin).
+ * 5. Real `guardian_relationship`, then the interim household_adult email match ->
+ *    Parent dashboard.
+ * 6. Otherwise -> Athlete dashboard (explicit `role_assignment(PARTICIPANT)` self-link
+ *    if one exists, else the same fallback as before — DESIGN-DOC.md section 4.6: no
+ *    general participant-login concept exists, so this remains a deliberate fallback).
  */
 @Service
 class DashboardContextService(
 	private val membershipRepository: MembershipRepository,
 	private val householdRepository: HouseholdRepository,
+	private val roleAssignmentRepository: RoleAssignmentRepository,
+	private val guardianRelationshipRepository: GuardianRelationshipRepository,
 ) {
 
 	fun resolve(currentUser: CurrentUser): DashboardContext {
+		if (currentUser.platformAdministrator) {
+			return DashboardContext(DashboardRole.PLATFORM_ADMIN, organizationId = null, householdId = null)
+		}
+
 		val membership = membershipRepository.findAnyActiveMembershipForUser(currentUser.userId)
 		if (membership != null) {
 			val role = when (membership.role) {
 				MembershipRole.OWNER, MembershipRole.ADMINISTRATOR, MembershipRole.FINANCE_MANAGER, MembershipRole.VIEWER ->
 					DashboardRole.OWNER
-				MembershipRole.TEAM_ADMINISTRATOR, MembershipRole.TOURNAMENT_ADMINISTRATOR ->
-					DashboardRole.COACH
+				MembershipRole.TEAM_ADMINISTRATOR -> DashboardRole.COACH
+				MembershipRole.TOURNAMENT_ADMINISTRATOR -> DashboardRole.TOURNAMENT_ADMIN
 			}
-			return DashboardContext(role, organizationId = membership.organizationId, householdId = null)
+			val tournamentId = if (role == DashboardRole.TOURNAMENT_ADMIN) {
+				roleAssignmentRepository.findActiveForUserAndContext(currentUser.userId, RoleAssignmentContextType.TOURNAMENT)
+					.firstOrNull { it.organizationId == membership.organizationId }
+					?.resourceId
+			} else {
+				null
+			}
+			return DashboardContext(role, organizationId = membership.organizationId, householdId = null, tournamentId = tournamentId)
+		}
+
+		val teamAssignment = roleAssignmentRepository.findActiveForUserAndContext(currentUser.userId, RoleAssignmentContextType.TEAM).firstOrNull()
+		if (teamAssignment != null) {
+			return DashboardContext(DashboardRole.COACH, organizationId = teamAssignment.organizationId, householdId = null)
+		}
+
+		val tournamentAssignment = roleAssignmentRepository.findActiveForUserAndContext(currentUser.userId, RoleAssignmentContextType.TOURNAMENT).firstOrNull()
+		if (tournamentAssignment != null) {
+			return DashboardContext(
+				DashboardRole.TOURNAMENT_ADMIN,
+				organizationId = tournamentAssignment.organizationId,
+				householdId = null,
+				tournamentId = tournamentAssignment.resourceId,
+			)
+		}
+
+		val guardianRelationship = guardianRelationshipRepository.findActiveForUser(currentUser.userId).firstOrNull()
+		if (guardianRelationship != null) {
+			return DashboardContext(DashboardRole.PARENT, organizationId = guardianRelationship.organizationId, householdId = guardianRelationship.householdId)
 		}
 
 		val adult = householdRepository.findActiveAdultByEmail(currentUser.email)

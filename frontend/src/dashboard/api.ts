@@ -17,16 +17,22 @@ import type {
 	HouseholdOverview,
 	OrderSummary,
 	OutstandingBalance,
+	OutboxHealth,
 	OwnerOnboardingProgress,
 	OwnerSummary,
+	PlatformOrganizationRow,
+	PlatformSummary,
 	ReportMetric,
 	RequiredActionItem,
 	RosterSummary,
 	ScheduleItem,
 	TeamPageStatusItem,
 	TeamPerformanceRow,
+	TournamentPageStatusItem,
+	TournamentSummary,
 	ActivityItem,
 	UpdateItem,
+	WebhookHealth,
 } from "./types";
 
 /**
@@ -150,14 +156,21 @@ export function useCoachRosterSummary(organizationId: string | null | undefined)
 export function useCoachTeamPageStatus(organizationId: string | null | undefined) {
 	return useQuery({
 		queryKey: ["organizations", organizationId, "dashboard", "coach", "team-page-status"],
-		queryFn: () => apiFetch<TeamPageStatusItem | null>(`/organizations/${organizationId}/dashboard/coach/team-page-status`),
+		// `?? null`: a nullable backend response with no active value serializes as an
+		// empty 200 body (no Content-Type header), which apiFetch resolves to
+		// `undefined` — and TanStack Query v5 treats a queryFn returning `undefined` as
+		// an error ("Query data cannot be undefined"), not as "no data yet". Discovered
+		// via Phase 7's real local end-to-end check (a coach with no active campaign hit
+		// this on the Fundraising Progress card) — same fix applied to both nullable
+		// Coach-dashboard hooks below.
+		queryFn: () => apiFetch<TeamPageStatusItem | null>(`/organizations/${organizationId}/dashboard/coach/team-page-status`).then((v) => v ?? null),
 		enabled: !!organizationId,
 	});
 }
 export function useCoachFundraisingProgress(organizationId: string | null | undefined) {
 	return useQuery({
 		queryKey: ["organizations", organizationId, "dashboard", "coach", "fundraising-progress"],
-		queryFn: () => apiFetch<FundraisingProgress | null>(`/organizations/${organizationId}/dashboard/coach/fundraising-progress`),
+		queryFn: () => apiFetch<FundraisingProgress | null>(`/organizations/${organizationId}/dashboard/coach/fundraising-progress`).then((v) => v ?? null),
 		enabled: !!organizationId,
 	});
 }
@@ -243,5 +256,46 @@ export function useParentOrganizationUpdates(organizationId: string | null | und
 		queryKey: ["organizations", organizationId, "households", householdId, "dashboard", "parent", "organization-updates"],
 		queryFn: () => apiFetch<UpdateItem[]>(parentDashboardPath(organizationId, householdId, "organization-updates")),
 		enabled: !!organizationId && !!householdId,
+	});
+}
+
+// --- Tournament ---
+
+export function useTournamentSummary(organizationId: string | null | undefined, tournamentId: string | null | undefined) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "dashboard", "tournament", tournamentId, "summary"],
+		queryFn: () => apiFetch<TournamentSummary>(`/organizations/${organizationId}/dashboard/tournament/${tournamentId}/summary`),
+		enabled: !!organizationId && !!tournamentId,
+	});
+}
+export function useTournamentPageStatus(organizationId: string | null | undefined, tournamentId: string | null | undefined) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "dashboard", "tournament", tournamentId, "page-status"],
+		queryFn: () => apiFetch<TournamentPageStatusItem>(`/organizations/${organizationId}/dashboard/tournament/${tournamentId}/page-status`),
+		enabled: !!organizationId && !!tournamentId,
+	});
+}
+
+// --- Platform Admin ---
+
+export function usePlatformSummary() {
+	return useQuery({ queryKey: ["platform", "dashboard", "summary"], queryFn: () => apiFetch<PlatformSummary>("/platform/dashboard/summary") });
+}
+export function usePlatformOrganizations() {
+	return useQuery({
+		queryKey: ["platform", "dashboard", "organizations"],
+		queryFn: () => apiFetch<PlatformOrganizationRow[]>("/platform/dashboard/organizations"),
+	});
+}
+export function usePlatformWebhookHealth() {
+	return useQuery({
+		queryKey: ["platform", "dashboard", "webhook-health"],
+		queryFn: () => apiFetch<WebhookHealth>("/platform/dashboard/webhook-health"),
+	});
+}
+export function usePlatformOutboxHealth() {
+	return useQuery({
+		queryKey: ["platform", "dashboard", "outbox-health"],
+		queryFn: () => apiFetch<OutboxHealth>("/platform/dashboard/outbox-health"),
 	});
 }

@@ -1,5 +1,8 @@
 package com.leaguelift.dashboard.application
 
+import com.leaguelift.authorization.domain.GuardianRelationship
+import com.leaguelift.authorization.domain.GuardianRelationshipStatus
+import com.leaguelift.authorization.persistence.GuardianRelationshipRepository
 import com.leaguelift.common.error.ForbiddenException
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.web.CurrentUser
@@ -33,6 +36,7 @@ class ParentDashboardServiceTest {
 
 	private val householdRepository = mockk<HouseholdRepository>()
 	private val membershipRepository = mockk<MembershipRepository>()
+	private val guardianRelationshipRepository = mockk<GuardianRelationshipRepository>()
 	private val participantRepository = mockk<ParticipantRepository>()
 	private val teamRepository = mockk<TeamRepository>()
 	private val feeRepository = mockk<FeeRepository>()
@@ -42,7 +46,7 @@ class ParentDashboardServiceTest {
 	private val contributionRepository = mockk<ContributionRepository>()
 
 	private val service = ParentDashboardService(
-		householdRepository, membershipRepository, participantRepository, teamRepository,
+		householdRepository, membershipRepository, guardianRelationshipRepository, participantRepository, teamRepository,
 		feeRepository, feePaymentRepository, feeAdjustmentRepository, campaignRepository, contributionRepository,
 	)
 
@@ -60,9 +64,10 @@ class ParentDashboardServiceTest {
 	}
 
 	@Test
-	fun `getOverview denies access when caller is neither an org member nor a household adult`() {
+	fun `getOverview denies access when caller is neither an org member, a real guardian, nor a household adult`() {
 		every { householdRepository.findById(householdId, orgId) } returns household()
 		every { membershipRepository.findActiveMembership(orgId, guardian.userId) } returns null
+		every { guardianRelationshipRepository.findActiveForHousehold(guardian.userId, householdId) } returns null
 		every { householdRepository.listAdults(householdId, orgId) } returns listOf(adult("someone.else@example.com"))
 
 		assertFailsWith<ForbiddenException> {
@@ -71,9 +76,25 @@ class ParentDashboardServiceTest {
 	}
 
 	@Test
+	fun `getOverview allows access via a real guardian_relationship without an email match`() {
+		every { householdRepository.findById(householdId, orgId) } returns household()
+		every { membershipRepository.findActiveMembership(orgId, guardian.userId) } returns null
+		every { guardianRelationshipRepository.findActiveForHousehold(guardian.userId, householdId) } returns
+			GuardianRelationship(
+				UUID.randomUUID(), orgId, householdId, UUID.randomUUID(), guardian.userId,
+				GuardianRelationshipStatus.ACTIVE, Instant.now(), Instant.now(),
+			)
+
+		val result = service.getOverview(orgId, householdId, guardian)
+
+		assertEquals("Johnson Family", result.householdName)
+	}
+
+	@Test
 	fun `getOverview allows access when caller email matches an active household adult`() {
 		every { householdRepository.findById(householdId, orgId) } returns household()
 		every { membershipRepository.findActiveMembership(orgId, guardian.userId) } returns null
+		every { guardianRelationshipRepository.findActiveForHousehold(guardian.userId, householdId) } returns null
 		every { householdRepository.listAdults(householdId, orgId) } returns listOf(adult(guardian.email))
 
 		val result = service.getOverview(orgId, householdId, guardian)
@@ -85,6 +106,7 @@ class ParentDashboardServiceTest {
 	fun `getOutstandingBalance is zero with no fee assignments`() {
 		every { householdRepository.findById(householdId, orgId) } returns household()
 		every { membershipRepository.findActiveMembership(orgId, guardian.userId) } returns null
+		every { guardianRelationshipRepository.findActiveForHousehold(guardian.userId, householdId) } returns null
 		every { householdRepository.listAdults(householdId, orgId) } returns listOf(adult(guardian.email))
 		every { feeRepository.findByHousehold(householdId, orgId, 0, 50) } returns emptyList()
 
@@ -100,6 +122,7 @@ class ParentDashboardServiceTest {
 		val paidAssignment = feeAssignment(status = FeeAssignmentStatus.PAID, originalAmountMinor = 5000L)
 		every { householdRepository.findById(householdId, orgId) } returns household()
 		every { membershipRepository.findActiveMembership(orgId, guardian.userId) } returns null
+		every { guardianRelationshipRepository.findActiveForHousehold(guardian.userId, householdId) } returns null
 		every { householdRepository.listAdults(householdId, orgId) } returns listOf(adult(guardian.email))
 		every { feeRepository.findByHousehold(householdId, orgId, 0, 50) } returns listOf(openAssignment, paidAssignment)
 		every { feePaymentRepository.sumActiveByAssignment(openAssignment.id, orgId) } returns 5000L
@@ -116,6 +139,7 @@ class ParentDashboardServiceTest {
 	fun `getAthletes returns real participants for the household`() {
 		every { householdRepository.findById(householdId, orgId) } returns household()
 		every { membershipRepository.findActiveMembership(orgId, guardian.userId) } returns null
+		every { guardianRelationshipRepository.findActiveForHousehold(guardian.userId, householdId) } returns null
 		every { householdRepository.listAdults(householdId, orgId) } returns listOf(adult(guardian.email))
 		every { participantRepository.findByHousehold(householdId, orgId) } returns emptyList()
 
@@ -134,6 +158,7 @@ class ParentDashboardServiceTest {
 		)
 		every { householdRepository.findById(householdId, orgId) } returns household()
 		every { membershipRepository.findActiveMembership(orgId, guardian.userId) } returns null
+		every { guardianRelationshipRepository.findActiveForHousehold(guardian.userId, householdId) } returns null
 		every { householdRepository.listAdults(householdId, orgId) } returns listOf(adult(guardian.email))
 		every { campaignRepository.findAll(orgId, 0, 25) } returns listOf(campaign)
 		every { contributionRepository.sumConfirmedByCampaign(campaign.id) } returns 34_500L

@@ -61,6 +61,7 @@ tags:
   - name: orders
   - name: sponsorships
   - name: dashboard
+  - name: authorization
 paths:
   /public/status:
     get:
@@ -3676,7 +3677,7 @@ paths:
   /organizations/{organizationId}/dashboard/coach/teams:
     get:
       tags: [dashboard]
-      summary: Coach dashboard — teams (real)
+      summary: Coach dashboard — teams (real, scoped to the caller's actual assigned teams as of Phase 7/ADR-020 — not every team in the organization)
       operationId: getCoachTeams
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
@@ -3718,7 +3719,7 @@ paths:
   /organizations/{organizationId}/dashboard/coach/roster-summary:
     get:
       tags: [dashboard]
-      summary: Coach dashboard — roster summary (real athlete count; demo attendance)
+      summary: Coach dashboard — roster summary (real athlete count across the caller's assigned teams; demo attendance)
       operationId: getCoachRosterSummary
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
@@ -3757,7 +3758,7 @@ paths:
   /organizations/{organizationId}/dashboard/coach/fundraising-progress:
     get:
       tags: [dashboard]
-      summary: Coach dashboard — fundraising progress (real when a campaign exists; demo raised amount)
+      summary: Coach dashboard — fundraising progress (real, including the raised amount, when the caller's team has an active campaign)
       operationId: getCoachFundraisingProgress
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
@@ -4025,6 +4026,241 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/dashboard/tournament/{tournamentId}/summary:
+    get:
+      tags: [dashboard]
+      summary: Tournament dashboard — tournament identity (real; new in Phase 7/ADR-020)
+      operationId: getTournamentDashboardSummary
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/TournamentIdParam"
+      responses:
+        "200":
+          description: Tournament summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentSummaryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/dashboard/tournament/{tournamentId}/page-status:
+    get:
+      tags: [dashboard]
+      summary: Tournament dashboard — public page status (real, when a page exists; new in Phase 7/ADR-020)
+      operationId: getTournamentDashboardPageStatus
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/TournamentIdParam"
+      responses:
+        "200":
+          description: Tournament page status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentPageStatusItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /platform/dashboard/summary:
+    get:
+      tags: [dashboard]
+      summary: Platform Admin dashboard — organization/user counts (real; new in Phase 7/ADR-020; requires platform.organization.view)
+      operationId: getPlatformDashboardSummary
+      responses:
+        "200":
+          description: Platform summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformSummaryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /platform/dashboard/organizations:
+    get:
+      tags: [dashboard]
+      summary: Platform Admin dashboard — every organization on the platform (real; new in Phase 7/ADR-020; requires platform.organization.view)
+      operationId: getPlatformDashboardOrganizations
+      responses:
+        "200":
+          description: Organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlatformOrganizationRow"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /platform/dashboard/webhook-health:
+    get:
+      tags: [dashboard]
+      summary: Platform Admin dashboard — webhook_event counts by processing status (real; new in Phase 7/ADR-020; requires platform.integration.view)
+      operationId: getPlatformDashboardWebhookHealth
+      responses:
+        "200":
+          description: Webhook health
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookHealthResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /platform/dashboard/outbox-health:
+    get:
+      tags: [dashboard]
+      summary: Platform Admin dashboard — outbox_event counts by status (real; new in Phase 7/ADR-020; requires platform.integration.view)
+      operationId: getPlatformDashboardOutboxHealth
+      responses:
+        "200":
+          description: Outbox health
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OutboxHealthResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /me/contexts:
+    get:
+      tags: [authorization]
+      summary: Every authorization context (PERSONAL/ATHLETE/HOUSEHOLD/TEAM/ORGANIZATION/TOURNAMENT/PLATFORM_ADMIN) the caller holds, with resolved capabilities (Phase 7/ADR-020)
+      operationId: getMyContexts
+      responses:
+        "200":
+          description: Contexts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContextResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /organizations/{organizationId}/teams/{teamId}/role-assignments:
+    post:
+      tags: [authorization]
+      summary: Grant a team-scoped role (COACH_READ/TEAM_EDITOR/TEAM_MANAGER) to an org member (org OWNER/ADMINISTRATOR only; Phase 7/ADR-020; no admin UI yet — API only)
+      operationId: grantTeamRoleAssignment
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/TeamIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GrantRoleAssignmentRequest"
+      responses:
+        "201":
+          description: Role assignment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleAssignmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/teams/{teamId}/role-assignments/{assignmentId}:
+    delete:
+      tags: [authorization]
+      summary: Revoke a team-scoped role assignment (org OWNER/ADMINISTRATOR only; Phase 7/ADR-020)
+      operationId: revokeTeamRoleAssignment
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/TeamIdParam"
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Revoked
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/tournaments/{tournamentId}/role-assignments:
+    post:
+      tags: [authorization]
+      summary: Grant a tournament-scoped role (TOURNAMENT_VIEWER/TOURNAMENT_ADMINISTRATOR) to an org member (org OWNER/ADMINISTRATOR only; Phase 7/ADR-020; no admin UI yet — API only)
+      operationId: grantTournamentRoleAssignment
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/TournamentIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GrantRoleAssignmentRequest"
+      responses:
+        "201":
+          description: Role assignment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleAssignmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/tournaments/{tournamentId}/role-assignments/{assignmentId}:
+    delete:
+      tags: [authorization]
+      summary: Revoke a tournament-scoped role assignment (org OWNER/ADMINISTRATOR only; Phase 7/ADR-020)
+      operationId: revokeTournamentRoleAssignment
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/TournamentIdParam"
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Revoked
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
 components:
   securitySchemes:
@@ -7244,6 +7480,164 @@ components:
           type: integer
           format: int64
           description: eligibleMinor minus pendingDebitsMinor. Can be negative.
+
+    ContextResponse:
+      type: object
+      description: One authorization context the caller holds (Phase 7/ADR-020, DESIGN-DOC.md section 4.2).
+      required: [contextType, label, role, capabilities]
+      properties:
+        contextType:
+          type: string
+          enum: [PERSONAL, ATHLETE, HOUSEHOLD, TEAM, ORGANIZATION, TOURNAMENT, PLATFORM_ADMIN]
+        resourceId:
+          type: string
+          format: uuid
+          nullable: true
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
+        label:
+          type: string
+        role:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+          description: Resolved, deny-by-default capability strings for this context — never re-derive from `role` client-side.
+
+    GrantRoleAssignmentRequest:
+      type: object
+      required: [userId, role]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          description: One of COACH_READ/TEAM_EDITOR/TEAM_MANAGER (team endpoint) or TOURNAMENT_VIEWER/TOURNAMENT_ADMINISTRATOR (tournament endpoint).
+
+    RoleAssignmentResponse:
+      type: object
+      required: [id, userId, contextType, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        contextType:
+          type: string
+        resourceId:
+          type: string
+          format: uuid
+          nullable: true
+        role:
+          type: string
+
+    TournamentSummaryResponse:
+      type: object
+      required: [tournamentId, name, status]
+      properties:
+        tournamentId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sport:
+          type: string
+          nullable: true
+        status:
+          type: string
+        startDate:
+          type: string
+          format: date
+          nullable: true
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        location:
+          type: string
+          nullable: true
+
+    TournamentPageStatusItem:
+      type: object
+      required: [tournamentId, tournamentName, status]
+      properties:
+        tournamentId:
+          type: string
+          format: uuid
+        tournamentName:
+          type: string
+        status:
+          type: string
+        slug:
+          type: string
+          nullable: true
+
+    PlatformSummaryResponse:
+      type: object
+      required: [organizationCount, userCount]
+      properties:
+        organizationCount:
+          type: integer
+          format: int64
+        userCount:
+          type: integer
+          format: int64
+
+    PlatformOrganizationRow:
+      type: object
+      required: [organizationId, name, slug, organizationType, status]
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        organizationType:
+          type: string
+        status:
+          type: string
+
+    WebhookHealthResponse:
+      type: object
+      required: [processed, failed, ignored]
+      properties:
+        processed:
+          type: integer
+          format: int64
+        failed:
+          type: integer
+          format: int64
+        ignored:
+          type: integer
+          format: int64
+
+    OutboxHealthResponse:
+      type: object
+      required: [pending, processing, processed, failed, deadLetter]
+      properties:
+        pending:
+          type: integer
+          format: int64
+        processing:
+          type: integer
+          format: int64
+        processed:
+          type: integer
+          format: int64
+        failed:
+          type: integer
+          format: int64
+        deadLetter:
+          type: integer
+          format: int64
 
 security:
   - bearerAuth: []

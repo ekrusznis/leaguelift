@@ -80,3 +80,15 @@ Additional, unreserved decisions:
   `EmailProvider`; ZXing-generated QR codes with no persistence/tracking;
   computed (not stored/numbered) invoices; `sponsor` widened with
   phone/company_name/notes (2026-07-29)
+- ADR-020: Phase 7 capability-based authorization model — additive
+  `role_assignment`/`guardian_relationship` tables alongside
+  `organization_membership` (not a replacement); a new `AuthorizationService`
+  with deny-by-default resource-scoped checks and org owner/admin
+  team/tournament inheritance; `TEAM_ADMINISTRATOR`/`TOURNAMENT_ADMINISTRATOR`
+  org roles now grant zero implicit team/tournament access (closing the
+  "not actually scoped to just Varsity Soccer" gap); a guardian-authorized
+  athlete self-link formalizing the existing seeded "controlled test account"
+  pattern (not general athlete login); real `platformAdministrator` resolution
+  (previously hardcoded false); Coach/Athlete/Tournament/Platform Admin
+  dashboards wired to live data; most existing `MembershipService` call sites
+  deliberately not migrated this phase (2026-07-29)

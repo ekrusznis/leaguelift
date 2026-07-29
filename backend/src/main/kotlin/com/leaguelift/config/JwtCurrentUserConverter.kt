@@ -1,5 +1,6 @@
 package com.leaguelift.config
 
+import com.leaguelift.authorization.persistence.RoleAssignmentRepository
 import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.identity.persistence.AppUserRepository
 import org.springframework.core.convert.converter.Converter
@@ -15,12 +16,15 @@ import java.util.UUID
  * issue our own tokens (see `TokenService`), so a valid token can only exist for an
  * app_user that already exists. A missing row means the account was removed after
  * the token was issued. Platform-administrator status is never derived from the
- * token (DESIGN-DOC.md section 18.2) — it must come from the internal
- * membership/role model once that exists.
+ * token itself (DESIGN-DOC.md section 18.2/7.2 — "never inferred from email or
+ * frontend state") — as of Phase 7/ADR-020 it comes from a real, explicit
+ * `role_assignment(context_type = PLATFORM, role = PLATFORM_ADMINISTRATOR)` grant,
+ * looked up fresh on every request rather than embedded in the token.
  */
 @Component
 class JwtCurrentUserConverter(
 	private val appUserRepository: AppUserRepository,
+	private val roleAssignmentRepository: RoleAssignmentRepository,
 ) : Converter<Jwt, AbstractAuthenticationToken> {
 
 	override fun convert(jwt: Jwt): AbstractAuthenticationToken {
@@ -32,7 +36,7 @@ class JwtCurrentUserConverter(
 			userId = appUser.id,
 			email = appUser.email,
 			displayName = appUser.displayName,
-			platformAdministrator = false,
+			platformAdministrator = roleAssignmentRepository.findActivePlatformGrant(appUser.id) != null,
 		)
 		return CurrentUserAuthenticationToken(currentUser)
 	}

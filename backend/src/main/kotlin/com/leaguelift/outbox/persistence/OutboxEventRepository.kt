@@ -38,4 +38,11 @@ class OutboxEventRepository(private val jdbcClient: JdbcClient) {
 			.param("payload", payloadJson)
 			.update()
 	}
+
+	/** Platform-admin-only health aggregate (DESIGN-DOC.md section 10.2/18.2 outbox backlog). */
+	fun countByStatus(status: String): Long =
+		jdbcClient.sql("select count(*) from outbox_event where status = :status")
+			.param("status", status)
+			.query(Long::class.java)
+			.single()
 }
