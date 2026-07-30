@@ -91,6 +91,13 @@ class EventController(
 		@AuthenticationPrincipal currentUser: CurrentUser,
 	): EventResponse = eventService.postpone(organizationId, eventId, currentUser).toResponseWithNames(organizationId)
 
+	@PostMapping("/organizations/{organizationId}/events/{eventId}/detach-from-source")
+	fun detachFromSource(
+		@PathVariable organizationId: UUID,
+		@PathVariable eventId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): EventResponse = eventService.detachFromSource(organizationId, eventId, currentUser).toResponseWithNames(organizationId)
+
 	@GetMapping("/teams/{teamId}/events")
 	fun listForTeam(
 		@PathVariable teamId: UUID,

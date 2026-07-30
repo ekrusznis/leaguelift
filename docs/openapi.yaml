@@ -63,10 +63,14 @@ info:
     connect request and connection response (a gap in slice 1's original
     connect flow, fixed here rather than deferred) — the scheduled sync
     poller itself has no endpoint of its own, it runs in the background
-    like the outbox worker (ADR-033).
+    like the outbox worker (ADR-033). Phase 12 slice 4 adds a
+    detach-from-source endpoint, completing Phase 12 — an imported
+    event's source-owned fields (opponent/start-end time/venue/status)
+    can no longer be overwritten through the ordinary update endpoint;
+    detaching first converts the event back to MANUAL (ADR-034).
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
-  version: "0.22.0"
+  version: "0.23.0"
 servers:
   - url: /api/v1
 tags:
@@ -4787,7 +4791,7 @@ paths:
           $ref: "#/components/responses/NotFound"
     patch:
       tags: [events]
-      summary: Update an event (Phase 10 slice 1, ADR-026; requires event.update at the event's scope) — team/tournament ownership is not reassignable via this endpoint
+      summary: Update an event (Phase 10 slice 1, ADR-026; requires event.update at the event's scope) — team/tournament ownership is not reassignable via this endpoint; on an imported event (sourceType != MANUAL), setting a source-owned field (opponent/start/end time/venue/status) is rejected — detach-from-source first (Phase 12 slice 4, ADR-034)
       operationId: updateEvent
       parameters:
         - name: organizationId
@@ -4895,6 +4899,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/events/{eventId}/detach-from-source:
+    post:
+      tags: [events]
+      summary: Convert an imported event back to MANUAL, clearing its import identity (Phase 12 slice 4, ADR-034; requires event.update at the event's scope) — required before editing a source-owned field (opponent/start/end time/venue/status)
+      operationId: detachEventFromSource
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Detached event (now MANUAL)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":

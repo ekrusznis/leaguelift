@@ -218,6 +218,22 @@ class EventRepository(private val jdbcClient: JdbcClient) {
 			.update()
 	}
 
+	/** Converts an imported event back to MANUAL (Phase 12 slice 4, ADR-034) — clears every import-identity column, since a detached event is no longer subject to `event_external_identity_idx`'s dedup, matching the "provider is null" exemption that index's own partial-where clause already documents. */
+	fun detachFromSource(id: UUID, organizationId: UUID, updatedByUserId: UUID): Int {
+		val now = Instant.now()
+		return jdbcClient.sql(
+			"""
+			update event
+			set source_type = 'MANUAL', provider = null, connection_id = null, external_event_id = null,
+			    external_sync_hash = null, source_updated_at = null, updated_by_user_id = :updatedByUserId, updated_at = :now
+			where id = :id and organization_id = :organizationId
+			""".trimIndent(),
+		)
+			.param("updatedByUserId", updatedByUserId).param("now", Timestamp.from(now))
+			.param("id", id).param("organizationId", organizationId)
+			.update()
+	}
+
 	fun updateStatus(id: UUID, organizationId: UUID, status: EventStatus, updatedByUserId: UUID): Int {
 		val now = Instant.now()
 		return jdbcClient.sql(

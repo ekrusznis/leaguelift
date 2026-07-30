@@ -221,3 +221,19 @@ Additional, unreserved decisions:
   never blocks another's; one event's failure never blocks the rest of
   that feed — a plain `@Scheduled` job (default every 30 minutes),
   mirroring `FeePaymentReminderScanner`'s shape (2026-07-30)
+- ADR-034: Phase 12 slice 4 — source-owned vs. overlay field enforcement,
+  completing Phase 12's roadmap scope. `EventService.update()` rejects
+  any attempt to set a source-owned field (status/start/end time/venue/
+  opponent) on an imported event — a presence-based check matching
+  `update()`'s own null-means-unchanged convention, not a diff against
+  current values. Only "detach from source" (of section 14.1A's three
+  named options) was built — a new `detachFromSource` clears every
+  import-identity column, converting the event back to MANUAL;
+  "temporary local override" would need a whole second per-field
+  override data model section 14.1A frames as one option, not a
+  requirement, so it stays unbuilt pending real usage evidence.
+  Overlay fields (title/description/arrival/meeting point/directions
+  notes/area/visibility) stay freely editable — `area` is grouped as
+  overlay, not source-owned, since `event.area_assigned`'s own
+  existence as a distinct notification type already implies routine
+  local assignment (2026-07-30) — completes Phase 12's roadmap scope

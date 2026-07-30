@@ -395,4 +395,64 @@ class EventServiceTest {
 		assertEquals(EventStatus.POSTPONED, result.status)
 		verify(exactly = 1) { outboxWriter.write(any(), any(), any(), eq("event.postponed"), any()) }
 	}
+
+	@Test
+	fun `update rejects a source-owned field change on an imported event`() {
+		val imported = sampleEvent(status = EventStatus.TENTATIVE).copy(provider = "CSV_IMPORT", sourceType = EventSourceType.CSV_IMPORT)
+		every { eventRepository.findById(imported.id, orgId) } returns imported
+		every { authorizationService.requireTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_UPDATE) } just runs
+
+		assertFailsWith<ValidationException> {
+			service.update(
+				orgId, imported.id, null, null, null, Instant.now(), null, null, null,
+				null, null, null, null, null, null, null, null, null, currentUser,
+			)
+		}
+	}
+
+	@Test
+	fun `update still allows an overlay-only field change on an imported event`() {
+		val imported = sampleEvent(status = EventStatus.TENTATIVE).copy(provider = "CSV_IMPORT", sourceType = EventSourceType.CSV_IMPORT)
+		every { eventRepository.findById(imported.id, orgId) } returns imported andThen imported.copy(meetingPoint = "By the main gate")
+		every { authorizationService.requireTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_UPDATE) } just runs
+		stubEventRepositoryUpdate()
+		every { auditService.record(currentUser.userId, orgId, "event.updated", "event", imported.id) } just runs
+		every { teamRepository.findById(teamId, orgId) } returns team()
+		every { householdRepository.findActiveForTeam(teamId, orgId) } returns emptyList()
+		every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
+
+		val result = service.update(
+			orgId, imported.id, null, null, null, null, null, null, null,
+			null, null, null, null, null, "By the main gate", null, null, null, currentUser,
+		)
+
+		assertEquals("By the main gate", result.meetingPoint)
+	}
+
+	@Test
+	fun `detachFromSource rejects an event that was never imported`() {
+		val manual = sampleEvent()
+		every { eventRepository.findById(manual.id, orgId) } returns manual
+		every { authorizationService.requireTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_UPDATE) } just runs
+
+		assertFailsWith<ValidationException> {
+			service.detachFromSource(orgId, manual.id, currentUser)
+		}
+	}
+
+	@Test
+	fun `detachFromSource clears import identity and records an audit event`() {
+		val imported = sampleEvent().copy(provider = "CSV_IMPORT", sourceType = EventSourceType.CSV_IMPORT, externalEventId = "row-1")
+		every { eventRepository.findById(imported.id, orgId) } returns imported andThen imported.copy(
+			provider = null, sourceType = EventSourceType.MANUAL, externalEventId = null,
+		)
+		every { authorizationService.requireTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_UPDATE) } just runs
+		every { eventRepository.detachFromSource(imported.id, orgId, currentUser.userId) } returns 1
+		every { auditService.record(currentUser.userId, orgId, "event.detached_from_source", "event", imported.id) } just runs
+
+		val result = service.detachFromSource(orgId, imported.id, currentUser)
+
+		assertEquals(EventSourceType.MANUAL, result.sourceType)
+		verify(exactly = 1) { eventRepository.detachFromSource(imported.id, orgId, currentUser.userId) }
+	}
 }

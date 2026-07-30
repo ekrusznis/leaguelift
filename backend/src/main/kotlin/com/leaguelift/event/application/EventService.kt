@@ -199,6 +199,9 @@ class EventService(
 	): Event {
 		val event = requireOwnedEvent(organizationId, eventId)
 		requireManageAccess(event, currentUser, Capabilities.EVENT_UPDATE)
+		if (event.provider != null) {
+			requireNoSourceOwnedFieldChange(status, startAt, endAt, venueName, address, latitude, longitude, opponentTeamId, opponentName)
+		}
 		if (opponentTeamId != null) {
 			if (opponentTeamId == event.teamId) throw ValidationException("An event's opponent team cannot be the same as its owning team.")
 			teamRepository.findById(opponentTeamId, organizationId) ?: throw NotFoundException("TEAM_NOT_FOUND", "The opponent team could not be found.")
@@ -260,6 +263,24 @@ class EventService(
 			writeChangeNotification(postponed, "event.postponed", "\"${displayTitleFor(postponed, organizationId)}\" has been postponed.")
 		}
 		return postponed
+	}
+
+	/**
+	 * Converts an imported event back into a normal MANUAL one (Phase 12 slice 4,
+	 * ADR-034) — the "detach from source" option section 14.1A requires before a
+	 * source-owned field can be edited through [update]'s normal staff path.
+	 * Overlay fields never needed this — they've always been freely editable.
+	 */
+	@Transactional
+	fun detachFromSource(organizationId: UUID, eventId: UUID, currentUser: CurrentUser): Event {
+		val event = requireOwnedEvent(organizationId, eventId)
+		requireManageAccess(event, currentUser, Capabilities.EVENT_UPDATE)
+		if (event.provider == null) {
+			throw ValidationException("This event isn't imported from an external source.")
+		}
+		eventRepository.detachFromSource(eventId, organizationId, currentUser.userId)
+		auditService.record(currentUser.userId, organizationId, "event.detached_from_source", "event", eventId)
+		return eventRepository.findById(eventId, organizationId)!!
 	}
 
 	// --- Notification wiring (Phase 10 slice 4, ADR-029) ---
@@ -351,6 +372,37 @@ class EventService(
 			event.teamId != null -> authorizationService.requireTeamCapability(event.organizationId, event.teamId, currentUser, Capabilities.EVENT_READ)
 			event.tournamentId != null -> authorizationService.requireTournamentCapability(event.organizationId, event.tournamentId, currentUser, Capabilities.EVENT_READ)
 			else -> membershipService.requireActiveMembership(event.organizationId, currentUser)
+		}
+	}
+
+	/**
+	 * Section 14.1A's source-owned fields (official opponent, start time, venue,
+	 * official status) can't be silently overwritten through the normal staff-edit
+	 * path on an imported event (Phase 12 slice 4, ADR-034) — call [detachFromSource]
+	 * first, same as choosing "detach from source" over a temporary local override
+	 * or updating the field in the source system itself. Overlay fields (title,
+	 * description, arrival time, meeting point, directions notes, area, visibility)
+	 * are never checked here — they've always been freely editable regardless of
+	 * [Event.provider].
+	 */
+	private fun requireNoSourceOwnedFieldChange(
+		status: EventStatus?,
+		startAt: Instant?,
+		endAt: Instant?,
+		venueName: String?,
+		address: String?,
+		latitude: Double?,
+		longitude: Double?,
+		opponentTeamId: UUID?,
+		opponentName: String?,
+	) {
+		val attemptedSourceOwnedChange = status != null || startAt != null || endAt != null || venueName != null ||
+			address != null || latitude != null || longitude != null || opponentTeamId != null || opponentName != null
+		if (attemptedSourceOwnedChange) {
+			throw ValidationException(
+				"This event was imported from an external source — opponent, start/end time, venue, and status can't be " +
+					"edited directly. Detach it from its source first, or update the value in the source system.",
+			)
 		}
 	}
 
