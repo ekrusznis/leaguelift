@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/apiClient";
-import type { EventSourceConnection } from "./types";
+import type { CsvImportResult, EventSourceConnection } from "./types";
 
 const connectionsKey = (organizationId: string) => ["organizations", organizationId, "event-source-connections"] as const;
 
@@ -34,5 +34,15 @@ export function useDisconnectEventSource(organizationId: string) {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: connectionsKey(organizationId) });
 		},
+	});
+}
+
+export function useImportEventsCsv(organizationId: string) {
+	return useMutation({
+		mutationFn: (params: { teamId: string | null; timezone: string; csvContent: string }) =>
+			apiFetch<CsvImportResult>(`/organizations/${organizationId}/events/csv-import`, {
+				method: "POST",
+				body: params,
+			}),
 	});
 }

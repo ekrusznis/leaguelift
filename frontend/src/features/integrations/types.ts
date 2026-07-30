@@ -13,3 +13,15 @@ export interface EventSourceConnection {
 	lastSyncError: string | null;
 	createdAt: string;
 }
+
+export interface CsvImportRowError {
+	rowNumber: number;
+	message: string;
+}
+
+export interface CsvImportResult {
+	createdCount: number;
+	updatedCount: number;
+	unchangedCount: number;
+	errors: CsvImportRowError[];
+}

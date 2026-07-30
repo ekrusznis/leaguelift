@@ -52,13 +52,17 @@ info:
     pure backend event-producer/consumer wiring — ADR-029), completing
     Phase 10. Phase 12 slice 1 (the Integrations page's org-connected
     event-source connections — list/connect-ICS-feed/disconnect; only
-    ICS_FEED has a real connect flow this slice, CSV import and the
-    not-yet-integrated vendors are handled entirely client-side as
-    disabled "coming soon" cards with no backend endpoint of their own —
-    ADR-031).
+    ICS_FEED has a real connect flow this slice, the not-yet-integrated
+    vendors are handled entirely client-side as disabled "coming soon"
+    cards with no backend endpoint of their own — ADR-031), and Phase 12
+    slice 2 (CSV schedule import — one upload scoped to one team-or-org-wide
+    and one shared timezone, `external_id`-keyed dedup against the same
+    `(provider, connection_id, external_event_id)` identity model Phase 10
+    reserved, row-level errors collected without aborting the batch —
+    ADR-032).
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
-  version: "0.20.0"
+  version: "0.21.0"
 servers:
   - url: /api/v1
 tags:
@@ -4711,6 +4715,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/events/csv-import:
+    post:
+      tags: [events]
+      summary: Bulk-import events from a CSV file, scoped to one team (or org-wide) and one shared timezone (Phase 12 slice 2, ADR-032; requires event.create at the relevant scope) — imported events start TENTATIVE, not DRAFT
+      operationId: importEventsCsv
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CsvImportRequest"
+      responses:
+        "200":
+          description: Import summary — row-level failures are collected here, not thrown, so a partially-bad file still processes its valid rows
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CsvImportResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -9682,6 +9718,45 @@ components:
         createdAt:
           type: string
           format: date-time
+    CsvImportRequest:
+      type: object
+      required: [timezone, csvContent]
+      properties:
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Null for an org-wide import.
+        timezone:
+          type: string
+          example: America/New_York
+        csvContent:
+          type: string
+          description: The raw CSV file content (read client-side via FileReader, sent as a plain string — no multipart upload in this codebase).
+    CsvImportRowErrorResponse:
+      type: object
+      required: [rowNumber, message]
+      properties:
+        rowNumber:
+          type: integer
+          description: 1-indexed, counting the header row as row 1.
+        message:
+          type: string
+    CsvImportResponse:
+      type: object
+      required: [createdCount, updatedCount, unchangedCount, errors]
+      properties:
+        createdCount:
+          type: integer
+        updatedCount:
+          type: integer
+        unchangedCount:
+          type: integer
+          description: Rows whose external_id matched an existing event with an identical content hash — a safe no-op re-upload.
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/CsvImportRowErrorResponse"
     PlatformOrdersSummary:
       type: object
       required: [confirmed, refunded, pending]

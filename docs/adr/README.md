@@ -189,3 +189,19 @@ Additional, unreserved decisions:
   capability, since no ORGANIZATION-context action in this codebase routes
   through that service. The page is a new section on the existing
   `OrganizationDetailPage`, not a separate route (2026-07-30)
+- ADR-032: Phase 12 slice 2 — CSV import connector. One upload is scoped
+  to exactly one team (or org-wide) and one shared timezone, never
+  per-row; required columns are `external_id` (caller-supplied stable
+  identifier, no fuzzy matching) and `event_type`. `connection_id`
+  (populated for the first time) is the target team id or `"org:{id}"`,
+  making the existing `(provider, connection_id, external_event_id)`
+  index do real dedup; a SHA-256 hash of every imported field
+  (`external_sync_hash`) makes a re-upload of an unchanged file a safe
+  no-op. Imported events start TENTATIVE, not DRAFT — a deliberate
+  departure from manual creation's DRAFT-first default, since a bulk
+  import has already been reviewed outside the system. Writes bypass
+  `EventService` and Phase 10 slice 4's notification wiring entirely, to
+  avoid flooding families with one email per imported row; one audit
+  event per upload is recorded instead. Row-level failures are collected,
+  never abort the batch. No CSV-parsing library was added — a hand-rolled
+  RFC 4180 parser, same call as ICS generation (ADR-028) (2026-07-30)

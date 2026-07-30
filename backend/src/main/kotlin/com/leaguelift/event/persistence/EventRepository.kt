@@ -61,6 +61,18 @@ class EventRepository(private val jdbcClient: JdbcClient) {
 			.param("organizationId", organizationId).param("tournamentId", tournamentId).param("offset", offset).param("limit", limit)
 			.query(::mapRow).list()
 
+	/** The dedup lookup behind `event_external_identity_idx` (Phase 12 slice 2, ADR-032) — null `provider` is never passed here, manual events are exempt from this identity model entirely. */
+	fun findByExternalIdentity(organizationId: UUID, provider: String, connectionId: String, externalEventId: String): Event? =
+		jdbcClient.sql(
+			"""
+			select $COLUMNS from event
+			where organization_id = :organizationId and provider = :provider and connection_id = :connectionId and external_event_id = :externalEventId
+			""".trimIndent(),
+		)
+			.param("organizationId", organizationId).param("provider", provider)
+			.param("connectionId", connectionId).param("externalEventId", externalEventId)
+			.query(::mapRow).optional().orElse(null)
+
 	/** Every event owned by any of [teamIds] — the guardian/athlete "combined schedule" query (Phase 10 slice 2). */
 	fun findByTeams(teamIds: Collection<UUID>, organizationId: UUID, offset: Int, limit: Int): List<Event> {
 		if (teamIds.isEmpty()) return emptyList()
@@ -99,6 +111,14 @@ class EventRepository(private val jdbcClient: JdbcClient) {
 		directionsNotes: String?,
 		visibility: EventVisibility,
 		createdByUserId: UUID,
+		sourceType: EventSourceType = EventSourceType.MANUAL,
+		provider: String? = null,
+		connectionId: String? = null,
+		externalEventId: String? = null,
+		externalSyncHash: String? = null,
+		sourceUpdatedAt: Instant? = null,
+		/** MANUAL creation always starts DRAFT (matches [EventStatus] check constraint's default); CSV import (Phase 12 slice 2) starts TENTATIVE instead — the org already reviewed the source file before uploading it, so forcing a manual publish per imported row would be pure friction. */
+		initialStatus: EventStatus = EventStatus.DRAFT,
 	): Event {
 		val id = UUID.randomUUID()
 		val now = Instant.now()
@@ -108,23 +128,29 @@ class EventRepository(private val jdbcClient: JdbcClient) {
 				(id, organization_id, team_id, tournament_id, opponent_team_id, opponent_name,
 				 event_type, title, description, status, start_at, end_at, arrival_at, meeting_at,
 				 timezone, venue_name, address, latitude, longitude, area, meeting_point, directions_notes,
-				 visibility, source_type, created_by_user_id, updated_by_user_id, created_at, updated_at)
+				 visibility, source_type, provider, connection_id, external_event_id, external_sync_hash,
+				 source_updated_at, created_by_user_id, updated_by_user_id, created_at, updated_at)
 			values
 				(:id, :organizationId, :teamId, :tournamentId, :opponentTeamId, :opponentName,
-				 :eventType, :title, :description, 'DRAFT', :startAt, :endAt, :arrivalAt, :meetingAt,
+				 :eventType, :title, :description, :initialStatus, :startAt, :endAt, :arrivalAt, :meetingAt,
 				 :timezone, :venueName, :address, :latitude, :longitude, :area, :meetingPoint, :directionsNotes,
-				 :visibility, 'MANUAL', :createdByUserId, :createdByUserId, :now, :now)
+				 :visibility, :sourceType, :provider, :connectionId, :externalEventId, :externalSyncHash,
+				 :sourceUpdatedAt, :createdByUserId, :createdByUserId, :now, :now)
 			""".trimIndent(),
 		)
 			.param("id", id).param("organizationId", organizationId).param("teamId", teamId)
 			.param("tournamentId", tournamentId).param("opponentTeamId", opponentTeamId).param("opponentName", opponentName)
 			.param("eventType", eventType.name).param("title", title).param("description", description)
+			.param("initialStatus", initialStatus.name)
 			.param("startAt", startAt?.let { Timestamp.from(it) }).param("endAt", endAt?.let { Timestamp.from(it) })
 			.param("arrivalAt", arrivalAt?.let { Timestamp.from(it) }).param("meetingAt", meetingAt?.let { Timestamp.from(it) })
 			.param("timezone", timezone).param("venueName", venueName).param("address", address)
 			.param("latitude", latitude).param("longitude", longitude).param("area", area)
 			.param("meetingPoint", meetingPoint).param("directionsNotes", directionsNotes)
 			.param("visibility", visibility.name).param("createdByUserId", createdByUserId).param("now", Timestamp.from(now))
+			.param("sourceType", sourceType.name).param("provider", provider).param("connectionId", connectionId)
+			.param("externalEventId", externalEventId).param("externalSyncHash", externalSyncHash)
+			.param("sourceUpdatedAt", sourceUpdatedAt?.let { Timestamp.from(it) })
 			.update()
 		return findById(id, organizationId)!!
 	}
@@ -150,6 +176,8 @@ class EventRepository(private val jdbcClient: JdbcClient) {
 		opponentTeamId: UUID?,
 		opponentName: String?,
 		updatedByUserId: UUID,
+		externalSyncHash: String? = null,
+		sourceUpdatedAt: Instant? = null,
 	): Int {
 		val now = Instant.now()
 		return jdbcClient.sql(
@@ -171,6 +199,8 @@ class EventRepository(private val jdbcClient: JdbcClient) {
 			    directions_notes  = coalesce(:directionsNotes, directions_notes),
 			    opponent_team_id  = coalesce(:opponentTeamId, opponent_team_id),
 			    opponent_name     = coalesce(:opponentName, opponent_name),
+			    external_sync_hash = coalesce(:externalSyncHash, external_sync_hash),
+			    source_updated_at = coalesce(:sourceUpdatedAt, source_updated_at),
 			    updated_by_user_id = :updatedByUserId,
 			    updated_at        = :now
 			where id = :id and organization_id = :organizationId
@@ -182,6 +212,7 @@ class EventRepository(private val jdbcClient: JdbcClient) {
 			.param("venueName", venueName).param("address", address).param("latitude", latitude).param("longitude", longitude)
 			.param("area", area).param("meetingPoint", meetingPoint).param("directionsNotes", directionsNotes)
 			.param("opponentTeamId", opponentTeamId).param("opponentName", opponentName)
+			.param("externalSyncHash", externalSyncHash).param("sourceUpdatedAt", sourceUpdatedAt?.let { Timestamp.from(it) })
 			.param("updatedByUserId", updatedByUserId).param("now", Timestamp.from(now))
 			.param("id", id).param("organizationId", organizationId)
 			.update()

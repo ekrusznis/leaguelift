@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { Button } from "../../components/Button";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
+import { CsvImportSection } from "./CsvImportSection";
 import { useConnectIcsFeed, useDisconnectEventSource, useEventSourceConnections } from "./api";
 import { connectIcsFeedSchema, type ConnectIcsFeedFormValues } from "./schema";
 
@@ -17,9 +18,8 @@ const PLATFORM_OPERATED_CONNECTORS = [
 	{ name: "Google Calendar", description: ".ics calendar export (Add-to-Calendar) — no account connection needed." },
 ];
 
-/** Real connectors with no vendor account or verified API access yet — shown so the roadmap is visible, never wired to a fake connect flow (ADR-031). */
+/** Vendors with no verified API access yet — shown so the roadmap is visible, never wired to a fake connect flow (ADR-031). CSV import (ADR-032) graduated out of this list — see CsvImportSection. */
 const COMING_SOON_CONNECTORS = [
-	{ name: "CSV Import", description: "Upload a schedule spreadsheet — coming in a follow-up update." },
 	{ name: "MaxPreps", description: "Requires a verified MaxPreps API relationship, not yet in place." },
 	{ name: "GameChanger", description: "Requires a verified GameChanger API relationship, not yet in place." },
 	{ name: "SportsEngine", description: "Requires a verified SportsEngine API relationship, not yet in place." },
@@ -184,6 +184,8 @@ export function IntegrationsPanel({ organizationId }: { organizationId: string }
 			</div>
 
 			<IcsFeedSection organizationId={organizationId} />
+
+			<CsvImportSection organizationId={organizationId} />
 
 			<div>
 				<h3 className="font-heading text-base font-semibold text-navy">More Connectors</h3>
