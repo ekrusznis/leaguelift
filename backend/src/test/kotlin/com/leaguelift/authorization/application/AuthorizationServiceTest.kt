@@ -24,6 +24,7 @@ import io.mockk.mockk
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -194,5 +195,34 @@ class AuthorizationServiceTest {
 		every { guardianRelationshipRepository.findActiveForHousehold(outsider.userId, householdId) } returns null
 
 		assertFalse(service.hasHouseholdCapability(organizationId, householdId, outsider, Capabilities.HOUSEHOLD_VIEW))
+	}
+
+	@Test
+	fun `listTeamStaffUserIds combines explicit team grants with inherited org owner-admin, deduplicated`() {
+		val organizationId = UUID.randomUUID()
+		val teamId = UUID.randomUUID()
+		val editorUserId = UUID.randomUUID()
+		val ownerUserId = UUID.randomUUID()
+		every { roleAssignmentRepository.listActiveForResource(RoleAssignmentContextType.TEAM, teamId) } returns
+			listOf(grant(organizationId, editorUserId, teamId, ResourceRole.TEAM_EDITOR))
+		every { membershipRepository.listActiveManagers(organizationId) } returns listOf(membership(organizationId, ownerUserId, MembershipRole.OWNER))
+
+		val result = service.listTeamStaffUserIds(organizationId, teamId, Capabilities.EVENT_RSVP_READ_TEAM)
+
+		assertEquals(setOf(editorUserId, ownerUserId), result)
+	}
+
+	@Test
+	fun `listTeamStaffUserIds excludes a COACH_READ grant that lacks the requested capability`() {
+		val organizationId = UUID.randomUUID()
+		val teamId = UUID.randomUUID()
+		val coachUserId = UUID.randomUUID()
+		every { roleAssignmentRepository.listActiveForResource(RoleAssignmentContextType.TEAM, teamId) } returns
+			listOf(grant(organizationId, coachUserId, teamId, ResourceRole.COACH_READ))
+		every { membershipRepository.listActiveManagers(organizationId) } returns emptyList()
+
+		val result = service.listTeamStaffUserIds(organizationId, teamId, Capabilities.EVENT_RSVP_READ_TEAM)
+
+		assertTrue(result.isEmpty())
 	}
 }

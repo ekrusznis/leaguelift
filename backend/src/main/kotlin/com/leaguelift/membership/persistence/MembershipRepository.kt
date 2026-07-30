@@ -49,6 +49,24 @@ class MembershipRepository(private val jdbcClient: JdbcClient) {
 			.single()
 
 	/**
+	 * Every active OWNER/ADMINISTRATOR in this organization, unpaginated — used by
+	 * [com.leaguelift.authorization.application.AuthorizationService.listTeamStaffUserIds]
+	 * to resolve the inherited-team-manager half of a notification recipient set (Phase
+	 * 10 slice 4, ADR-029), not [listForOrganization]'s paginated member-list use case.
+	 */
+	fun listActiveManagers(organizationId: UUID): List<OrganizationMembership> =
+		jdbcClient.sql(
+			"""
+			select id, organization_id, user_id, role, status, created_at, updated_at
+			from organization_membership
+			where organization_id = :organizationId and status = 'ACTIVE' and role in ('OWNER', 'ADMINISTRATOR')
+			""".trimIndent(),
+		)
+			.param("organizationId", organizationId)
+			.query(::mapRow)
+			.list()
+
+	/**
 	 * The first ACTIVE organization_membership for this user, in no particular
 	 * cross-organization order (a user is only expected to belong to one
 	 * organization in practice today). Used by dashboard role resolution

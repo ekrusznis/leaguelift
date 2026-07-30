@@ -132,3 +132,42 @@ Additional, unreserved decisions:
   data); and an `AnalyticsProvider` seam shipped as a logging-only stub, no
   vendor chosen, with one real call site (`organization_created`)
   (2026-07-30)
+- ADR-026: Phase 10 slice 1 — event data model (`event`, V22) and staff CRUD
+  (create/read/update/publish/cancel/postpone), org/team/tournament-scoped;
+  reuses the existing team/tournament capability-inheritance architecture
+  unchanged, no new AuthorizationService methods; collapses the doc's
+  separate "status"/"publication status" fields into one lifecycle enum;
+  records three founder decisions shaping all of Phase 10 (simple v1 RSVP
+  policy, aggregate RSVP counts also shown to athletes/guardians, no
+  per-org feature toggle) even though RSVP itself is slice 2 (2026-07-30)
+- ADR-027: Phase 10 slice 2 — RSVP (`event_rsvp`, V23, upserted per
+  event+participant, not append-only); submission requires a real self/
+  guardian/staff relationship resolved directly (never through the broader
+  `hasHouseholdCapability` check, which would let any org staff member
+  impersonate a guardian); staff get individual responses, guardians/
+  athletes get aggregate counts only; household/participant combined-
+  schedule listing; `AthleteDashboardService`'s next-event/week-schedule
+  cards wired to real data, closing a gap flagged since Phase 7 (2026-07-30)
+- ADR-028: Phase 10 slice 3 — `CalendarProvider` (real RFC 5545 `.ics`
+  output, UTC timestamps, no `VTIMEZONE`) and `MapsProvider`
+  (`GoogleMapsDirectionsProvider` — genuinely real, keyless, unlike every
+  other provider stopgap in this codebase); both live in the `event` module,
+  not `notification/`; neither ever reads `meetingPoint`/`directionsNotes`,
+  so private location notes can't leak by construction; reuses existing
+  read authorization with no new auth path; `EventController`'s team-name
+  resolution consolidated into `EventService.displayTitleFor` (2026-07-30)
+- ADR-029: Phase 10 slice 4 — notification wiring into Phase 8's outbox
+  worker: `EventService` diffs each mutation's before/after snapshot and
+  writes one outbox event per changed dimension (`event.created`,
+  `event.time_changed`, `event.location_changed`, `event.area_assigned`,
+  `event.arrival_time_changed`, `event.postponed`, `event.cancelled`,
+  `tournament.event_added`, `tournament.event_updated`), never for a
+  still-DRAFT event; family recipients resolve only through `Event.teamId`'s
+  roster (never `opponentTeamId`), respecting the existing email/SMS opt-out/
+  opt-in flags; `event.rsvp_changed` notifies team staff instead (a new
+  `AuthorizationService.listTeamStaffUserIds`), not the submitting family;
+  nine of the ten event types share one `EventChangeNotificationHandler`
+  class registered as nine distinct `@Bean` instances rather than nine
+  near-identical `@Component` classes; "in-app state" is the pre-existing
+  Activity Feed, not a new notification inbox (2026-07-30) — completes
+  Phase 10's roadmap scope

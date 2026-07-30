@@ -7,6 +7,7 @@ import com.leaguelift.authorization.domain.RoleAssignmentContextType
 import com.leaguelift.authorization.domain.RoleAssignmentStatus
 import com.leaguelift.authorization.persistence.RoleAssignmentRepository
 import com.leaguelift.common.web.CurrentUser
+import com.leaguelift.event.application.EventService
 import com.leaguelift.household.domain.AdultStatus
 import com.leaguelift.household.domain.HouseholdAdult
 import com.leaguelift.household.persistence.HouseholdRepository
@@ -41,9 +42,10 @@ class AthleteDashboardServiceTest {
 	private val householdRepository = mockk<HouseholdRepository>()
 	private val teamRepository = mockk<TeamRepository>()
 	private val appUserRepository = mockk<AppUserRepository>()
+	private val eventService = mockk<EventService>()
 
 	private val service = AthleteDashboardService(
-		authorizationService, roleAssignmentRepository, participantRepository, householdRepository, teamRepository, appUserRepository,
+		authorizationService, roleAssignmentRepository, participantRepository, householdRepository, teamRepository, appUserRepository, eventService,
 	)
 
 	private val currentUser = CurrentUser(UUID.randomUUID(), "maya.johnson@example.com", "Maya Johnson")
@@ -73,10 +75,12 @@ class AthleteDashboardServiceTest {
 	fun `getOverview uses the linked participant's real name`() {
 		every { authorizationService.findAthleteSelfLink(currentUser) } returns selfLink()
 		every { participantRepository.findById(participantId, orgId) } returns participant()
+		every { eventService.listForParticipant(orgId, participantId, currentUser, 0, 50) } returns emptyList()
 
 		val result = service.getOverview(currentUser)
 
 		assertEquals("Maya Johnson", result.displayName)
+		assertEquals(null, result.nextEvent)
 	}
 
 	@Test
@@ -125,8 +129,39 @@ class AthleteDashboardServiceTest {
 	}
 
 	@Test
-	fun `week events, recent history, and orders are honestly empty — no backing data model exists`() {
+	fun `getWeekEvents returns empty with no self-link, never fabricated content`() {
+		every { authorizationService.findAthleteSelfLink(currentUser) } returns null
+
 		assertTrue(service.getWeekEvents(currentUser).isEmpty())
+	}
+
+	@Test
+	fun `getWeekEvents returns the linked participant's real upcoming events`() {
+		val team = Team(UUID.randomUUID(), orgId, "Varsity Soccer", "Soccer", "2024", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
+		val event = com.leaguelift.event.domain.Event(
+			id = UUID.randomUUID(), organizationId = orgId, teamId = team.id, tournamentId = null, opponentTeamId = null, opponentName = "Northside FC",
+			eventType = com.leaguelift.event.domain.EventType.COMPETITION, title = null, description = null,
+			status = com.leaguelift.event.domain.EventStatus.SCHEDULED, startAt = Instant.now().plusSeconds(3600), endAt = null,
+			arrivalAt = null, meetingAt = null, timezone = "America/New_York", venueName = "Home Field", address = null, latitude = null,
+			longitude = null, area = null, meetingPoint = null, directionsNotes = null, visibility = com.leaguelift.event.domain.EventVisibility.TEAM,
+			sourceType = com.leaguelift.event.domain.EventSourceType.MANUAL, provider = null, connectionId = null, externalEventId = null,
+			externalSyncHash = null, sourceUpdatedAt = null, createdByUserId = UUID.randomUUID(), updatedByUserId = UUID.randomUUID(),
+			createdAt = Instant.now(), updatedAt = Instant.now(),
+		)
+		every { authorizationService.findAthleteSelfLink(currentUser) } returns selfLink()
+		every { participantRepository.findById(participantId, orgId) } returns participant()
+		every { eventService.listForParticipant(orgId, participantId, currentUser, 0, 50) } returns listOf(event)
+		every { teamRepository.findById(team.id, orgId) } returns team
+
+		val result = service.getWeekEvents(currentUser)
+
+		assertEquals(1, result.size)
+		assertEquals("Varsity Soccer vs Northside FC", result.first().title)
+		assertEquals("Home Field", result.first().subtitle)
+	}
+
+	@Test
+	fun `recent history and orders are honestly empty — no backing data model exists`() {
 		assertTrue(service.getRecentHistory(currentUser).isEmpty())
 		assertTrue(service.getOrders(currentUser).isEmpty())
 	}

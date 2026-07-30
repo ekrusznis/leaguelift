@@ -45,6 +45,27 @@ class HouseholdRepository(private val jdbcClient: JdbcClient) {
             .param("organizationId", organizationId)
             .query(Long::class.java).single()
 
+    /**
+     * Every distinct active household with an active participant on [teamId] — the
+     * recipient set for Phase 10 slice 4 event-change notifications (ADR-029). Opt-out/
+     * opt-in filtering happens at the caller (`EventService`), same as
+     * `FeeRepository.findNeedingPaymentReminder`'s convention.
+     */
+    fun findActiveForTeam(teamId: UUID, organizationId: UUID): List<Household> =
+        jdbcClient.sql(
+            """
+            select distinct h.id, h.organization_id, h.display_name, h.contact_email, h.contact_phone, h.notes,
+                   h.email_reminders_opt_out, h.sms_reminders_opt_in, h.status, h.created_at, h.updated_at
+            from household h
+            join participant p on p.household_id = h.id
+            join participant_team pt on pt.participant_id = p.id
+            where pt.team_id = :teamId and pt.organization_id = :organizationId
+              and pt.status = 'ACTIVE' and p.status = 'ACTIVE' and h.status = 'ACTIVE'
+            """.trimIndent(),
+        )
+            .param("teamId", teamId).param("organizationId", organizationId)
+            .query(::mapHousehold).list()
+
     fun insert(organizationId: UUID, displayName: String, contactEmail: String?, contactPhone: String?, notes: String?): Household {
         val now = Instant.now()
         val id = UUID.randomUUID()

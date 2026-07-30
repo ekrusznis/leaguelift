@@ -204,6 +204,25 @@ class AuthorizationService(
 			.toSet()
 	}
 
+	/**
+	 * Every user currently holding [capability] as staff on [teamId] — explicit
+	 * `role_assignment` grants plus inherited org OWNER/ADMINISTRATOR — used to resolve
+	 * notification *recipients* (Phase 10 slice 4, ADR-029), not just to answer a
+	 * yes/no permission check the way [hasTeamCapability] does.
+	 */
+	fun listTeamStaffUserIds(organizationId: UUID, teamId: UUID, capability: String): Set<UUID> {
+		val explicit = roleAssignmentRepository.listActiveForResource(RoleAssignmentContextType.TEAM, teamId)
+			.filter { capability in CapabilityRegistry.teamCapabilities(it.role) }
+			.map { it.userId }
+			.toSet()
+		val inherited = if (capability in CapabilityRegistry.teamCapabilities(ResourceRole.TEAM_MANAGER)) {
+			membershipRepository.listActiveManagers(organizationId).map { it.userId }.toSet()
+		} else {
+			emptySet()
+		}
+		return explicit + inherited
+	}
+
 	// --- Tournament context ------------------------------------------------------------
 
 	fun hasTournamentCapability(organizationId: UUID, tournamentId: UUID, currentUser: CurrentUser, capability: String): Boolean {

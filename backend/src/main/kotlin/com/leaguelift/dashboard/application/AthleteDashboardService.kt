@@ -8,14 +8,25 @@ import com.leaguelift.dashboard.web.AthleteOverviewResponse
 import com.leaguelift.dashboard.web.AthleteTeamSummary
 import com.leaguelift.dashboard.web.GuardianSummary
 import com.leaguelift.dashboard.web.HistoryItem
+import com.leaguelift.dashboard.web.NextEventSummary
 import com.leaguelift.dashboard.web.OrderSummary
 import com.leaguelift.dashboard.web.ScheduleItem
+import com.leaguelift.event.application.EventService
+import com.leaguelift.event.domain.Event
+import com.leaguelift.event.domain.EventStatus
+import com.leaguelift.event.domain.displayTitle
 import com.leaguelift.household.persistence.HouseholdRepository
 import com.leaguelift.identity.persistence.AppUserRepository
 import com.leaguelift.participant.domain.Participant
 import com.leaguelift.participant.persistence.ParticipantRepository
 import com.leaguelift.team.persistence.TeamRepository
 import org.springframework.stereotype.Service
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.TextStyle
+import java.util.Locale
+
+private const val WEEK_EVENTS_LIMIT = 50
 
 /**
  * One method per Athlete-dashboard card. As of Phase 7/ADR-020, real wherever the
@@ -29,10 +40,13 @@ import org.springframework.stereotype.Service
  * still a manual/seed-only step) gets the same honest-empty response a linked athlete
  * with no schedule/order data would get — never fabricated content.
  *
- * Genuinely not real yet, honestly: week/history schedule data (no events model exists
- * — Phase 10, "Not started") and orders (the `order` table has no participant
- * association — orders are organization/store-scoped, not athlete-scoped). Both return
- * empty lists rather than demo content.
+ * As of Phase 10 slice 2 (ADR-027), the next-event/week-schedule cards are real,
+ * reusing [EventService.listForParticipant]'s own authorization (the caller already
+ * holds the `ATHLETE_SELF` link this method resolves [linkedParticipant] from, so that
+ * check always passes here — it's not redundant paranoia, just the same seam every
+ * other caller of that method goes through). Orders remain honestly empty — the
+ * `order` table still has no participant association (orders are organization/store-
+ * scoped, not athlete-scoped).
  */
 @Service
 class AthleteDashboardService(
@@ -42,6 +56,7 @@ class AthleteDashboardService(
 	private val householdRepository: HouseholdRepository,
 	private val teamRepository: TeamRepository,
 	private val appUserRepository: AppUserRepository,
+	private val eventService: EventService,
 ) {
 
 	private fun linkedParticipant(currentUser: CurrentUser): Participant? {
@@ -51,14 +66,42 @@ class AthleteDashboardService(
 		return participantRepository.findById(participantId, organizationId)
 	}
 
+	/** Upcoming (not cancelled/completed), soonest first. */
+	private fun upcomingEvents(participant: Participant, currentUser: CurrentUser): List<Event> {
+		val now = Instant.now()
+		return eventService.listForParticipant(participant.organizationId, participant.id, currentUser, 0, WEEK_EVENTS_LIMIT)
+			.filter { it.status != EventStatus.CANCELLED && it.status != EventStatus.COMPLETED }
+			.filter { it.startAt == null || it.startAt.isAfter(now) }
+			.sortedBy { it.startAt ?: Instant.MAX }
+	}
+
+	private fun toScheduleItem(event: Event, participant: Participant): ScheduleItem {
+		val teamName = event.teamId?.let { teamRepository.findById(it, participant.organizationId)?.name }
+		val opponentName = event.opponentTeamId?.let { teamRepository.findById(it, participant.organizationId)?.name }
+		val zone = runCatching { ZoneId.of(event.timezone) }.getOrDefault(ZoneId.systemDefault())
+		val zoned = event.startAt?.atZone(zone)
+		return ScheduleItem(
+			id = event.id.toString(),
+			day = zoned?.dayOfWeek?.getDisplayName(TextStyle.SHORT, Locale.US) ?: "TBD",
+			date = zoned?.toLocalDate()?.toString() ?: "TBD",
+			title = displayTitle(event, teamName, opponentName),
+			subtitle = event.venueName ?: event.address ?: "",
+			time = zoned?.toLocalTime()?.toString() ?: "TBD",
+			tag = event.eventType.name,
+		)
+	}
+
 	fun getOverview(currentUser: CurrentUser): AthleteOverviewResponse {
 		val participant = linkedParticipant(currentUser)
 		return AthleteOverviewResponse(
 			displayName = participant?.let { "${it.firstName} ${it.lastName}" } ?: currentUser.displayName,
 			isDemoData = false,
-			// No events/schedule model exists yet (Phase 10 — "Not started"); honestly
-			// empty rather than a fabricated next event.
-			nextEvent = null,
+			nextEvent = participant?.let { p ->
+				upcomingEvents(p, currentUser).firstOrNull()?.let { event ->
+					val item = toScheduleItem(event, p)
+					NextEventSummary(item.title, item.tag ?: "", "${item.day} ${item.date} ${item.time}".trim(), item.subtitle)
+				}
+			},
 		)
 	}
 
@@ -74,7 +117,13 @@ class AthleteDashboardService(
 		}
 	}
 
-	fun getWeekEvents(currentUser: CurrentUser): List<ScheduleItem> = emptyList()
+	fun getWeekEvents(currentUser: CurrentUser): List<ScheduleItem> {
+		val participant = linkedParticipant(currentUser) ?: return emptyList()
+		val weekFromNow = Instant.now().plusSeconds(7 * 24 * 60 * 60)
+		return upcomingEvents(participant, currentUser)
+			.filter { it.startAt == null || it.startAt.isBefore(weekFromNow) }
+			.map { toScheduleItem(it, participant) }
+	}
 
 	fun getRecentHistory(currentUser: CurrentUser): List<HistoryItem> = emptyList()
 

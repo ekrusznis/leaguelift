@@ -56,11 +56,32 @@ object Capabilities {
 	const val ATHLETE_TEAM_VIEW = "athlete.team.view"
 	const val ATHLETE_GUARDIAN_VIEW = "athlete.guardian.view"
 
+	// Events/RSVP (Phase 10, ADR-026 — DESIGN-DOC.md section 14.1A's exact capability
+	// names). EVENT_READ/EVENT_RSVP_GUARDIAN are granted here for context-listing/
+	// frontend-nav purposes only — real per-event guardian/athlete access is resolved
+	// through the guardian-relationship/participant-team chain in EventService, the
+	// same way ParentDashboardService bypasses the generic household-capability check
+	// for guardian-scoped actions (see AuthorizationService.hasHouseholdCapability's
+	// "any active org member" branch, which is deliberately too broad for a
+	// guardian-only action like submitting an RSVP).
+	const val EVENT_READ = "event.read"
+	const val EVENT_CREATE = "event.create"
+	const val EVENT_UPDATE = "event.update"
+	const val EVENT_CANCEL = "event.cancel"
+	const val EVENT_PUBLISH = "event.publish"
+	const val EVENT_RSVP_SELF = "event.rsvp.self"
+	const val EVENT_RSVP_GUARDIAN = "event.rsvp.guardian"
+	const val EVENT_RSVP_READ_TEAM = "event.rsvp.read_team"
+	const val TEAM_EVENT_MANAGE = "team.event.manage"
+	const val TOURNAMENT_EVENT_MANAGE = "tournament.event.manage"
+	const val ORG_EVENT_MANAGE = "organization.event.manage"
+
 	// Platform admin
 	const val PLATFORM_ORG_VIEW = "platform.organization.view"
 	const val PLATFORM_ORG_MANAGE = "platform.organization.manage"
 	const val PLATFORM_USER_VIEW = "platform.user.view"
 	const val PLATFORM_INTEGRATION_VIEW = "platform.integration.view"
+	const val PLATFORM_INTEGRATION_MANAGE = "platform.integration.manage"
 	const val PLATFORM_AUDIT_VIEW = "platform.audit.view"
 	const val PLATFORM_FEATURE_FLAG_MANAGE = "platform.feature_flag.manage"
 	const val PLATFORM_SUPPORT_IMPERSONATE = "platform.support.impersonate"
@@ -99,32 +120,38 @@ object CapabilityRegistry {
 		MembershipRole.OWNER -> setOf(
 			Capabilities.ORG_MANAGE, Capabilities.ORG_MEMBERS_MANAGE, Capabilities.ORG_BILLING_MANAGE,
 			Capabilities.ORG_PAYOUT_MANAGE, Capabilities.ORG_REPORT_VIEW, Capabilities.ORG_TEAM_MANAGE,
-			Capabilities.ORG_TOURNAMENT_MANAGE,
+			Capabilities.ORG_TOURNAMENT_MANAGE, Capabilities.ORG_EVENT_MANAGE, Capabilities.EVENT_READ,
 		)
 		MembershipRole.ADMINISTRATOR -> setOf(
 			Capabilities.ORG_MANAGE, Capabilities.ORG_MEMBERS_MANAGE, Capabilities.ORG_REPORT_VIEW,
-			Capabilities.ORG_TEAM_MANAGE, Capabilities.ORG_TOURNAMENT_MANAGE,
+			Capabilities.ORG_TEAM_MANAGE, Capabilities.ORG_TOURNAMENT_MANAGE, Capabilities.ORG_EVENT_MANAGE, Capabilities.EVENT_READ,
 		)
 		MembershipRole.FINANCE_MANAGER, MembershipRole.VIEWER -> setOf(Capabilities.ORG_REPORT_VIEW)
 		MembershipRole.TEAM_ADMINISTRATOR, MembershipRole.TOURNAMENT_ADMINISTRATOR -> emptySet()
 	}
 
 	fun teamCapabilities(role: ResourceRole): Set<String> = when (role) {
-		ResourceRole.COACH_READ -> setOf(Capabilities.TEAM_VIEW)
+		ResourceRole.COACH_READ -> setOf(Capabilities.TEAM_VIEW, Capabilities.EVENT_READ)
 		ResourceRole.TEAM_EDITOR -> setOf(
 			Capabilities.TEAM_VIEW, Capabilities.TEAM_PAGE_EDIT, Capabilities.TEAM_FUNDRAISING_MANAGE, Capabilities.TEAM_STORE_MANAGE,
+			Capabilities.EVENT_READ, Capabilities.EVENT_CREATE, Capabilities.EVENT_UPDATE, Capabilities.EVENT_PUBLISH,
+			Capabilities.EVENT_RSVP_READ_TEAM, Capabilities.TEAM_EVENT_MANAGE,
 		)
 		ResourceRole.TEAM_MANAGER -> setOf(
 			Capabilities.TEAM_VIEW, Capabilities.TEAM_PAGE_EDIT, Capabilities.TEAM_FUNDRAISING_MANAGE, Capabilities.TEAM_STORE_MANAGE,
 			Capabilities.TEAM_ROSTER_MANAGE, Capabilities.TEAM_STAFF_MANAGE, Capabilities.TEAM_FEE_VIEW,
+			Capabilities.EVENT_READ, Capabilities.EVENT_CREATE, Capabilities.EVENT_UPDATE, Capabilities.EVENT_CANCEL, Capabilities.EVENT_PUBLISH,
+			Capabilities.EVENT_RSVP_READ_TEAM, Capabilities.TEAM_EVENT_MANAGE,
 		)
 		else -> emptySet()
 	}
 
 	fun tournamentCapabilities(role: ResourceRole): Set<String> = when (role) {
-		ResourceRole.TOURNAMENT_VIEWER -> setOf(Capabilities.TOURNAMENT_VIEW)
+		ResourceRole.TOURNAMENT_VIEWER -> setOf(Capabilities.TOURNAMENT_VIEW, Capabilities.EVENT_READ)
 		ResourceRole.TOURNAMENT_ADMINISTRATOR -> setOf(
 			Capabilities.TOURNAMENT_VIEW, Capabilities.TOURNAMENT_MANAGE, Capabilities.TOURNAMENT_PAGE_EDIT, Capabilities.TOURNAMENT_TEAM_MANAGE,
+			Capabilities.EVENT_READ, Capabilities.EVENT_CREATE, Capabilities.EVENT_UPDATE, Capabilities.EVENT_CANCEL, Capabilities.EVENT_PUBLISH,
+			Capabilities.EVENT_RSVP_READ_TEAM, Capabilities.TOURNAMENT_EVENT_MANAGE,
 		)
 		else -> emptySet()
 	}
@@ -132,7 +159,7 @@ object CapabilityRegistry {
 	fun platformCapabilities(role: ResourceRole): Set<String> = when (role) {
 		ResourceRole.PLATFORM_ADMINISTRATOR -> setOf(
 			Capabilities.PLATFORM_ORG_VIEW, Capabilities.PLATFORM_ORG_MANAGE, Capabilities.PLATFORM_USER_VIEW,
-			Capabilities.PLATFORM_INTEGRATION_VIEW, Capabilities.PLATFORM_AUDIT_VIEW,
+			Capabilities.PLATFORM_INTEGRATION_VIEW, Capabilities.PLATFORM_INTEGRATION_MANAGE, Capabilities.PLATFORM_AUDIT_VIEW,
 			Capabilities.PLATFORM_FEATURE_FLAG_MANAGE, Capabilities.PLATFORM_SUPPORT_IMPERSONATE,
 		)
 		else -> emptySet()
@@ -141,11 +168,13 @@ object CapabilityRegistry {
 	fun householdCapabilities(): Set<String> = setOf(
 		Capabilities.HOUSEHOLD_VIEW, Capabilities.HOUSEHOLD_FEE_VIEW, Capabilities.HOUSEHOLD_FEE_PAY,
 		Capabilities.HOUSEHOLD_CREDIT_VIEW, Capabilities.HOUSEHOLD_ORDER_VIEW, Capabilities.HOUSEHOLD_PROFILE_MANAGE,
+		Capabilities.EVENT_READ, Capabilities.EVENT_RSVP_GUARDIAN,
 	)
 
 	/** Deliberately excludes anything fee/payment/report-related — see the class doc. */
 	fun athleteSelfCapabilities(): Set<String> = setOf(
 		Capabilities.ATHLETE_PROFILE_VIEW, Capabilities.ATHLETE_PROFILE_UPDATE, Capabilities.ATHLETE_SCHEDULE_VIEW,
 		Capabilities.ATHLETE_ORDER_VIEW, Capabilities.ATHLETE_TEAM_VIEW, Capabilities.ATHLETE_GUARDIAN_VIEW,
+		Capabilities.EVENT_RSVP_SELF,
 	)
 }

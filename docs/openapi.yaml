@@ -33,10 +33,25 @@ info:
     gating public sponsor-directory visibility, refunds including an atomic
     reject-triggers-refund flow, a minimal scheduled renewal-reminder job,
     stateless QR/link sharing, computed receipt-style invoices, and
-    sponsor-contact CRM widening — ADR-019).
+    sponsor-contact CRM widening — ADR-019), and Phase 8 slice 1 (the outbox
+    worker's platform-admin dead-letter/failed inspection and reprocess
+    endpoints — ADR-022; the outbox worker itself and the real Resend-backed
+    EmailProvider have no endpoints of their own, they run in the background).
+    Phase 9 (org/household/platform reporting endpoints, plus an
+    AnalyticsProvider seam with a logging-only implementation — no real
+    analytics vendor chosen yet — ADR-025), Phase 10 slice 1 (event CRUD
+    — create/read/update/publish/cancel/postpone, org/team/tournament-scoped
+    — ADR-026), and Phase 10 slice 2 (RSVP — submit/update via self/guardian/
+    admin, staff individual-response + summary view, guardian/athlete
+    summary-only view, household/participant combined-schedule listing —
+    ADR-027), and Phase 10 slice 3 (a real `.ics` calendar export for a
+    single event or a household's combined schedule, plus a real Google
+    Maps directions link builder — neither is a logging stopgap, both are
+    fully functional today — ADR-028). Notification wiring remains the
+    last Phase 10 slice, not yet built.
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
-  version: "0.14.0"
+  version: "0.19.0"
 servers:
   - url: /api/v1
 tags:
@@ -61,10 +76,13 @@ tags:
   - name: orders
   - name: sponsorships
   - name: dashboard
+  - name: outbox-admin
   - name: authorization
   - name: documents
   - name: activity
   - name: search
+  - name: reporting
+  - name: events
 paths:
   /public/status:
     get:
@@ -4407,6 +4425,847 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /organizations/{organizationId}/reports/revenue:
+    get:
+      tags: [reporting]
+      summary: Org revenue report — by source type (CONTRIBUTION/ORDER) and by team, date-ranged (Phase 9 slice 1, ADR-025; requires manager role)
+      operationId: getRevenueReport
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Revenue report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RevenueReportResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/reports/revenue/export:
+    get:
+      tags: [reporting]
+      summary: Revenue report as CSV (Phase 9 slice 1, ADR-025; requires manager role)
+      operationId: exportRevenueReport
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema: { type: string }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/reports/campaigns:
+    get:
+      tags: [reporting]
+      summary: Revenue by campaign, date-ranged (Phase 9 slice 1, ADR-025; requires manager role)
+      operationId: getCampaignRevenueReport
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Campaign revenue breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CampaignRevenueResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/reports/products:
+    get:
+      tags: [reporting]
+      summary: Product performance (quantity sold/revenue) from confirmed orders, date-ranged (Phase 9 slice 1, ADR-025; requires manager role)
+      operationId: getProductPerformanceReport
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Product performance
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductPerformanceResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/reports/refunds:
+    get:
+      tags: [reporting]
+      summary: Refunds report, date-ranged (Phase 9 slice 1, ADR-025; requires manager role)
+      operationId: getRefundsReport
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Refunds report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefundsReportResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/reports/fee-collections:
+    get:
+      tags: [reporting]
+      summary: Org-wide fee payments actually collected in range, plus current outstanding total (Phase 9 slice 1, ADR-025; requires manager role)
+      operationId: getFeeCollectionsReport
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Fee collections report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeCollectionsReportResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/reports/households/{householdId}/fees:
+    get:
+      tags: [reporting]
+      summary: One household's fee payments in range plus current outstanding balance (Phase 9 slice 2, ADR-025; requires active org membership) — scoped to fees/payments/balance only, credits/orders/contributions deferred
+      operationId: getHouseholdFeeReport
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: householdId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Household fee report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeeCollectionsReportResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /platform/reports/overview:
+    get:
+      tags: [reporting]
+      summary: Platform-wide report — new orgs/customers, active orgs, GTV, refunds, integration health, date-ranged (Phase 9 slice 3, ADR-025; requires platform.audit.view) — excludes subscription revenue and dispute rate (no backing data)
+      operationId: getPlatformReport
+      parameters:
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Platform report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformReportResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/events:
+    get:
+      tags: [events]
+      summary: List events for an organization (Phase 10 slice 1, ADR-026; requires active org membership)
+      operationId: listOrganizationEvents
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [events]
+      summary: Create an org-wide event, or a team/tournament event via teamId/tournamentId in the body (Phase 10 slice 1, ADR-026; requires event.create at the relevant scope)
+      operationId: createOrganizationEvent
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventRequest"
+      responses:
+        "200":
+          description: Created event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/events/{eventId}:
+    get:
+      tags: [events]
+      summary: Get one event (Phase 10 slice 1, ADR-026; requires event.read at the event's scope)
+      operationId: getEvent
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [events]
+      summary: Update an event (Phase 10 slice 1, ADR-026; requires event.update at the event's scope) — team/tournament ownership is not reassignable via this endpoint
+      operationId: updateEvent
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEventRequest"
+      responses:
+        "200":
+          description: Updated event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/events/{eventId}/publish:
+    post:
+      tags: [events]
+      summary: Publish a DRAFT event, moving it to TENTATIVE (Phase 10 slice 1, ADR-026; requires event.publish at the event's scope)
+      operationId: publishEvent
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Published event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/events/{eventId}/cancel:
+    post:
+      tags: [events]
+      summary: Cancel an event (Phase 10 slice 1, ADR-026; requires event.cancel at the event's scope)
+      operationId: cancelEvent
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Cancelled event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/events/{eventId}/postpone:
+    post:
+      tags: [events]
+      summary: Postpone an event (Phase 10 slice 1, ADR-026; requires event.cancel at the event's scope)
+      operationId: postponeEvent
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Postponed event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/events/{eventId}/calendar.ics:
+    get:
+      tags: [events]
+      summary: A single event's .ics file (Phase 10 slice 3, ADR-028) — RFC 5545, UTC timestamps, same read authorization as GET .../events/{eventId}
+      operationId: getEventIcs
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: .ics file
+          content:
+            text/calendar:
+              schema: { type: string }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/events/{eventId}/directions:
+    get:
+      tags: [events]
+      summary: A Google Maps directions link built only from address/latitude/longitude — never meetingPoint/directionsNotes (Phase 10 slice 3, ADR-028)
+      operationId: getEventDirections
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Directions link (null if the event has no location at all)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectionsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /households/{householdId}/calendar.ics:
+    get:
+      tags: [events]
+      summary: A household's combined-schedule .ics file (Phase 10 slice 3, ADR-028) — same read authorization as GET /households/{householdId}/events
+      operationId: getHouseholdIcs
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: organizationId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: .ics file
+          content:
+            text/calendar:
+              schema: { type: string }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /teams/{teamId}/events:
+    get:
+      tags: [events]
+      summary: List events for a team, including events where this team is the opponent (Phase 10 slice 1, ADR-026; requires event.read at team scope)
+      operationId: listTeamEvents
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: organizationId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [events]
+      summary: Create a team-owned event (Phase 10 slice 1, ADR-026; requires event.create at team scope)
+      operationId: createTeamEvent
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: organizationId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventRequest"
+      responses:
+        "200":
+          description: Created event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /tournaments/{tournamentId}/events:
+    get:
+      tags: [events]
+      summary: List a tournament's child events (Phase 10 slice 1, ADR-026; requires event.read at tournament scope)
+      operationId: listTournamentEvents
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: organizationId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [events]
+      summary: Create a tournament child event — may have TBD start time/opponent/area (Phase 10 slice 1, ADR-026; requires event.create at tournament scope)
+      operationId: createTournamentEvent
+      parameters:
+        - name: tournamentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: organizationId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventRequest"
+      responses:
+        "200":
+          description: Created event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /events/{eventId}/rsvps:
+    get:
+      tags: [events]
+      summary: RSVP summary + (staff only) individual responses for an event (Phase 10 slice 2, ADR-027) — a guardian/athlete with a participant on the event's team gets summary counts only, never another family's individual response
+      operationId: getEventRsvps
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: organizationId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: RSVP summary and (if authorized) individual responses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventRsvpsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /events/{eventId}/participants/{participantId}/rsvp:
+    put:
+      tags: [events]
+      summary: Submit or update an RSVP for a participant (Phase 10 slice 2, ADR-027) — self (linked athlete), guardian (real guardian_relationship, not just any org member), or admin (staff with event.update at the event's scope)
+      operationId: submitEventRsvp
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: participantId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: organizationId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitRsvpRequest"
+      responses:
+        "200":
+          description: The current effective RSVP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventRsvpResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /households/{householdId}/events:
+    get:
+      tags: [events]
+      summary: A household's combined schedule — every event owned by any team any of its active participants is on (Phase 10 slice 2, ADR-027)
+      operationId: listHouseholdEvents
+      parameters:
+        - name: householdId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: organizationId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /participants/{participantId}/events:
+    get:
+      tags: [events]
+      summary: A single participant's schedule — every event owned by any team the participant is on (Phase 10 slice 2, ADR-027)
+      operationId: listParticipantEvents
+      parameters:
+        - name: participantId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: organizationId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, default: 0 }
+        - name: size
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/outbox-events/dead-letter:
+    get:
+      tags: [outbox-admin]
+      summary: Outbox events that exhausted retry attempts (Phase 8 slice 1, ADR-022; requires platform.integration.view)
+      operationId: listDeadLetterOutboxEvents
+      responses:
+        "200":
+          description: Dead-lettered outbox events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OutboxEventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/outbox-events/failed:
+    get:
+      tags: [outbox-admin]
+      summary: Outbox events currently backing off after a retryable failure (Phase 8 slice 1, ADR-022; requires platform.integration.view)
+      operationId: listFailedOutboxEvents
+      responses:
+        "200":
+          description: Failed (retrying) outbox events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OutboxEventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/outbox-events/{id}/reprocess:
+    post:
+      tags: [outbox-admin]
+      summary: Resets a DEAD_LETTER/FAILED outbox event back to PENDING with attempt_count reset to 0 (Phase 8 slice 1, ADR-022; requires platform.integration.manage)
+      operationId: reprocessOutboxEvent
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Reset for reprocessing
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /me/contexts:
     get:
       tags: [authorization]
@@ -5444,9 +6303,17 @@ components:
         notes:
           type: string
           nullable: true
+        emailRemindersOptOut:
+          type: boolean
+          nullable: true
+          description: Phase 8 slice 2 (ADR-023) — opt out of transactional reminder emails (e.g. fee-payment reminders).
+        smsRemindersOptIn:
+          type: boolean
+          nullable: true
+          description: Phase 8 slice 3 (ADR-024) — opt IN to one-way SMS reminders via contactPhone.
     HouseholdResponse:
       type: object
-      required: [id, organizationId, displayName, status, createdAt, updatedAt]
+      required: [id, organizationId, displayName, emailRemindersOptOut, smsRemindersOptIn, status, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -5466,6 +6333,10 @@ components:
         notes:
           type: string
           nullable: true
+        emailRemindersOptOut:
+          type: boolean
+        smsRemindersOptIn:
+          type: boolean
         status:
           type: string
           enum: [ACTIVE, ARCHIVED]
@@ -8148,6 +9019,539 @@ components:
         deadLetter:
           type: integer
           format: int64
+    OutboxEventResponse:
+      type: object
+      required: [id, aggregateType, aggregateId, eventType, status, attemptCount, availableAt, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        aggregateType:
+          type: string
+        aggregateId:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
+        eventType:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, PROCESSING, PROCESSED, FAILED, DEAD_LETTER]
+        attemptCount:
+          type: integer
+        availableAt:
+          type: string
+          format: date-time
+        processedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastError:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    SourceTypeRevenueResponse:
+      type: object
+      required: [sourceType, amountMinor]
+      properties:
+        sourceType:
+          type: string
+        amountMinor:
+          type: integer
+          format: int64
+    TeamRevenueResponse:
+      type: object
+      required: [amountMinor]
+      properties:
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+        teamName:
+          type: string
+          nullable: true
+        amountMinor:
+          type: integer
+          format: int64
+    RevenueReportResponse:
+      type: object
+      required: [from, to, totalMinor, bySourceType, byTeam]
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        totalMinor:
+          type: integer
+          format: int64
+        bySourceType:
+          type: array
+          items:
+            $ref: "#/components/schemas/SourceTypeRevenueResponse"
+        byTeam:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamRevenueResponse"
+    CampaignRevenueResponse:
+      type: object
+      required: [campaignId, campaignName, amountMinor]
+      properties:
+        campaignId:
+          type: string
+          format: uuid
+        campaignName:
+          type: string
+        amountMinor:
+          type: integer
+          format: int64
+    ProductPerformanceResponse:
+      type: object
+      required: [productId, productName, quantitySold, revenueMinor]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        productName:
+          type: string
+        quantitySold:
+          type: integer
+          format: int64
+        revenueMinor:
+          type: integer
+          format: int64
+    RefundResponse:
+      type: object
+      required: [sourceType, sourceId, amountMinor, effectiveAt]
+      properties:
+        sourceType:
+          type: string
+        sourceId:
+          type: string
+          format: uuid
+        amountMinor:
+          type: integer
+          format: int64
+        effectiveAt:
+          type: string
+          format: date-time
+    RefundsReportResponse:
+      type: object
+      required: [from, to, count, totalMinor, refunds]
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        count:
+          type: integer
+        totalMinor:
+          type: integer
+          format: int64
+        refunds:
+          type: array
+          items:
+            $ref: "#/components/schemas/RefundResponse"
+    FeeCollectionResponse:
+      type: object
+      required: [feePaymentId, householdId, householdName, amountMinor, paidAt]
+      properties:
+        feePaymentId:
+          type: string
+          format: uuid
+        householdId:
+          type: string
+          format: uuid
+        householdName:
+          type: string
+        amountMinor:
+          type: integer
+          format: int64
+        paidAt:
+          type: string
+          format: date
+    FeeCollectionsReportResponse:
+      type: object
+      required: [from, to, collectedMinor, outstandingMinor, payments]
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        collectedMinor:
+          type: integer
+          format: int64
+        outstandingMinor:
+          type: integer
+          format: int64
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeeCollectionResponse"
+    PlatformReportResponse:
+      type: object
+      required: [from, to, newOrganizations, activeOrganizations, newCustomers, grossTransactionVolumeMinor, refundedMinor, webhookProcessed, webhookFailed, outboxPending, outboxDeadLetter]
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        newOrganizations:
+          type: integer
+          format: int64
+        activeOrganizations:
+          type: integer
+          format: int64
+        newCustomers:
+          type: integer
+          format: int64
+        grossTransactionVolumeMinor:
+          type: integer
+          format: int64
+        refundedMinor:
+          type: integer
+          format: int64
+        refundRatePercent:
+          type: number
+          format: double
+          nullable: true
+          description: Null (not zero) when there was no GTV in the period.
+        webhookProcessed:
+          type: integer
+          format: int64
+        webhookFailed:
+          type: integer
+          format: int64
+        outboxPending:
+          type: integer
+          format: int64
+        outboxDeadLetter:
+          type: integer
+          format: int64
+    CreateEventRequest:
+      type: object
+      required: [eventType, timezone]
+      properties:
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+        tournamentId:
+          type: string
+          format: uuid
+          nullable: true
+        opponentTeamId:
+          type: string
+          format: uuid
+          nullable: true
+        opponentName:
+          type: string
+          nullable: true
+          maxLength: 120
+        eventType:
+          type: string
+          enum: [COMPETITION, TOURNAMENT, PRACTICE, MEETING, OTHER]
+        title:
+          type: string
+          nullable: true
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+        startAt:
+          type: string
+          format: date-time
+          nullable: true
+        endAt:
+          type: string
+          format: date-time
+          nullable: true
+        arrivalAt:
+          type: string
+          format: date-time
+          nullable: true
+        meetingAt:
+          type: string
+          format: date-time
+          nullable: true
+        timezone:
+          type: string
+          description: IANA time zone id, e.g. America/New_York.
+        venueName:
+          type: string
+          nullable: true
+          maxLength: 200
+        address:
+          type: string
+          nullable: true
+          maxLength: 300
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+        area:
+          type: string
+          nullable: true
+          maxLength: 120
+        meetingPoint:
+          type: string
+          nullable: true
+          maxLength: 300
+        directionsNotes:
+          type: string
+          nullable: true
+          maxLength: 1000
+        visibility:
+          type: string
+          enum: [PUBLIC, ORGANIZATION, TEAM]
+          default: TEAM
+    UpdateEventRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          nullable: true
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+        status:
+          type: string
+          nullable: true
+          enum: [DRAFT, TENTATIVE, SCHEDULED, DELAYED, POSTPONED, CANCELLED, COMPLETED]
+        startAt:
+          type: string
+          format: date-time
+          nullable: true
+        endAt:
+          type: string
+          format: date-time
+          nullable: true
+        arrivalAt:
+          type: string
+          format: date-time
+          nullable: true
+        meetingAt:
+          type: string
+          format: date-time
+          nullable: true
+        venueName:
+          type: string
+          nullable: true
+          maxLength: 200
+        address:
+          type: string
+          nullable: true
+          maxLength: 300
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+        area:
+          type: string
+          nullable: true
+          maxLength: 120
+        meetingPoint:
+          type: string
+          nullable: true
+          maxLength: 300
+        directionsNotes:
+          type: string
+          nullable: true
+          maxLength: 1000
+        opponentTeamId:
+          type: string
+          format: uuid
+          nullable: true
+        opponentName:
+          type: string
+          nullable: true
+          maxLength: 120
+    EventResponse:
+      type: object
+      required: [id, organizationId, eventType, displayTitle, status, timezone, visibility, sourceType, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+        tournamentId:
+          type: string
+          format: uuid
+          nullable: true
+        opponentTeamId:
+          type: string
+          format: uuid
+          nullable: true
+        opponentName:
+          type: string
+          nullable: true
+        eventType:
+          type: string
+          enum: [COMPETITION, TOURNAMENT, PRACTICE, MEETING, OTHER]
+        displayTitle:
+          type: string
+          description: Generated from team/opponent data unless an explicit title override was set.
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [DRAFT, TENTATIVE, SCHEDULED, DELAYED, POSTPONED, CANCELLED, COMPLETED]
+        startAt:
+          type: string
+          format: date-time
+          nullable: true
+        endAt:
+          type: string
+          format: date-time
+          nullable: true
+        arrivalAt:
+          type: string
+          format: date-time
+          nullable: true
+        meetingAt:
+          type: string
+          format: date-time
+          nullable: true
+        timezone:
+          type: string
+        venueName:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+        area:
+          type: string
+          nullable: true
+        meetingPoint:
+          type: string
+          nullable: true
+        directionsNotes:
+          type: string
+          nullable: true
+        visibility:
+          type: string
+          enum: [PUBLIC, ORGANIZATION, TEAM]
+        sourceType:
+          type: string
+          enum: [MANUAL, CSV_IMPORT, ICS_FEED, MAXPREPS, GAMECHANGER]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    SubmitRsvpRequest:
+      type: object
+      required: [response]
+      properties:
+        response:
+          type: string
+          enum: [ATTENDING, NOT_ATTENDING, MAYBE, NO_RESPONSE]
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+    EventRsvpResponse:
+      type: object
+      required: [id, eventId, participantId, response, source, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        participantId:
+          type: string
+          format: uuid
+        response:
+          type: string
+          enum: [ATTENDING, NOT_ATTENDING, MAYBE, NO_RESPONSE]
+        note:
+          type: string
+          nullable: true
+        source:
+          type: string
+          enum: [SELF, GUARDIAN, ADMIN]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    RsvpSummaryResponse:
+      type: object
+      required: [attending, notAttending, maybe, noResponse]
+      properties:
+        attending:
+          type: integer
+          format: int64
+        notAttending:
+          type: integer
+          format: int64
+        maybe:
+          type: integer
+          format: int64
+        noResponse:
+          type: integer
+          format: int64
+    EventRsvpsResponse:
+      type: object
+      required: [summary, responses]
+      properties:
+        summary:
+          $ref: "#/components/schemas/RsvpSummaryResponse"
+        responses:
+          type: array
+          description: Empty for a guardian/athlete caller (summary counts only) — populated only for staff with event.rsvp.read_team at the event's scope.
+          items:
+            $ref: "#/components/schemas/EventRsvpResponse"
+    DirectionsResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          nullable: true
+          description: Null when the event has no address and no coordinates.
     PlatformOrdersSummary:
       type: object
       required: [confirmed, refunded, pending]
