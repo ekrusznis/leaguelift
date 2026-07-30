@@ -237,3 +237,26 @@ Additional, unreserved decisions:
   overlay, not source-owned, since `event.area_assigned`'s own
   existence as a distinct notification type already implies routine
   local assignment (2026-07-30) — completes Phase 12's roadmap scope
+- ADR-035: Phase 13 Production Readiness Review scope — splits into four
+  code-level slices buildable this session (security headers/secrets-
+  audit-finalization/404-vs-403 review, test-coverage gap review against
+  section 18.1's critical-scenarios list, accessibility code-level audit
+  mirroring ADR-030's mobile-audit methodology, and operational runbook
+  documentation) versus items explicitly flagged as needing real
+  infrastructure or stakeholders this session doesn't have (load testing,
+  backup-restore rehearsal, incident-response rehearsal, UAT, legal
+  sign-off, the founder's own go/no-go decision) — never fabricated or
+  simulated (2026-07-30)
+- ADR-036: Phase 13 slice 1 — security hardening. Added the six missing
+  HTTP security headers to `SecurityConfig` (CSP/HSTS/X-Content-Type-Options/
+  X-Frame-Options/Referrer-Policy/Permissions-Policy); manually verified
+  Swagger UI still renders and executes under the new CSP (browser
+  screenshot + console check, no violations). Finalized the secrets audit
+  Phase 8 deferred: `.env.example` was missing 14 real, non-secret config
+  variables (platform economics, sponsorship/fee reminder scanners, outbox
+  worker tunables) — added; no plaintext secrets found anywhere in the repo.
+  404-vs-403 review of all 18 `ForbiddenException` sites confirmed the
+  codebase already returns 404 for cross-organization resource lookups and a
+  uniform 403 for organization-membership denial regardless of whether the
+  org exists — no leak found, now written down as a checked invariant
+  (2026-07-30)

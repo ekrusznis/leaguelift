@@ -8,6 +8,7 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
@@ -48,6 +49,33 @@ class SecurityConfig(
 			}
 			.oauth2ResourceServer { oauth2 ->
 				oauth2.jwt { jwt -> jwt.jwtAuthenticationConverter(jwtCurrentUserConverter) }
+			}
+			.headers { headers ->
+				headers
+					.contentTypeOptions { }
+					.frameOptions { it.deny() }
+					.httpStrictTransportSecurity {
+						it.includeSubDomains(true).preload(true).maxAgeInSeconds(31_536_000)
+					}
+					.referrerPolicy { it.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN) }
+					.permissionsPolicyHeader { it.policy("geolocation=(), camera=(), microphone=(), payment=(), usb=()") }
+					// Swagger UI (springdoc) is the only HTML this service ever renders (see
+					// the permitAll list above) and needs its own bundled inline script/style
+					// to boot; every other response here is JSON, which browsers never execute
+					// as script/style regardless of this header. `'self'` still blocks any
+					// third-party script/frame/object injection on that one HTML page.
+					.contentSecurityPolicy {
+						it.policyDirectives(
+							"default-src 'self'; " +
+								"script-src 'self' 'unsafe-inline'; " +
+								"style-src 'self' 'unsafe-inline'; " +
+								"img-src 'self' data:; " +
+								"connect-src 'self'; " +
+								"frame-ancestors 'none'; " +
+								"base-uri 'self'; " +
+								"object-src 'none'",
+						)
+					}
 			}
 
 		return http.build()
