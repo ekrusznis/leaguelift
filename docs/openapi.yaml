@@ -47,11 +47,18 @@ info:
     ADR-027), and Phase 10 slice 3 (a real `.ics` calendar export for a
     single event or a household's combined schedule, plus a real Google
     Maps directions link builder — neither is a logging stopgap, both are
-    fully functional today — ADR-028). Notification wiring remains the
-    last Phase 10 slice, not yet built.
+    fully functional today — ADR-028), and Phase 10 slice 4 (notification
+    wiring into the outbox worker for event/RSVP changes — no new endpoints,
+    pure backend event-producer/consumer wiring — ADR-029), completing
+    Phase 10. Phase 12 slice 1 (the Integrations page's org-connected
+    event-source connections — list/connect-ICS-feed/disconnect; only
+    ICS_FEED has a real connect flow this slice, CSV import and the
+    not-yet-integrated vendors are handled entirely client-side as
+    disabled "coming soon" cards with no backend endpoint of their own —
+    ADR-031).
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
-  version: "0.19.0"
+  version: "0.20.0"
 servers:
   - url: /api/v1
 tags:
@@ -83,6 +90,7 @@ tags:
   - name: search
   - name: reporting
   - name: events
+  - name: integrations
 paths:
   /public/status:
     get:
@@ -4909,6 +4917,84 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /organizations/{organizationId}/event-source-connections:
+    get:
+      tags: [integrations]
+      summary: List an organization's org-connected event-source connections (Phase 12 slice 1, ADR-031; requires active org membership)
+      operationId: listEventSourceConnections
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Event-source connections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventSourceConnectionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/event-source-connections/ics-feed:
+    post:
+      tags: [integrations]
+      summary: Connect an ICS feed URL (Phase 12 slice 1, ADR-031; requires org OWNER/ADMINISTRATOR) — no sync yet, that's Phase 12 slice 3
+      operationId: connectIcsFeed
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectIcsFeedRequest"
+      responses:
+        "201":
+          description: Connection created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventSourceConnectionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/event-source-connections/{connectionId}:
+    delete:
+      tags: [integrations]
+      summary: Disconnect an event-source connection (Phase 12 slice 1, ADR-031; requires org OWNER/ADMINISTRATOR)
+      operationId: disconnectEventSourceConnection
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: connectionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Disconnected
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /households/{householdId}/calendar.ics:
     get:
       tags: [events]
@@ -9552,6 +9638,50 @@ components:
           type: string
           nullable: true
           description: Null when the event has no address and no coordinates.
+    ConnectIcsFeedRequest:
+      type: object
+      required: [label, feedUrl]
+      properties:
+        label:
+          type: string
+          example: Varsity Soccer Schedule
+        feedUrl:
+          type: string
+          format: uri
+          example: https://example.com/schedule.ics
+    EventSourceConnectionResponse:
+      type: object
+      required: [id, provider, label, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum: [ICS_FEED, MAXPREPS, GAMECHANGER]
+        label:
+          type: string
+        feedUrl:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [ACTIVE, DISCONNECTED]
+        lastSyncedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Null until Phase 12 slice 3's scheduled poller ships.
+        lastSyncStatus:
+          type: string
+          enum: [SUCCESS, FAILED]
+          nullable: true
+        lastSyncError:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
     PlatformOrdersSummary:
       type: object
       required: [confirmed, refunded, pending]

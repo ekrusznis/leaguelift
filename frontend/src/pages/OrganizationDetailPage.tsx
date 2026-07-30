@@ -9,6 +9,7 @@ import { HouseholdList } from "../features/households/HouseholdList";
 import { useMediaAssignments } from "../features/media/api";
 import { OrganizationBrandingPanel } from "../features/media/OrganizationBrandingPanel";
 import { OrganizationDocumentsPanel } from "../features/documents/OrganizationDocumentsPanel";
+import { IntegrationsPanel } from "../features/integrations/IntegrationsPanel";
 import { useOrganization } from "../features/organizations/api";
 import { InvitationsPanel } from "../features/organizations/InvitationsPanel";
 import { OnboardingChecklist } from "../features/organizations/OnboardingChecklist";
@@ -113,6 +114,11 @@ export function OrganizationDetailPage() {
 			<section aria-label="Documents" className="flex flex-col gap-3">
 				<h2 className="font-heading text-lg font-semibold text-navy">Documents</h2>
 				<OrganizationDocumentsPanel organizationId={organization.id} />
+			</section>
+
+			<section aria-label="Integrations" className="flex flex-col gap-3">
+				<h2 className="font-heading text-lg font-semibold text-navy">Integrations</h2>
+				<IntegrationsPanel organizationId={organization.id} />
 			</section>
 
 			<section aria-label="Administrators" className="flex flex-col gap-3">

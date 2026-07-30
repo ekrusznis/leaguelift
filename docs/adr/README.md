@@ -171,3 +171,21 @@ Additional, unreserved decisions:
   near-identical `@Component` classes; "in-app state" is the pre-existing
   Activity Feed, not a new notification inbox (2026-07-30) — completes
   Phase 10's roadmap scope
+- ADR-030: Phase 11 mobile/responsive audit scope — audit-and-fix only,
+  the WebView-vs-native app-shell decision and standalone registration
+  workflows stay deferred behind the roadmap's pilot-evidence gate; audit
+  method is code-level markup/Tailwind review, not live-viewport
+  screenshots (`resize_window` doesn't actually change `window.innerWidth`
+  in this environment, confirmed via direct JS check); public-facing pages
+  and checkout flows audited before authenticated dashboards (2026-07-30)
+- ADR-031: Phase 12 slice 1 — Integrations page and connector foundation.
+  First org-connected connectors are CSV import and ICS feed subscription,
+  not MaxPreps/GameChanger/SportsEngine (no verified vendor account/API
+  terms for any of the three); those three appear as disabled "coming
+  soon" cards, not omitted or fake-wired. A new `event_source_connection`
+  table (V24) represents only stateful connections — CSV import gets no
+  row, it's a one-time action (slice 2). Authorization reuses
+  `MembershipService.requireManagerRole`, not a new `AuthorizationService`
+  capability, since no ORGANIZATION-context action in this codebase routes
+  through that service. The page is a new section on the existing
+  `OrganizationDetailPage`, not a separate route (2026-07-30)
