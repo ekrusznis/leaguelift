@@ -58,11 +58,13 @@ class HouseholdService(
         contactPhone: String?,
         notes: String?,
         currentUser: CurrentUser,
+        emailRemindersOptOut: Boolean? = null,
+        smsRemindersOptIn: Boolean? = null,
     ): Household {
         membershipService.requireManagerRole(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
-        householdRepository.update(householdId, organizationId, displayName, contactEmail, contactPhone, notes)
+        householdRepository.update(householdId, organizationId, displayName, contactEmail, contactPhone, notes, emailRemindersOptOut, smsRemindersOptIn)
         auditService.record(currentUser.userId, organizationId, "household.updated", "household", householdId)
         return householdRepository.findById(householdId, organizationId)!!
     }

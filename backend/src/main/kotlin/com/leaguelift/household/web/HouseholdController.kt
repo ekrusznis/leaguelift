@@ -63,6 +63,7 @@ class HouseholdController(private val householdService: HouseholdService) {
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): HouseholdResponse = householdService.update(
         organizationId, householdId, request.displayName, request.contactEmail, request.contactPhone, request.notes, currentUser,
+        request.emailRemindersOptOut, request.smsRemindersOptIn,
     ).toResponse()
 
     @GetMapping("/{householdId}/adults")

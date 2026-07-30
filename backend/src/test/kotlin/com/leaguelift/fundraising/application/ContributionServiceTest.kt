@@ -1,5 +1,6 @@
 package com.leaguelift.fundraising.application
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.error.ServiceUnavailableException
 import com.leaguelift.common.error.ValidationException
@@ -19,12 +20,14 @@ import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.membership.domain.MembershipRole
 import com.leaguelift.membership.domain.MembershipStatus
 import com.leaguelift.membership.domain.OrganizationMembership
+import com.leaguelift.outbox.application.OutboxWriter
 import com.leaguelift.audit.application.AuditService
 import com.stripe.exception.ApiConnectionException
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import io.mockk.slot
 import io.mockk.verify
 import java.time.Duration
 import java.time.Instant
@@ -41,7 +44,11 @@ class ContributionServiceTest {
 	private val membershipService = mockk<MembershipService>()
 	private val auditService = mockk<AuditService>()
 	private val ledgerService = mockk<LedgerService>()
-	private val service = ContributionService(contributionRepository, campaignRepository, stripeCheckoutClient, membershipService, auditService, ledgerService)
+	private val outboxWriter = mockk<OutboxWriter>()
+	private val service = ContributionService(
+		contributionRepository, campaignRepository, stripeCheckoutClient, membershipService, auditService,
+		ledgerService, outboxWriter, ObjectMapper(),
+	)
 
 	private val orgId = UUID.randomUUID()
 
@@ -139,6 +146,32 @@ class ContributionServiceTest {
 		assertEquals(ContributionStatus.CONFIRMED, result?.status)
 		verify(exactly = 1) { auditService.record(null, campaign.organizationId, "contribution.confirmed", "contribution", contribution.id) }
 		verify(exactly = 1) { ledgerService.recordConfirmedContribution(any()) }
+		verify(exactly = 0) { outboxWriter.write(any(), any(), any(), any(), any()) } // no supporterEmail on this fixture contribution
+	}
+
+	@Test
+	fun `confirmFromWebhook writes a contribution_confirmed outbox event when the contribution has a supporter email`() {
+		val campaign = campaign()
+		val contribution = pendingContribution(campaign).copy(supporterEmail = "supporter@example.com", supporterName = "Jane Doe")
+		val confirmed = contribution.copy(status = ContributionStatus.CONFIRMED, confirmedAt = Instant.now())
+		every { contributionRepository.findByStripeCheckoutSessionId("cs_test_123") } returns contribution
+		every { contributionRepository.markConfirmed(contribution.id, "pi_test_123") } returns 1
+		every { contributionRepository.findById(contribution.id) } returns confirmed
+		every { auditService.record(null, campaign.organizationId, "contribution.confirmed", "contribution", contribution.id) } just runs
+		every { ledgerService.recordConfirmedContribution(any()) } just runs
+		every { campaignRepository.findById(campaign.id, campaign.organizationId) } returns campaign
+		val payloadSlot = slot<String>()
+		every {
+			outboxWriter.write(
+				aggregateType = "contribution", aggregateId = contribution.id, organizationId = campaign.organizationId,
+				eventType = "contribution.confirmed", payloadJson = capture(payloadSlot),
+			)
+		} just runs
+
+		service.confirmFromWebhook("cs_test_123", "paid", "pi_test_123")
+
+		verify(exactly = 1) { outboxWriter.write(any(), any(), any(), any(), any()) }
+		assertEquals(true, payloadSlot.captured.contains("supporter@example.com"))
 	}
 
 	@Test

@@ -1,5 +1,6 @@
 package com.leaguelift.order.application
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.leaguelift.audit.application.AuditService
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.error.ServiceUnavailableException
@@ -24,6 +25,7 @@ import com.leaguelift.order.infra.StripeOrderCheckoutClient
 import com.leaguelift.order.persistence.FulfillmentRepository
 import com.leaguelift.order.persistence.OrderItemRepository
 import com.leaguelift.order.persistence.OrderRepository
+import com.leaguelift.outbox.application.OutboxWriter
 import com.leaguelift.store.domain.ProductStatus
 import com.leaguelift.store.domain.StoreStatus
 import com.leaguelift.store.persistence.ProductRepository
@@ -48,6 +50,9 @@ val ORDER_REFUND_WINDOW: Duration = Duration.ofDays(14)
 
 data class OrderLineItemRequest(val productVariantId: UUID, val quantity: Int)
 data class OrderCheckout(val orderId: UUID, val checkoutUrl: String)
+
+/** `order.confirmed` outbox payload (Phase 8 slice 2) — consumed by `OrderConfirmationEmailHandler`. */
+data class OrderConfirmedPayload(val supporterEmail: String, val supporterName: String?, val totalMinor: Long, val currency: String)
 
 /**
  * Order checkout (Phase 4 slice 1) — mirrors
@@ -74,6 +79,8 @@ class OrderService(
 	private val membershipService: MembershipService,
 	private val auditService: AuditService,
 	private val ledgerService: LedgerService,
+	private val outboxWriter: OutboxWriter,
+	private val objectMapper: ObjectMapper,
 ) {
 
 	@Transactional
@@ -136,8 +143,21 @@ class OrderService(
 		val updated = orderRepository.markConfirmed(order.id, shippingAddress, stripePaymentIntentId)
 		if (updated > 0) {
 			auditService.record(null, order.organizationId, "order.confirmed", "order", order.id)
-			ledgerService.recordConfirmedOrder(order.copy(status = OrderStatus.CONFIRMED), orderItemRepository.findByOrder(order.id))
+			val items = orderItemRepository.findByOrder(order.id)
+			ledgerService.recordConfirmedOrder(order.copy(status = OrderStatus.CONFIRMED), items)
 			submitFulfillment(order.id, order.organizationId)
+			if (order.supporterEmail != null) {
+				val totalMinor = items.sumOf { it.unitPriceMinor * it.quantity }
+				outboxWriter.write(
+					aggregateType = "order",
+					aggregateId = order.id,
+					organizationId = order.organizationId,
+					eventType = "order.confirmed",
+					payloadJson = objectMapper.writeValueAsString(
+						OrderConfirmedPayload(order.supporterEmail, order.supporterName, totalMinor, order.currency),
+					),
+				)
+			}
 		}
 		return orderRepository.findById(order.id, order.organizationId)
 	}

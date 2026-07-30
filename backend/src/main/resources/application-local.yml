@@ -46,13 +46,50 @@ leaguelift:
     fee-basis-points: ${PLATFORM_FEE_BASIS_POINTS:500}
   payout:
     holding-period-days: ${PAYOUT_HOLDING_PERIOD_DAYS:7}
-  # Phase 6 remainder (ADR-019) — a minimal @Scheduled reminder, not the real Phase 8
-  # notification infrastructure. Configurable without a redeploy.
+  # Phase 6 remainder (ADR-019) — the scan half of the renewal reminder (see
+  # SponsorshipRenewalScanner, rebuilt on the outbox worker as of Phase 8 slice 1,
+  # ADR-022). Configurable without a redeploy.
   sponsorship:
     renewal-reminder:
       enabled: ${SPONSORSHIP_RENEWAL_REMINDER_ENABLED:true}
       days-before: ${SPONSORSHIP_RENEWAL_REMINDER_DAYS_BEFORE:14}
       cron: ${SPONSORSHIP_RENEWAL_REMINDER_CRON:0 0 8 * * *}
+  # Phase 8 slice 1 (ADR-022) — the outbox consumer itself. Safe defaults, all
+  # configurable without a redeploy.
+  outbox:
+    worker:
+      enabled: ${OUTBOX_WORKER_ENABLED:true}
+      poll-interval-ms: ${OUTBOX_WORKER_POLL_INTERVAL_MS:5000}
+      batch-size: ${OUTBOX_WORKER_BATCH_SIZE:20}
+      max-attempts: ${OUTBOX_WORKER_MAX_ATTEMPTS:5}
+      backoff-base-seconds: ${OUTBOX_WORKER_BACKOFF_BASE_SECONDS:30}
+      backoff-cap-seconds: ${OUTBOX_WORKER_BACKOFF_CAP_SECONDS:3600}
+  # Phase 8 slice 1 (ADR-022) — "logging" (default) until a real Resend account is
+  # configured; flip to "resend" once RESEND_API_KEY/RESEND_FROM_ADDRESS below are real.
+  email:
+    provider: ${EMAIL_PROVIDER:logging}
+    resend:
+      api-key: ${RESEND_API_KEY:}
+      from-address: ${RESEND_FROM_ADDRESS:}
+  # Used to build a complete, clickable URL in outbound emails (e.g. the invitation
+  # accept link) — see FrontendProperties. Defaults to the local Vite dev server.
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
+  # Phase 8 slice 2 (ADR-023) — fee-due payment reminders, same shape as the
+  # sponsorship renewal reminder. Configurable without a redeploy.
+  fee:
+    payment-reminder:
+      enabled: ${FEE_PAYMENT_REMINDER_ENABLED:true}
+      days-before: ${FEE_PAYMENT_REMINDER_DAYS_BEFORE:3}
+      cron: ${FEE_PAYMENT_REMINDER_CRON:0 0 8 * * *}
+  # Phase 8 slice 3 (ADR-024) — "logging" (default) until a real Twilio account is
+  # configured; flip to "twilio" once the credentials below are real.
+  sms:
+    provider: ${SMS_PROVIDER:logging}
+    twilio:
+      account-sid: ${TWILIO_ACCOUNT_SID:}
+      auth-token: ${TWILIO_AUTH_TOKEN:}
+      from-number: ${TWILIO_FROM_NUMBER:}
 
 management:
   endpoint:

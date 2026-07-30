@@ -1,5 +1,6 @@
 package com.leaguelift.sponsorship.application
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.leaguelift.audit.application.AuditService
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.error.ServiceUnavailableException
@@ -14,6 +15,7 @@ import com.leaguelift.media.domain.MediaUsageSlot
 import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.organization.domain.Organization
 import com.leaguelift.organization.persistence.OrganizationRepository
+import com.leaguelift.outbox.application.OutboxWriter
 import com.leaguelift.sponsorship.domain.Sponsor
 import com.leaguelift.sponsorship.domain.SponsorshipPackage
 import com.leaguelift.sponsorship.domain.SponsorshipPackageStatus
@@ -58,6 +60,12 @@ data class SponsorshipInvoice(
 	val organization: Organization,
 )
 
+/** `sponsorship.approved` outbox payload (Phase 8 slice 2) — consumed by `SponsorshipApprovedEmailHandler`. */
+data class SponsorshipApprovedPayload(val sponsorContactEmail: String?, val sponsorName: String, val packageName: String)
+
+/** `sponsorship.refunded` outbox payload (Phase 8 slice 2) — consumed by `SponsorshipRefundedEmailHandler`; covers both a general refund and a reject-triggered refund. */
+data class SponsorshipRefundedPayload(val sponsorContactEmail: String?, val sponsorName: String, val packageName: String, val amountMinor: Long, val currency: String)
+
 /**
  * Sponsorship checkout (Phase 6 slice 1, ADR-018) plus the Phase 6 remainder additions
  * (ADR-019): an org-admin approval workflow gating public directory visibility, refunds
@@ -78,6 +86,8 @@ class SponsorshipService(
 	private val ledgerService: LedgerService,
 	private val mediaAssignmentService: MediaAssignmentService,
 	private val mediaReadService: MediaReadService,
+	private val outboxWriter: OutboxWriter,
+	private val objectMapper: ObjectMapper,
 ) {
 
 	@Transactional
@@ -188,6 +198,19 @@ class SponsorshipService(
 		requireReviewable(sponsorship)
 		sponsorshipRepository.updateReviewStatus(sponsorship.id, SponsorshipReviewStatus.APPROVED, currentUser.userId)
 		auditService.record(currentUser.userId, organizationId, "sponsorship.approved", "sponsorship", sponsorship.id)
+		val sponsor = sponsorRepository.findById(sponsorship.sponsorId)
+		val sponsorshipPackage = sponsorshipPackageRepository.findById(sponsorship.packageId, organizationId)
+		if (sponsor != null && sponsorshipPackage != null) {
+			outboxWriter.write(
+				aggregateType = "sponsorship",
+				aggregateId = sponsorship.id,
+				organizationId = organizationId,
+				eventType = "sponsorship.approved",
+				payloadJson = objectMapper.writeValueAsString(
+					SponsorshipApprovedPayload(sponsor.contactEmail, sponsor.name, sponsorshipPackage.name),
+				),
+			)
+		}
 		return sponsorshipRepository.findById(sponsorship.id)!!
 	}
 
@@ -254,6 +277,19 @@ class SponsorshipService(
 		sponsorshipRepository.markRefunded(sponsorship.id)
 		ledgerService.recordRefund(organizationId, LedgerSourceType.SPONSORSHIP, sponsorship.id, sponsorship.amountMinor, sponsorship.currency, stripeRefundId)
 		auditService.record(currentUser.userId, organizationId, auditAction, "sponsorship", sponsorship.id)
+		val sponsor = sponsorRepository.findById(sponsorship.sponsorId)
+		val sponsorshipPackage = sponsorshipPackageRepository.findById(sponsorship.packageId, organizationId)
+		if (sponsor != null && sponsorshipPackage != null) {
+			outboxWriter.write(
+				aggregateType = "sponsorship",
+				aggregateId = sponsorship.id,
+				organizationId = organizationId,
+				eventType = "sponsorship.refunded",
+				payloadJson = objectMapper.writeValueAsString(
+					SponsorshipRefundedPayload(sponsor.contactEmail, sponsor.name, sponsorshipPackage.name, sponsorship.amountMinor, sponsorship.currency),
+				),
+			)
+		}
 		return sponsorshipRepository.findById(sponsorship.id)!!
 	}
 

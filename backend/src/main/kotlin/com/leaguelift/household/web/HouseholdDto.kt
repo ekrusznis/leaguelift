@@ -21,6 +21,10 @@ data class UpdateHouseholdRequest(
     @field:Email val contactEmail: String? = null,
     @field:Size(max = 40) val contactPhone: String? = null,
     @field:Size(max = 1000) val notes: String? = null,
+    /** Phase 8 slice 2 (ADR-023) — opt out of transactional reminder emails (e.g. fee-payment reminders). */
+    val emailRemindersOptOut: Boolean? = null,
+    /** Phase 8 slice 3 (ADR-024) — opt IN to one-way SMS reminders via contactPhone. */
+    val smsRemindersOptIn: Boolean? = null,
 )
 
 data class AddAdultRequest(
@@ -39,6 +43,8 @@ data class HouseholdResponse(
     val contactEmail: String?,
     val contactPhone: String?,
     val notes: String?,
+    val emailRemindersOptOut: Boolean,
+    val smsRemindersOptIn: Boolean,
     val status: String,
     val createdAt: Instant,
     val updatedAt: Instant,
@@ -58,7 +64,7 @@ data class HouseholdAdultResponse(
 )
 
 fun Household.toResponse() = HouseholdResponse(
-    id, organizationId, displayName, contactEmail, contactPhone, notes, status.name, createdAt, updatedAt,
+    id, organizationId, displayName, contactEmail, contactPhone, notes, emailRemindersOptOut, smsRemindersOptIn, status.name, createdAt, updatedAt,
 )
 
 fun HouseholdAdult.toResponse() = HouseholdAdultResponse(

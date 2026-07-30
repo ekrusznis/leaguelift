@@ -63,7 +63,7 @@ class DocumentServiceTest {
 		status: PublicationStatus = PublicationStatus.APPROVED,
 	) = MediaAssignment(id, orgId, assetId, entityType, entityId, MediaUsageSlot.DOCUMENT, status, Visibility.HOUSEHOLD_PRIVATE, "Waiver", Instant.now(), Instant.now())
 
-	private fun household() = Household(householdId, orgId, "Smith Family", null, null, null, HouseholdStatus.ACTIVE, Instant.now(), Instant.now())
+	private fun household() = Household(householdId, orgId, "Smith Family", null, null, null, false, false, HouseholdStatus.ACTIVE, Instant.now(), Instant.now())
 
 	@Test
 	fun `assignToOrganization rejects an asset that is not READY`() {
@@ -105,7 +105,7 @@ class DocumentServiceTest {
 	fun `assignToAllHouseholds creates one assignment per household sharing the same asset`() {
 		val doc = asset()
 		val householdA = household()
-		val householdB = Household(UUID.randomUUID(), orgId, "Jones Family", null, null, null, HouseholdStatus.ACTIVE, Instant.now(), Instant.now())
+		val householdB = Household(UUID.randomUUID(), orgId, "Jones Family", null, null, null, false, false, HouseholdStatus.ACTIVE, Instant.now(), Instant.now())
 		every { mediaAssetRepository.findById(doc.id, orgId) } returns doc
 		every { householdRepository.findAll(orgId, 0, 500) } returns listOf(householdA, householdB)
 		every { mediaAssignmentRepository.insert(orgId, doc.id, MediaEntityType.HOUSEHOLD, householdA.id, MediaUsageSlot.DOCUMENT, any(), any(), any()) } returns assignment(entityId = householdA.id, assetId = doc.id)

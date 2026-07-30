@@ -11,7 +11,7 @@ import java.time.Instant
 import java.util.UUID
 
 private const val HOUSEHOLD_COLS =
-    "id, organization_id, display_name, contact_email, contact_phone, notes, status, created_at, updated_at"
+    "id, organization_id, display_name, contact_email, contact_phone, notes, email_reminders_opt_out, sms_reminders_opt_in, status, created_at, updated_at"
 
 private const val ADULT_COLS =
     "id, household_id, organization_id, first_name, last_name, email, phone, relationship, is_primary, status, created_at, updated_at"
@@ -57,24 +57,37 @@ class HouseholdRepository(private val jdbcClient: JdbcClient) {
             .param("id", id).param("organizationId", organizationId).param("displayName", displayName)
             .param("contactEmail", contactEmail).param("contactPhone", contactPhone).param("notes", notes)
             .param("now", Timestamp.from(now)).update()
-        return Household(id, organizationId, displayName, contactEmail, contactPhone, notes, HouseholdStatus.ACTIVE, now, now)
+        return Household(id, organizationId, displayName, contactEmail, contactPhone, notes, false, false, HouseholdStatus.ACTIVE, now, now)
     }
 
-    fun update(id: UUID, organizationId: UUID, displayName: String?, contactEmail: String?, contactPhone: String?, notes: String?): Int {
+    fun update(
+        id: UUID,
+        organizationId: UUID,
+        displayName: String?,
+        contactEmail: String?,
+        contactPhone: String?,
+        notes: String?,
+        emailRemindersOptOut: Boolean? = null,
+        smsRemindersOptIn: Boolean? = null,
+    ): Int {
         val now = Instant.now()
         return jdbcClient.sql(
             """
             update household
-            set display_name   = coalesce(:displayName, display_name),
-                contact_email  = coalesce(:contactEmail, contact_email),
-                contact_phone  = coalesce(:contactPhone, contact_phone),
-                notes          = coalesce(:notes, notes),
-                updated_at     = :now
+            set display_name             = coalesce(:displayName, display_name),
+                contact_email            = coalesce(:contactEmail, contact_email),
+                contact_phone            = coalesce(:contactPhone, contact_phone),
+                notes                    = coalesce(:notes, notes),
+                email_reminders_opt_out  = coalesce(:emailRemindersOptOut, email_reminders_opt_out),
+                sms_reminders_opt_in     = coalesce(:smsRemindersOptIn, sms_reminders_opt_in),
+                updated_at               = :now
             where id = :id and organization_id = :organizationId
             """.trimIndent(),
         )
             .param("displayName", displayName).param("contactEmail", contactEmail)
             .param("contactPhone", contactPhone).param("notes", notes)
+            .param("emailRemindersOptOut", emailRemindersOptOut)
+            .param("smsRemindersOptIn", smsRemindersOptIn)
             .param("now", Timestamp.from(now)).param("id", id).param("organizationId", organizationId).update()
     }
 
@@ -154,6 +167,8 @@ class HouseholdRepository(private val jdbcClient: JdbcClient) {
         contactEmail = rs.getString("contact_email"),
         contactPhone = rs.getString("contact_phone"),
         notes = rs.getString("notes"),
+        emailRemindersOptOut = rs.getBoolean("email_reminders_opt_out"),
+        smsRemindersOptIn = rs.getBoolean("sms_reminders_opt_in"),
         status = HouseholdStatus.valueOf(rs.getString("status")),
         createdAt = rs.getTimestamp("created_at").toInstant(),
         updatedAt = rs.getTimestamp("updated_at").toInstant(),

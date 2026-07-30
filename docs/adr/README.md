@@ -92,3 +92,33 @@ Additional, unreserved decisions:
   (previously hardcoded false); Coach/Athlete/Tournament/Platform Admin
   dashboards wired to live data; most existing `MembershipService` call sites
   deliberately not migrated this phase (2026-07-29)
+- ADR-021: Phase 7 completion pass — nav+widget registries for all six
+  dashboards, a real admin UI for team/tournament role-assignment
+  grant/revoke, a coach team selector, Documents (migration V19,
+  `document_acknowledgment`), a cross-org Activity Feed, Global Search,
+  platform-wide Orders/Payments/Payouts on the Platform Admin dashboard, a
+  demo-data audit bugfix; an interactive context-switching UI was prototyped
+  then explicitly reverted (dashboard routing stays fixed-priority-by-role);
+  the full `MembershipService`→`AuthorizationService` migration explicitly
+  deferred to a later phase (2026-07-29)
+- ADR-022: Phase 8 slice 1 — outbox worker (claim/dispatch/backoff/dead-letter)
+  and a real Resend-backed `EmailProvider` (resolving a Resend-vs-SendGrid doc
+  inconsistency in Resend's favor); real invitation emails for
+  `membership.invited`; sponsorship renewal reminder rebuilt as a scan-then-
+  handler outbox consumer; a platform-admin dead-letter/failed inspection +
+  reprocess endpoint (2026-07-30)
+- ADR-023: Phase 8 slice 2 — notification trigger expansion: fee-payment
+  reminders (new scanner/handler + `fee_assignment.payment_reminder_sent_at`),
+  order-confirmation and contribution-thank-you emails written directly from
+  their webhook-confirmation methods, sponsorship approval/refund notices,
+  and a minimal `household.email_reminders_opt_out` flag gating only
+  recurring reminders (not one-time transactional confirmations);
+  "campaign launch emails" explicitly deferred — no subscriber/mailing-list
+  model exists to trigger it from (2026-07-30)
+- ADR-024: Phase 8 slice 3 — one-way SMS via Twilio (plain REST API, no
+  official SDK), gated on a new `household.sms_reminders_opt_in` opt-IN flag
+  (opposite default from email's opt-out); wired only to fee-payment
+  reminders (the one recurring reminder that concretely exists) as a second,
+  independent channel alongside email; fundraising SMS/email reminders and
+  campaign-launch emails remain deferred pending a subscriber-model decision
+  (2026-07-30) — completes Phase 8's roadmap scope

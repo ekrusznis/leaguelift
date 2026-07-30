@@ -30,13 +30,55 @@ leaguelift:
     fee-basis-points: ${PLATFORM_FEE_BASIS_POINTS:500}
   payout:
     holding-period-days: ${PAYOUT_HOLDING_PERIOD_DAYS:7}
-  # Phase 6 remainder (ADR-019) — a minimal @Scheduled reminder, not the real Phase 8
-  # notification infrastructure. Not secrets — safe defaults, overridable without a redeploy.
+  # Phase 6 remainder (ADR-019) — the scan half of the renewal reminder, rebuilt on the
+  # outbox worker as of Phase 8 slice 1 (ADR-022). Not secrets — safe defaults,
+  # overridable without a redeploy.
   sponsorship:
     renewal-reminder:
       enabled: ${SPONSORSHIP_RENEWAL_REMINDER_ENABLED:true}
       days-before: ${SPONSORSHIP_RENEWAL_REMINDER_DAYS_BEFORE:14}
       cron: ${SPONSORSHIP_RENEWAL_REMINDER_CRON:0 0 8 * * *}
+  # Phase 8 slice 1 (ADR-022) — the outbox consumer. Not secrets — safe defaults,
+  # overridable without a redeploy.
+  outbox:
+    worker:
+      enabled: ${OUTBOX_WORKER_ENABLED:true}
+      poll-interval-ms: ${OUTBOX_WORKER_POLL_INTERVAL_MS:5000}
+      batch-size: ${OUTBOX_WORKER_BATCH_SIZE:20}
+      max-attempts: ${OUTBOX_WORKER_MAX_ATTEMPTS:5}
+      backoff-base-seconds: ${OUTBOX_WORKER_BACKOFF_BASE_SECONDS:30}
+      backoff-cap-seconds: ${OUTBOX_WORKER_BACKOFF_CAP_SECONDS:3600}
+  # Phase 8 slice 1 (ADR-022) — provider selection defaults to "logging" until a real
+  # Resend account is provisioned for staging. api-key/from-address default to blank
+  # (unlike stripe/printify/spaces above) since "logging" is a legitimate mode where
+  # they're simply unused — see ResendProperties. Flipping provider to "resend" without
+  # a real key just means real send calls fail cleanly at call time, same as a blank
+  # Printify token.
+  email:
+    provider: ${EMAIL_PROVIDER:logging}
+    resend:
+      api-key: ${RESEND_API_KEY:}
+      from-address: ${RESEND_FROM_ADDRESS:}
+  # The deployed staging frontend origin — no default, startup fails if unset.
+  frontend:
+    base-url: ${FRONTEND_BASE_URL}
+  # Phase 8 slice 2 (ADR-023) — fee-due payment reminders. Not secrets — safe
+  # defaults, overridable without a redeploy.
+  fee:
+    payment-reminder:
+      enabled: ${FEE_PAYMENT_REMINDER_ENABLED:true}
+      days-before: ${FEE_PAYMENT_REMINDER_DAYS_BEFORE:3}
+      cron: ${FEE_PAYMENT_REMINDER_CRON:0 0 8 * * *}
+  # Phase 8 slice 3 (ADR-024) — provider selection defaults to "logging" until a real
+  # Twilio account is provisioned for staging. account-sid/auth-token/from-number
+  # default to blank (same rationale as email.resend above) since "logging" is a
+  # legitimate mode where they're simply unused.
+  sms:
+    provider: ${SMS_PROVIDER:logging}
+    twilio:
+      account-sid: ${TWILIO_ACCOUNT_SID:}
+      auth-token: ${TWILIO_AUTH_TOKEN:}
+      from-number: ${TWILIO_FROM_NUMBER:}
 
 management:
   endpoint:

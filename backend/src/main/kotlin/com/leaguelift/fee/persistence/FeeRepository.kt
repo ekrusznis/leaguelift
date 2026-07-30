@@ -17,6 +17,25 @@ import java.util.UUID
 private const val T_COLS = "id, organization_id, name, description, amount_minor, currency, status, created_at, updated_at"
 private const val A_COLS = "id, organization_id, household_id, participant_id, fee_template_id, description, original_amount_minor, currency, due_date, status, created_at, updated_at"
 
+/**
+ * `FeePaymentReminderScanner`'s data source (Phase 8 slice 2/3) — mirrors
+ * `SponsorshipRenewalCandidate`'s shape. [householdContactPhone]/[householdSmsOptIn]
+ * added in slice 3 (ADR-024) alongside the email fields already here.
+ */
+data class FeePaymentReminderCandidate(
+    val feeAssignmentId: UUID,
+    val organizationId: UUID,
+    val householdId: UUID,
+    val householdContactEmail: String?,
+    val householdContactPhone: String?,
+    val householdSmsOptIn: Boolean,
+    val participantName: String?,
+    val description: String,
+    val currency: String,
+    val dueDate: LocalDate,
+    val balanceMinor: Long,
+)
+
 @Repository
 class FeeRepository(private val jdbcClient: JdbcClient) {
 
@@ -210,6 +229,72 @@ class FeeRepository(private val jdbcClient: JdbcClient) {
                 )
             }
             .single()
+
+    /**
+     * `FeePaymentReminderScanner`'s data source (Phase 8 slice 2/3) — open/partially-paid
+     * assignments with a real balance due, whose `due_date` falls within [withinDays],
+     * not yet reminded, and whose household hasn't shut off every available channel
+     * (still a candidate if opted out of email but opted in to SMS, or vice versa —
+     * see ADR-024; the handler decides per-channel whether to actually send). Mirrors
+     * `SponsorshipRepository.findNeedingRenewalReminder`'s shape/guard pattern.
+     */
+    fun findNeedingPaymentReminder(withinDays: Long): List<FeePaymentReminderCandidate> =
+        jdbcClient.sql(
+            """
+            select fa.id as fee_assignment_id, fa.organization_id, fa.household_id,
+                   h.contact_email as household_contact_email, h.email_reminders_opt_out as household_email_opt_out,
+                   h.contact_phone as household_contact_phone, h.sms_reminders_opt_in as household_sms_opt_in,
+                   fa.participant_id, p.first_name as participant_first_name, p.last_name as participant_last_name,
+                   fa.description, fa.currency, fa.due_date,
+                   (fa.original_amount_minor - coalesce(fp.paid_minor, 0) - coalesce(fadj.adjusted_minor, 0)) as balance_minor
+            from fee_assignment fa
+            join household h on h.id = fa.household_id
+            left join participant p on p.id = fa.participant_id
+            left join (select fee_assignment_id, sum(amount_minor) as paid_minor from fee_payment where voided_at is null group by fee_assignment_id) fp
+                on fp.fee_assignment_id = fa.id
+            left join (select fee_assignment_id, sum(amount_minor) as adjusted_minor from fee_adjustment where voided_at is null group by fee_assignment_id) fadj
+                on fadj.fee_assignment_id = fa.id
+            where fa.status in ('OPEN', 'PARTIALLY_PAID')
+              and fa.payment_reminder_sent_at is null
+              and (h.email_reminders_opt_out = false or h.sms_reminders_opt_in = true)
+              and fa.due_date is not null
+              and fa.due_date >= current_date
+              and fa.due_date <= current_date + make_interval(days => :withinDays::int)
+              and (fa.original_amount_minor - coalesce(fp.paid_minor, 0) - coalesce(fadj.adjusted_minor, 0)) > 0
+            """.trimIndent(),
+        )
+            .param("withinDays", withinDays)
+            .query { rs, _ ->
+                val firstName = rs.getString("participant_first_name")
+                val lastName = rs.getString("participant_last_name")
+                // Resolved to null here (rather than carrying the opt-out flags separately)
+                // so the scanner/handler downstream only ever needs a null check per
+                // channel — "no email" and "opted out of email" collapse to the same thing.
+                val emailOptedOut = rs.getBoolean("household_email_opt_out")
+                val smsOptedIn = rs.getBoolean("household_sms_opt_in")
+                FeePaymentReminderCandidate(
+                    feeAssignmentId = rs.getObject("fee_assignment_id", UUID::class.java),
+                    organizationId = rs.getObject("organization_id", UUID::class.java),
+                    householdId = rs.getObject("household_id", UUID::class.java),
+                    householdContactEmail = rs.getString("household_contact_email").takeUnless { emailOptedOut },
+                    householdContactPhone = rs.getString("household_contact_phone").takeIf { smsOptedIn },
+                    householdSmsOptIn = smsOptedIn,
+                    participantName = if (firstName != null) "$firstName $lastName" else null,
+                    description = rs.getString("description"),
+                    currency = rs.getString("currency"),
+                    dueDate = rs.getDate("due_date").toLocalDate(),
+                    balanceMinor = rs.getLong("balance_minor"),
+                )
+            }
+            .list()
+
+    fun markPaymentReminderSent(id: UUID): Int {
+        val now = Instant.now()
+        return jdbcClient.sql("update fee_assignment set payment_reminder_sent_at = :now where id = :id")
+            .param("now", Timestamp.from(now))
+            .param("id", id)
+            .update()
+    }
 
     private fun mapSummary(rs: java.sql.ResultSet, row: Int): FeeAssignmentSummary {
         val firstName = rs.getString("participant_first_name")

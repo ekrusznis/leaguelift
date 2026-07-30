@@ -192,6 +192,8 @@ class ParentDashboardServiceTest {
 		contactEmail = "sarah.johnson@example.com",
 		contactPhone = null,
 		notes = null,
+		emailRemindersOptOut = false,
+		smsRemindersOptIn = false,
 		status = HouseholdStatus.ACTIVE,
 		createdAt = Instant.now(),
 		updatedAt = Instant.now(),

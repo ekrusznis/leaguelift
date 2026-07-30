@@ -1,5 +1,6 @@
 package com.leaguelift.fundraising.application
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.leaguelift.audit.application.AuditService
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.error.ServiceUnavailableException
@@ -15,6 +16,7 @@ import com.leaguelift.fundraising.persistence.ContributionRepository
 import com.leaguelift.ledger.application.LedgerService
 import com.leaguelift.ledger.domain.LedgerSourceType
 import com.leaguelift.membership.application.MembershipService
+import com.leaguelift.outbox.application.OutboxWriter
 import com.stripe.exception.StripeException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -30,6 +32,9 @@ const val CONTRIBUTION_ID_PLACEHOLDER = "{CONTRIBUTION_ID}"
 
 /** Org-admin-initiated refunds are only allowed within this window of confirmation (ADR-017, 2026-07-29 founder decision). */
 val REFUND_WINDOW = Duration.ofDays(14)
+
+/** `contribution.confirmed` outbox payload (Phase 8 slice 2) — consumed by `ContributionThankYouEmailHandler`. */
+data class ContributionConfirmedPayload(val supporterEmail: String, val supporterName: String?, val amountMinor: Long, val currency: String, val campaignName: String)
 
 /**
  * Campaign contribution checkout (Phase 3 remainder). Confirmation happens only
@@ -51,6 +56,8 @@ class ContributionService(
 	private val membershipService: MembershipService,
 	private val auditService: AuditService,
 	private val ledgerService: LedgerService,
+	private val outboxWriter: OutboxWriter,
+	private val objectMapper: ObjectMapper,
 ) {
 
 	@Transactional
@@ -107,6 +114,21 @@ class ContributionService(
 		if (updated > 0) {
 			auditService.record(null, contribution.organizationId, "contribution.confirmed", "contribution", contribution.id)
 			ledgerService.recordConfirmedContribution(contribution.copy(status = ContributionStatus.CONFIRMED))
+			if (contribution.supporterEmail != null) {
+				val campaign = campaignRepository.findById(contribution.campaignId, contribution.organizationId)
+				outboxWriter.write(
+					aggregateType = "contribution",
+					aggregateId = contribution.id,
+					organizationId = contribution.organizationId,
+					eventType = "contribution.confirmed",
+					payloadJson = objectMapper.writeValueAsString(
+						ContributionConfirmedPayload(
+							contribution.supporterEmail, contribution.supporterName, contribution.amountMinor,
+							contribution.currency, campaign?.name ?: "your campaign",
+						),
+					),
+				)
+			}
 		}
 		return contributionRepository.findById(contribution.id)
 	}

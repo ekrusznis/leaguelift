@@ -1,15 +1,12 @@
 package com.leaguelift.notification
 
 /**
- * The seam DESIGN-DOC.md section 17 reserves for a real transactional-email adapter
- * (Resend, per section 5's infra design target — `RESEND_API_KEY` already exists as an
- * unwired placeholder in `.env.example`). No implementation of this interface has ever
- * existed in this codebase before Phase 6 remainder (ADR-019): [LoggingEmailProvider]
- * is a deliberate stopgap, not a real send path, built only because
- * `SponsorshipRenewalReminderService` needed *something* concrete to call. Building the
- * real Resend-backed implementation is Phase 8 work (the outbox worker + notification
- * infrastructure milestone) — do not treat this interface's existence as that phase
- * having started.
+ * The seam DESIGN-DOC.md section 17 reserves for a real transactional-email adapter.
+ * [LoggingEmailProvider] (Phase 6 remainder, ADR-019) was the only implementation until
+ * Phase 8 slice 1 (ADR-022) added `notification/infra/ResendEmailProvider.kt` — a real
+ * send path via Resend's HTTP API, active when `leaguelift.email.provider = resend`.
+ * `LoggingEmailProvider` remains the default in every environment without a real
+ * `RESEND_API_KEY` configured, which is every environment today.
  */
 interface EmailProvider {
 	fun send(message: EmailMessage)

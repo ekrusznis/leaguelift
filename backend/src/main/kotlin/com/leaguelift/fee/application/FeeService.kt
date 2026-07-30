@@ -3,6 +3,7 @@ package com.leaguelift.fee.application
 import com.leaguelift.audit.application.AuditService
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.error.ValidationException
+import com.leaguelift.common.util.CsvUtil
 import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.fee.domain.AdjustmentType
 import com.leaguelift.fee.domain.FeeAdjustment
@@ -291,35 +292,21 @@ class FeeService(
 
     private fun buildCsv(rows: List<FeeAssignmentSummary>): String {
         val header = listOf("Household", "Participant", "Description", "Original", "Paid", "Adjusted", "Balance", "Currency", "Due Date", "Status")
-        val lines = mutableListOf(header.joinToString(",") { csvEscape(it) })
+        val lines = mutableListOf(header.joinToString(",") { CsvUtil.escape(it) })
         for (row in rows) {
             lines += listOf(
                 row.householdName,
                 row.participantName ?: "",
                 row.description,
-                formatMinor(row.originalAmountMinor),
-                formatMinor(row.paidMinor),
-                formatMinor(row.adjustedMinor),
-                formatMinor(row.balance.balanceMinor),
+                CsvUtil.formatMinor(row.originalAmountMinor),
+                CsvUtil.formatMinor(row.paidMinor),
+                CsvUtil.formatMinor(row.adjustedMinor),
+                CsvUtil.formatMinor(row.balance.balanceMinor),
                 row.currency,
                 row.dueDate?.toString() ?: "",
                 row.status.name,
-            ).joinToString(",") { csvEscape(it) }
+            ).joinToString(",") { CsvUtil.escape(it) }
         }
         return lines.joinToString("\r\n")
-    }
-
-    private fun csvEscape(value: String): String =
-        if (value.contains(',') || value.contains('"') || value.contains('\n') || value.contains('\r')) {
-            "\"${value.replace("\"", "\"\"")}\""
-        } else {
-            value
-        }
-
-    /** Assumes a 2-decimal-place currency (USD, the only currency in use today) — revisit if a non-USD currency is ever supported. */
-    private fun formatMinor(minor: Long): String {
-        val whole = minor / 100
-        val fraction = kotlin.math.abs(minor % 100)
-        return "$whole.${fraction.toString().padStart(2, '0')}"
     }
 }

@@ -1,5 +1,6 @@
 package com.leaguelift.sponsorship.application
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.leaguelift.audit.application.AuditService
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.error.ServiceUnavailableException
@@ -17,6 +18,7 @@ import com.leaguelift.organization.domain.Organization
 import com.leaguelift.organization.domain.OrganizationStatus
 import com.leaguelift.organization.domain.OrganizationType
 import com.leaguelift.organization.persistence.OrganizationRepository
+import com.leaguelift.outbox.application.OutboxWriter
 import com.leaguelift.sponsorship.domain.Sponsor
 import com.leaguelift.sponsorship.domain.Sponsorship
 import com.leaguelift.sponsorship.domain.SponsorshipPackage
@@ -53,9 +55,11 @@ class SponsorshipServiceTest {
 	private val ledgerService = mockk<LedgerService>()
 	private val mediaAssignmentService = mockk<MediaAssignmentService>()
 	private val mediaReadService = mockk<MediaReadService>()
+	private val outboxWriter = mockk<OutboxWriter>()
 	private val service = SponsorshipService(
 		sponsorshipRepository, sponsorshipPackageRepository, sponsorRepository, organizationRepository,
 		stripeSponsorshipCheckoutClient, membershipService, auditService, ledgerService, mediaAssignmentService, mediaReadService,
+		outboxWriter, ObjectMapper(),
 	)
 
 	private val orgId = UUID.randomUUID()
@@ -206,11 +210,20 @@ class SponsorshipServiceTest {
 		every { sponsorshipRepository.findById(confirmed.id) } returns confirmed andThen approved
 		every { sponsorshipRepository.updateReviewStatus(confirmed.id, SponsorshipReviewStatus.APPROVED, currentUser.userId) } returns 1
 		every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+		every { sponsorRepository.findById(sponsor.id) } returns sponsor
+		every { sponsorshipPackageRepository.findById(pkg.id, orgId) } returns pkg
+		every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
 
 		val result = service.approve(orgId, confirmed.id, currentUser)
 
 		assertEquals(SponsorshipReviewStatus.APPROVED, result.reviewStatus)
 		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "sponsorship.approved", "sponsorship", confirmed.id) }
+		verify(exactly = 1) {
+			outboxWriter.write(
+				aggregateType = "sponsorship", aggregateId = confirmed.id, organizationId = orgId,
+				eventType = "sponsorship.approved", payloadJson = any(),
+			)
+		}
 	}
 
 	@Test
@@ -268,6 +281,9 @@ class SponsorshipServiceTest {
 		every { stripeSponsorshipCheckoutClient.createRefund("pi_test_123") } returns "re_test_123"
 		every { sponsorshipRepository.markRefunded(confirmed.id) } returns 1
 		every { ledgerService.recordRefund(orgId, LedgerSourceType.SPONSORSHIP, confirmed.id, confirmed.amountMinor, confirmed.currency, "re_test_123") } just runs
+		every { sponsorRepository.findById(sponsor.id) } returns sponsor
+		every { sponsorshipPackageRepository.findById(pkg.id, orgId) } returns pkg
+		every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
 
 		val result = service.reject(orgId, confirmed.id, currentUser)
 
@@ -276,6 +292,12 @@ class SponsorshipServiceTest {
 		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "sponsorship.rejected", "sponsorship", confirmed.id) }
 		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "sponsorship.refunded", "sponsorship", confirmed.id) }
 		verify(exactly = 1) { stripeSponsorshipCheckoutClient.createRefund("pi_test_123") }
+		verify(exactly = 1) {
+			outboxWriter.write(
+				aggregateType = "sponsorship", aggregateId = confirmed.id, organizationId = orgId,
+				eventType = "sponsorship.refunded", payloadJson = any(),
+			)
+		}
 	}
 
 	@Test

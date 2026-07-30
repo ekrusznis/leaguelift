@@ -93,7 +93,7 @@ class HouseholdServiceTest {
         val household = sampleHousehold()
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
         every { householdRepository.findById(household.id, orgId) } returns household
-        every { householdRepository.update(household.id, orgId, any(), any(), any(), any()) } returns 1
+        every { householdRepository.update(household.id, orgId, any(), any(), any(), any(), any(), any()) } returns 1
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 
         service.update(orgId, household.id, "Updated Name", null, null, null, currentUser)
@@ -156,6 +156,8 @@ class HouseholdServiceTest {
         contactEmail = "smith@example.com",
         contactPhone = "555-0100",
         notes = null,
+        emailRemindersOptOut = false,
+        smsRemindersOptIn = false,
         status = HouseholdStatus.ACTIVE,
         createdAt = Instant.now(),
         updatedAt = Instant.now(),
