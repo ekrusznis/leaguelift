@@ -3,14 +3,13 @@ import { AudienceCard } from "../../marketing/components/AudienceCard";
 import { AvailabilityStatusBadge } from "../../marketing/components/Badges";
 import { FaqAccordion } from "../../marketing/components/FaqAccordion";
 import { FeatureCard } from "../../marketing/components/FeatureCard";
-import { IntegrationsDiagram } from "../../marketing/components/IntegrationsDiagram";
 import { LandingPreviewHeader } from "../../marketing/components/LandingPreviewHeader";
 import { PageContainer } from "../../marketing/components/PageContainer";
+import { ResponsiveVisual } from "../../marketing/components/ResponsiveVisual";
 import { SectionHeading } from "../../marketing/components/SectionHeading";
 import { Seo } from "../../marketing/components/Seo";
 import { SiteFooter } from "../../marketing/components/SiteFooter";
 import { StepTimeline } from "../../marketing/components/StepTimeline";
-import { WorkflowFlow } from "../../marketing/components/WorkflowFlow";
 import { PrimaryButton, SecondaryDarkButton, SecondaryLightButton, TextButton } from "../../marketing/components/buttons";
 import { PREVIEW_SECTION_IDS } from "../../marketing/content/landingPreviewNav";
 import { HOMEPAGE_FAQ } from "../../marketing/content/faq";
@@ -104,17 +103,6 @@ const HOW_IT_WORKS_STEPS = [
 			</svg>
 		),
 	},
-];
-
-const DETAILED_WORKFLOW = [
-	"Create the organization",
-	"Add teams and tournaments",
-	"Publish public pages",
-	"Create fundraising or apparel programs",
-	"Add households and assign fees",
-	"Attribute eligible sales or contributions",
-	"Apply approved credits",
-	"Review reports and payouts",
 ];
 
 const ORGANIZATION_TYPE_CARDS = [
@@ -305,22 +293,19 @@ export function LandingPreviewPage() {
 							<StepTimeline steps={HOW_IT_WORKS_STEPS} />
 						</div>
 
-						<div className="flex flex-col gap-10">
-							<SectionHeading
-								tone="dark"
-								align="left"
-								heading="Works alongside your existing tools."
-								copy="LeagueLift is not a registration, scheduling, or communication system. It adds a revenue layer next to the tools you already use."
-							/>
-							<IntegrationsDiagram />
-						</div>
+						<ResponsiveVisual
+							src="/demo-assets/landing/landing-page-vis-2.png"
+							alt="Diagram showing LeagueLift at the center, connected to MaxPreps, GameChanger, SportsEngine, Google Calendar, Twilio, Stripe, and Printify — works alongside your existing tools."
+							width={1672}
+							height={941}
+						/>
 
-						<div>
-							<SectionHeading tone="dark" align="left" heading="The detailed workflow" />
-							<div className="mt-8">
-								<WorkflowFlow steps={DETAILED_WORKFLOW} />
-							</div>
-						</div>
+						<ResponsiveVisual
+							src="/demo-assets/landing/landing-page-vis-1.png"
+							alt="The detailed LeagueLift workflow: a club or tournament sets up LeagueLift, creates team pages and stores, launches dues/fundraising/apparel, parents and supporters pay or purchase, orders and notifications flow through Stripe and Printify, and revenue/credits/reporting flow back to the organization."
+							width={1672}
+							height={941}
+						/>
 					</PageContainer>
 				</section>
 
