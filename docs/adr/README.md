@@ -205,3 +205,19 @@ Additional, unreserved decisions:
   event per upload is recorded instead. Row-level failures are collected,
   never abort the batch. No CSV-parsing library was added — a hand-rolled
   RFC 4180 parser, same call as ICS generation (ADR-028) (2026-07-30)
+- ADR-033: Phase 12 slice 3 — ICS feed connector. A new `IcsFeedParser`
+  is the read-side counterpart to `IcsCalendarProvider` (ADR-028) —
+  UID/SUMMARY/DESCRIPTION/LOCATION/DTSTART/DTEND/STATUS only, everything
+  else ignored, no recurrence expansion, no new dependency. Slice 1's
+  connect flow didn't anticipate two things the poller needs — timezone
+  (resolves floating DTSTART/DTEND) and team scope (mirrors CSV
+  import's own per-upload team) — both added now via V25 rather than
+  deferred. UID is the `external_event_id`, reusing the same
+  `(provider, connection_id, external_event_id)` dedup index and
+  SHA-256 `external_sync_hash` change-detection ADR-032 established. A
+  synced STATUS can set a *new* event's initial status but never
+  overwrites an existing event's status on update, so an external feed
+  can't silently undo a staff postpone/cancel. One connection's failure
+  never blocks another's; one event's failure never blocks the rest of
+  that feed — a plain `@Scheduled` job (default every 30 minutes),
+  mirroring `FeePaymentReminderScanner`'s shape (2026-07-30)

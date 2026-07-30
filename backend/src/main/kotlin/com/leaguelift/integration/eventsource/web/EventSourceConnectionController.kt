@@ -36,7 +36,7 @@ class EventSourceConnectionController(
 		@Valid @RequestBody request: ConnectIcsFeedRequest,
 		@AuthenticationPrincipal currentUser: CurrentUser,
 	): EventSourceConnectionResponse =
-		eventSourceConnectionService.connectIcsFeed(organizationId, request.label, request.feedUrl, currentUser).toResponse()
+		eventSourceConnectionService.connectIcsFeed(organizationId, request.label, request.feedUrl, request.timezone, request.teamId, currentUser).toResponse()
 
 	@DeleteMapping("/{connectionId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)

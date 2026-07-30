@@ -7,6 +7,8 @@ export interface EventSourceConnection {
 	provider: EventSourceProvider;
 	label: string;
 	feedUrl: string | null;
+	timezone: string;
+	teamId: string | null;
 	status: EventSourceConnectionStatus;
 	lastSyncedAt: string | null;
 	lastSyncStatus: EventSourceSyncStatus | null;

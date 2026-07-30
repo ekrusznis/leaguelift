@@ -15,7 +15,7 @@ export function useEventSourceConnections(organizationId: string) {
 export function useConnectIcsFeed(organizationId: string) {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (params: { label: string; feedUrl: string }) =>
+		mutationFn: (params: { label: string; feedUrl: string; timezone: string; teamId: string | null }) =>
 			apiFetch<EventSourceConnection>(`/organizations/${organizationId}/event-source-connections/ics-feed`, {
 				method: "POST",
 				body: params,

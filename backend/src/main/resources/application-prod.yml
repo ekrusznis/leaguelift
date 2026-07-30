@@ -80,6 +80,10 @@ leaguelift:
       account-sid: ${TWILIO_ACCOUNT_SID:}
       auth-token: ${TWILIO_AUTH_TOKEN:}
       from-number: ${TWILIO_FROM_NUMBER:}
+  ics-feed:
+    sync:
+      enabled: ${ICS_FEED_SYNC_ENABLED:true}
+      cron: ${ICS_FEED_SYNC_CRON:0 */30 * * * *}
 
 management:
   endpoint:

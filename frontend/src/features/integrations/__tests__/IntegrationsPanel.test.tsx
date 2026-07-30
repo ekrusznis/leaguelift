@@ -32,6 +32,7 @@ describe("IntegrationsPanel", () => {
 							provider: "ICS_FEED",
 							label: "Varsity Soccer Schedule",
 							feedUrl: "https://example.com/feed.ics",
+							timezone: "America/New_York",
 							status: "ACTIVE",
 							lastSyncedAt: null,
 							lastSyncStatus: null,

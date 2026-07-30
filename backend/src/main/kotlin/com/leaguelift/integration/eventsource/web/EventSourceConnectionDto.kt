@@ -8,6 +8,8 @@ import java.util.UUID
 data class ConnectIcsFeedRequest(
 	@field:NotBlank val label: String,
 	@field:NotBlank val feedUrl: String,
+	@field:NotBlank val timezone: String,
+	val teamId: UUID?,
 )
 
 data class EventSourceConnectionResponse(
@@ -15,6 +17,8 @@ data class EventSourceConnectionResponse(
 	val provider: String,
 	val label: String,
 	val feedUrl: String?,
+	val timezone: String,
+	val teamId: UUID?,
 	val status: String,
 	val lastSyncedAt: Instant?,
 	val lastSyncStatus: String?,
@@ -27,6 +31,8 @@ fun EventSourceConnection.toResponse() = EventSourceConnectionResponse(
 	provider = provider.name,
 	label = label,
 	feedUrl = feedUrl,
+	timezone = timezone,
+	teamId = teamId,
 	status = status.name,
 	lastSyncedAt = lastSyncedAt,
 	lastSyncStatus = lastSyncStatus?.name,

@@ -22,6 +22,10 @@ data class EventSourceConnection(
 	val provider: EventSourceProvider,
 	val label: String,
 	val feedUrl: String?,
+	/** Resolves a feed's floating (no UTC offset) DTSTART/DTEND values (Phase 12 slice 3, ADR-033) — mirrors the CSV import connector's own per-upload timezone (ADR-032). */
+	val timezone: String,
+	/** Which team synced events belong to — null means org-wide. Mirrors CSV import's own per-upload team scope (ADR-032). */
+	val teamId: UUID?,
 	val status: EventSourceConnectionStatus,
 	val lastSyncedAt: Instant?,
 	val lastSyncStatus: EventSourceSyncStatus?,

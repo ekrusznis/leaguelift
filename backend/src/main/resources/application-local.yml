@@ -90,6 +90,12 @@ leaguelift:
       account-sid: ${TWILIO_ACCOUNT_SID:}
       auth-token: ${TWILIO_AUTH_TOKEN:}
       from-number: ${TWILIO_FROM_NUMBER:}
+  # Phase 12 slice 3 (ADR-033) — how often every ACTIVE ICS_FEED connection is
+  # re-fetched and synced. Configurable without a redeploy.
+  ics-feed:
+    sync:
+      enabled: ${ICS_FEED_SYNC_ENABLED:true}
+      cron: ${ICS_FEED_SYNC_CRON:0 */30 * * * *}
 
 management:
   endpoint:

@@ -13,6 +13,7 @@ import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.membership.domain.MembershipRole
 import com.leaguelift.membership.domain.MembershipStatus
 import com.leaguelift.membership.domain.OrganizationMembership
+import com.leaguelift.team.persistence.TeamRepository
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -29,7 +30,8 @@ class EventSourceConnectionServiceTest {
 	private val eventSourceConnectionRepository = mockk<EventSourceConnectionRepository>()
 	private val membershipService = mockk<MembershipService>()
 	private val auditService = mockk<AuditService>()
-	private val service = EventSourceConnectionService(eventSourceConnectionRepository, membershipService, auditService)
+	private val teamRepository = mockk<TeamRepository>()
+	private val service = EventSourceConnectionService(eventSourceConnectionRepository, membershipService, auditService, teamRepository)
 
 	private val orgId = UUID.randomUUID()
 	private val currentUser = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")
@@ -37,7 +39,7 @@ class EventSourceConnectionServiceTest {
 	private fun managerMembership() = OrganizationMembership(UUID.randomUUID(), orgId, currentUser.userId, MembershipRole.OWNER, MembershipStatus.ACTIVE, Instant.now(), Instant.now())
 
 	private fun connection(id: UUID = UUID.randomUUID()) = EventSourceConnection(
-		id, orgId, EventSourceProvider.ICS_FEED, "Varsity Schedule", "https://example.com/feed.ics",
+		id, orgId, EventSourceProvider.ICS_FEED, "Varsity Schedule", "https://example.com/feed.ics", "America/New_York", null,
 		EventSourceConnectionStatus.ACTIVE, null, null, null, currentUser.userId, Instant.now(), Instant.now(),
 	)
 
@@ -46,7 +48,7 @@ class EventSourceConnectionServiceTest {
 		every { membershipService.requireManagerRole(orgId, currentUser) } throws ForbiddenException("DENIED", "no")
 
 		assertFailsWith<ForbiddenException> {
-			service.connectIcsFeed(orgId, "Varsity Schedule", "https://example.com/feed.ics", currentUser)
+			service.connectIcsFeed(orgId, "Varsity Schedule", "https://example.com/feed.ics", "America/New_York", null, currentUser)
 		}
 	}
 
@@ -55,7 +57,7 @@ class EventSourceConnectionServiceTest {
 		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
 
 		assertFailsWith<ValidationException> {
-			service.connectIcsFeed(orgId, "Varsity Schedule", "ftp://example.com/feed.ics", currentUser)
+			service.connectIcsFeed(orgId, "Varsity Schedule", "ftp://example.com/feed.ics", "America/New_York", null, currentUser)
 		}
 	}
 
@@ -64,7 +66,16 @@ class EventSourceConnectionServiceTest {
 		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
 
 		assertFailsWith<ValidationException> {
-			service.connectIcsFeed(orgId, "  ", "https://example.com/feed.ics", currentUser)
+			service.connectIcsFeed(orgId, "  ", "https://example.com/feed.ics", "America/New_York", null, currentUser)
+		}
+	}
+
+	@Test
+	fun `connectIcsFeed rejects an invalid timezone`() {
+		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+
+		assertFailsWith<ValidationException> {
+			service.connectIcsFeed(orgId, "Varsity Schedule", "https://example.com/feed.ics", "Not/AZone", null, currentUser)
 		}
 	}
 
@@ -73,11 +84,11 @@ class EventSourceConnectionServiceTest {
 		val created = connection()
 		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
 		every {
-			eventSourceConnectionRepository.insert(orgId, EventSourceProvider.ICS_FEED, "Varsity Schedule", "https://example.com/feed.ics", currentUser.userId)
+			eventSourceConnectionRepository.insert(orgId, EventSourceProvider.ICS_FEED, "Varsity Schedule", "https://example.com/feed.ics", "America/New_York", null, currentUser.userId)
 		} returns created
 		every { auditService.record(currentUser.userId, orgId, "event_source_connection.connected", "event_source_connection", created.id) } just runs
 
-		val result = service.connectIcsFeed(orgId, "Varsity Schedule", "https://example.com/feed.ics", currentUser)
+		val result = service.connectIcsFeed(orgId, "Varsity Schedule", "https://example.com/feed.ics", "America/New_York", null, currentUser)
 
 		assertEquals(created.id, result.id)
 		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "event_source_connection.connected", "event_source_connection", created.id) }

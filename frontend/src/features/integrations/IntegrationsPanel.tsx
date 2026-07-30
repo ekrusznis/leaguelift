@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { Button } from "../../components/Button";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
+import { useTeams } from "../teams/api";
 import { CsvImportSection } from "./CsvImportSection";
 import { useConnectIcsFeed, useDisconnectEventSource, useEventSourceConnections } from "./api";
 import { connectIcsFeedSchema, type ConnectIcsFeedFormValues } from "./schema";
@@ -39,6 +40,8 @@ function ComingSoonCard({ name, description }: { name: string; description: stri
 
 function ConnectIcsFeedForm({ organizationId, onDone }: { organizationId: string; onDone: () => void }) {
 	const connect = useConnectIcsFeed(organizationId);
+	const { data: teams } = useTeams(organizationId);
+	const [teamId, setTeamId] = useState("");
 	const {
 		register,
 		handleSubmit,
@@ -46,12 +49,13 @@ function ConnectIcsFeedForm({ organizationId, onDone }: { organizationId: string
 		formState: { errors, isSubmitting },
 	} = useForm<ConnectIcsFeedFormValues>({
 		resolver: zodResolver(connectIcsFeedSchema),
-		defaultValues: { label: "", feedUrl: "" },
+		defaultValues: { label: "", feedUrl: "", timezone: "" },
 	});
 
 	const onSubmit = handleSubmit(async (values) => {
-		await connect.mutateAsync(values);
+		await connect.mutateAsync({ ...values, teamId: teamId || null });
 		reset();
+		setTeamId("");
 		onDone();
 	});
 
@@ -91,8 +95,40 @@ function ConnectIcsFeedForm({ organizationId, onDone }: { organizationId: string
 					/>
 					{errors.feedUrl && <p role="alert" className="text-sm text-error-red">{errors.feedUrl.message}</p>}
 				</div>
+				<div className="flex flex-col gap-1">
+					<label htmlFor="ics-feed-timezone" className="text-sm font-medium text-navy">
+						Timezone <span aria-hidden>*</span>
+					</label>
+					<input
+						id="ics-feed-timezone"
+						type="text"
+						placeholder="America/New_York"
+						{...register("timezone")}
+						aria-invalid={!!errors.timezone}
+						className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+					/>
+					{errors.timezone && <p role="alert" className="text-sm text-error-red">{errors.timezone.message}</p>}
+				</div>
+				<div className="flex flex-col gap-1">
+					<label htmlFor="ics-feed-team" className="text-sm font-medium text-navy">
+						Team
+					</label>
+					<select
+						id="ics-feed-team"
+						value={teamId}
+						onChange={(event) => setTeamId(event.target.value)}
+						className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+					>
+						<option value="">Org-wide (no single team)</option>
+						{teams?.items?.map((team) => (
+							<option key={team.id} value={team.id}>
+								{team.name}
+							</option>
+						))}
+					</select>
+				</div>
 			</div>
-			<p className="text-xs text-slate-gray">Syncing starts once the scheduled sync is available — connecting a feed now just saves it for later.</p>
+			<p className="text-xs text-slate-gray">Resolves this feed's floating (no UTC offset) event times. Synced events also reuse this timezone.</p>
 			<Button type="submit" disabled={isSubmitting} className="self-start">
 				{isSubmitting ? "Connecting…" : "Connect feed"}
 			</Button>

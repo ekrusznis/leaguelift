@@ -8,9 +8,11 @@ import com.leaguelift.integration.eventsource.domain.EventSourceConnection
 import com.leaguelift.integration.eventsource.domain.EventSourceProvider
 import com.leaguelift.integration.eventsource.persistence.EventSourceConnectionRepository
 import com.leaguelift.membership.application.MembershipService
+import com.leaguelift.team.persistence.TeamRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.net.URI
+import java.time.ZoneId
 import java.util.UUID
 
 /**
@@ -26,6 +28,7 @@ class EventSourceConnectionService(
 	private val eventSourceConnectionRepository: EventSourceConnectionRepository,
 	private val membershipService: MembershipService,
 	private val auditService: AuditService,
+	private val teamRepository: TeamRepository,
 ) {
 
 	fun list(organizationId: UUID, currentUser: CurrentUser): List<EventSourceConnection> {
@@ -35,13 +38,17 @@ class EventSourceConnectionService(
 
 	/** Only [EventSourceProvider.ICS_FEED] has a real connect flow this slice — MAXPREPS/GAMECHANGER have no wiring yet (disabled cards on the Integrations page). */
 	@Transactional
-	fun connectIcsFeed(organizationId: UUID, label: String, feedUrl: String, currentUser: CurrentUser): EventSourceConnection {
+	fun connectIcsFeed(organizationId: UUID, label: String, feedUrl: String, timezone: String, teamId: UUID?, currentUser: CurrentUser): EventSourceConnection {
 		membershipService.requireManagerRole(organizationId, currentUser)
 		if (label.isBlank()) {
 			throw ValidationException("A label is required.", listOf(com.leaguelift.common.error.FieldError("label", "Label is required.")))
 		}
 		requireValidHttpUrl(feedUrl)
-		val connection = eventSourceConnectionRepository.insert(organizationId, EventSourceProvider.ICS_FEED, label.trim(), feedUrl.trim(), currentUser.userId)
+		requireValidTimezone(timezone)
+		if (teamId != null) {
+			teamRepository.findById(teamId, organizationId) ?: throw NotFoundException("TEAM_NOT_FOUND", "The team could not be found.")
+		}
+		val connection = eventSourceConnectionRepository.insert(organizationId, EventSourceProvider.ICS_FEED, label.trim(), feedUrl.trim(), timezone, teamId, currentUser.userId)
 		auditService.record(currentUser.userId, organizationId, "event_source_connection.connected", "event_source_connection", connection.id)
 		return connection
 	}
@@ -53,6 +60,17 @@ class EventSourceConnectionService(
 			?: throw NotFoundException("EVENT_SOURCE_CONNECTION_NOT_FOUND", "The connection could not be found.")
 		eventSourceConnectionRepository.disconnect(connectionId, organizationId)
 		auditService.record(currentUser.userId, organizationId, "event_source_connection.disconnected", "event_source_connection", connectionId)
+	}
+
+	private fun requireValidTimezone(timezone: String) {
+		try {
+			ZoneId.of(timezone)
+		} catch (e: Exception) {
+			throw ValidationException(
+				"Timezone must be a valid IANA time zone id (e.g. America/New_York).",
+				listOf(com.leaguelift.common.error.FieldError("timezone", "Invalid time zone.")),
+			)
+		}
 	}
 
 	private fun requireValidHttpUrl(url: String) {

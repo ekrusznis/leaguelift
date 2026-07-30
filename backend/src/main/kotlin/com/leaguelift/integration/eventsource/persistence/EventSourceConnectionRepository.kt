@@ -10,7 +10,7 @@ import java.time.Instant
 import java.util.UUID
 
 private const val COLS =
-	"id, organization_id, provider, label, feed_url, status, last_synced_at, last_sync_status, last_sync_error, created_by_user_id, created_at, updated_at"
+	"id, organization_id, provider, label, feed_url, timezone, team_id, status, last_synced_at, last_sync_status, last_sync_error, created_by_user_id, created_at, updated_at"
 
 @Repository
 class EventSourceConnectionRepository(private val jdbcClient: JdbcClient) {
@@ -38,21 +38,21 @@ class EventSourceConnectionRepository(private val jdbcClient: JdbcClient) {
 		)
 			.query(::mapRow).list()
 
-	fun insert(organizationId: UUID, provider: EventSourceProvider, label: String, feedUrl: String?, createdByUserId: UUID): EventSourceConnection {
+	fun insert(organizationId: UUID, provider: EventSourceProvider, label: String, feedUrl: String?, timezone: String, teamId: UUID?, createdByUserId: UUID): EventSourceConnection {
 		val now = Instant.now()
 		val id = UUID.randomUUID()
 		jdbcClient.sql(
 			"""
 			insert into event_source_connection
-				(id, organization_id, provider, label, feed_url, status, created_by_user_id, created_at, updated_at)
+				(id, organization_id, provider, label, feed_url, timezone, team_id, status, created_by_user_id, created_at, updated_at)
 			values
-				(:id, :organizationId, :provider, :label, :feedUrl, 'ACTIVE', :createdByUserId, :now, :now)
+				(:id, :organizationId, :provider, :label, :feedUrl, :timezone, :teamId, 'ACTIVE', :createdByUserId, :now, :now)
 			""".trimIndent(),
 		)
 			.param("id", id).param("organizationId", organizationId).param("provider", provider.name)
-			.param("label", label).param("feedUrl", feedUrl).param("createdByUserId", createdByUserId)
+			.param("label", label).param("feedUrl", feedUrl).param("timezone", timezone).param("teamId", teamId).param("createdByUserId", createdByUserId)
 			.param("now", toTimestamp(now)).update()
-		return EventSourceConnection(id, organizationId, provider, label, feedUrl, EventSourceConnectionStatus.ACTIVE, null, null, null, createdByUserId, now, now)
+		return EventSourceConnection(id, organizationId, provider, label, feedUrl, timezone, teamId, EventSourceConnectionStatus.ACTIVE, null, null, null, createdByUserId, now, now)
 	}
 
 	fun disconnect(id: UUID, organizationId: UUID): Int {
@@ -84,6 +84,8 @@ class EventSourceConnectionRepository(private val jdbcClient: JdbcClient) {
 		provider = EventSourceProvider.valueOf(rs.getString("provider")),
 		label = rs.getString("label"),
 		feedUrl = rs.getString("feed_url"),
+		timezone = rs.getString("timezone"),
+		teamId = rs.getObject("team_id", UUID::class.java),
 		status = EventSourceConnectionStatus.valueOf(rs.getString("status")),
 		lastSyncedAt = rs.getTimestamp("last_synced_at")?.toInstant(),
 		lastSyncStatus = rs.getString("last_sync_status")?.let { EventSourceSyncStatus.valueOf(it) },

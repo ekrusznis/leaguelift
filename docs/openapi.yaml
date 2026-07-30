@@ -59,10 +59,14 @@ info:
     and one shared timezone, `external_id`-keyed dedup against the same
     `(provider, connection_id, external_event_id)` identity model Phase 10
     reserved, row-level errors collected without aborting the batch —
-    ADR-032).
+    ADR-032). Phase 12 slice 3 adds `timezone`/`teamId` to the ICS Feed
+    connect request and connection response (a gap in slice 1's original
+    connect flow, fixed here rather than deferred) — the scheduled sync
+    poller itself has no endpoint of its own, it runs in the background
+    like the outbox worker (ADR-033).
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
-  version: "0.21.0"
+  version: "0.22.0"
 servers:
   - url: /api/v1
 tags:
@@ -9676,7 +9680,7 @@ components:
           description: Null when the event has no address and no coordinates.
     ConnectIcsFeedRequest:
       type: object
-      required: [label, feedUrl]
+      required: [label, feedUrl, timezone]
       properties:
         label:
           type: string
@@ -9685,9 +9689,18 @@ components:
           type: string
           format: uri
           example: https://example.com/schedule.ics
+        timezone:
+          type: string
+          description: Resolves the feed's floating (no UTC offset) DTSTART/DTEND values (Phase 12 slice 3, ADR-033).
+          example: America/New_York
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Null for an org-wide feed — mirrors CSV import's own per-upload team scope (ADR-032).
     EventSourceConnectionResponse:
       type: object
-      required: [id, provider, label, status, createdAt]
+      required: [id, provider, label, timezone, status, createdAt]
       properties:
         id:
           type: string
@@ -9700,6 +9713,12 @@ components:
         feedUrl:
           type: string
           nullable: true
+        timezone:
+          type: string
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
         status:
           type: string
           enum: [ACTIVE, DISCONNECTED]
@@ -9707,7 +9726,7 @@ components:
           type: string
           format: date-time
           nullable: true
-          description: Null until Phase 12 slice 3's scheduled poller ships.
+          description: Null until the connection's first scheduled sync runs (Phase 12 slice 3).
         lastSyncStatus:
           type: string
           enum: [SUCCESS, FAILED]
