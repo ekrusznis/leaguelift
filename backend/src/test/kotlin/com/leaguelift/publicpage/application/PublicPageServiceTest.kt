@@ -87,6 +87,16 @@ class PublicPageServiceTest {
     }
 
     @Test
+    fun `getPublic throws NotFoundException for archived pages`() {
+        val archived = samplePage().copy(status = PageStatus.ARCHIVED, publishedAt = Instant.now())
+        every { publicPageRepository.findBySlug("my-org") } returns archived
+
+        assertFailsWith<NotFoundException> {
+            service.getPublic("my-org")
+        }
+    }
+
+    @Test
     fun `publish transitions DRAFT to PUBLISHED and records audit`() {
         val page = samplePage()
         val published = page.copy(status = PageStatus.PUBLISHED, publishedAt = Instant.now())

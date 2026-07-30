@@ -160,6 +160,40 @@ class OrderServiceTest {
 	}
 
 	@Test
+	fun `confirmFromWebhook keeps the order CONFIRMED even when Printify draft-order creation fails`() {
+		val store = store()
+		val product = product(store.id)
+		val variant = productVariant(product.id)
+		val order = pendingOrder(store)
+		val confirmed = order.copy(status = OrderStatus.CONFIRMED, confirmedAt = Instant.now())
+		every { orderRepository.findByStripeCheckoutSessionId("cs_test_123") } returns order
+		every { orderRepository.markConfirmed(order.id, null, null) } returns 1
+		every { auditService.record(null, orgId, "order.confirmed", "order", order.id) } just runs
+		every { orderItemRepository.findByOrder(order.id) } returns listOf(
+			com.leaguelift.order.domain.OrderItem(UUID.randomUUID(), order.id, variant.id, 1, variant.priceMinor, variant.costMinor),
+		)
+		every { ledgerService.recordConfirmedOrder(any(), any()) } just runs
+		every { productVariantRepository.findById(variant.id, orgId) } returns variant
+		every { productRepository.findById(product.id, orgId) } returns product
+		val designAssignment = mockk<com.leaguelift.media.domain.MediaAssignment>()
+		every { mediaAssignmentService.getActiveAssignment(com.leaguelift.media.domain.MediaEntityType.PRODUCT, product.id, com.leaguelift.media.domain.MediaUsageSlot.PRODUCT_DESIGN) } returns designAssignment
+		every { mediaReadService.describe(designAssignment) } returns mockk { every { url } returns "https://signed.example.com/design.png" }
+		every { printifyOrderClient.createDraftOrder(order.id.toString(), any()) } throws
+			org.springframework.web.client.RestClientException("Printify is unreachable")
+		every { fulfillmentRepository.insert(order.id, FulfillmentStatus.FAILED, null, "Printify is unreachable") } returns mockk()
+		every { orderRepository.findById(order.id, orgId) } returns confirmed
+
+		val result = service.confirmFromWebhook("cs_test_123", "paid", null, null)
+
+		// A Printify outage must not undo a real, already-collected payment — the order stays
+		// CONFIRMED and the failure is recorded as its own fulfillment row, not swallowed or
+		// thrown back out to roll back the surrounding @Transactional confirmation.
+		assertEquals(OrderStatus.CONFIRMED, result?.status)
+		verify(exactly = 1) { orderRepository.markConfirmed(order.id, null, null) }
+		verify(exactly = 1) { fulfillmentRepository.insert(order.id, FulfillmentStatus.FAILED, null, "Printify is unreachable") }
+	}
+
+	@Test
 	fun `confirmFromWebhook writes an order_confirmed outbox event when the order has a supporter email`() {
 		val store = store()
 		val product = product(store.id)

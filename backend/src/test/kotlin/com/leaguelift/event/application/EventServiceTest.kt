@@ -206,6 +206,7 @@ class EventServiceTest {
 
 		assertEquals(EventStatus.CANCELLED, result.status)
 		verify(exactly = 1) { outboxWriter.write(any(), any(), any(), eq("event.cancelled"), any()) }
+		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "event.cancelled", "event", event.id) }
 	}
 
 	@Test
@@ -289,6 +290,25 @@ class EventServiceTest {
 	}
 
 	@Test
+	fun `listForParticipant denies an athlete's self-link from viewing a sibling's schedule`() {
+		val siblingHouseholdId = UUID.randomUUID()
+		val sibling = com.leaguelift.participant.domain.Participant(
+			participantId2, siblingHouseholdId, orgId, "Sam", "Lee", null, null,
+			com.leaguelift.participant.domain.ParticipantStatus.ACTIVE, Instant.now(), Instant.now(),
+		)
+		every { participantRepository.findById(participantId2, orgId) } returns sibling
+		// currentUser's own self-link is tied to a different participant, so a check scoped to
+		// participantId2 (the sibling) correctly returns false — same mechanism ATHLETE_SCHEDULE_VIEW
+		// itself uses to key off the exact participant id, not just "is this user an athlete."
+		every { authorizationService.hasParticipantCapability(currentUser, participantId2, Capabilities.ATHLETE_SCHEDULE_VIEW) } returns false
+		every { authorizationService.hasHouseholdCapability(orgId, siblingHouseholdId, currentUser, Capabilities.EVENT_READ) } returns false
+
+		assertFailsWith<ForbiddenException> {
+			service.listForParticipant(orgId, participantId2, currentUser, 0, 20)
+		}
+	}
+
+	@Test
 	fun `getIcsForEvent reuses get's read authorization and builds ics from the resolved display title`() {
 		val event = sampleEvent()
 		every { eventRepository.findById(event.id, orgId) } returns event
@@ -357,6 +377,7 @@ class EventServiceTest {
 		)
 
 		verify(exactly = 1) { outboxWriter.write(any(), any(), any(), eq("event.time_changed"), any()) }
+		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "event.updated", "event", before.id) }
 	}
 
 	@Test
@@ -377,6 +398,40 @@ class EventServiceTest {
 		)
 
 		verify(exactly = 1) { outboxWriter.write(any(), any(), any(), eq("tournament.event_updated"), any()) }
+		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "event.updated", "event", before.id) }
+	}
+
+	@Test
+	fun `update fills in TBD opponent, time, and area on a tournament child event without changing its identity`() {
+		val tournamentId = UUID.randomUUID()
+		val opponentTeamId = UUID.randomUUID()
+		val before = sampleEvent(teamId = null, tournamentId = tournamentId, status = EventStatus.DRAFT)
+		val filledIn = before.copy(startAt = Instant.parse("2026-08-01T10:00:00Z"), area = "Field 1", opponentTeamId = opponentTeamId)
+		every { eventRepository.findById(before.id, orgId) } returns before andThen filledIn
+		every { authorizationService.requireTournamentCapability(orgId, tournamentId, currentUser, Capabilities.EVENT_UPDATE) } just runs
+		every { teamRepository.findById(opponentTeamId, orgId) } returns team(opponentTeamId)
+		stubEventRepositoryUpdate()
+		every { auditService.record(currentUser.userId, orgId, "event.updated", "event", before.id) } just runs
+
+		val result = service.update(
+			orgId, before.id, null, null, null, filledIn.startAt, null, null, null,
+			null, null, null, null, filledIn.area, null, null, opponentTeamId, null, currentUser,
+		)
+
+		assertEquals(before.id, result.id)
+		assertEquals(filledIn.startAt, result.startAt)
+		assertEquals(filledIn.area, result.area)
+		assertEquals(opponentTeamId, result.opponentTeamId)
+		// Same row updated in place (same id), never a new insert — a duplicate event/tournament
+		// child would be a much worse bug than a missed field, since it would silently orphan the
+		// original identity every RSVP/notification/audit row already references.
+		verify(exactly = 1) {
+			eventRepository.update(
+				before.id, orgId, any(), any(), any(), any(), any(), any(), any(),
+				any(), any(), any(), any(), any(), any(), any(), any(), any(), currentUser.userId, any(), any(),
+			)
+		}
+		verify(exactly = 0) { eventRepository.insert(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
 	}
 
 	@Test
@@ -394,6 +449,7 @@ class EventServiceTest {
 
 		assertEquals(EventStatus.POSTPONED, result.status)
 		verify(exactly = 1) { outboxWriter.write(any(), any(), any(), eq("event.postponed"), any()) }
+		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "event.postponed", "event", event.id) }
 	}
 
 	@Test
@@ -427,6 +483,7 @@ class EventServiceTest {
 		)
 
 		assertEquals("By the main gate", result.meetingPoint)
+		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "event.updated", "event", imported.id) }
 	}
 
 	@Test
@@ -454,5 +511,6 @@ class EventServiceTest {
 
 		assertEquals(EventSourceType.MANUAL, result.sourceType)
 		verify(exactly = 1) { eventRepository.detachFromSource(imported.id, orgId, currentUser.userId) }
+		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "event.detached_from_source", "event", imported.id) }
 	}
 }

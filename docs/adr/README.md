@@ -260,3 +260,21 @@ Additional, unreserved decisions:
   uniform 403 for organization-membership denial regardless of whether the
   org exists — no leak found, now written down as a checked invariant
   (2026-07-30)
+- ADR-037: Phase 13 slice 2 — test-coverage gap review against section
+  18.1's 21 named critical scenarios: 13 already solidly covered, one
+  (audit-on-mutation) stubbed but never actually verified across five test
+  bodies — fixed with real `verify()` assertions; five real gaps against
+  already-correct existing behavior (athlete-cannot-view-sibling's-schedule,
+  tournament TBD-field identity preservation, fulfillment-failure-doesn't-
+  erase-a-paid-order, public store field/status exposure, archived-page
+  public-read blocking) closed with new tests; a first-ever real-HTTP
+  security test (`SecurityConfigIntegrationTest`, plain JDK `HttpClient`
+  since Spring Boot 4 dropped `TestRestTemplate` from `spring-boot-test`)
+  proves no auth bypass and that an unauthenticated visitor is correctly
+  rejected; two reflection-based checks (`MoneyArithmeticTest`) guard money
+  fields staying `Long`/never floating-point and `LedgerEntryRepository`
+  staying append-only. Two scenarios left as documented gaps, not silently
+  dropped: partial refunds are a missing *feature* (not a missing test,
+  needs a founder decision on the split formula) and prior-release
+  migration testing needs release-snapshot tooling this repo doesn't have
+  (2026-07-30)

@@ -111,6 +111,42 @@ class ProductServiceTest {
 		verify(exactly = 0) { printifyImageClient.uploadImage(any(), any()) }
 	}
 
+	@Test
+	fun `listPublicProducts returns only ACTIVE products, never DRAFT or ARCHIVED`() {
+		val storeId = UUID.randomUUID()
+		val active = product(printifyImageId = "img_1").copy(storeId = storeId, status = ProductStatus.ACTIVE)
+		val draft = product(printifyImageId = null).copy(storeId = storeId, status = ProductStatus.DRAFT)
+		val archived = product(printifyImageId = "img_2").copy(storeId = storeId, status = ProductStatus.ARCHIVED)
+		every { productRepository.findByStore(storeId, 0, 100) } returns listOf(active, draft, archived)
+
+		val result = service.listPublicProducts(storeId)
+
+		assertEquals(listOf(active.id), result.map { it.id })
+	}
+
+	@Test
+	fun `getPublicDesignUrl returns null when the design assignment isn't PUBLIC-visibility`() {
+		val product = product(printifyImageId = "img_1")
+		every { mediaAssignmentService.getPublicAssignment(MediaEntityType.PRODUCT, product.id, MediaUsageSlot.PRODUCT_DESIGN) } returns null
+
+		val result = service.getPublicDesignUrl(product.id)
+
+		assertEquals(null, result)
+		verify(exactly = 0) { mediaReadService.describe(any()) }
+	}
+
+	@Test
+	fun `getPublicDesignUrl resolves the signed url once a PUBLIC assignment exists`() {
+		val product = product(printifyImageId = "img_1")
+		val assignment = mediaAssignment(product.id).copy(visibility = Visibility.PUBLIC, publicationStatus = PublicationStatus.APPROVED)
+		every { mediaAssignmentService.getPublicAssignment(MediaEntityType.PRODUCT, product.id, MediaUsageSlot.PRODUCT_DESIGN) } returns assignment
+		every { mediaReadService.describe(assignment) } returns MediaDescriptor(assignment, "https://signed.example.com/design.png", "image/png", 1024, 500, 500)
+
+		val result = service.getPublicDesignUrl(product.id)
+
+		assertEquals("https://signed.example.com/design.png", result)
+	}
+
 	private fun product(printifyImageId: String?) = Product(
 		id = UUID.randomUUID(), organizationId = orgId, storeId = UUID.randomUUID(), name = "Team Hoodie", description = null,
 		printifyBlueprintId = 12L, printifyImageId = printifyImageId, printifyPrintPosition = "front",

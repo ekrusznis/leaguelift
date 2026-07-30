@@ -138,6 +138,7 @@ class EventRsvpServiceTest {
 
 		assertEquals(RsvpSource.GUARDIAN, result.source)
 		verify(exactly = 1) { eventRsvpRepository.upsert(eventId, participantId, RsvpResponse.MAYBE, "running late", currentUser.userId, RsvpSource.GUARDIAN) }
+		verify(exactly = 1) { auditService.record(any(), any(), any(), any(), any(), any()) }
 	}
 
 	@Test
@@ -156,6 +157,7 @@ class EventRsvpServiceTest {
 		val result = service.submit(orgId, eventId, participantId, RsvpResponse.ATTENDING, null, currentUser)
 
 		assertEquals(RsvpSource.SELF, result.source)
+		verify(exactly = 1) { auditService.record(any(), any(), any(), any(), any(), any()) }
 	}
 
 	@Test
