@@ -197,9 +197,9 @@ export function SponsorshipPackageList({
 				<ul className="flex flex-col gap-2" aria-label="Sponsorship packages">
 					{data.items.map((sponsorshipPackage) => (
 						<li key={sponsorshipPackage.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="font-medium text-navy">
+							<div className="flex flex-wrap items-center justify-between gap-3">
+								<div className="min-w-0 flex-1">
+									<p className="break-words font-medium text-navy">
 										{sponsorshipPackage.name}
 										<span className="ml-2 rounded-full bg-ice-white px-2 py-0.5 text-xs font-medium text-slate-gray">
 											{sponsorshipPackage.status}
@@ -222,7 +222,7 @@ export function SponsorshipPackageList({
 										{sponsorshipPackage.maxQuantity ? ` of ${sponsorshipPackage.maxQuantity}` : ""}
 									</p>
 								</div>
-								<div className="flex gap-2">
+								<div className="flex shrink-0 gap-2">
 									{sponsorshipPackage.status === "DRAFT" && (
 										<Button
 											type="button"
@@ -299,9 +299,9 @@ function SponsorshipManagementPanel({ organizationId, packageId }: { organizatio
 		<ul className="flex flex-col gap-3" aria-label="Confirmed sponsors">
 			{data.items.map((sponsorship) => (
 				<li key={sponsorship.id} className="rounded-md bg-ice-white p-3">
-					<div className="flex items-center justify-between">
-						<div>
-							<p className="font-medium text-navy">
+					<div className="flex flex-wrap items-center justify-between gap-3">
+						<div className="min-w-0 flex-1">
+							<p className="break-words font-medium text-navy">
 								{sponsorship.sponsorName}
 								<span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${reviewStatusBadgeClass(sponsorship.reviewStatus)}`}>
 									{sponsorship.reviewStatus === "PENDING_REVIEW" ? "Pending review" : sponsorship.reviewStatus}
@@ -312,7 +312,7 @@ function SponsorshipManagementPanel({ organizationId, packageId }: { organizatio
 							</p>
 							{sponsorship.sponsorContactEmail && <p className="text-sm text-slate-gray">{sponsorship.sponsorContactEmail}</p>}
 						</div>
-						<span className="text-sm text-slate-gray">{formatMoneyMinorUnits(sponsorship.amountMinor, sponsorship.currency)}</span>
+						<span className="shrink-0 text-sm text-slate-gray">{formatMoneyMinorUnits(sponsorship.amountMinor, sponsorship.currency)}</span>
 					</div>
 					<div className="mt-2 flex flex-wrap items-center gap-2">
 						<SponsorLogoUpload organizationId={organizationId} packageId={packageId} sponsorId={sponsorship.sponsorId} />
@@ -462,12 +462,12 @@ function PendingReviewQueue({ organizationId }: { organizationId: string }) {
 	return (
 		<ul className="flex flex-col gap-2" aria-label="Sponsorships awaiting review">
 			{data.items.map((sponsorship) => (
-				<li key={sponsorship.id} className="flex items-center justify-between rounded-md bg-pure-white p-3">
-					<div>
-						<p className="font-medium text-navy">{sponsorship.sponsorName}</p>
+				<li key={sponsorship.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-pure-white p-3">
+					<div className="min-w-0 flex-1">
+						<p className="break-words font-medium text-navy">{sponsorship.sponsorName}</p>
 						<p className="text-sm text-slate-gray">{formatMoneyMinorUnits(sponsorship.amountMinor, sponsorship.currency)}</p>
 					</div>
-					<div className="flex gap-2">
+					<div className="flex shrink-0 gap-2">
 						<Button type="button" disabled={approve.isPending} onClick={() => approve.mutate(sponsorship.id)}>
 							Approve
 						</Button>

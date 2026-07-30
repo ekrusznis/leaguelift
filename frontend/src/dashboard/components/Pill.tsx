@@ -9,5 +9,5 @@ const TONE_STYLES: Record<PillTone, string> = {
 };
 
 export function Pill({ tone = "neutral", children }: { tone?: PillTone; children: string }) {
-	return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${TONE_STYLES[tone]}`}>{children}</span>;
+	return <span className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${TONE_STYLES[tone]}`}>{children}</span>;
 }

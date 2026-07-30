@@ -117,17 +117,17 @@ export function HouseholdList({ organizationId }: { organizationId: string }) {
 					{data.items.map((household) => (
 						<li
 							key={household.id}
-							className="flex items-center justify-between rounded-lg border border-slate-gray/20 bg-pure-white p-3"
+							className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-3"
 						>
-							<div>
-								<p className="font-medium text-navy">{household.displayName}</p>
+							<div className="min-w-0 flex-1">
+								<p className="break-words font-medium text-navy">{household.displayName}</p>
 								{household.contactEmail && (
 									<p className="text-sm text-slate-gray">{household.contactEmail}</p>
 								)}
 							</div>
 							<Link
 								to={`/app/organizations/${organizationId}/households/${household.id}`}
-								className="rounded-md border border-slate-gray/30 px-3 py-1.5 text-sm font-medium text-navy hover:bg-ice-white"
+								className="shrink-0 rounded-md border border-slate-gray/30 px-3 py-1.5 text-sm font-medium text-navy hover:bg-ice-white"
 							>
 								View
 							</Link>

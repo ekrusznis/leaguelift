@@ -129,9 +129,9 @@ export function ProductManagementPanel({ organizationId, storeId }: { organizati
 				<ul className="flex flex-col gap-2" aria-label="Products">
 					{data.items.map((product) => (
 						<li key={product.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="font-medium text-navy">
+							<div className="flex flex-wrap items-center justify-between gap-3">
+								<div className="min-w-0 flex-1">
+									<p className="break-words font-medium text-navy">
 										{product.name}
 										<span className="ml-2 rounded-full bg-ice-white px-2 py-0.5 text-xs font-medium text-slate-gray">
 											{product.status}
@@ -144,7 +144,7 @@ export function ProductManagementPanel({ organizationId, storeId }: { organizati
 									</p>
 									{product.description && <p className="text-sm text-slate-gray">{product.description}</p>}
 								</div>
-								<div className="flex gap-2">
+								<div className="flex shrink-0 gap-2">
 									{product.status === "DRAFT" && (
 										<Button
 											type="button"
@@ -276,9 +276,9 @@ function ProductVariantManagement({
 			{variants && variants.length > 0 && (
 				<ul className="flex flex-col gap-1" aria-label="Product variants">
 					{variants.map((variant) => (
-						<li key={variant.id} className="flex items-center justify-between rounded-md bg-ice-white px-3 py-2 text-sm">
-							<span>{variant.label}</span>
-							<span className="text-slate-gray">
+						<li key={variant.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-ice-white px-3 py-2 text-sm">
+							<span className="min-w-0 flex-1 break-words">{variant.label}</span>
+							<span className="shrink-0 text-slate-gray">
 								{formatMoneyMinorUnits(variant.priceMinor, variant.currency)} (cost {formatMoneyMinorUnits(variant.costMinor, variant.currency)})
 							</span>
 						</li>

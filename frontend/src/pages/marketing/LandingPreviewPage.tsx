@@ -271,7 +271,7 @@ export function LandingPreviewPage() {
 									className="flex flex-col justify-between rounded-[22px] border border-white/[0.12] bg-navy-900 p-7 shadow-[0_22px_60px_rgba(0,0,0,0.22)]"
 								>
 									<div>
-										<div className="flex items-start justify-between gap-3">
+										<div className="flex flex-wrap items-start justify-between gap-3">
 											<h3 className="font-heading text-xl font-bold text-white">{solution.heading}</h3>
 											<AvailabilityStatusBadge status={solution.availability} />
 										</div>

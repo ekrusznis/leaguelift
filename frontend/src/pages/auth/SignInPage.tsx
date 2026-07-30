@@ -78,7 +78,7 @@ export function SignInPage() {
 				{featureFlags.socialAuthProviders && (
 					<div className="mt-6 flex flex-col gap-3">
 						<p className="text-center text-xs uppercase tracking-wide text-slate-500">or continue with</p>
-						<div className="flex gap-3">
+						<div className="flex flex-col gap-3 sm:flex-row">
 							<SocialAuthButton provider="Google" />
 							<SocialAuthButton provider="Microsoft" />
 							<SocialAuthButton provider="Apple" />

@@ -217,9 +217,9 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 				<ul className="flex flex-col gap-2" aria-label="Fundraising campaigns">
 					{data.items.map((campaign) => (
 						<li key={campaign.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="font-medium text-navy">
+							<div className="flex flex-wrap items-center justify-between gap-3">
+								<div className="min-w-0 flex-1">
+									<p className="break-words font-medium text-navy">
 										{campaign.name}
 										<span className="ml-2 rounded-full bg-ice-white px-2 py-0.5 text-xs font-medium text-slate-gray">
 											{campaign.status}
@@ -230,7 +230,7 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 										{formatMoneyMinorUnits(campaign.goalAmountMinor, campaign.currency)} goal &middot; /{campaign.slug}
 									</p>
 								</div>
-								<div className="flex items-center gap-2">
+								<div className="flex shrink-0 items-center gap-2">
 									<Button
 										type="button"
 										variant="secondary"

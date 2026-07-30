@@ -100,9 +100,9 @@ export function StoreList({ organizationId }: { organizationId: string }) {
 				<ul className="flex flex-col gap-2" aria-label="Stores">
 					{data.items.map((store) => (
 						<li key={store.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="font-medium text-navy">
+							<div className="flex flex-wrap items-center justify-between gap-3">
+								<div className="min-w-0 flex-1">
+									<p className="break-words font-medium text-navy">
 										{store.name}
 										<span className="ml-2 rounded-full bg-ice-white px-2 py-0.5 text-xs font-medium text-slate-gray">
 											{store.status}
@@ -110,7 +110,7 @@ export function StoreList({ organizationId }: { organizationId: string }) {
 									</p>
 									<p className="text-sm text-slate-gray">/{store.slug}</p>
 								</div>
-								<div className="flex gap-2">
+								<div className="flex shrink-0 gap-2">
 									{store.status === "DRAFT" && (
 										<Button
 											type="button"

@@ -160,7 +160,7 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 						<CardQuery query={rosterSummary} loadingLabel="Loading roster…">
 							{(data) => (
 								<>
-									<div className="grid grid-cols-3 gap-3">
+									<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
 										<StatTile value={String(data.athletes)} label="Athletes" />
 										<StatTile value={String(data.attendanceRatePercent)} label="Attendance %" />
 										<StatTile value={String(data.availabilityResponsePercent)} label="Availability %" />

@@ -36,9 +36,9 @@ export function ContributionList({ organizationId, campaignId }: { organizationI
 			)}
 			<ul className="flex flex-col gap-2" aria-label="Contributions">
 				{data.items.map((contribution) => (
-					<li key={contribution.id} className="flex items-center justify-between rounded-lg border border-slate-gray/20 bg-pure-white p-3">
-						<div>
-							<p className="font-medium text-navy">
+					<li key={contribution.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+						<div className="min-w-0 flex-1">
+							<p className="break-words font-medium text-navy">
 								{contribution.isAnonymous ? "Anonymous supporter" : contribution.supporterName ?? "Anonymous supporter"}
 								{contribution.status === "REFUNDED" && (
 									<span className="ml-2 rounded-full bg-ice-white px-2 py-0.5 text-xs font-medium text-slate-gray">Refunded</span>
@@ -50,6 +50,7 @@ export function ContributionList({ organizationId, campaignId }: { organizationI
 							<Button
 								type="button"
 								variant="danger"
+								className="shrink-0"
 								onClick={() => handleRefund(contribution.id)}
 								disabled={refundContribution.isPending}
 							>

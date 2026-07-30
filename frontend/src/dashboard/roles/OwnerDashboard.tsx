@@ -149,7 +149,7 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 					>
 						<CardQuery query={financialOverview} loadingLabel="Loading financials…">
 							{(data) => (
-								<div className="grid grid-cols-3 gap-3 text-sm">
+								<div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
 									<div>
 										<p className="text-xs text-slate-500">Fees Assigned</p>
 										<p className="font-heading text-lg font-bold text-navy-900">{formatMoneyMinorUnits(data.feesAssignedMinor, data.currency)}</p>
@@ -175,7 +175,7 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 										<p className="font-heading text-lg font-bold text-navy-900">{formatMoneyMinorUnits(data.pendingPayoutMinor, data.currency)}</p>
 									</div>
 									{data.isFundraisingDemoData && (
-										<p className="col-span-3 text-xs text-slate-400">Fundraising/apparel/payout figures are demo data — fees are real.</p>
+										<p className="col-span-2 text-xs text-slate-400 sm:col-span-3">Fundraising/apparel/payout figures are demo data — fees are real.</p>
 									)}
 								</div>
 							)}

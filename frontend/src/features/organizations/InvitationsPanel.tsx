@@ -86,15 +86,16 @@ export function InvitationsPanel({ organizationId }: { organizationId: string })
 					{data.items.map((invitation) => (
 						<li
 							key={invitation.id}
-							className="flex items-center justify-between rounded-lg border border-slate-gray/20 bg-pure-white p-3"
+							className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-3"
 						>
-							<div>
-								<p className="font-medium text-navy">{invitation.email}</p>
+							<div className="min-w-0 flex-1">
+								<p className="break-words font-medium text-navy">{invitation.email}</p>
 								<p className="text-sm text-slate-gray">{ROLE_LABELS[invitation.role]}</p>
 							</div>
 							<Button
 								type="button"
 								variant="secondary"
+								className="shrink-0"
 								onClick={() => revokeInvitation.mutate(invitation.id)}
 								disabled={revokeInvitation.isPending}
 							>

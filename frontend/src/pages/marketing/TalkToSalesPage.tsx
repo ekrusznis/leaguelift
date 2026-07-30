@@ -223,7 +223,7 @@ export function TalkToSalesPage() {
 								<FormField label="Current sports-management software" hint="Optional" {...register("currentSoftware")} />
 								<FormField label="Current merchandise provider or method" hint="Optional" {...register("currentMerchProvider")} />
 							</div>
-							<div className="grid gap-5 sm:grid-cols-3">
+							<div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
 								<FormField label="Est. annual merchandise revenue" hint="Optional, whole dollars" error={errors.estMerchRevenue?.message} {...register("estMerchRevenue")} />
 								<FormField label="Est. annual fundraising revenue" hint="Optional, whole dollars" error={errors.estFundraisingRevenue?.message} {...register("estFundraisingRevenue")} />
 								<FormField label="Est. annual sponsorship revenue" hint="Optional, whole dollars" error={errors.estSponsorshipRevenue?.message} {...register("estSponsorshipRevenue")} />

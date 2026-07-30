@@ -10,7 +10,7 @@ const AVAILABILITY_STYLES: Record<AvailabilityBadge, string> = {
 export function AvailabilityStatusBadge({ status }: { status: AvailabilityBadge }) {
 	return (
 		<span
-			className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${AVAILABILITY_STYLES[status]}`}
+			className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold ${AVAILABILITY_STYLES[status]}`}
 		>
 			{status}
 		</span>
@@ -24,5 +24,5 @@ export function StatusBadge({ tone = "neutral", children }: { tone?: "neutral" |
 		warning: "bg-gold-500/15 text-warning-600",
 	}[tone];
 
-	return <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${styles}`}>{children}</span>;
+	return <span className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${styles}`}>{children}</span>;
 }

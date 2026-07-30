@@ -121,10 +121,10 @@ export function FeeTemplateList({ organizationId }: { organizationId: string }) 
 					{data.items.map((tpl) => (
 						<li
 							key={tpl.id}
-							className="flex items-center justify-between rounded-lg border border-slate-gray/20 bg-pure-white p-3"
+							className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-3"
 						>
-							<div>
-								<p className="font-medium text-navy">{tpl.name}</p>
+							<div className="min-w-0 flex-1">
+								<p className="break-words font-medium text-navy">{tpl.name}</p>
 								<p className="text-sm text-slate-gray">
 									{formatAmount(tpl.amountMinor, tpl.currency)}
 									{tpl.description ? ` · ${tpl.description}` : ""}
@@ -133,6 +133,7 @@ export function FeeTemplateList({ organizationId }: { organizationId: string }) 
 							<Button
 								type="button"
 								variant="secondary"
+								className="shrink-0"
 								onClick={() => archiveTemplate.mutate(tpl.id)}
 								disabled={archiveTemplate.isPending}
 							>

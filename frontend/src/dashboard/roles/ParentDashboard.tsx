@@ -157,9 +157,9 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 									{data.lineItems.length > 0 ? (
 										<ul className="mt-4 flex flex-col gap-2 border-t border-slate-200 pt-3">
 											{data.lineItems.map((line, index) => (
-												<li key={index} className="flex justify-between text-sm text-slate-600">
-													<span>{line.description}</span>
-													<span className="font-medium text-navy-900">{formatMoneyMinorUnits(line.balanceMinor, data.currency)}</span>
+												<li key={index} className="flex justify-between gap-3 text-sm text-slate-600">
+													<span className="min-w-0 flex-1 break-words">{line.description}</span>
+													<span className="shrink-0 font-medium text-navy-900">{formatMoneyMinorUnits(line.balanceMinor, data.currency)}</span>
 												</li>
 											))}
 										</ul>

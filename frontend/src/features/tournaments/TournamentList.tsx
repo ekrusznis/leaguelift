@@ -141,16 +141,16 @@ export function TournamentList({ organizationId }: { organizationId: string }) {
 				<ul className="flex flex-col gap-2" aria-label="Tournaments">
 					{data.items.map((tournament) => (
 						<li key={tournament.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="font-medium text-navy">{tournament.name}</p>
+							<div className="flex flex-wrap items-center justify-between gap-3">
+								<div className="min-w-0 flex-1">
+									<p className="break-words font-medium text-navy">{tournament.name}</p>
 									<p className="text-sm text-slate-gray">
 										{[tournament.sport, formatDateRange(tournament.startDate, tournament.endDate), tournament.location]
 											.filter(Boolean)
 											.join(" · ")}
 									</p>
 								</div>
-								<div className="flex items-center gap-2">
+								<div className="flex shrink-0 items-center gap-2">
 									<Button
 										type="button"
 										variant="secondary"

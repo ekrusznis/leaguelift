@@ -126,9 +126,9 @@ function AdultsPanel({ organizationId, householdId }: { organizationId: string; 
 			{data && data.length > 0 && (
 				<ul className="flex flex-col gap-2" aria-label="Adults list">
 					{data.map((adult) => (
-						<li key={adult.id} className="flex items-center justify-between rounded-lg border border-slate-gray/20 bg-pure-white p-3">
-							<div>
-								<p className="font-medium text-navy">
+						<li key={adult.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+							<div className="min-w-0 flex-1">
+								<p className="break-words font-medium text-navy">
 									{adult.firstName} {adult.lastName}
 									{adult.isPrimary && <span className="ml-2 rounded-full bg-navy/10 px-2 py-0.5 text-xs text-navy">Primary</span>}
 								</p>
@@ -136,7 +136,7 @@ function AdultsPanel({ organizationId, householdId }: { organizationId: string; 
 									{[adult.relationship, adult.email].filter(Boolean).join(" · ")}
 								</p>
 							</div>
-							<Button type="button" variant="secondary" onClick={() => removeAdult.mutate(adult.id)} disabled={removeAdult.isPending}>
+							<Button type="button" variant="secondary" className="shrink-0" onClick={() => removeAdult.mutate(adult.id)} disabled={removeAdult.isPending}>
 								Remove
 							</Button>
 						</li>
@@ -275,9 +275,9 @@ function ParticipantsPanel({ organizationId, householdId }: { organizationId: st
 				<ul className="flex flex-col gap-2" aria-label="Participants list">
 					{data.map((participant) => (
 						<li key={participant.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="font-medium text-navy">
+							<div className="flex flex-wrap items-center justify-between gap-3">
+								<div className="min-w-0 flex-1">
+									<p className="break-words font-medium text-navy">
 										{participant.firstName} {participant.lastName}
 									</p>
 									{participant.dateOfBirth && (
@@ -286,7 +286,7 @@ function ParticipantsPanel({ organizationId, householdId }: { organizationId: st
 								</div>
 								<button
 									type="button"
-									className="text-sm text-azure-blue hover:underline"
+									className="shrink-0 text-sm text-azure-blue hover:underline"
 									onClick={() => setExpandedId((id) => id === participant.id ? null : participant.id)}
 								>
 									{expandedId === participant.id ? "Hide teams" : "Teams"}
@@ -469,13 +469,13 @@ function FeeDetailPanel({ organizationId, householdId, fee }: { organizationId: 
 					<h3 className="text-sm font-semibold text-navy">Payments</h3>
 					<ul className="flex flex-col gap-1">
 						{payments.map((payment) => (
-							<li key={payment.id} className="flex items-center justify-between text-sm">
-								<span className={payment.voidedAt ? "text-slate-gray line-through" : "text-slate-gray"}>
+							<li key={payment.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
+								<span className={`min-w-0 flex-1 break-words ${payment.voidedAt ? "text-slate-gray line-through" : "text-slate-gray"}`}>
 									{formatAmount(payment.amountMinor, payment.currency)} · {payment.method} · {payment.paidAt}
 									{payment.voidedAt ? ` · voided (${payment.voidReason})` : ""}
 								</span>
 								{!payment.voidedAt && (
-									<button type="button" className="text-azure-blue hover:underline" onClick={() => handleVoidPayment(payment.id)}>
+									<button type="button" className="shrink-0 text-azure-blue hover:underline" onClick={() => handleVoidPayment(payment.id)}>
 										Void
 									</button>
 								)}
@@ -491,14 +491,14 @@ function FeeDetailPanel({ organizationId, householdId, fee }: { organizationId: 
 					<h3 className="text-sm font-semibold text-navy">Discounts &amp; Credits</h3>
 					<ul className="flex flex-col gap-1">
 						{adjustments.map((adjustment) => (
-							<li key={adjustment.id} className="flex items-center justify-between text-sm">
-								<span className={adjustment.voidedAt ? "text-slate-gray line-through" : "text-slate-gray"}>
+							<li key={adjustment.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
+								<span className={`min-w-0 flex-1 break-words ${adjustment.voidedAt ? "text-slate-gray line-through" : "text-slate-gray"}`}>
 									{formatAmount(adjustment.amountMinor, adjustment.currency)} · {adjustment.adjustmentType}
 									{adjustment.reason ? ` · ${adjustment.reason}` : ""}
 									{adjustment.voidedAt ? ` · voided (${adjustment.voidReason})` : ""}
 								</span>
 								{!adjustment.voidedAt && (
-									<button type="button" className="text-azure-blue hover:underline" onClick={() => handleVoidAdjustment(adjustment.id)}>
+									<button type="button" className="shrink-0 text-azure-blue hover:underline" onClick={() => handleVoidAdjustment(adjustment.id)}>
 										Void
 									</button>
 								)}
@@ -638,16 +638,16 @@ function FeeAssignmentsPanel({ organizationId, householdId }: { organizationId: 
 						const participant = participants?.find((p) => p.id === fee.participantId);
 						return (
 							<li key={fee.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
-								<div className="flex items-center justify-between">
-									<div>
-										<p className="font-medium text-navy">{fee.description}</p>
+								<div className="flex flex-wrap items-center justify-between gap-3">
+									<div className="min-w-0 flex-1">
+										<p className="break-words font-medium text-navy">{fee.description}</p>
 										<p className="text-sm text-slate-gray">
 											{formatAmount(fee.balanceMinor, fee.currency)} due of {formatAmount(fee.originalAmountMinor, fee.currency)}
 											{fee.dueDate ? ` · Due ${fee.dueDate}` : ""}
 											{participant ? ` · ${participant.firstName} ${participant.lastName}` : ""}
 										</p>
 									</div>
-									<div className="flex items-center gap-2">
+									<div className="flex shrink-0 items-center gap-2">
 										<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[fee.status]}`}>
 											{STATUS_LABELS[fee.status]}
 										</span>

@@ -29,7 +29,7 @@ export function SolutionsOverviewPage() {
 					{SOLUTIONS.map((solution) => (
 						<div key={solution.slug} className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-ice-50 p-6">
 							<div>
-								<div className="flex items-start justify-between gap-3">
+								<div className="flex flex-wrap items-start justify-between gap-3">
 									<h2 className="font-heading text-lg font-bold text-navy-900">{solution.heading}</h2>
 									<AvailabilityStatusBadge status={solution.availability} />
 								</div>

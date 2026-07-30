@@ -38,8 +38,8 @@ export function PayoutConnectPanel({ organizationId }: { organizationId: string 
 	}
 
 	return (
-		<div className="flex items-center justify-between rounded-lg border border-slate-gray/20 bg-pure-white p-4">
-			<div>
+		<div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-4">
+			<div className="min-w-0 flex-1">
 				{status?.isFullyConnected ? (
 					<>
 						<p className="font-medium text-navy">Payouts connected</p>
@@ -62,7 +62,7 @@ export function PayoutConnectPanel({ organizationId }: { organizationId: string 
 					</p>
 				)}
 			</div>
-			<Button type="button" variant="secondary" onClick={handleConnect} disabled={startOnboarding.isPending}>
+			<Button type="button" variant="secondary" className="shrink-0" onClick={handleConnect} disabled={startOnboarding.isPending}>
 				{startOnboarding.isPending ? "Starting…" : status?.isFullyConnected ? "Manage" : "Connect payouts"}
 			</Button>
 		</div>

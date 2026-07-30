@@ -91,7 +91,7 @@ export function PlatformAdminDashboard() {
 					<DashCard title="Webhook Health" className="lg:col-span-1">
 						<CardQuery query={webhookHealth} loadingLabel="Loading…">
 							{(data) => (
-								<div className="grid grid-cols-3 gap-3">
+								<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
 									<StatTile value={String(data.processed)} label="Processed" />
 									<StatTile value={String(data.failed)} label="Failed" />
 									<StatTile value={String(data.ignored)} label="Ignored" />
@@ -120,7 +120,7 @@ export function PlatformAdminDashboard() {
 					<DashCard title="Orders" className="lg:col-span-1">
 						<CardQuery query={ordersSummary} loadingLabel="Loading…">
 							{(data) => (
-								<div className="grid grid-cols-3 gap-3">
+								<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
 									<StatTile value={String(data.confirmed)} label="Confirmed" />
 									<StatTile value={String(data.pending)} label="Pending" />
 									<StatTile value={String(data.refunded)} label="Refunded" />

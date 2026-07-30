@@ -70,11 +70,11 @@ function ProductCard({ product, cart, onChangeQuantity }: { product: PublicProdu
 				{product.variants.map((variant) => {
 					const quantity = cart.find((line) => line.productVariantId === variant.id)?.quantity ?? 0;
 					return (
-						<li key={variant.id} className="flex items-center justify-between gap-3 rounded-md bg-navy-900/40 px-3 py-2 text-sm text-white">
-							<span>
+						<li key={variant.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-navy-900/40 px-3 py-2 text-sm text-white">
+							<span className="min-w-0 flex-1 break-words">
 								{variant.label} — {formatMoneyMinorUnits(variant.priceMinor, variant.currency)}
 							</span>
-							<label className="flex items-center gap-2">
+							<label className="flex shrink-0 items-center gap-2">
 								<span className="sr-only">Quantity for {variant.label}</span>
 								<input
 									type="number"
