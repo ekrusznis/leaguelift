@@ -50,6 +50,13 @@ class OrderRepository(private val jdbcClient: JdbcClient, private val objectMapp
 			.query(::mapRow)
 			.list()
 
+	/** Platform-wide order counts by status (Platform Admin dashboard, Phase 7 completion) — no organization filter, unlike every other query here. */
+	fun countAllByStatus(): Map<String, Long> =
+		jdbcClient.sql("select status, count(*) as cnt from \"order\" group by status")
+			.query { rs, _ -> rs.getString("status") to rs.getLong("cnt") }
+			.list()
+			.toMap()
+
 	fun countConfirmedByStore(storeId: UUID): Long =
 		jdbcClient.sql("""select count(*) from "order" where store_id = :storeId and status in ('CONFIRMED', 'REFUNDED')""")
 			.param("storeId", storeId)

@@ -44,6 +44,7 @@ import { STATUS_COLORS, STATUS_LABELS } from "../features/fees/statusLabels";
 import type { FeeAssignment, FeeAssignmentStatus } from "../features/fees/types";
 import { useFeeTemplates } from "../features/fees/api";
 import { useTeams } from "../features/teams/api";
+import { HouseholdDocumentsPanel } from "../features/documents/HouseholdDocumentsPanel";
 
 function formatAmount(amountMinor: number, currency: string) {
 	return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amountMinor / 100);
@@ -724,6 +725,11 @@ export function HouseholdDetailPage() {
 			<AdultsPanel organizationId={organizationId} householdId={householdId} />
 			<ParticipantsPanel organizationId={organizationId} householdId={householdId} />
 			<FeeAssignmentsPanel organizationId={organizationId} householdId={householdId} />
+
+			<section aria-label="Documents" className="flex flex-col gap-3">
+				<h2 className="font-heading text-lg font-semibold text-navy">Documents</h2>
+				<HouseholdDocumentsPanel organizationId={organizationId} householdId={householdId} canManage />
+			</section>
 		</div>
 	);
 }

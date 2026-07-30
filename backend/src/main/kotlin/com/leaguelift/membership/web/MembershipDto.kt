@@ -11,15 +11,19 @@ data class MembershipResponse(
 	val id: UUID,
 	val organizationId: UUID,
 	val userId: UUID,
+	val userEmail: String?,
+	val userDisplayName: String?,
 	val role: String,
 	val status: String,
 	val createdAt: Instant,
 )
 
-fun OrganizationMembership.toResponse() = MembershipResponse(
+fun OrganizationMembership.toResponse(userEmail: String? = null, userDisplayName: String? = null) = MembershipResponse(
 	id = id,
 	organizationId = organizationId,
 	userId = userId,
+	userEmail = userEmail,
+	userDisplayName = userDisplayName,
 	role = role.name,
 	status = status.name,
 	createdAt = createdAt,

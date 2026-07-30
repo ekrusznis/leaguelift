@@ -269,6 +269,20 @@ class AuthorizationService(
 
 	// --- Grants (org-manager-only; PLATFORM/PARTICIPANT grants are code-only, see class doc) ---
 
+	/** Every active role grant on this team — the admin UI's "who currently has access" list (ADR-020 consequence: grant/revoke had no UI to show this). */
+	fun listTeamRoleAssignments(organizationId: UUID, teamId: UUID, currentUser: CurrentUser): List<RoleAssignment> {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		requireNotNull(teamRepository.findById(teamId, organizationId)) { "Team not found in this organization." }
+		return roleAssignmentRepository.listActiveForResource(RoleAssignmentContextType.TEAM, teamId)
+	}
+
+	/** Every active role grant on this tournament — same purpose as [listTeamRoleAssignments]. */
+	fun listTournamentRoleAssignments(organizationId: UUID, tournamentId: UUID, currentUser: CurrentUser): List<RoleAssignment> {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		requireNotNull(tournamentRepository.findById(tournamentId, organizationId)) { "Tournament not found in this organization." }
+		return roleAssignmentRepository.listActiveForResource(RoleAssignmentContextType.TOURNAMENT, tournamentId)
+	}
+
 	@Transactional
 	fun grantTeamRole(organizationId: UUID, teamId: UUID, targetUserId: UUID, role: ResourceRole, currentUser: CurrentUser): RoleAssignment {
 		membershipService.requireManagerRole(organizationId, currentUser)

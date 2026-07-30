@@ -20,7 +20,10 @@ import type {
 	OutboxHealth,
 	OwnerOnboardingProgress,
 	OwnerSummary,
+	PlatformOrdersSummary,
 	PlatformOrganizationRow,
+	PlatformPaymentsSummary,
+	PlatformPayoutsSummary,
 	PlatformSummary,
 	ReportMetric,
 	RequiredActionItem,
@@ -153,9 +156,9 @@ export function useCoachRosterSummary(organizationId: string | null | undefined)
 		enabled: !!organizationId,
 	});
 }
-export function useCoachTeamPageStatus(organizationId: string | null | undefined) {
+export function useCoachTeamPageStatus(organizationId: string | null | undefined, teamId?: string | null) {
 	return useQuery({
-		queryKey: ["organizations", organizationId, "dashboard", "coach", "team-page-status"],
+		queryKey: ["organizations", organizationId, "dashboard", "coach", "team-page-status", teamId ?? null],
 		// `?? null`: a nullable backend response with no active value serializes as an
 		// empty 200 body (no Content-Type header), which apiFetch resolves to
 		// `undefined` — and TanStack Query v5 treats a queryFn returning `undefined` as
@@ -163,14 +166,20 @@ export function useCoachTeamPageStatus(organizationId: string | null | undefined
 		// via Phase 7's real local end-to-end check (a coach with no active campaign hit
 		// this on the Fundraising Progress card) — same fix applied to both nullable
 		// Coach-dashboard hooks below.
-		queryFn: () => apiFetch<TeamPageStatusItem | null>(`/organizations/${organizationId}/dashboard/coach/team-page-status`).then((v) => v ?? null),
+		queryFn: () =>
+			apiFetch<TeamPageStatusItem | null>(
+				`/organizations/${organizationId}/dashboard/coach/team-page-status${teamId ? `?teamId=${teamId}` : ""}`,
+			).then((v) => v ?? null),
 		enabled: !!organizationId,
 	});
 }
-export function useCoachFundraisingProgress(organizationId: string | null | undefined) {
+export function useCoachFundraisingProgress(organizationId: string | null | undefined, teamId?: string | null) {
 	return useQuery({
-		queryKey: ["organizations", organizationId, "dashboard", "coach", "fundraising-progress"],
-		queryFn: () => apiFetch<FundraisingProgress | null>(`/organizations/${organizationId}/dashboard/coach/fundraising-progress`).then((v) => v ?? null),
+		queryKey: ["organizations", organizationId, "dashboard", "coach", "fundraising-progress", teamId ?? null],
+		queryFn: () =>
+			apiFetch<FundraisingProgress | null>(
+				`/organizations/${organizationId}/dashboard/coach/fundraising-progress${teamId ? `?teamId=${teamId}` : ""}`,
+			).then((v) => v ?? null),
 		enabled: !!organizationId,
 	});
 }
@@ -297,5 +306,23 @@ export function usePlatformOutboxHealth() {
 	return useQuery({
 		queryKey: ["platform", "dashboard", "outbox-health"],
 		queryFn: () => apiFetch<OutboxHealth>("/platform/dashboard/outbox-health"),
+	});
+}
+export function usePlatformOrdersSummary() {
+	return useQuery({
+		queryKey: ["platform", "dashboard", "orders-summary"],
+		queryFn: () => apiFetch<PlatformOrdersSummary>("/platform/dashboard/orders-summary"),
+	});
+}
+export function usePlatformPaymentsSummary() {
+	return useQuery({
+		queryKey: ["platform", "dashboard", "payments-summary"],
+		queryFn: () => apiFetch<PlatformPaymentsSummary>("/platform/dashboard/payments-summary"),
+	});
+}
+export function usePlatformPayoutsSummary() {
+	return useQuery({
+		queryKey: ["platform", "dashboard", "payouts-summary"],
+		queryFn: () => apiFetch<PlatformPayoutsSummary>("/platform/dashboard/payouts-summary"),
 	});
 }

@@ -62,6 +62,9 @@ tags:
   - name: sponsorships
   - name: dashboard
   - name: authorization
+  - name: documents
+  - name: activity
+  - name: search
 paths:
   /public/status:
     get:
@@ -2103,6 +2106,204 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /organizations/{organizationId}/documents:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [documents]
+      summary: List the organization's documents (any active org member)
+      operationId: listOrganizationDocuments
+      responses:
+        "200":
+          description: Organization documents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [documents]
+      summary: Assign an already-uploaded (usageSlot=DOCUMENT) asset as an organization-level document (org manager only)
+      description: Upload the underlying file first via POST /organizations/{organizationId}/media/uploads (usageSlot=DOCUMENT) + its /confirm call.
+      operationId: assignOrganizationDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignDocumentRequest"
+      responses:
+        "201":
+          description: Document assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/documents/broadcast:
+    post:
+      tags: [documents]
+      summary: Assign an already-uploaded document to every active household in the organization (org manager only)
+      description: Convenience for a season-wide waiver/form — creates one assignment per household, all sharing the same underlying asset.
+      operationId: broadcastDocumentToAllHouseholds
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignDocumentRequest"
+      responses:
+        "201":
+          description: Document assigned to every household
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/documents/{assignmentId}:
+    delete:
+      tags: [documents]
+      summary: Retire a document (org manager only) — never deletes the underlying asset, which may back other households' assignments from a broadcast
+      operationId: removeDocument
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Retired
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/documents/{assignmentId}/acknowledgments:
+    get:
+      tags: [documents]
+      summary: List which guardians have acknowledged/signed this document (org manager only)
+      operationId: listDocumentAcknowledgments
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Acknowledgments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentAcknowledgmentListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/households/{householdId}/documents:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/HouseholdIdParam"
+    get:
+      tags: [documents]
+      summary: List a household's documents (org member or a guardian of this household)
+      operationId: listHouseholdDocuments
+      responses:
+        "200":
+          description: Household documents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [documents]
+      summary: Assign an already-uploaded document to one household (org manager only)
+      operationId: assignHouseholdDocument
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignDocumentRequest"
+      responses:
+        "201":
+          description: Document assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/households/{householdId}/documents/{assignmentId}/acknowledge:
+    post:
+      tags: [documents]
+      summary: Acknowledge ("sign") a household document — must be an active guardian of this household. Idempotent — re-acknowledging returns the existing record.
+      operationId: acknowledgeDocument
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/HouseholdIdParam"
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Acknowledgment recorded (or already existed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentAcknowledgmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /public/campaigns/{slug}:
     get:
       tags: [fundraising]
@@ -3742,6 +3943,13 @@ paths:
       operationId: getCoachTeamPageStatus
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: teamId
+          in: query
+          required: false
+          description: Selects which of the caller's accessible teams to show (the team selector). Defaults to the alphabetically-first accessible team when omitted. 403s if the team isn't one the caller can access.
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: Team page status, or null when the organization has no teams
@@ -3762,6 +3970,13 @@ paths:
       operationId: getCoachFundraisingProgress
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: teamId
+          in: query
+          required: false
+          description: Selects which of the caller's accessible teams to show (the team selector). Defaults to the alphabetically-first accessible team when omitted. 403s if the team isn't one the caller can access.
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: Fundraising progress, or null when there is no active campaign
@@ -4141,6 +4356,57 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /platform/dashboard/orders-summary:
+    get:
+      tags: [dashboard]
+      summary: Platform Admin dashboard — platform-wide order counts by status (real; Phase 7 completion; requires platform.audit.view)
+      operationId: getPlatformDashboardOrdersSummary
+      responses:
+        "200":
+          description: Orders summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformOrdersSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /platform/dashboard/payments-summary:
+    get:
+      tags: [dashboard]
+      summary: Platform Admin dashboard — platform-wide ledger sums (gross processed, platform fees, refunds) (real; Phase 7 completion; requires platform.audit.view)
+      operationId: getPlatformDashboardPaymentsSummary
+      responses:
+        "200":
+          description: Payments summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformPaymentsSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /platform/dashboard/payouts-summary:
+    get:
+      tags: [dashboard]
+      summary: Platform Admin dashboard — payout-enabled organization count and total transferred (real; Phase 7 completion; requires platform.audit.view)
+      operationId: getPlatformDashboardPayoutsSummary
+      responses:
+        "200":
+          description: Payouts summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformPayoutsSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /me/contexts:
     get:
       tags: [authorization]
@@ -4158,10 +4424,94 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /me/activity:
+    get:
+      tags: [activity]
+      summary: Cross-org activity feed (DESIGN-DOC.md section 13, Phase 7 completion) — every organization the caller belongs to, or platform-wide for a platform administrator
+      operationId: getMyActivity
+      responses:
+        "200":
+          description: Activity feed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityFeedResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /organizations/{organizationId}/search:
+    get:
+      tags: [search]
+      summary: Global search within one organization — teams, participants, and households (DESIGN-DOC.md section 13, Phase 7 completion; any active org member)
+      operationId: searchOrganization
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Search results (empty for a query under 2 characters)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /platform/search:
+    get:
+      tags: [search]
+      summary: Global search across organizations, platform-wide (platform administrator only)
+      operationId: searchPlatform
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Search results (empty for a query under 2 characters)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /organizations/{organizationId}/teams/{teamId}/role-assignments:
+    get:
+      tags: [authorization]
+      summary: List active role assignments for a team (org OWNER/ADMINISTRATOR only; backs the "Manage access" admin UI)
+      operationId: listTeamRoleAssignments
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/TeamIdParam"
+      responses:
+        "200":
+          description: Active role assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoleAssignmentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
     post:
       tags: [authorization]
-      summary: Grant a team-scoped role (COACH_READ/TEAM_EDITOR/TEAM_MANAGER) to an org member (org OWNER/ADMINISTRATOR only; Phase 7/ADR-020; no admin UI yet — API only)
+      summary: Grant a team-scoped role (COACH_READ/TEAM_EDITOR/TEAM_MANAGER) to an org member (org OWNER/ADMINISTRATOR only; Phase 7/ADR-020)
       operationId: grantTeamRoleAssignment
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
@@ -4211,9 +4561,31 @@ paths:
           $ref: "#/components/responses/Forbidden"
 
   /organizations/{organizationId}/tournaments/{tournamentId}/role-assignments:
+    get:
+      tags: [authorization]
+      summary: List active role assignments for a tournament (org OWNER/ADMINISTRATOR only; backs the "Manage access" admin UI)
+      operationId: listTournamentRoleAssignments
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/TournamentIdParam"
+      responses:
+        "200":
+          description: Active role assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoleAssignmentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
     post:
       tags: [authorization]
-      summary: Grant a tournament-scoped role (TOURNAMENT_VIEWER/TOURNAMENT_ADMINISTRATOR) to an org member (org OWNER/ADMINISTRATOR only; Phase 7/ADR-020; no admin UI yet — API only)
+      summary: Grant a tournament-scoped role (TOURNAMENT_VIEWER/TOURNAMENT_ADMINISTRATOR) to an org member (org OWNER/ADMINISTRATOR only; Phase 7/ADR-020)
       operationId: grantTournamentRoleAssignment
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
@@ -4643,6 +5015,12 @@ components:
         userId:
           type: string
           format: uuid
+        userEmail:
+          type: string
+          nullable: true
+        userDisplayName:
+          type: string
+          nullable: true
         role:
           $ref: "#/components/schemas/MembershipRole"
         status:
@@ -7374,7 +7752,7 @@ components:
       properties:
         usageSlot:
           type: string
-          enum: [LOGO, COVER, PRODUCT_DESIGN, SPONSOR_LOGO]
+          enum: [LOGO, COVER, PRODUCT_DESIGN, SPONSOR_LOGO, DOCUMENT]
         assetId:
           type: string
           format: uuid
@@ -7422,6 +7800,75 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MediaAssignmentResponse"
+
+    # --- Documents (Phase 7 completion, DESIGN-DOC.md section 13) ---
+    AssignDocumentRequest:
+      type: object
+      required: [assetId]
+      properties:
+        assetId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          nullable: true
+    DocumentResponse:
+      type: object
+      required: [id, assetId, url, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+          format: uuid
+        url:
+          type: string
+        title:
+          type: string
+          nullable: true
+        contentType:
+          type: string
+          nullable: true
+        byteSizeBytes:
+          type: integer
+          format: int64
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+    DocumentListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentResponse"
+    DocumentAcknowledgmentResponse:
+      type: object
+      required: [id, householdAdultId, acknowledgedByUserId, acknowledgedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        householdAdultId:
+          type: string
+          format: uuid
+        acknowledgedByUserId:
+          type: string
+          format: uuid
+        acknowledgedAt:
+          type: string
+          format: date-time
+    DocumentAcknowledgmentListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentAcknowledgmentResponse"
 
     # --- Payouts ---
     StartOnboardingRequest:
@@ -7507,6 +7954,63 @@ components:
             type: string
           description: Resolved, deny-by-default capability strings for this context — never re-derive from `role` client-side.
 
+    ActivityFeedItem:
+      type: object
+      required: [id, action, entityType, entityId, occurredAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
+        organizationName:
+          type: string
+          nullable: true
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+          format: uuid
+        occurredAt:
+          type: string
+          format: date-time
+    ActivityFeedResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityFeedItem"
+
+    SearchHitResponse:
+      type: object
+      required: [type, id, label]
+      properties:
+        type:
+          type: string
+          enum: [TEAM, PARTICIPANT, HOUSEHOLD, ORGANIZATION]
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        subtitle:
+          type: string
+          nullable: true
+    SearchResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchHitResponse"
+
     GrantRoleAssignmentRequest:
       type: object
       required: [userId, role]
@@ -7528,6 +8032,12 @@ components:
         userId:
           type: string
           format: uuid
+        userEmail:
+          type: string
+          nullable: true
+        userDisplayName:
+          type: string
+          nullable: true
         contextType:
           type: string
         resourceId:
@@ -7636,6 +8146,42 @@ components:
           type: integer
           format: int64
         deadLetter:
+          type: integer
+          format: int64
+    PlatformOrdersSummary:
+      type: object
+      required: [confirmed, refunded, pending]
+      properties:
+        confirmed:
+          type: integer
+          format: int64
+        refunded:
+          type: integer
+          format: int64
+        pending:
+          type: integer
+          format: int64
+    PlatformPaymentsSummary:
+      type: object
+      required: [grossProcessedMinor, platformFeesCollectedMinor, refundedMinor]
+      properties:
+        grossProcessedMinor:
+          type: integer
+          format: int64
+        platformFeesCollectedMinor:
+          type: integer
+          format: int64
+        refundedMinor:
+          type: integer
+          format: int64
+    PlatformPayoutsSummary:
+      type: object
+      required: [organizationsPayoutEnabled, totalTransferredMinor]
+      properties:
+        organizationsPayoutEnabled:
+          type: integer
+          format: int64
+        totalTransferredMinor:
           type: integer
           format: int64
 

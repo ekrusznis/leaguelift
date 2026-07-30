@@ -13,6 +13,7 @@ object UploadLimits {
 	private const val MAX_COVER_BYTES = 15L * 1024 * 1024
 	private const val MAX_PRODUCT_DESIGN_RASTER_BYTES = 15L * 1024 * 1024
 	private const val MAX_PRODUCT_DESIGN_SVG_BYTES = 2L * 1024 * 1024
+	private const val MAX_DOCUMENT_BYTES = 15L * 1024 * 1024
 
 	const val MAX_DIMENSION_PX = 10_000
 
@@ -25,12 +26,17 @@ object UploadLimits {
 	// (small raster/vector mark), so it reuses LOGO's exact limits rather than defining
 	// a new set of numbers.
 	private val SPONSOR_LOGO_CONTENT_TYPES = LOGO_CONTENT_TYPES
+	// PDF only for this slice — waivers/forms/uploads (DESIGN-DOC.md section 13).
+	// Word/Office formats are zip-based and need a different magic-byte check; not
+	// worth the extra surface until a real need for them shows up.
+	private val DOCUMENT_CONTENT_TYPES = setOf("application/pdf")
 
 	fun allowedContentTypes(slot: MediaUsageSlot): Set<String> = when (slot) {
 		MediaUsageSlot.LOGO -> LOGO_CONTENT_TYPES
 		MediaUsageSlot.COVER -> COVER_CONTENT_TYPES
 		MediaUsageSlot.PRODUCT_DESIGN -> PRODUCT_DESIGN_CONTENT_TYPES
 		MediaUsageSlot.SPONSOR_LOGO -> SPONSOR_LOGO_CONTENT_TYPES
+		MediaUsageSlot.DOCUMENT -> DOCUMENT_CONTENT_TYPES
 	}
 
 	fun isContentTypeAllowed(slot: MediaUsageSlot, contentType: String): Boolean =
@@ -41,7 +47,11 @@ object UploadLimits {
 		MediaUsageSlot.COVER -> MAX_COVER_BYTES
 		MediaUsageSlot.PRODUCT_DESIGN -> if (contentType == "image/svg+xml") MAX_PRODUCT_DESIGN_SVG_BYTES else MAX_PRODUCT_DESIGN_RASTER_BYTES
 		MediaUsageSlot.SPONSOR_LOGO -> if (contentType == "image/svg+xml") MAX_LOGO_SVG_BYTES else MAX_LOGO_RASTER_BYTES
+		MediaUsageSlot.DOCUMENT -> MAX_DOCUMENT_BYTES
 	}
+
+	/** True for any content type this slot allows that isn't a decodable raster/vector image — e.g. a DOCUMENT slot's PDF. Callers use this to skip image-specific validation (dimension decode/cap) that doesn't apply. */
+	fun isNonImageContentType(contentType: String): Boolean = contentType == "application/pdf"
 
 	/**
 	 * Sniffs magic bytes to determine the actual image format, independent of the
@@ -53,7 +63,13 @@ object UploadLimits {
 		if (isJpeg(bytes)) return "image/jpeg"
 		if (isWebp(bytes)) return "image/webp"
 		if (isSvg(bytes)) return "image/svg+xml"
+		if (isPdf(bytes)) return "application/pdf"
 		return null
+	}
+
+	private fun isPdf(bytes: ByteArray): Boolean {
+		val signature = "%PDF-".toByteArray(Charsets.US_ASCII)
+		return bytes.size >= signature.size && bytes.copyOf(signature.size).contentEquals(signature)
 	}
 
 	private fun isPng(bytes: ByteArray): Boolean {

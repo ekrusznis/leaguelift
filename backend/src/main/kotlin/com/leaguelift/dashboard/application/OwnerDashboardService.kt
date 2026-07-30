@@ -15,9 +15,13 @@ import com.leaguelift.fee.persistence.FeeRepository
 import com.leaguelift.fundraising.persistence.CampaignRepository
 import com.leaguelift.fundraising.persistence.ContributionRepository
 import com.leaguelift.household.persistence.HouseholdRepository
+import com.leaguelift.ledger.domain.LedgerDirection
+import com.leaguelift.ledger.domain.LedgerEntryType
+import com.leaguelift.ledger.persistence.LedgerEntryRepository
 import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.organization.persistence.OrganizationRepository
 import com.leaguelift.participant.persistence.ParticipantRepository
+import com.leaguelift.payout.application.PayoutAccountService
 import com.leaguelift.team.persistence.TeamRepository
 import com.leaguelift.tournament.persistence.TournamentRepository
 import org.springframework.stereotype.Service
@@ -31,9 +35,13 @@ private const val RECENT_ACTIVITY_LIMIT = 10
  * own controller endpoint, each re-checks the caller's organization membership on
  * every call rather than trusting a previously-resolved context. Real data where the
  * schema supports it (summary counts, team performance identity/participants, recent
- * activity from audit_event); canned sample data everywhere the backing table doesn't
- * exist yet (financial overview, attention queue, upcoming events, onboarding
- * progress, reports snapshot) — each demo-backed response is tagged `isDemoData` /
+ * activity from audit_event, and — as of the Phase 7 completion demo-data audit —
+ * financial overview's apparel/payout figures and reports snapshot's dollar values,
+ * both now read from `ledger_entry`/`PayoutAccountService` instead of hardcoded
+ * literals); canned sample data only where the backing model genuinely doesn't exist
+ * yet (attention queue, upcoming events, onboarding progress, reports snapshot's
+ * trend percentages — no historical/time-series tracking exists to compute a real
+ * period-over-period change) — each demo-backed response is tagged `isDemoData` /
  * `isFundraisingDemoData` so the frontend can label it rather than presenting it as
  * real.
  */
@@ -49,6 +57,8 @@ class OwnerDashboardService(
 	private val feeRepository: FeeRepository,
 	private val campaignRepository: CampaignRepository,
 	private val contributionRepository: ContributionRepository,
+	private val ledgerEntryRepository: LedgerEntryRepository,
+	private val payoutAccountService: PayoutAccountService,
 ) {
 
 	fun getSummary(organizationId: UUID, currentUser: CurrentUser): OwnerSummaryResponse {
@@ -75,8 +85,8 @@ class OwnerDashboardService(
 			feesCollectedMinor = fees.feesCollectedMinor,
 			outstandingMinor = fees.outstandingMinor,
 			fundraisingMinor = contributionRepository.sumConfirmedByOrganization(organizationId),
-			apparelSalesMinor = 1_892_000,
-			pendingPayoutMinor = 784_500,
+			apparelSalesMinor = ledgerEntryRepository.sumByOrganizationTypeAndDirection(organizationId, LedgerEntryType.GROSS_SALE, LedgerDirection.CREDIT),
+			pendingPayoutMinor = payoutAccountService.getPayoutSummary(organizationId, currentUser).netAvailableMinor,
 		)
 	}
 
@@ -127,12 +137,25 @@ class OwnerDashboardService(
 		return OwnerOnboardingProgress(isDemoData = true, completedSteps = 8, totalSteps = 10)
 	}
 
+	/**
+	 * `valueMinor` for each metric is real (same queries as [getFinancialOverview]), so
+	 * `isDemoData = false` now — the frontend's "Demo data" label would otherwise
+	 * mislabel a real number. `trendPercent` is pinned to 0.0: no historical/time-series
+	 * snapshot mechanism exists to compute a real period-over-period change, and
+	 * fabricating one would be exactly the kind of invented growth story DESIGN-DOC.md
+	 * section 12.2's truthfulness rules forbid on the marketing site — the same
+	 * standard applies here even though this is an authenticated view. 0.0 reads as "no
+	 * measured change" rather than asserting a specific (fabricated) trend.
+	 */
 	fun getReportsSnapshot(organizationId: UUID, currentUser: CurrentUser): List<ReportMetric> {
 		membershipService.requireActiveMembership(organizationId, currentUser)
+		val fees = feeRepository.getFinancialSummary(organizationId)
+		val fundraising = contributionRepository.sumConfirmedByOrganization(organizationId)
+		val apparel = ledgerEntryRepository.sumByOrganizationTypeAndDirection(organizationId, LedgerEntryType.GROSS_SALE, LedgerDirection.CREDIT)
 		return listOf(
-			ReportMetric(isDemoData = true, label = "Fee Collection", valueMinor = 21_243_000, trendPercent = 12.0),
-			ReportMetric(isDemoData = true, label = "Fundraising", valueMinor = 3_468_000, trendPercent = 18.0),
-			ReportMetric(isDemoData = true, label = "Apparel Sales", valueMinor = 1_892_000, trendPercent = 9.0),
+			ReportMetric(isDemoData = false, label = "Fee Collection", valueMinor = fees.feesCollectedMinor, trendPercent = 0.0),
+			ReportMetric(isDemoData = false, label = "Fundraising", valueMinor = fundraising, trendPercent = 0.0),
+			ReportMetric(isDemoData = false, label = "Apparel Sales", valueMinor = apparel, trendPercent = 0.0),
 		)
 	}
 }

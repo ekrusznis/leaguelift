@@ -41,6 +41,12 @@ class OrganizationPayoutAccountRepository(private val jdbcClient: JdbcClient) {
 		)
 	}
 
+	/** Platform-wide count of organizations with a fully payouts-enabled Stripe Connect account (Platform Admin dashboard, Phase 7 completion). */
+	fun countPayoutsEnabled(): Long =
+		jdbcClient.sql("select count(*) from organization_payout_account where payouts_enabled = true")
+			.query(Long::class.java)
+			.single()
+
 	fun updateStatus(organizationId: UUID, detailsSubmitted: Boolean, chargesEnabled: Boolean, payoutsEnabled: Boolean): Int {
 		val now = Instant.now()
 		return jdbcClient.sql(

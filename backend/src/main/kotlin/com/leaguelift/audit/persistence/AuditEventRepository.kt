@@ -23,6 +23,38 @@ class AuditEventRepository(private val jdbcClient: JdbcClient) {
 			.query(::mapRow)
 			.list()
 
+	/** Cross-org activity feed (DESIGN-DOC.md section 13) — every organization the caller belongs to, in one feed. */
+	fun listRecentForOrganizations(organizationIds: Collection<UUID>, limit: Int): List<AuditEvent> {
+		if (organizationIds.isEmpty()) return emptyList()
+		return jdbcClient.sql(
+			"""
+			select id, actor_user_id, organization_id, action, entity_type, entity_id, metadata, created_at
+			from audit_event
+			where organization_id in (:organizationIds)
+			order by created_at desc
+			limit :limit
+			""".trimIndent(),
+		)
+			.param("organizationIds", organizationIds.toList())
+			.param("limit", limit)
+			.query(::mapRow)
+			.list()
+	}
+
+	/** Platform-admin-only: the activity feed with no organization filter at all. */
+	fun listRecentAcrossAllOrganizations(limit: Int): List<AuditEvent> =
+		jdbcClient.sql(
+			"""
+			select id, actor_user_id, organization_id, action, entity_type, entity_id, metadata, created_at
+			from audit_event
+			order by created_at desc
+			limit :limit
+			""".trimIndent(),
+		)
+			.param("limit", limit)
+			.query(::mapRow)
+			.list()
+
 	fun insert(
 		actorUserId: UUID?,
 		organizationId: UUID?,

@@ -5,6 +5,7 @@ import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
+import { TournamentRoleAssignmentsSection } from "../authorization/TournamentRoleAssignmentsSection";
 import { useArchiveTournament, useCreateTournament, useTournaments } from "./api";
 import { createTournamentSchema, type CreateTournamentFormValues } from "./schema";
 
@@ -20,6 +21,7 @@ export function TournamentList({ organizationId }: { organizationId: string }) {
 	const createTournament = useCreateTournament(organizationId);
 	const archiveTournament = useArchiveTournament(organizationId);
 	const [showForm, setShowForm] = useState(false);
+	const [expandedTournamentId, setExpandedTournamentId] = useState<string | null>(null);
 
 	const {
 		register,
@@ -138,26 +140,39 @@ export function TournamentList({ organizationId }: { organizationId: string }) {
 			{data && data.items.length > 0 && (
 				<ul className="flex flex-col gap-2" aria-label="Tournaments">
 					{data.items.map((tournament) => (
-						<li
-							key={tournament.id}
-							className="flex items-center justify-between rounded-lg border border-slate-gray/20 bg-pure-white p-3"
-						>
-							<div>
-								<p className="font-medium text-navy">{tournament.name}</p>
-								<p className="text-sm text-slate-gray">
-									{[tournament.sport, formatDateRange(tournament.startDate, tournament.endDate), tournament.location]
-										.filter(Boolean)
-										.join(" · ")}
-								</p>
+						<li key={tournament.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+							<div className="flex items-center justify-between">
+								<div>
+									<p className="font-medium text-navy">{tournament.name}</p>
+									<p className="text-sm text-slate-gray">
+										{[tournament.sport, formatDateRange(tournament.startDate, tournament.endDate), tournament.location]
+											.filter(Boolean)
+											.join(" · ")}
+									</p>
+								</div>
+								<div className="flex items-center gap-2">
+									<Button
+										type="button"
+										variant="secondary"
+										onClick={() => setExpandedTournamentId(expandedTournamentId === tournament.id ? null : tournament.id)}
+									>
+										{expandedTournamentId === tournament.id ? "Hide access" : "Manage access"}
+									</Button>
+									<Button
+										type="button"
+										variant="secondary"
+										onClick={() => archiveTournament.mutate(tournament.id)}
+										disabled={archiveTournament.isPending}
+									>
+										Archive
+									</Button>
+								</div>
 							</div>
-							<Button
-								type="button"
-								variant="secondary"
-								onClick={() => archiveTournament.mutate(tournament.id)}
-								disabled={archiveTournament.isPending}
-							>
-								Archive
-							</Button>
+							{expandedTournamentId === tournament.id && (
+								<div className="mt-3">
+									<TournamentRoleAssignmentsSection organizationId={organizationId} tournamentId={tournament.id} />
+								</div>
+							)}
 						</li>
 					))}
 				</ul>

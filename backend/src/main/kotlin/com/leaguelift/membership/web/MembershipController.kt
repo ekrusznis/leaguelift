@@ -2,6 +2,7 @@ package com.leaguelift.membership.web
 
 import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.common.web.PageResponse
+import com.leaguelift.identity.persistence.AppUserRepository
 import com.leaguelift.membership.application.MembershipService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
@@ -18,7 +19,10 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/members")
-class MembershipController(private val membershipService: MembershipService) {
+class MembershipController(
+	private val membershipService: MembershipService,
+	private val appUserRepository: AppUserRepository,
+) {
 
 	@GetMapping
 	fun list(
@@ -29,7 +33,13 @@ class MembershipController(private val membershipService: MembershipService) {
 	): PageResponse<MembershipResponse> {
 		membershipService.requireActiveMembership(organizationId, currentUser)
 		val offset = page * size
-		val items = membershipService.listMembers(organizationId, offset, size).map { it.toResponse() }
+		// N+1 user lookups are acceptable at this page size (default 20, admin-facing
+		// list) — no batch-by-ids query exists on AppUserRepository yet and adding one
+		// for a single admin-facing list isn't worth the extra surface today.
+		val items = membershipService.listMembers(organizationId, offset, size).map { member ->
+			val user = appUserRepository.findById(member.userId)
+			member.toResponse(userEmail = user?.email, userDisplayName = user?.displayName)
+		}
 		val total = membershipService.countMembers(organizationId)
 		return PageResponse(items, page, size, total)
 	}

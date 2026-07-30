@@ -18,8 +18,13 @@ import com.leaguelift.fundraising.domain.CampaignStatus
 import com.leaguelift.fundraising.domain.CampaignType
 import com.leaguelift.fundraising.persistence.CampaignRepository
 import com.leaguelift.fundraising.persistence.ContributionRepository
+import com.leaguelift.ledger.application.PayoutSummary
+import com.leaguelift.ledger.domain.LedgerDirection
+import com.leaguelift.ledger.domain.LedgerEntryType
+import com.leaguelift.ledger.persistence.LedgerEntryRepository
 import com.leaguelift.organization.persistence.OrganizationRepository
 import com.leaguelift.participant.persistence.ParticipantRepository
+import com.leaguelift.payout.application.PayoutAccountService
 import com.leaguelift.team.domain.Team
 import com.leaguelift.team.domain.TeamStatus
 import com.leaguelift.team.persistence.TeamRepository
@@ -45,11 +50,13 @@ class OwnerDashboardServiceTest {
 	private val feeRepository = mockk<FeeRepository>()
 	private val campaignRepository = mockk<CampaignRepository>()
 	private val contributionRepository = mockk<ContributionRepository>()
+	private val ledgerEntryRepository = mockk<LedgerEntryRepository>()
+	private val payoutAccountService = mockk<PayoutAccountService>()
 
 	private val service = OwnerDashboardService(
 		membershipService, organizationRepository, teamRepository,
 		householdRepository, participantRepository, tournamentRepository, auditEventRepository, feeRepository,
-		campaignRepository, contributionRepository,
+		campaignRepository, contributionRepository, ledgerEntryRepository, payoutAccountService,
 	)
 
 	private val orgId = UUID.randomUUID()
@@ -83,12 +90,16 @@ class OwnerDashboardServiceTest {
 	}
 
 	@Test
-	fun `getFinancialOverview returns real fee and fundraising figures`() {
+	fun `getFinancialOverview returns real fee, fundraising, apparel, and payout figures`() {
 		every { membershipService.requireActiveMembership(orgId, currentUser) } returns membership()
 		every { feeRepository.getFinancialSummary(orgId) } returns OrganizationFeeFinancialSummary(
 			feesAssignedMinor = 15000L, feesCollectedMinor = 5000L, outstandingMinor = 10000L,
 		)
 		every { contributionRepository.sumConfirmedByOrganization(orgId) } returns 42_00L
+		every { ledgerEntryRepository.sumByOrganizationTypeAndDirection(orgId, LedgerEntryType.GROSS_SALE, LedgerDirection.CREDIT) } returns 18_900L
+		every { payoutAccountService.getPayoutSummary(orgId, currentUser) } returns PayoutSummary(
+			eligibleMinor = 20_000L, heldMinor = 5_000L, pendingDebitsMinor = 0L, netAvailableMinor = 15_000L,
+		)
 
 		val result = service.getFinancialOverview(orgId, currentUser)
 
@@ -98,7 +109,28 @@ class OwnerDashboardServiceTest {
 		assertEquals(5000L, result.feesCollectedMinor)
 		assertEquals(10000L, result.outstandingMinor)
 		assertEquals(42_00L, result.fundraisingMinor)
+		assertEquals(18_900L, result.apparelSalesMinor)
+		assertEquals(15_000L, result.pendingPayoutMinor)
 		verify(exactly = 1) { membershipService.requireActiveMembership(orgId, currentUser) }
+	}
+
+	@Test
+	fun `getReportsSnapshot returns real dollar values with an honest zeroed trend`() {
+		every { membershipService.requireActiveMembership(orgId, currentUser) } returns membership()
+		every { feeRepository.getFinancialSummary(orgId) } returns OrganizationFeeFinancialSummary(
+			feesAssignedMinor = 15000L, feesCollectedMinor = 5000L, outstandingMinor = 10000L,
+		)
+		every { contributionRepository.sumConfirmedByOrganization(orgId) } returns 42_00L
+		every { ledgerEntryRepository.sumByOrganizationTypeAndDirection(orgId, LedgerEntryType.GROSS_SALE, LedgerDirection.CREDIT) } returns 18_900L
+
+		val result = service.getReportsSnapshot(orgId, currentUser)
+
+		assertEquals(3, result.size)
+		assertEquals(true, result.none { it.isDemoData })
+		assertEquals(5000L, result.first { it.label == "Fee Collection" }.valueMinor)
+		assertEquals(42_00L, result.first { it.label == "Fundraising" }.valueMinor)
+		assertEquals(18_900L, result.first { it.label == "Apparel Sales" }.valueMinor)
+		assertEquals(true, result.all { it.trendPercent == 0.0 })
 	}
 
 	@Test

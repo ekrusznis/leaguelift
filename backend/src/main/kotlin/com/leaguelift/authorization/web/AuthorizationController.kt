@@ -2,8 +2,10 @@ package com.leaguelift.authorization.web
 
 import com.leaguelift.authorization.application.AuthorizationService
 import com.leaguelift.authorization.domain.ResourceRole
+import com.leaguelift.authorization.domain.RoleAssignment
 import com.leaguelift.common.error.ValidationException
 import com.leaguelift.common.web.CurrentUser
+import com.leaguelift.identity.persistence.AppUserRepository
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -25,11 +27,22 @@ import java.util.UUID
  */
 @RestController
 @RequestMapping("/api/v1")
-class AuthorizationController(private val authorizationService: AuthorizationService) {
+class AuthorizationController(
+	private val authorizationService: AuthorizationService,
+	private val appUserRepository: AppUserRepository,
+) {
 
 	@GetMapping("/me/contexts")
 	fun contexts(@AuthenticationPrincipal currentUser: CurrentUser): List<ContextResponse> =
 		authorizationService.listContexts(currentUser).map { it.toResponse() }
+
+	@GetMapping("/organizations/{organizationId}/teams/{teamId}/role-assignments")
+	fun listTeamRoleAssignments(
+		@PathVariable organizationId: UUID,
+		@PathVariable teamId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): List<RoleAssignmentResponse> =
+		authorizationService.listTeamRoleAssignments(organizationId, teamId, currentUser).map { it.toResponse() }
 
 	@PostMapping("/organizations/{organizationId}/teams/{teamId}/role-assignments")
 	@ResponseStatus(HttpStatus.CREATED)
@@ -41,7 +54,7 @@ class AuthorizationController(private val authorizationService: AuthorizationSer
 	): RoleAssignmentResponse {
 		val role = parseResourceRole(request.role)
 		val assignment = authorizationService.grantTeamRole(organizationId, teamId, request.userId, role, currentUser)
-		return RoleAssignmentResponse(assignment.id, assignment.userId, assignment.contextType.name, assignment.resourceId, assignment.role.name)
+		return assignment.toResponse()
 	}
 
 	@DeleteMapping("/organizations/{organizationId}/teams/{teamId}/role-assignments/{assignmentId}")
@@ -55,6 +68,14 @@ class AuthorizationController(private val authorizationService: AuthorizationSer
 		authorizationService.revokeTeamRole(organizationId, teamId, assignmentId, currentUser)
 	}
 
+	@GetMapping("/organizations/{organizationId}/tournaments/{tournamentId}/role-assignments")
+	fun listTournamentRoleAssignments(
+		@PathVariable organizationId: UUID,
+		@PathVariable tournamentId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): List<RoleAssignmentResponse> =
+		authorizationService.listTournamentRoleAssignments(organizationId, tournamentId, currentUser).map { it.toResponse() }
+
 	@PostMapping("/organizations/{organizationId}/tournaments/{tournamentId}/role-assignments")
 	@ResponseStatus(HttpStatus.CREATED)
 	fun grantTournamentRole(
@@ -65,7 +86,7 @@ class AuthorizationController(private val authorizationService: AuthorizationSer
 	): RoleAssignmentResponse {
 		val role = parseResourceRole(request.role)
 		val assignment = authorizationService.grantTournamentRole(organizationId, tournamentId, request.userId, role, currentUser)
-		return RoleAssignmentResponse(assignment.id, assignment.userId, assignment.contextType.name, assignment.resourceId, assignment.role.name)
+		return assignment.toResponse()
 	}
 
 	@DeleteMapping("/organizations/{organizationId}/tournaments/{tournamentId}/role-assignments/{assignmentId}")
@@ -77,6 +98,11 @@ class AuthorizationController(private val authorizationService: AuthorizationSer
 		@AuthenticationPrincipal currentUser: CurrentUser,
 	) {
 		authorizationService.revokeTournamentRole(organizationId, tournamentId, assignmentId, currentUser)
+	}
+
+	private fun RoleAssignment.toResponse(): RoleAssignmentResponse {
+		val user = appUserRepository.findById(userId)
+		return RoleAssignmentResponse(id, userId, user?.email, user?.displayName, contextType.name, resourceId, role.name)
 	}
 
 	private fun parseResourceRole(role: String): ResourceRole =

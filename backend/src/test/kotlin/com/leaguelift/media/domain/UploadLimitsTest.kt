@@ -13,6 +13,7 @@ class UploadLimitsTest {
 	private val webpSignature = "RIFF....WEBPVP8 ".toByteArray(Charsets.US_ASCII)
 	private val svgBytes = """<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"></svg>""".toByteArray()
 	private val exeSignature = byteArrayOf('M'.code.toByte(), 'Z'.code.toByte(), 0x90.toByte(), 0x00)
+	private val pdfSignature = "%PDF-1.7\n".toByteArray(Charsets.US_ASCII)
 
 	@Test
 	fun `detects PNG by magic bytes`() {
@@ -32,6 +33,11 @@ class UploadLimitsTest {
 	@Test
 	fun `detects SVG by top-level svg tag`() {
 		assertEquals("image/svg+xml", UploadLimits.detectContentType(svgBytes))
+	}
+
+	@Test
+	fun `detects PDF by magic bytes`() {
+		assertEquals("application/pdf", UploadLimits.detectContentType(pdfSignature))
 	}
 
 	@Test
@@ -57,11 +63,17 @@ class UploadLimitsTest {
 
 	@Test
 	fun `logo and cover both allow png jpeg webp`() {
-		for (slot in MediaUsageSlot.entries) {
+		for (slot in listOf(MediaUsageSlot.LOGO, MediaUsageSlot.COVER)) {
 			for (contentType in listOf("image/png", "image/jpeg", "image/webp")) {
 				assertTrue(UploadLimits.isContentTypeAllowed(slot, contentType), "$slot should allow $contentType")
 			}
 		}
+	}
+
+	@Test
+	fun `document allows pdf only`() {
+		assertTrue(UploadLimits.isContentTypeAllowed(MediaUsageSlot.DOCUMENT, "application/pdf"))
+		assertFalse(UploadLimits.isContentTypeAllowed(MediaUsageSlot.DOCUMENT, "image/png"))
 	}
 
 	@Test

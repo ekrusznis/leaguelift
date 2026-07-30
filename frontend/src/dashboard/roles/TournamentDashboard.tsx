@@ -8,6 +8,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { useContexts } from "../../authorization/api";
 import { capabilitiesFor } from "../../authorization/capabilities";
 import { navItemsFor } from "../registry/navRegistry";
+import { visibleWidgetIds } from "../registry/widgetRegistry";
 import { useTournamentPageStatus, useTournamentSummary } from "../api";
 import { TrophyIcon } from "../icons";
 
@@ -31,6 +32,7 @@ export function TournamentDashboard({ organizationId, tournamentId }: { organiza
 		label: item.label,
 		active: index === 0,
 	}));
+	const visibleWidgets = visibleWidgetIds("TOURNAMENT", tournamentCapabilities);
 
 	return (
 		<DashboardShell
@@ -50,42 +52,46 @@ export function TournamentDashboard({ organizationId, tournamentId }: { organiza
 			<DashboardPageHeader heading="Tournament Overview" description="Here's what's happening with your tournament." />
 
 			<div className="grid gap-5 lg:grid-cols-2">
-				<DashCard title="Tournament">
-					<CardQuery query={summary} loadingLabel="Loading tournament…">
-						{(data) => (
-							<div>
-								<div className="flex items-center justify-between">
-									<p className="font-heading text-xl font-extrabold text-navy-900">{data.name}</p>
-									<Pill tone={data.status === "ACTIVE" ? "success" : "neutral"}>{data.status}</Pill>
+				{visibleWidgets.has("tournament.summary") && (
+					<DashCard title="Tournament">
+						<CardQuery query={summary} loadingLabel="Loading tournament…">
+							{(data) => (
+								<div>
+									<div className="flex items-center justify-between">
+										<p className="font-heading text-xl font-extrabold text-navy-900">{data.name}</p>
+										<Pill tone={data.status === "ACTIVE" ? "success" : "neutral"}>{data.status}</Pill>
+									</div>
+									<p className="mt-1 text-sm text-slate-500">{data.sport ?? "Multi-sport"}</p>
+									<div className="mt-3 flex flex-col gap-1 text-sm text-slate-600">
+										{data.startDate && (
+											<span>
+												{data.startDate}
+												{data.endDate ? ` – ${data.endDate}` : ""}
+											</span>
+										)}
+										{data.location && <span>{data.location}</span>}
+									</div>
 								</div>
-								<p className="mt-1 text-sm text-slate-500">{data.sport ?? "Multi-sport"}</p>
-								<div className="mt-3 flex flex-col gap-1 text-sm text-slate-600">
-									{data.startDate && (
-										<span>
-											{data.startDate}
-											{data.endDate ? ` – ${data.endDate}` : ""}
-										</span>
-									)}
-									{data.location && <span>{data.location}</span>}
-								</div>
-							</div>
-						)}
-					</CardQuery>
-				</DashCard>
+							)}
+						</CardQuery>
+					</DashCard>
+				)}
 
-				<DashCard title="Tournament Page Status" action={{ label: "Edit Page" }}>
-					<CardQuery query={pageStatus} loadingLabel="Loading page status…">
-						{(data) => (
-							<div className="rounded-xl bg-navy-900 p-4 text-white">
-								<div className="flex items-center justify-between">
-									<p className="font-heading font-bold">{data.tournamentName}</p>
-									<Pill tone={data.status === "PUBLISHED" ? "success" : "neutral"}>{data.status}</Pill>
+				{visibleWidgets.has("tournament.page-status") && (
+					<DashCard title="Tournament Page Status" action={{ label: "Edit Page" }}>
+						<CardQuery query={pageStatus} loadingLabel="Loading page status…">
+							{(data) => (
+								<div className="rounded-xl bg-navy-900 p-4 text-white">
+									<div className="flex items-center justify-between">
+										<p className="font-heading font-bold">{data.tournamentName}</p>
+										<Pill tone={data.status === "PUBLISHED" ? "success" : "neutral"}>{data.status}</Pill>
+									</div>
+									{data.slug && <p className="text-xs text-slate-400">/{data.slug}</p>}
 								</div>
-								{data.slug && <p className="text-xs text-slate-400">/{data.slug}</p>}
-							</div>
-						)}
-					</CardQuery>
-				</DashCard>
+							)}
+						</CardQuery>
+					</DashCard>
+				)}
 			</div>
 		</DashboardShell>
 	);

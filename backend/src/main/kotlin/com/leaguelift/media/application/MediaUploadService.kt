@@ -31,6 +31,7 @@ private val EXTENSION_BY_CONTENT_TYPE = mapOf(
 	"image/jpeg" to "jpg",
 	"image/webp" to "webp",
 	"image/svg+xml" to "svg",
+	"application/pdf" to "pdf",
 )
 
 /**
@@ -178,7 +179,9 @@ class MediaUploadService(
 		if (bytes.size.toLong() > maxBytes) return "FILE_TOO_LARGE"
 		val detected = UploadLimits.detectContentType(bytes) ?: return "UNRECOGNIZED_FILE_FORMAT"
 		if (detected != asset.declaredContentType) return "CONTENT_TYPE_MISMATCH"
-		if (detected != "image/svg+xml") {
+		// SVG and non-image types (e.g. a DOCUMENT slot's PDF) have no raster dimensions
+		// to decode/cap — only PNG/JPEG/WebP go through the image-decode check.
+		if (detected != "image/svg+xml" && !UploadLimits.isNonImageContentType(detected)) {
 			val dimensions = imageDimensions(detected, bytes) ?: return "INVALID_IMAGE"
 			if (dimensions.first > UploadLimits.MAX_DIMENSION_PX || dimensions.second > UploadLimits.MAX_DIMENSION_PX) {
 				return "IMAGE_DIMENSIONS_TOO_LARGE"
@@ -188,7 +191,7 @@ class MediaUploadService(
 	}
 
 	private fun imageDimensions(contentType: String, bytes: ByteArray): Pair<Int, Int>? {
-		if (contentType == "image/svg+xml") return null
+		if (contentType == "image/svg+xml" || UploadLimits.isNonImageContentType(contentType)) return null
 		// ImageIO.read throws (rather than returning null) on some malformed/truncated
 		// images (e.g. a valid signature with no image data) — both cases mean
 		// "not decodable" for this slice's purposes.

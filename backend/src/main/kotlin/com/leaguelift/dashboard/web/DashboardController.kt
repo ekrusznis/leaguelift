@@ -12,6 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
@@ -107,12 +108,18 @@ class DashboardController(
 		coachDashboardService.getRosterSummary(organizationId, currentUser)
 
 	@GetMapping("/organizations/{organizationId}/dashboard/coach/team-page-status")
-	fun coachTeamPageStatus(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		coachDashboardService.getTeamPageStatus(organizationId, currentUser)
+	fun coachTeamPageStatus(
+		@PathVariable organizationId: UUID,
+		@RequestParam(required = false) teamId: UUID?,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	) = coachDashboardService.getTeamPageStatus(organizationId, currentUser, teamId)
 
 	@GetMapping("/organizations/{organizationId}/dashboard/coach/fundraising-progress")
-	fun coachFundraisingProgress(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		coachDashboardService.getFundraisingProgress(organizationId, currentUser)
+	fun coachFundraisingProgress(
+		@PathVariable organizationId: UUID,
+		@RequestParam(required = false) teamId: UUID?,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	) = coachDashboardService.getFundraisingProgress(organizationId, currentUser, teamId)
 
 	@GetMapping("/organizations/{organizationId}/dashboard/coach/announcements")
 	fun coachAnnouncements(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
@@ -216,4 +223,13 @@ class DashboardController(
 
 	@GetMapping("/platform/dashboard/outbox-health")
 	fun platformOutboxHealth(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.getOutboxHealth(currentUser)
+
+	@GetMapping("/platform/dashboard/orders-summary")
+	fun platformOrdersSummary(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.getOrdersSummary(currentUser)
+
+	@GetMapping("/platform/dashboard/payments-summary")
+	fun platformPaymentsSummary(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.getPaymentsSummary(currentUser)
+
+	@GetMapping("/platform/dashboard/payouts-summary")
+	fun platformPayoutsSummary(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.getPayoutsSummary(currentUser)
 }

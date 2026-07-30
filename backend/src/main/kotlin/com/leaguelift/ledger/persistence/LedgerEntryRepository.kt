@@ -97,6 +97,28 @@ class LedgerEntryRepository(private val jdbcClient: JdbcClient) {
 			.query(::mapRow)
 			.list()
 
+	/** Platform-wide sum for one entry type + direction (Platform Admin dashboard, Phase 7 completion) — no organization filter, unlike every other query here. */
+	fun sumAllByTypeAndDirection(entryType: LedgerEntryType, direction: LedgerDirection): Long =
+		jdbcClient.sql("select coalesce(sum(amount_minor), 0) from ledger_entry where entry_type = :entryType and direction = :direction")
+			.param("entryType", entryType.name)
+			.param("direction", direction.name)
+			.query(Long::class.java)
+			.single()
+
+	/** Org-scoped sum for one entry type + direction (Owner dashboard Financial Overview/Reports Snapshot, Phase 7 completion demo-data cleanup). */
+	fun sumByOrganizationTypeAndDirection(organizationId: UUID, entryType: LedgerEntryType, direction: LedgerDirection): Long =
+		jdbcClient.sql(
+			"""
+			select coalesce(sum(amount_minor), 0) from ledger_entry
+			where organization_id = :organizationId and entry_type = :entryType and direction = :direction
+			""".trimIndent(),
+		)
+			.param("organizationId", organizationId)
+			.param("entryType", entryType.name)
+			.param("direction", direction.name)
+			.query(Long::class.java)
+			.single()
+
 	fun markIncludedInTransfer(entryIds: List<UUID>, transferEntryId: UUID): Int {
 		if (entryIds.isEmpty()) return 0
 		return jdbcClient.sql("update ledger_entry set included_in_transfer_entry_id = :transferEntryId where id in (:entryIds)")

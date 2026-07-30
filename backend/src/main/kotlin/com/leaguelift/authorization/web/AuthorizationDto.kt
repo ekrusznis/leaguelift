@@ -29,6 +29,8 @@ data class GrantRoleAssignmentRequest(
 data class RoleAssignmentResponse(
 	val id: UUID,
 	val userId: UUID,
+	val userEmail: String?,
+	val userDisplayName: String?,
 	val contextType: String,
 	val resourceId: UUID?,
 	val role: String,

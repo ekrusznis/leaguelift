@@ -31,3 +31,23 @@ data class OutboxHealthResponse(
 	val failed: Long,
 	val deadLetter: Long,
 )
+
+/** Real, platform-wide (Phase 7 completion): `"order"` rows by status, no organization filter. */
+data class PlatformOrdersSummary(
+	val confirmed: Long,
+	val refunded: Long,
+	val pending: Long,
+)
+
+/** Real, platform-wide (Phase 7 completion): `ledger_entry` sums across every organization. */
+data class PlatformPaymentsSummary(
+	val grossProcessedMinor: Long,
+	val platformFeesCollectedMinor: Long,
+	val refundedMinor: Long,
+)
+
+/** Real, platform-wide (Phase 7 completion): `organization_payout_account` + `ledger_entry` TRANSFER sums. */
+data class PlatformPayoutsSummary(
+	val organizationsPayoutEnabled: Long,
+	val totalTransferredMinor: Long,
+)

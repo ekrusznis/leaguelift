@@ -5,6 +5,7 @@ import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
+import { TeamRoleAssignmentsSection } from "../authorization/TeamRoleAssignmentsSection";
 import { useArchiveTeam, useCreateTeam, useTeams } from "./api";
 import { createTeamSchema, type CreateTeamFormValues } from "./schema";
 
@@ -13,6 +14,7 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 	const createTeam = useCreateTeam(organizationId);
 	const archiveTeam = useArchiveTeam(organizationId);
 	const [showForm, setShowForm] = useState(false);
+	const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
 
 	const {
 		register,
@@ -108,25 +110,38 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 			{data && data.items.length > 0 && (
 				<ul className="flex flex-col gap-2" aria-label="Teams">
 					{data.items.map((team) => (
-						<li
-							key={team.id}
-							className="flex items-center justify-between rounded-lg border border-slate-gray/20 bg-pure-white p-3"
-						>
-							<div>
-								<p className="font-medium text-navy">{team.name}</p>
-								<p className="text-sm text-slate-gray">
-									{team.sport}
-									{team.season ? ` · ${team.season}` : ""}
-								</p>
+						<li key={team.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+							<div className="flex items-center justify-between">
+								<div>
+									<p className="font-medium text-navy">{team.name}</p>
+									<p className="text-sm text-slate-gray">
+										{team.sport}
+										{team.season ? ` · ${team.season}` : ""}
+									</p>
+								</div>
+								<div className="flex items-center gap-2">
+									<Button
+										type="button"
+										variant="secondary"
+										onClick={() => setExpandedTeamId(expandedTeamId === team.id ? null : team.id)}
+									>
+										{expandedTeamId === team.id ? "Hide access" : "Manage access"}
+									</Button>
+									<Button
+										type="button"
+										variant="secondary"
+										onClick={() => archiveTeam.mutate(team.id)}
+										disabled={archiveTeam.isPending}
+									>
+										Archive
+									</Button>
+								</div>
 							</div>
-							<Button
-								type="button"
-								variant="secondary"
-								onClick={() => archiveTeam.mutate(team.id)}
-								disabled={archiveTeam.isPending}
-							>
-								Archive
-							</Button>
+							{expandedTeamId === team.id && (
+								<div className="mt-3">
+									<TeamRoleAssignmentsSection organizationId={organizationId} teamId={team.id} />
+								</div>
+							)}
 						</li>
 					))}
 				</ul>

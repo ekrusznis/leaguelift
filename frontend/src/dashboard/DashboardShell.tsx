@@ -1,8 +1,12 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Logo } from "../marketing/components/Logo";
 import { Avatar } from "./components/Avatar";
 import { CardBackground } from "./components/CardBackground";
 import { BellIcon, HelpIcon, SearchIcon, ChevronDownIcon } from "./icons";
+import { ActivityFeedPanel } from "./ActivityFeedPanel";
+import { useMyActivity } from "../features/activity/api";
+import { GlobalSearchBox } from "./GlobalSearchBox";
+import type { SearchScope } from "../features/search/api";
 
 export type DashNavItem = {
 	icon: ReactNode;
@@ -17,6 +21,8 @@ export type DashboardShellProps = {
 	contextRole: string;
 	navItems: DashNavItem[];
 	showSearch?: boolean;
+	/** When set, the search bar is a real GlobalSearchBox for this scope; when showSearch is true but this is omitted, the search bar stays the decorative placeholder it always was. */
+	searchScope?: SearchScope;
 	showHelp?: boolean;
 	notificationCount?: number;
 	userName: string;
@@ -27,11 +33,12 @@ export type DashboardShellProps = {
 };
 
 /**
- * Shared application chrome for every dashboard role
- * (docs/LEAGUELIFT_DASHBOARD_DESIGN.md section 4.2-4.4). This is a visual shell
- * only — the context switcher, search, and user menu render as static, inert
- * elements rather than working controls, per this slice's scope (look right,
- * not full routing/context-switching/auth yet).
+ * Shared application chrome for every dashboard role (DESIGN-DOC.md section
+ * 10.1-10.3). The context switcher, search, and user menu remain static, inert
+ * elements — a fixed role-to-dashboard routing is the intended product behavior
+ * (only an org owner reassigning a member's role changes what they land on, not a
+ * session-level switcher), not an unbuilt gap. The bell icon is real: it opens the
+ * cross-org activity feed (DESIGN-DOC.md section 13, Phase 7 completion).
  */
 export function DashboardShell({
 	contextIcon,
@@ -40,6 +47,7 @@ export function DashboardShell({
 	contextRole,
 	navItems,
 	showSearch = false,
+	searchScope,
 	showHelp = false,
 	notificationCount,
 	userName,
@@ -48,6 +56,10 @@ export function DashboardShell({
 	promo,
 	children,
 }: DashboardShellProps) {
+	const activity = useMyActivity();
+	const [activityOpen, setActivityOpen] = useState(false);
+	const badgeCount = notificationCount ?? activity.data?.items.length ?? 0;
+
 	return (
 		<div className="flex h-full flex-col bg-ice-50">
 			<header className="flex h-16 shrink-0 items-center gap-4 border-b border-white/10 bg-navy-950 px-4 sm:px-6">
@@ -62,7 +74,10 @@ export function DashboardShell({
 					<ChevronDownIcon className="size-4 text-slate-400" />
 				</div>
 
-				{showSearch && (
+				{showSearch && searchScope && (
+					<GlobalSearchBox scope={searchScope} organizationId={searchScope.kind === "organization" ? searchScope.organizationId : undefined} />
+				)}
+				{showSearch && !searchScope && (
 					<div className="hidden flex-1 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-slate-400 md:flex">
 						<SearchIcon className="size-4 shrink-0" />
 						<span className="flex-1 text-sm">Search athletes, teams, orders&hellip;</span>
@@ -71,14 +86,27 @@ export function DashboardShell({
 				)}
 
 				<div className="ml-auto flex items-center gap-3 sm:gap-4">
-					<span className="relative flex size-9 items-center justify-center rounded-full text-slate-300 hover:bg-white/5 hover:text-white">
-						<BellIcon className="size-5" />
-						{!!notificationCount && (
-							<span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-green-500 text-[10px] font-bold text-white">
-								{notificationCount}
-							</span>
+					<div className="relative">
+						<button
+							type="button"
+							aria-label="Recent activity"
+							aria-expanded={activityOpen}
+							onClick={() => setActivityOpen((open) => !open)}
+							className="relative flex size-9 items-center justify-center rounded-full text-slate-300 hover:bg-white/5 hover:text-white"
+						>
+							<BellIcon className="size-5" />
+							{badgeCount > 0 && (
+								<span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-green-500 text-[10px] font-bold text-white">
+									{badgeCount > 9 ? "9+" : badgeCount}
+								</span>
+							)}
+						</button>
+						{activityOpen && (
+							<div className="absolute right-0 top-full z-20 mt-2">
+								<ActivityFeedPanel />
+							</div>
 						)}
-					</span>
+					</div>
 					{showHelp && (
 						<span className="hidden size-9 items-center justify-center rounded-full text-slate-300 hover:bg-white/5 hover:text-white sm:flex">
 							<HelpIcon className="size-5" />

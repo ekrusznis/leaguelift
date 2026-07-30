@@ -55,6 +55,23 @@ export interface OutboxHealth {
 	deadLetter: number;
 }
 
+export interface PlatformOrdersSummary {
+	confirmed: number;
+	refunded: number;
+	pending: number;
+}
+
+export interface PlatformPaymentsSummary {
+	grossProcessedMinor: number;
+	platformFeesCollectedMinor: number;
+	refundedMinor: number;
+}
+
+export interface PlatformPayoutsSummary {
+	organizationsPayoutEnabled: number;
+	totalTransferredMinor: number;
+}
+
 export interface ScheduleItem {
 	id: string;
 	day: string;

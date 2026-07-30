@@ -69,18 +69,25 @@ class CoachDashboardService(
 		)
 	}
 
-	/** Real, for the caller's first accessible team, when a public page exists for it. */
-	fun getTeamPageStatus(organizationId: UUID, currentUser: CurrentUser): TeamPageStatusItem? {
-		val teamIds = requireAnyTeamAccess(organizationId, currentUser)
-		val team = teamIds.mapNotNull { teamRepository.findById(it, organizationId) }.minByOrNull { it.name } ?: return null
+	/**
+	 * Real, for the selected team when one is passed (a coach's team selector, see
+	 * ADR-020 consequences), defaulting to the caller's alphabetically-first
+	 * accessible team otherwise — when a public page exists for it.
+	 */
+	fun getTeamPageStatus(organizationId: UUID, currentUser: CurrentUser, teamId: UUID? = null): TeamPageStatusItem? {
+		val team = resolveSelectedOrDefaultTeam(organizationId, currentUser, teamId) ?: return null
 		val page = publicPageRepository.findByEntityId(team.id)
 		return TeamPageStatusItem(team.id, team.name, page?.status?.name ?: "NOT_CREATED", page?.slug)
 	}
 
-	/** Real, when the caller's first accessible team has an active campaign; raised amount is real (Phase 3/ADR-015). */
-	fun getFundraisingProgress(organizationId: UUID, currentUser: CurrentUser): FundraisingProgress? {
-		val teamIds = requireAnyTeamAccess(organizationId, currentUser)
-		val team = teamIds.mapNotNull { teamRepository.findById(it, organizationId) }.minByOrNull { it.name } ?: return null
+	/**
+	 * Real, for the selected team when one is passed (a coach's team selector, see
+	 * ADR-020 consequences), defaulting to the caller's alphabetically-first
+	 * accessible team otherwise — when that team has an active campaign; raised
+	 * amount is real (Phase 3/ADR-015).
+	 */
+	fun getFundraisingProgress(organizationId: UUID, currentUser: CurrentUser, teamId: UUID? = null): FundraisingProgress? {
+		val team = resolveSelectedOrDefaultTeam(organizationId, currentUser, teamId) ?: return null
 		val campaign = campaignRepository.findActiveByTeam(team.id, organizationId) ?: return null
 		return FundraisingProgress(
 			campaignId = campaign.id,
@@ -92,6 +99,26 @@ class CoachDashboardService(
 			raisedMinor = contributionRepository.sumConfirmedByCampaign(campaign.id),
 		)
 	}
+
+	/**
+	 * Resolves [teamId] against the caller's accessible teams when given — throwing
+	 * if it isn't one of them, the same "no unrelated team" boundary every other
+	 * method here enforces via [requireAnyTeamAccess] — or falls back to the
+	 * alphabetically-first accessible team (the pre-selector default every caller saw
+	 * before a team parameter existed).
+	 */
+	private fun resolveSelectedOrDefaultTeam(organizationId: UUID, currentUser: CurrentUser, teamId: UUID?) =
+		run {
+			val teamIds = requireAnyTeamAccess(organizationId, currentUser)
+			if (teamId != null) {
+				if (teamId !in teamIds) {
+					throw ForbiddenException("TEAM_ACCESS_DENIED", "You are not assigned to this team in this organization.")
+				}
+				teamRepository.findById(teamId, organizationId)
+			} else {
+				teamIds.mapNotNull { teamRepository.findById(it, organizationId) }.minByOrNull { it.name }
+			}
+		}
 
 	fun getAnnouncements(organizationId: UUID, currentUser: CurrentUser): List<AnnouncementItem> {
 		requireAnyTeamAccess(organizationId, currentUser)

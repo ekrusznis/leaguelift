@@ -20,6 +20,14 @@ private const val MEDIA_ASSIGNMENT_COLUMNS = """
 @Repository
 class MediaAssignmentRepository(private val jdbcClient: JdbcClient) {
 
+	fun findById(id: UUID, organizationId: UUID): MediaAssignment? =
+		jdbcClient.sql("select $MEDIA_ASSIGNMENT_COLUMNS from media_assignment where id = :id and organization_id = :organizationId")
+			.param("id", id)
+			.param("organizationId", organizationId)
+			.query(::mapRow)
+			.optional()
+			.orElse(null)
+
 	fun findActiveBySlot(entityType: MediaEntityType, entityId: UUID, usageSlot: MediaUsageSlot): MediaAssignment? =
 		jdbcClient.sql(
 			"""

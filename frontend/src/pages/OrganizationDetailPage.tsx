@@ -8,6 +8,7 @@ import { CampaignList } from "../features/fundraising/CampaignList";
 import { HouseholdList } from "../features/households/HouseholdList";
 import { useMediaAssignments } from "../features/media/api";
 import { OrganizationBrandingPanel } from "../features/media/OrganizationBrandingPanel";
+import { OrganizationDocumentsPanel } from "../features/documents/OrganizationDocumentsPanel";
 import { useOrganization } from "../features/organizations/api";
 import { InvitationsPanel } from "../features/organizations/InvitationsPanel";
 import { OnboardingChecklist } from "../features/organizations/OnboardingChecklist";
@@ -107,6 +108,11 @@ export function OrganizationDetailPage() {
 			<section aria-label="Public pages" className="flex flex-col gap-3">
 				<h2 className="font-heading text-lg font-semibold text-navy">Public Pages</h2>
 				<PublicPagesPanel organizationId={organization.id} organizationName={organization.name} />
+			</section>
+
+			<section aria-label="Documents" className="flex flex-col gap-3">
+				<h2 className="font-heading text-lg font-semibold text-navy">Documents</h2>
+				<OrganizationDocumentsPanel organizationId={organization.id} />
 			</section>
 
 			<section aria-label="Administrators" className="flex flex-col gap-3">

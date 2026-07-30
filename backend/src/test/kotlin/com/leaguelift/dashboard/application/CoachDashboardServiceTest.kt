@@ -107,5 +107,56 @@ class CoachDashboardServiceTest {
 		assertNull(result)
 	}
 
+	@Test
+	fun `getTeamPageStatus defaults to the alphabetically-first accessible team when no teamId is given`() {
+		val teamA = team("Alpha")
+		val teamB = team("Zeta")
+		every { authorizationService.listAccessibleTeamIds(orgId, currentUser, Capabilities.TEAM_VIEW) } returns setOf(teamA.id, teamB.id)
+		every { teamRepository.findById(teamA.id, orgId) } returns teamA
+		every { teamRepository.findById(teamB.id, orgId) } returns teamB
+		every { publicPageRepository.findByEntityId(teamA.id) } returns null
+
+		val result = service.getTeamPageStatus(orgId, currentUser)
+
+		assertEquals(teamA.id, result?.teamId)
+	}
+
+	@Test
+	fun `getTeamPageStatus honors an explicit teamId selection among the caller's accessible teams`() {
+		val teamA = team("Alpha")
+		val teamB = team("Zeta")
+		every { authorizationService.listAccessibleTeamIds(orgId, currentUser, Capabilities.TEAM_VIEW) } returns setOf(teamA.id, teamB.id)
+		every { teamRepository.findById(teamB.id, orgId) } returns teamB
+		every { publicPageRepository.findByEntityId(teamB.id) } returns null
+
+		val result = service.getTeamPageStatus(orgId, currentUser, teamB.id)
+
+		assertEquals(teamB.id, result?.teamId)
+	}
+
+	@Test
+	fun `getTeamPageStatus rejects a teamId the caller cannot access`() {
+		val teamA = team("Alpha")
+		val unrelatedTeamId = UUID.randomUUID()
+		every { authorizationService.listAccessibleTeamIds(orgId, currentUser, Capabilities.TEAM_VIEW) } returns setOf(teamA.id)
+
+		assertFailsWith<ForbiddenException> {
+			service.getTeamPageStatus(orgId, currentUser, unrelatedTeamId)
+		}
+	}
+
+	@Test
+	fun `getFundraisingProgress honors an explicit teamId selection among the caller's accessible teams`() {
+		val teamA = team("Alpha")
+		val teamB = team("Zeta")
+		every { authorizationService.listAccessibleTeamIds(orgId, currentUser, Capabilities.TEAM_VIEW) } returns setOf(teamA.id, teamB.id)
+		every { teamRepository.findById(teamB.id, orgId) } returns teamB
+		every { campaignRepository.findActiveByTeam(teamB.id, orgId) } returns null
+
+		val result = service.getFundraisingProgress(orgId, currentUser, teamB.id)
+
+		assertNull(result)
+	}
+
 	private fun team(name: String) = Team(UUID.randomUUID(), orgId, name, "Soccer", "2025", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
 }
