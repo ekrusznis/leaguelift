@@ -122,3 +122,13 @@ Additional, unreserved decisions:
   independent channel alongside email; fundraising SMS/email reminders and
   campaign-launch emails remain deferred pending a subscriber-model decision
   (2026-07-30) — completes Phase 8's roadmap scope
+- ADR-025: Phase 9 — a new `reporting/` module with date-ranged org reports
+  (revenue by source/team, campaigns, product performance, refunds, fee
+  collections, plus CSV export); a household fee report scoped to fees/
+  payments/balance only (credits/orders/contributions deferred — no credit
+  rules and no household attribution FK on orders/contributions exist yet);
+  a platform report (new orgs/customers, GTV, refund rate, integration
+  health) excluding subscription revenue and dispute rate (no backing
+  data); and an `AnalyticsProvider` seam shipped as a logging-only stub, no
+  vendor chosen, with one real call site (`organization_created`)
+  (2026-07-30)

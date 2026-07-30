@@ -6,6 +6,8 @@ import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.error.ValidationException
 import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.membership.application.MembershipService
+import com.leaguelift.notification.AnalyticsEvent
+import com.leaguelift.notification.AnalyticsProvider
 import com.leaguelift.organization.domain.Organization
 import com.leaguelift.organization.domain.OrganizationType
 import com.leaguelift.organization.domain.isValidContactEmail
@@ -22,6 +24,7 @@ class OrganizationService(
 	private val membershipService: MembershipService,
 	private val auditService: AuditService,
 	private val payoutAccountRepository: OrganizationPayoutAccountRepository,
+	private val analyticsProvider: AnalyticsProvider,
 ) {
 
 	@Transactional
@@ -44,6 +47,18 @@ class OrganizationService(
 			action = "organization.created",
 			entityType = "organization",
 			entityId = organization.id,
+		)
+		// The first real AnalyticsProvider call site (Phase 9, ADR-025) — org creation is
+		// the most fundamental usage signal a "usage insights" tool would want. Only
+		// the org type is worth including as a property; nothing else here is
+		// non-sensitive enough to forward to a future real vendor by default.
+		analyticsProvider.track(
+			AnalyticsEvent(
+				name = "organization_created",
+				organizationId = organization.id,
+				userId = currentUser.userId,
+				properties = mapOf("organizationType" to organizationType.name),
+			),
 		)
 		return organization
 	}

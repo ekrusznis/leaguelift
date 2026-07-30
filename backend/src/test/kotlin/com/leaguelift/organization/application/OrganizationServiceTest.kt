@@ -8,6 +8,7 @@ import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.membership.domain.MembershipRole
 import com.leaguelift.membership.domain.MembershipStatus
 import com.leaguelift.membership.domain.OrganizationMembership
+import com.leaguelift.notification.AnalyticsProvider
 import com.leaguelift.organization.domain.Organization
 import com.leaguelift.organization.domain.OrganizationStatus
 import com.leaguelift.organization.domain.OrganizationType
@@ -31,7 +32,8 @@ class OrganizationServiceTest {
 	private val membershipService = mockk<MembershipService>()
 	private val auditService = mockk<AuditService>()
 	private val payoutAccountRepository = mockk<OrganizationPayoutAccountRepository>()
-	private val service = OrganizationService(organizationRepository, membershipService, auditService, payoutAccountRepository)
+	private val analyticsProvider = mockk<AnalyticsProvider>()
+	private val service = OrganizationService(organizationRepository, membershipService, auditService, payoutAccountRepository, analyticsProvider)
 
 	private val currentUser = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")
 
@@ -60,6 +62,7 @@ class OrganizationServiceTest {
 		} returns created
 		every { membershipService.grantOwner(created.id, currentUser.userId) } returns ownerMembership(created.id, currentUser.userId)
 		every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+		every { analyticsProvider.track(any()) } just runs
 
 		val result = service.create("Riverside Soccer", "riverside-soccer", OrganizationType.RECREATIONAL_LEAGUE, currentUser)
 
@@ -68,6 +71,7 @@ class OrganizationServiceTest {
 		verify(exactly = 1) {
 			auditService.record(currentUser.userId, created.id, "organization.created", "organization", created.id, any())
 		}
+		verify(exactly = 1) { analyticsProvider.track(any()) }
 	}
 
 	private fun existingOrganization() = Organization(
