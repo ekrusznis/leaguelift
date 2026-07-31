@@ -1,0 +1,126 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "../../lib/apiClient";
+import { clearStoredSupportAccess, storeSupportAccess } from "./supportAccessStorage";
+import type {
+	OutboxEvent,
+	PageResponse,
+	PlatformOrganizationDetail,
+	PlatformOrganizationListItem,
+	PlatformSupportAccess,
+	PlatformSupportAccessListItem,
+	PlatformUserListItem,
+} from "./types";
+
+export interface PlatformListFilters {
+	query?: string;
+	status?: string;
+	page?: number;
+	size?: number;
+}
+
+function listQuery(filters: PlatformListFilters) {
+	const params = new URLSearchParams();
+	if (filters.query?.trim()) params.set("query", filters.query.trim());
+	if (filters.status) params.set("status", filters.status);
+	params.set("page", String(filters.page ?? 0));
+	params.set("size", String(filters.size ?? 25));
+	return params.toString();
+}
+
+export function usePlatformAdminOrganizations(filters: PlatformListFilters) {
+	return useQuery({
+		queryKey: ["platform", "admin", "organizations", filters],
+		queryFn: () => apiFetch<PageResponse<PlatformOrganizationListItem>>(`/platform/admin/organizations?${listQuery(filters)}`),
+	});
+}
+
+export function usePlatformAdminOrganization(organizationId: string | undefined) {
+	return useQuery({
+		queryKey: ["platform", "admin", "organizations", organizationId],
+		queryFn: () => apiFetch<PlatformOrganizationDetail>(`/platform/admin/organizations/${organizationId}`),
+		enabled: !!organizationId,
+	});
+}
+
+export function usePlatformAdminUsers(filters: PlatformListFilters) {
+	return useQuery({
+		queryKey: ["platform", "admin", "users", filters],
+		queryFn: () => apiFetch<PageResponse<PlatformUserListItem>>(`/platform/admin/users?${listQuery(filters)}`),
+	});
+}
+
+export function usePlatformSupportAccessList(filters: Pick<PlatformListFilters, "status" | "page" | "size">) {
+	return useQuery({
+		queryKey: ["platform", "admin", "support-access", "list", filters],
+		queryFn: () => apiFetch<PageResponse<PlatformSupportAccessListItem>>(`/platform/admin/support-access?${listQuery(filters)}`),
+	});
+}
+
+export function useCurrentSupportAccess(enabled = true) {
+	return useQuery({
+		queryKey: ["platform", "admin", "support-access", "current"],
+		enabled,
+		queryFn: async () => {
+			const access = await apiFetch<PlatformSupportAccess | null>("/platform/admin/support-access/current");
+			if (access) storeSupportAccess(access);
+			else clearStoredSupportAccess();
+			return access;
+		},
+	});
+}
+
+export function useStartSupportAccess(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (reason: string) => apiFetch<PlatformSupportAccess>(`/platform/admin/organizations/${organizationId}/support-access`, {
+			method: "POST",
+			body: { reason },
+		}),
+		onSuccess: (access) => {
+			storeSupportAccess(access);
+			// A new organization scope must not reuse cached customer data from the
+			// previous session. Platform directory queries will refetch as needed.
+			queryClient.removeQueries({ predicate: () => true });
+			queryClient.setQueryData(["platform", "admin", "support-access", "current"], access);
+		},
+	});
+}
+
+export function useEndSupportAccess() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (accessId: string) => apiFetch<void>(`/platform/admin/support-access/${accessId}`, { method: "DELETE" }),
+		onSuccess: () => {
+			clearStoredSupportAccess();
+			// Remove all customer data cached during the support session. The employee
+			// stays signed in, but must start a new reasoned session before refetching it.
+			queryClient.removeQueries({ predicate: () => true });
+			queryClient.setQueryData(["platform", "admin", "support-access", "current"], null);
+		},
+	});
+}
+
+export function useFailedOutboxEvents() {
+	return useQuery({
+		queryKey: ["platform", "admin", "outbox", "failed"],
+		queryFn: () => apiFetch<OutboxEvent[]>("/admin/outbox-events/failed"),
+	});
+}
+
+export function useDeadLetterOutboxEvents() {
+	return useQuery({
+		queryKey: ["platform", "admin", "outbox", "dead-letter"],
+		queryFn: () => apiFetch<OutboxEvent[]>("/admin/outbox-events/dead-letter"),
+	});
+}
+
+export function useReprocessOutboxEvent() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (eventId: string) => apiFetch<void>(`/admin/outbox-events/${eventId}/reprocess`, { method: "POST" }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["platform", "admin", "outbox"] });
+			queryClient.invalidateQueries({ queryKey: ["platform", "dashboard", "outbox-health"] });
+		},
+	});
+}

@@ -80,10 +80,12 @@ object Capabilities {
 	const val PLATFORM_ORG_VIEW = "platform.organization.view"
 	const val PLATFORM_ORG_MANAGE = "platform.organization.manage"
 	const val PLATFORM_USER_VIEW = "platform.user.view"
+	const val PLATFORM_USER_MANAGE = "platform.user.manage"
 	const val PLATFORM_INTEGRATION_VIEW = "platform.integration.view"
 	const val PLATFORM_INTEGRATION_MANAGE = "platform.integration.manage"
 	const val PLATFORM_AUDIT_VIEW = "platform.audit.view"
 	const val PLATFORM_FEATURE_FLAG_MANAGE = "platform.feature_flag.manage"
+	const val PLATFORM_SUPPORT_ACCESS = "platform.support.access"
 	const val PLATFORM_SUPPORT_IMPERSONATE = "platform.support.impersonate"
 }
 
@@ -94,7 +96,7 @@ enum class ResourceRole {
 	TEAM_MANAGER,
 	TOURNAMENT_VIEWER,
 	TOURNAMENT_ADMINISTRATOR,
-	PLATFORM_ADMINISTRATOR,
+	PLATFORM_ADMIN,
 	ATHLETE_SELF,
 }
 
@@ -157,10 +159,10 @@ object CapabilityRegistry {
 	}
 
 	fun platformCapabilities(role: ResourceRole): Set<String> = when (role) {
-		ResourceRole.PLATFORM_ADMINISTRATOR -> setOf(
-			Capabilities.PLATFORM_ORG_VIEW, Capabilities.PLATFORM_ORG_MANAGE, Capabilities.PLATFORM_USER_VIEW,
+		ResourceRole.PLATFORM_ADMIN -> setOf(
+			Capabilities.PLATFORM_ORG_VIEW, Capabilities.PLATFORM_ORG_MANAGE, Capabilities.PLATFORM_USER_VIEW, Capabilities.PLATFORM_USER_MANAGE,
 			Capabilities.PLATFORM_INTEGRATION_VIEW, Capabilities.PLATFORM_INTEGRATION_MANAGE, Capabilities.PLATFORM_AUDIT_VIEW,
-			Capabilities.PLATFORM_FEATURE_FLAG_MANAGE, Capabilities.PLATFORM_SUPPORT_IMPERSONATE,
+			Capabilities.PLATFORM_FEATURE_FLAG_MANAGE, Capabilities.PLATFORM_SUPPORT_ACCESS,
 		)
 		else -> emptySet()
 	}

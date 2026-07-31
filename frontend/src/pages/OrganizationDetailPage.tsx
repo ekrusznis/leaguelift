@@ -3,6 +3,7 @@ import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { Capabilities } from "../authorization/capabilityConstants";
 import { useContexts } from "../authorization/api";
 import { hasCapability } from "../authorization/capabilities";
+import { useCurrentSupportAccess } from "../features/platformAdmin/api";
 import { ErrorState } from "../components/states/ErrorState";
 import { LoadingState } from "../components/states/LoadingState";
 import { OrganizationLogo } from "../dashboard/components/OrganizationLogo";
@@ -53,24 +54,38 @@ function isOrganizationSection(value: string | undefined): value is Organization
 export function OrganizationDetailPage() {
 	const { organizationId, section } = useParams<{ organizationId: string; section?: string }>();
 	const contexts = useContexts();
-	const { data: organization, isLoading, isError, refetch } = useOrganization(organizationId ?? "");
+	const isPlatformAdmin = hasCapability(contexts.data, Capabilities.PLATFORM_SUPPORT_ACCESS, { contextType: "PLATFORM_ADMIN", resourceId: null });
+	const supportAccess = useCurrentSupportAccess(isPlatformAdmin);
+	const hasMatchingPlatformAccess = !isPlatformAdmin || (
+		supportAccess.data?.organizationId === organizationId && supportAccess.data?.status === "ACTIVE"
+	);
+	const canLoadOrganization = !contexts.isLoading && hasMatchingPlatformAccess;
+	const { data: organization, isLoading, isError, refetch } = useOrganization(organizationId ?? "", canLoadOrganization);
 
 	if (!organizationId) return <ErrorState message="No organization selected." />;
 	if (section && !isOrganizationSection(section)) return <Navigate to={appPaths.organization(organizationId, "overview")} replace />;
-	if (isLoading || contexts.isLoading) return <LoadingState label="Loading organization…" />;
-	if (isError || contexts.isError || !organization) {
+	if (contexts.isLoading || (isPlatformAdmin && supportAccess.isLoading)) return <LoadingState label="Loading organization…" />;
+	if (contexts.isError || (isPlatformAdmin && supportAccess.isError)) {
+		return <ErrorState message="Could not validate access to this organization." onRetry={() => { void contexts.refetch(); void supportAccess.refetch(); }} />;
+	}
+	if (isPlatformAdmin && !hasMatchingPlatformAccess) {
+		return <Navigate to={appPaths.platformOrganization(organizationId)} replace />;
+	}
+	if (isLoading) return <LoadingState label="Loading organization…" />;
+	if (isError || !organization) {
 		return <ErrorState message="Could not load this organization." onRetry={() => { void refetch(); void contexts.refetch(); }} />;
 	}
 
 	const activeSection: OrganizationSection = section && isOrganizationSection(section) ? section : "overview";
-	const canReadEvents = hasCapability(contexts.data, Capabilities.EVENT_READ, { contextType: "ORGANIZATION", resourceId: organization.id });
-	const canManageEvents = hasCapability(contexts.data, Capabilities.ORG_EVENT_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id });
-	const canManageOrganization = hasCapability(contexts.data, Capabilities.ORG_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id });
-	const canManageTeams = hasCapability(contexts.data, Capabilities.ORG_TEAM_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id }) || canManageOrganization;
-	const canManageTournaments = hasCapability(contexts.data, Capabilities.ORG_TOURNAMENT_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id }) || canManageOrganization;
-	const canManageMembers = hasCapability(contexts.data, Capabilities.ORG_MEMBERS_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id });
-	const canManagePayouts = hasCapability(contexts.data, Capabilities.ORG_PAYOUT_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id });
-	const canViewReports = hasCapability(contexts.data, Capabilities.ORG_REPORT_VIEW, { contextType: "ORGANIZATION", resourceId: organization.id });
+	const isPlatformSupportMode = isPlatformAdmin;
+	const canReadEvents = isPlatformSupportMode || hasCapability(contexts.data, Capabilities.EVENT_READ, { contextType: "ORGANIZATION", resourceId: organization.id });
+	const canManageEvents = isPlatformSupportMode || hasCapability(contexts.data, Capabilities.ORG_EVENT_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id });
+	const canManageOrganization = isPlatformSupportMode || hasCapability(contexts.data, Capabilities.ORG_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id });
+	const canManageTeams = isPlatformSupportMode || hasCapability(contexts.data, Capabilities.ORG_TEAM_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id }) || canManageOrganization;
+	const canManageTournaments = isPlatformSupportMode || hasCapability(contexts.data, Capabilities.ORG_TOURNAMENT_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id }) || canManageOrganization;
+	const canManageMembers = isPlatformSupportMode || hasCapability(contexts.data, Capabilities.ORG_MEMBERS_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id });
+	const canManagePayouts = isPlatformSupportMode || hasCapability(contexts.data, Capabilities.ORG_PAYOUT_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id });
+	const canViewReports = isPlatformSupportMode || hasCapability(contexts.data, Capabilities.ORG_REPORT_VIEW, { contextType: "ORGANIZATION", resourceId: organization.id });
 
 	const visibleSections = SECTION_LABELS.filter(({ id }) => {
 		if (id === "overview") return true;
@@ -94,7 +109,9 @@ export function OrganizationDetailPage() {
 				<div className="flex items-center gap-4">
 					<OrganizationHeaderLogo organizationId={organization.id} organizationName={organization.name} />
 					<div>
-						<Link to="/app" className="text-sm text-azure-blue hover:underline">← Dashboard</Link>
+						<Link to={isPlatformSupportMode ? `/app/platform/organizations/${organization.id}` : "/app"} className="text-sm text-azure-blue hover:underline">
+							← {isPlatformSupportMode ? "Organization console" : "Dashboard"}
+						</Link>
 						<h1 className="font-heading text-2xl font-bold text-navy">{organization.name}</h1>
 						<p className="text-slate-gray">/{organization.slug}</p>
 					</div>

@@ -49,7 +49,7 @@ class RoleAssignmentRepository(private val jdbcClient: JdbcClient) {
 	/** The active PLATFORM grant (if any) for this user — resourceId/organizationId are always null for PLATFORM. */
 	fun findActivePlatformGrant(userId: UUID): RoleAssignment? =
 		jdbcClient.sql(
-			"select $COLUMNS from role_assignment where user_id = :userId and context_type = 'PLATFORM' and status = 'ACTIVE'",
+			"select $COLUMNS from role_assignment where user_id = :userId and context_type = 'PLATFORM' and role = 'PLATFORM_ADMIN' and status = 'ACTIVE'",
 		)
 			.param("userId", userId)
 			.query(::mapRow)
