@@ -18,7 +18,7 @@ export function AuthErrorPage() {
 			</span>
 			<h1 className="font-heading text-2xl font-extrabold text-white">We couldn&rsquo;t sign you in</h1>
 			<p className="max-w-sm text-sm text-slate-300">Check your information or try again.</p>
-			{requestId && <p className="text-xs text-slate-500">Reference: {requestId}</p>}
+			{requestId && <p className="text-xs text-slate-400">Reference: {requestId}</p>}
 			<div className="mt-2 flex flex-wrap justify-center gap-3">
 				<PrimaryButton to="/auth/sign-in">Try Again</PrimaryButton>
 				<SecondaryDarkButton to="/">Return Home</SecondaryDarkButton>

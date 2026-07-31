@@ -47,10 +47,11 @@ export function InvitationsPanel({ organizationId }: { organizationId: string })
 						type="email"
 						{...register("email")}
 						aria-invalid={!!errors.email}
+						aria-describedby={errors.email ? "invite-email-error" : undefined}
 						className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 					/>
 					{errors.email && (
-						<p role="alert" className="text-sm text-error-red">
+						<p id="invite-email-error" role="alert" className="text-sm text-error-red">
 							{errors.email.message}
 						</p>
 					)}

@@ -126,9 +126,10 @@ function ContributionForm({ slug, campaignName }: { slug: string; campaignName: 
 					placeholder="e.g. 2500 = $25.00"
 					{...register("amountMinor")}
 					aria-invalid={!!errors.amountMinor}
+					aria-describedby={errors.amountMinor ? "contribution-amount-error" : undefined}
 					className="min-h-11 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-white"
 				/>
-				{errors.amountMinor && <p role="alert" className="text-sm text-error-red">{errors.amountMinor.message}</p>}
+				{errors.amountMinor && <p id="contribution-amount-error" role="alert" className="text-sm text-error-red">{errors.amountMinor.message}</p>}
 			</div>
 			<div className="flex flex-col gap-1">
 				<label htmlFor="contribution-name" className="text-sm font-medium text-slate-300">
@@ -155,9 +156,10 @@ function ContributionForm({ slug, campaignName }: { slug: string; campaignName: 
 					type="email"
 					{...register("supporterEmail")}
 					aria-invalid={!!errors.supporterEmail}
+					aria-describedby={errors.supporterEmail ? "contribution-email-error" : undefined}
 					className="min-h-11 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-white"
 				/>
-				{errors.supporterEmail && <p role="alert" className="text-sm text-error-red">{errors.supporterEmail.message}</p>}
+				{errors.supporterEmail && <p id="contribution-email-error" role="alert" className="text-sm text-error-red">{errors.supporterEmail.message}</p>}
 			</div>
 			<PrimaryButton type="submit" loading={isSubmitting} className="mt-2">
 				Contribute

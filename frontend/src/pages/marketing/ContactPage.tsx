@@ -94,13 +94,14 @@ export function ContactPage() {
 									rows={5}
 									required
 									aria-invalid={!!errors.message}
+									aria-describedby={errors.message ? "contact-message-error" : undefined}
 									className={`rounded-[10px] border px-3.5 py-2.5 text-navy-900 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400 ${
 										errors.message ? "border-error-600" : "border-slate-200"
 									}`}
 									{...register("message")}
 								/>
 								{errors.message && (
-									<p role="alert" className="text-sm text-error-600">
+									<p id="contact-message-error" role="alert" className="text-sm text-error-600">
 										{errors.message.message}
 									</p>
 								)}

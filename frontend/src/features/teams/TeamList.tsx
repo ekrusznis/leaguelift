@@ -53,10 +53,11 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 								type="text"
 								{...register("name")}
 								aria-invalid={!!errors.name}
+								aria-describedby={errors.name ? "team-name-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
 							{errors.name && (
-								<p role="alert" className="text-sm text-error-red">
+								<p id="team-name-error" role="alert" className="text-sm text-error-red">
 									{errors.name.message}
 								</p>
 							)}
@@ -70,10 +71,11 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 								type="text"
 								{...register("sport")}
 								aria-invalid={!!errors.sport}
+								aria-describedby={errors.sport ? "team-sport-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
 							{errors.sport && (
-								<p role="alert" className="text-sm text-error-red">
+								<p id="team-sport-error" role="alert" className="text-sm text-error-red">
 									{errors.sport.message}
 								</p>
 							)}

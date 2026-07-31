@@ -58,10 +58,11 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 					type="text"
 					{...register("name")}
 					aria-invalid={!!errors.name}
+					aria-describedby={errors.name ? "profile-name-error" : undefined}
 					className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 				/>
 				{errors.name && (
-					<p role="alert" className="text-sm text-error-red">
+					<p id="profile-name-error" role="alert" className="text-sm text-error-red">
 						{errors.name.message}
 					</p>
 				)}
@@ -125,10 +126,11 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 					type="email"
 					{...register("contactEmail")}
 					aria-invalid={!!errors.contactEmail}
+					aria-describedby={errors.contactEmail ? "profile-contact-email-error" : undefined}
 					className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 				/>
 				{errors.contactEmail && (
-					<p role="alert" className="text-sm text-error-red">
+					<p id="profile-contact-email-error" role="alert" className="text-sm text-error-red">
 						{errors.contactEmail.message}
 					</p>
 				)}

@@ -61,9 +61,10 @@ export function StoreList({ organizationId }: { organizationId: string }) {
 								placeholder="e.g. Team Store"
 								{...register("name")}
 								aria-invalid={!!errors.name}
+								aria-describedby={errors.name ? "store-name-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
-							{errors.name && <p role="alert" className="text-sm text-error-red">{errors.name.message}</p>}
+							{errors.name && <p id="store-name-error" role="alert" className="text-sm text-error-red">{errors.name.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
 							<label htmlFor="store-slug" className="text-sm font-medium text-navy">
@@ -75,9 +76,10 @@ export function StoreList({ organizationId }: { organizationId: string }) {
 								placeholder="team-store"
 								{...register("slug")}
 								aria-invalid={!!errors.slug}
+								aria-describedby={errors.slug ? "store-slug-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
-							{errors.slug && <p role="alert" className="text-sm text-error-red">{errors.slug.message}</p>}
+							{errors.slug && <p id="store-slug-error" role="alert" className="text-sm text-error-red">{errors.slug.message}</p>}
 						</div>
 					</div>
 					<div className="flex justify-end gap-2">

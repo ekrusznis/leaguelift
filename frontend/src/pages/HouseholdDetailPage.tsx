@@ -74,18 +74,18 @@ function AddAdultForm({ organizationId, householdId, onDone }: { organizationId:
 			<div className="flex flex-wrap gap-3">
 				<div className="flex flex-col gap-1">
 					<label htmlFor="adult-first" className="text-sm font-medium text-navy">First name <span aria-hidden>*</span></label>
-					<input id="adult-first" type="text" {...register("firstName")} aria-invalid={!!errors.firstName} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-					{errors.firstName && <p role="alert" className="text-sm text-error-red">{errors.firstName.message}</p>}
+					<input id="adult-first" type="text" {...register("firstName")} aria-invalid={!!errors.firstName} aria-describedby={errors.firstName ? "adult-first-error" : undefined} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+					{errors.firstName && <p id="adult-first-error" role="alert" className="text-sm text-error-red">{errors.firstName.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
 					<label htmlFor="adult-last" className="text-sm font-medium text-navy">Last name <span aria-hidden>*</span></label>
-					<input id="adult-last" type="text" {...register("lastName")} aria-invalid={!!errors.lastName} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-					{errors.lastName && <p role="alert" className="text-sm text-error-red">{errors.lastName.message}</p>}
+					<input id="adult-last" type="text" {...register("lastName")} aria-invalid={!!errors.lastName} aria-describedby={errors.lastName ? "adult-last-error" : undefined} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+					{errors.lastName && <p id="adult-last-error" role="alert" className="text-sm text-error-red">{errors.lastName.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
 					<label htmlFor="adult-email" className="text-sm font-medium text-navy">Email</label>
-					<input id="adult-email" type="email" {...register("email")} aria-invalid={!!errors.email} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-					{errors.email && <p role="alert" className="text-sm text-error-red">{errors.email.message}</p>}
+					<input id="adult-email" type="email" {...register("email")} aria-invalid={!!errors.email} aria-describedby={errors.email ? "adult-email-error" : undefined} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+					{errors.email && <p id="adult-email-error" role="alert" className="text-sm text-error-red">{errors.email.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
 					<label htmlFor="adult-rel" className="text-sm font-medium text-navy">Relationship</label>
@@ -231,13 +231,13 @@ function AddParticipantForm({ organizationId, householdId, onDone }: { organizat
 			<div className="flex flex-wrap gap-3">
 				<div className="flex flex-col gap-1">
 					<label htmlFor="par-first" className="text-sm font-medium text-navy">First name <span aria-hidden>*</span></label>
-					<input id="par-first" type="text" {...register("firstName")} aria-invalid={!!errors.firstName} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-					{errors.firstName && <p role="alert" className="text-sm text-error-red">{errors.firstName.message}</p>}
+					<input id="par-first" type="text" {...register("firstName")} aria-invalid={!!errors.firstName} aria-describedby={errors.firstName ? "par-first-error" : undefined} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+					{errors.firstName && <p id="par-first-error" role="alert" className="text-sm text-error-red">{errors.firstName.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
 					<label htmlFor="par-last" className="text-sm font-medium text-navy">Last name <span aria-hidden>*</span></label>
-					<input id="par-last" type="text" {...register("lastName")} aria-invalid={!!errors.lastName} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-					{errors.lastName && <p role="alert" className="text-sm text-error-red">{errors.lastName.message}</p>}
+					<input id="par-last" type="text" {...register("lastName")} aria-invalid={!!errors.lastName} aria-describedby={errors.lastName ? "par-last-error" : undefined} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+					{errors.lastName && <p id="par-last-error" role="alert" className="text-sm text-error-red">{errors.lastName.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
 					<label htmlFor="par-dob" className="text-sm font-medium text-navy">Date of birth</label>
@@ -327,8 +327,8 @@ function RecordPaymentForm({ organizationId, householdId, assignmentId, onDone }
 			<div className="flex flex-wrap gap-3">
 				<div className="flex flex-col gap-1">
 					<label htmlFor={`payment-amount-${assignmentId}`} className="text-sm font-medium text-navy">Amount (cents) <span aria-hidden>*</span></label>
-					<input id={`payment-amount-${assignmentId}`} type="number" min={1} step={1} {...register("amountMinor")} aria-invalid={!!errors.amountMinor} className="min-h-11 w-32 rounded-md border border-slate-gray/30 px-3 py-2" />
-					{errors.amountMinor && <p role="alert" className="text-sm text-error-red">{errors.amountMinor.message}</p>}
+					<input id={`payment-amount-${assignmentId}`} type="number" min={1} step={1} {...register("amountMinor")} aria-invalid={!!errors.amountMinor} aria-describedby={errors.amountMinor ? `payment-amount-${assignmentId}-error` : undefined} className="min-h-11 w-32 rounded-md border border-slate-gray/30 px-3 py-2" />
+					{errors.amountMinor && <p id={`payment-amount-${assignmentId}-error`} role="alert" className="text-sm text-error-red">{errors.amountMinor.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
 					<label htmlFor={`payment-method-${assignmentId}`} className="text-sm font-medium text-navy">Method</label>
@@ -387,8 +387,8 @@ function ApplyAdjustmentForm({ organizationId, householdId, assignmentId, onDone
 				</div>
 				<div className="flex flex-col gap-1">
 					<label htmlFor={`adj-amount-${assignmentId}`} className="text-sm font-medium text-navy">Amount (cents) <span aria-hidden>*</span></label>
-					<input id={`adj-amount-${assignmentId}`} type="number" min={1} step={1} {...register("amountMinor")} aria-invalid={!!errors.amountMinor} className="min-h-11 w-32 rounded-md border border-slate-gray/30 px-3 py-2" />
-					{errors.amountMinor && <p role="alert" className="text-sm text-error-red">{errors.amountMinor.message}</p>}
+					<input id={`adj-amount-${assignmentId}`} type="number" min={1} step={1} {...register("amountMinor")} aria-invalid={!!errors.amountMinor} aria-describedby={errors.amountMinor ? `adj-amount-${assignmentId}-error` : undefined} className="min-h-11 w-32 rounded-md border border-slate-gray/30 px-3 py-2" />
+					{errors.amountMinor && <p id={`adj-amount-${assignmentId}-error`} role="alert" className="text-sm text-error-red">{errors.amountMinor.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
 					<label htmlFor={`adj-reason-${assignmentId}`} className="text-sm font-medium text-navy">Reason</label>
@@ -569,13 +569,13 @@ function AddFeeAssignmentForm({
 				)}
 				<div className="flex flex-col gap-1">
 					<label htmlFor="fee-desc" className="text-sm font-medium text-navy">Description <span aria-hidden>*</span></label>
-					<input id="fee-desc" type="text" {...register("description")} aria-invalid={!!errors.description} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-					{errors.description && <p role="alert" className="text-sm text-error-red">{errors.description.message}</p>}
+					<input id="fee-desc" type="text" {...register("description")} aria-invalid={!!errors.description} aria-describedby={errors.description ? "fee-desc-error" : undefined} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+					{errors.description && <p id="fee-desc-error" role="alert" className="text-sm text-error-red">{errors.description.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
 					<label htmlFor="fee-amount" className="text-sm font-medium text-navy">Amount (cents) <span aria-hidden>*</span></label>
-					<input id="fee-amount" type="number" min={0} step={1} {...register("originalAmountMinor")} aria-invalid={!!errors.originalAmountMinor} className="min-h-11 w-36 rounded-md border border-slate-gray/30 px-3 py-2" />
-					{errors.originalAmountMinor && <p role="alert" className="text-sm text-error-red">{errors.originalAmountMinor.message}</p>}
+					<input id="fee-amount" type="number" min={0} step={1} {...register("originalAmountMinor")} aria-invalid={!!errors.originalAmountMinor} aria-describedby={errors.originalAmountMinor ? "fee-amount-error" : undefined} className="min-h-11 w-36 rounded-md border border-slate-gray/30 px-3 py-2" />
+					{errors.originalAmountMinor && <p id="fee-amount-error" role="alert" className="text-sm text-error-red">{errors.originalAmountMinor.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
 					<label htmlFor="fee-due" className="text-sm font-medium text-navy">Due date</label>

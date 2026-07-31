@@ -77,9 +77,10 @@ function ConnectIcsFeedForm({ organizationId, onDone }: { organizationId: string
 						placeholder="e.g. Varsity Soccer Schedule"
 						{...register("label")}
 						aria-invalid={!!errors.label}
+						aria-describedby={errors.label ? "ics-feed-label-error" : undefined}
 						className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 					/>
-					{errors.label && <p role="alert" className="text-sm text-error-red">{errors.label.message}</p>}
+					{errors.label && <p id="ics-feed-label-error" role="alert" className="text-sm text-error-red">{errors.label.message}</p>}
 				</div>
 				<div className="flex flex-1 flex-col gap-1">
 					<label htmlFor="ics-feed-url" className="text-sm font-medium text-navy">
@@ -91,9 +92,10 @@ function ConnectIcsFeedForm({ organizationId, onDone }: { organizationId: string
 						placeholder="https://example.com/schedule.ics"
 						{...register("feedUrl")}
 						aria-invalid={!!errors.feedUrl}
+						aria-describedby={errors.feedUrl ? "ics-feed-url-error" : undefined}
 						className="min-h-11 w-full rounded-md border border-slate-gray/30 px-3 py-2"
 					/>
-					{errors.feedUrl && <p role="alert" className="text-sm text-error-red">{errors.feedUrl.message}</p>}
+					{errors.feedUrl && <p id="ics-feed-url-error" role="alert" className="text-sm text-error-red">{errors.feedUrl.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
 					<label htmlFor="ics-feed-timezone" className="text-sm font-medium text-navy">
@@ -105,9 +107,10 @@ function ConnectIcsFeedForm({ organizationId, onDone }: { organizationId: string
 						placeholder="America/New_York"
 						{...register("timezone")}
 						aria-invalid={!!errors.timezone}
+						aria-describedby={errors.timezone ? "ics-feed-timezone-error" : undefined}
 						className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 					/>
-					{errors.timezone && <p role="alert" className="text-sm text-error-red">{errors.timezone.message}</p>}
+					{errors.timezone && <p id="ics-feed-timezone-error" role="alert" className="text-sm text-error-red">{errors.timezone.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
 					<label htmlFor="ics-feed-team" className="text-sm font-medium text-navy">

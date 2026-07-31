@@ -68,9 +68,10 @@ export function FeeTemplateList({ organizationId }: { organizationId: string }) 
 								placeholder="e.g. Spring Registration"
 								{...register("name")}
 								aria-invalid={!!errors.name}
+								aria-describedby={errors.name ? "tpl-name-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
-							{errors.name && <p role="alert" className="text-sm text-error-red">{errors.name.message}</p>}
+							{errors.name && <p id="tpl-name-error" role="alert" className="text-sm text-error-red">{errors.name.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
 							<label htmlFor="tpl-amount" className="text-sm font-medium text-navy">
@@ -84,9 +85,10 @@ export function FeeTemplateList({ organizationId }: { organizationId: string }) 
 								placeholder="e.g. 15000 = $150.00"
 								{...register("amountMinor")}
 								aria-invalid={!!errors.amountMinor}
+								aria-describedby={errors.amountMinor ? "tpl-amount-error" : undefined}
 								className="min-h-11 w-40 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
-							{errors.amountMinor && <p role="alert" className="text-sm text-error-red">{errors.amountMinor.message}</p>}
+							{errors.amountMinor && <p id="tpl-amount-error" role="alert" className="text-sm text-error-red">{errors.amountMinor.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
 							<label htmlFor="tpl-desc" className="text-sm font-medium text-navy">

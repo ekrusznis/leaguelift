@@ -278,3 +278,22 @@ Additional, unreserved decisions:
   needs a founder decision on the split formula) and prior-release
   migration testing needs release-snapshot tooling this repo doesn't have
   (2026-07-30)
+- ADR-038: Phase 13 slice 3 — accessibility code-level audit, same
+  methodology ADR-030 used for the mobile audit (static source review, not
+  live-viewport testing). No ESLint config exists anywhere in this repo, so
+  this is the first accessibility review this codebase has ever had. Fixed:
+  missing `aria-describedby` linking a field to its own error message,
+  systemic across 16 hand-rolled forms (the shared `FormField` primitive
+  already did this correctly — the gap was files not using it); a broken
+  label association and an unlabeled share-link input; low-contrast
+  `text-slate-500`-on-`navy-800` text on two auth pages (computed ~3.87:1,
+  below WCAG AA); an `h1`→`h3` heading-hierarchy skip on every dashboard,
+  root-caused and fixed once in `DashCard`; `GlobalSearchBox`'s results
+  dropdown was mouse-only — added the full ARIA combobox pattern
+  (`role="combobox"`/`"listbox"`/`"option"`, `aria-activedescendant`,
+  arrow-key/Enter/Escape handling), verified live against real seeded data
+  in a real browser. Left as a documented gap, not built: the entire
+  dashboard sidebar navigation is non-interactive (every nav item is a
+  plain `<span>`, root-caused in `navRegistry.tsx`'s missing route field) —
+  the same gap ADR-030 already found and declined to fix as a feature build
+  rather than an accessibility bug fix (2026-07-30)

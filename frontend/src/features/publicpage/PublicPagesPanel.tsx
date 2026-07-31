@@ -161,8 +161,9 @@ export function PublicPagesPanel({
 				>
 					<div className="flex flex-wrap gap-3">
 						<div className="flex flex-col gap-1">
-							<label className="text-sm font-medium text-navy">Page type</label>
+							<label htmlFor="public-page-type" className="text-sm font-medium text-navy">Page type</label>
 							<select
+								id="public-page-type"
 								value={selectedType}
 								onChange={(e) => onPageTypeChange(e.target.value as PageType)}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
@@ -232,10 +233,11 @@ export function PublicPagesPanel({
 								type="text"
 								{...register("title")}
 								aria-invalid={!!errors.title}
+								aria-describedby={errors.title ? "page-title-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
 							{errors.title && (
-								<p role="alert" className="text-sm text-error-red">
+								<p id="page-title-error" role="alert" className="text-sm text-error-red">
 									{errors.title.message}
 								</p>
 							)}
@@ -253,11 +255,12 @@ export function PublicPagesPanel({
 									placeholder="my-org"
 									{...register("slug")}
 									aria-invalid={!!errors.slug}
+									aria-describedby={errors.slug ? "page-slug-error" : undefined}
 									className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2 font-mono"
 								/>
 							</div>
 							{errors.slug && (
-								<p role="alert" className="text-sm text-error-red">
+								<p id="page-slug-error" role="alert" className="text-sm text-error-red">
 									{errors.slug.message}
 								</p>
 							)}

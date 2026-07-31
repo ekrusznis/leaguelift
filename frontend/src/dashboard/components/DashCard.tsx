@@ -20,7 +20,7 @@ export function DashCard({ title, action, children, className = "", tone = "ligh
 		<div className={`rounded-2xl border p-5 shadow-[0_8px_24px_rgba(11,31,51,0.06)] ${surface} ${className}`}>
 			{(title || action) && (
 				<div className="mb-4 flex items-center justify-between gap-3">
-					{title && <h3 className="font-heading text-base font-bold">{title}</h3>}
+					{title && <h2 className="font-heading text-base font-bold">{title}</h2>}
 					{action &&
 						(action.to ? (
 							<Link to={action.to} className="flex items-center gap-1 text-sm font-semibold text-green-600 hover:text-green-500">

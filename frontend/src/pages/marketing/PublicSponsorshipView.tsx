@@ -98,9 +98,10 @@ function SponsorshipPurchaseForm({ sponsorshipPackage }: { sponsorshipPackage: P
 					type="text"
 					{...register("sponsorName")}
 					aria-invalid={!!errors.sponsorName}
+					aria-describedby={errors.sponsorName ? `sponsor-name-${sponsorshipPackage.id}-error` : undefined}
 					className="min-h-11 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-white"
 				/>
-				{errors.sponsorName && <p role="alert" className="text-sm text-error-red">{errors.sponsorName.message}</p>}
+				{errors.sponsorName && <p id={`sponsor-name-${sponsorshipPackage.id}-error`} role="alert" className="text-sm text-error-red">{errors.sponsorName.message}</p>}
 			</div>
 			<div className="flex flex-col gap-1">
 				<label htmlFor={`sponsor-email-${sponsorshipPackage.id}`} className="text-sm font-medium text-slate-300">
@@ -111,9 +112,10 @@ function SponsorshipPurchaseForm({ sponsorshipPackage }: { sponsorshipPackage: P
 					type="email"
 					{...register("sponsorContactEmail")}
 					aria-invalid={!!errors.sponsorContactEmail}
+					aria-describedby={errors.sponsorContactEmail ? `sponsor-email-${sponsorshipPackage.id}-error` : undefined}
 					className="min-h-11 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-white"
 				/>
-				{errors.sponsorContactEmail && <p role="alert" className="text-sm text-error-red">{errors.sponsorContactEmail.message}</p>}
+				{errors.sponsorContactEmail && <p id={`sponsor-email-${sponsorshipPackage.id}-error`} role="alert" className="text-sm text-error-red">{errors.sponsorContactEmail.message}</p>}
 			</div>
 			<PrimaryButton type="submit" loading={isSubmitting}>
 				Continue to checkout

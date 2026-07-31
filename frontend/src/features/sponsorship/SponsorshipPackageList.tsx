@@ -105,9 +105,10 @@ export function SponsorshipPackageList({
 								placeholder="e.g. Gold Sponsor"
 								{...register("name")}
 								aria-invalid={!!errors.name}
+								aria-describedby={errors.name ? "sponsorship-name-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
-							{errors.name && <p role="alert" className="text-sm text-error-red">{errors.name.message}</p>}
+							{errors.name && <p id="sponsorship-name-error" role="alert" className="text-sm text-error-red">{errors.name.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
 							<label htmlFor="sponsorship-price" className="text-sm font-medium text-navy">
@@ -120,9 +121,10 @@ export function SponsorshipPackageList({
 								step={1}
 								{...register("priceMinor")}
 								aria-invalid={!!errors.priceMinor}
+								aria-describedby={errors.priceMinor ? "sponsorship-price-error" : undefined}
 								className="min-h-11 w-32 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
-							{errors.priceMinor && <p role="alert" className="text-sm text-error-red">{errors.priceMinor.message}</p>}
+							{errors.priceMinor && <p id="sponsorship-price-error" role="alert" className="text-sm text-error-red">{errors.priceMinor.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
 							<label htmlFor="sponsorship-max-quantity" className="text-sm font-medium text-navy">
@@ -506,7 +508,7 @@ function ShareLinkPanel({ organizationId, organizationSlug }: { organizationId: 
 			<div className="flex flex-col gap-1">
 				<p className="text-sm text-slate-gray">Share this link with a prospective sponsor, or print the QR code in event materials.</p>
 				<div className="flex items-center gap-2">
-					<input readOnly value={url} className="min-h-9 w-64 rounded-md border border-slate-gray/30 px-2 py-1 text-sm" onFocus={(e) => e.currentTarget.select()} />
+					<input readOnly aria-label="Shareable sponsorship link" value={url} className="min-h-9 w-64 rounded-md border border-slate-gray/30 px-2 py-1 text-sm" onFocus={(e) => e.currentTarget.select()} />
 					<Button type="button" variant="secondary" onClick={() => navigator.clipboard?.writeText(url)}>
 						Copy
 					</Button>

@@ -62,10 +62,11 @@ export function TournamentList({ organizationId }: { organizationId: string }) {
 								type="text"
 								{...register("name")}
 								aria-invalid={!!errors.name}
+								aria-describedby={errors.name ? "tournament-name-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
 							{errors.name && (
-								<p role="alert" className="text-sm text-error-red">
+								<p id="tournament-name-error" role="alert" className="text-sm text-error-red">
 									{errors.name.message}
 								</p>
 							)}
@@ -101,10 +102,11 @@ export function TournamentList({ organizationId }: { organizationId: string }) {
 								type="date"
 								{...register("endDate")}
 								aria-invalid={!!errors.endDate}
+								aria-describedby={errors.endDate ? "tournament-end-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
 							{errors.endDate && (
-								<p role="alert" className="text-sm text-error-red">
+								<p id="tournament-end-error" role="alert" className="text-sm text-error-red">
 									{errors.endDate.message}
 								</p>
 							)}

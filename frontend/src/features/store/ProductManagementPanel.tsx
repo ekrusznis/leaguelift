@@ -74,9 +74,10 @@ export function ProductManagementPanel({ organizationId, storeId }: { organizati
 								placeholder="e.g. Team Hoodie"
 								{...register("name")}
 								aria-invalid={!!errors.name}
+								aria-describedby={errors.name ? "product-name-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
-							{errors.name && <p role="alert" className="text-sm text-error-red">{errors.name.message}</p>}
+							{errors.name && <p id="product-name-error" role="alert" className="text-sm text-error-red">{errors.name.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
 							<label htmlFor="product-blueprint" className="text-sm font-medium text-navy">
@@ -86,6 +87,7 @@ export function ProductManagementPanel({ organizationId, storeId }: { organizati
 								id="product-blueprint"
 								{...register("printifyBlueprintId")}
 								aria-invalid={!!errors.printifyBlueprintId}
+								aria-describedby={errors.printifyBlueprintId ? "product-blueprint-error" : undefined}
 								className="min-h-11 min-w-48 rounded-md border border-slate-gray/30 px-3 py-2"
 							>
 								<option value={0}>Select a product type…</option>
@@ -95,7 +97,7 @@ export function ProductManagementPanel({ organizationId, storeId }: { organizati
 									</option>
 								))}
 							</select>
-							{errors.printifyBlueprintId && <p role="alert" className="text-sm text-error-red">{errors.printifyBlueprintId.message}</p>}
+							{errors.printifyBlueprintId && <p id="product-blueprint-error" role="alert" className="text-sm text-error-red">{errors.printifyBlueprintId.message}</p>}
 						</div>
 						<div className="flex min-w-[16rem] flex-1 flex-col gap-1">
 							<label htmlFor="product-desc" className="text-sm font-medium text-navy">

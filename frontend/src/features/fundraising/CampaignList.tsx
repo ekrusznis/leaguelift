@@ -94,9 +94,10 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 								placeholder="e.g. Spring Trip Fund"
 								{...register("name")}
 								aria-invalid={!!errors.name}
+								aria-describedby={errors.name ? "campaign-name-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
-							{errors.name && <p role="alert" className="text-sm text-error-red">{errors.name.message}</p>}
+							{errors.name && <p id="campaign-name-error" role="alert" className="text-sm text-error-red">{errors.name.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
 							<label htmlFor="campaign-slug" className="text-sm font-medium text-navy">
@@ -108,9 +109,10 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 								placeholder="spring-trip-fund"
 								{...register("slug")}
 								aria-invalid={!!errors.slug}
+								aria-describedby={errors.slug ? "campaign-slug-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
-							{errors.slug && <p role="alert" className="text-sm text-error-red">{errors.slug.message}</p>}
+							{errors.slug && <p id="campaign-slug-error" role="alert" className="text-sm text-error-red">{errors.slug.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
 							<label htmlFor="campaign-type" className="text-sm font-medium text-navy">
@@ -157,9 +159,10 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 								placeholder="e.g. 400000 = $4,000.00"
 								{...register("goalAmountMinor")}
 								aria-invalid={!!errors.goalAmountMinor}
+								aria-describedby={errors.goalAmountMinor ? "campaign-goal-error" : undefined}
 								className="min-h-11 w-44 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
-							{errors.goalAmountMinor && <p role="alert" className="text-sm text-error-red">{errors.goalAmountMinor.message}</p>}
+							{errors.goalAmountMinor && <p id="campaign-goal-error" role="alert" className="text-sm text-error-red">{errors.goalAmountMinor.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
 							<label htmlFor="campaign-start" className="text-sm font-medium text-navy">
@@ -181,9 +184,10 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 								type="date"
 								{...register("endDate")}
 								aria-invalid={!!errors.endDate}
+								aria-describedby={errors.endDate ? "campaign-end-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
-							{errors.endDate && <p role="alert" className="text-sm text-error-red">{errors.endDate.message}</p>}
+							{errors.endDate && <p id="campaign-end-error" role="alert" className="text-sm text-error-red">{errors.endDate.message}</p>}
 						</div>
 						<div className="flex min-w-[16rem] flex-1 flex-col gap-1">
 							<label htmlFor="campaign-desc" className="text-sm font-medium text-navy">

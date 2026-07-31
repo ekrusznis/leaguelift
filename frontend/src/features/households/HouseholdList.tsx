@@ -59,10 +59,11 @@ export function HouseholdList({ organizationId }: { organizationId: string }) {
 								placeholder="e.g. Smith Family"
 								{...register("displayName")}
 								aria-invalid={!!errors.displayName}
+								aria-describedby={errors.displayName ? "household-name-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
 							{errors.displayName && (
-								<p role="alert" className="text-sm text-error-red">
+								<p id="household-name-error" role="alert" className="text-sm text-error-red">
 									{errors.displayName.message}
 								</p>
 							)}
@@ -76,10 +77,11 @@ export function HouseholdList({ organizationId }: { organizationId: string }) {
 								type="email"
 								{...register("contactEmail")}
 								aria-invalid={!!errors.contactEmail}
+								aria-describedby={errors.contactEmail ? "household-email-error" : undefined}
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
 							{errors.contactEmail && (
-								<p role="alert" className="text-sm text-error-red">
+								<p id="household-email-error" role="alert" className="text-sm text-error-red">
 									{errors.contactEmail.message}
 								</p>
 							)}
