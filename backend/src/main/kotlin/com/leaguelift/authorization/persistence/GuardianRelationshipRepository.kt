@@ -33,6 +33,19 @@ class GuardianRelationshipRepository(private val jdbcClient: JdbcClient) {
 			.optional()
 			.orElse(null)
 
+	fun findActiveForAdult(userId: UUID, householdAdultId: UUID): GuardianRelationship? =
+		jdbcClient.sql(
+			"""
+			select $COLUMNS from guardian_relationship
+			where user_id = :userId and household_adult_id = :householdAdultId and status = 'ACTIVE'
+			""".trimIndent(),
+		)
+			.param("userId", userId)
+			.param("householdAdultId", householdAdultId)
+			.query(::mapRow)
+			.optional()
+			.orElse(null)
+
 	fun insert(organizationId: UUID, householdId: UUID, householdAdultId: UUID, userId: UUID): GuardianRelationship {
 		val now = Instant.now()
 		val id = UUID.randomUUID()

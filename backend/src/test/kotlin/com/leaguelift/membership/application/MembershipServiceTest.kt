@@ -117,6 +117,24 @@ class MembershipServiceTest {
 	}
 
 	@Test
+	fun `hasManagerRole returns true only for owner administrator or platform administrator`() {
+		val organizationId = UUID.randomUUID()
+		val admin = CurrentUser(UUID.randomUUID(), "manager-check@example.com", "Manager Check")
+		every { membershipRepository.findActiveMembership(organizationId, admin.userId) } returns
+			membership(organizationId, admin.userId, MembershipRole.ADMINISTRATOR)
+
+		assertEquals(true, service.hasManagerRole(organizationId, admin))
+
+		val viewer = CurrentUser(UUID.randomUUID(), "viewer-check@example.com", "Viewer Check")
+		every { membershipRepository.findActiveMembership(organizationId, viewer.userId) } returns
+			membership(organizationId, viewer.userId, MembershipRole.VIEWER)
+		assertEquals(false, service.hasManagerRole(organizationId, viewer))
+
+		val platformAdmin = CurrentUser(UUID.randomUUID(), "platform-check@example.com", "Platform", platformAdministrator = true)
+		assertEquals(true, service.hasManagerRole(organizationId, platformAdmin))
+	}
+
+	@Test
 	fun `administrator is denied owner-only actions`() {
 		val organizationId = UUID.randomUUID()
 		val admin = CurrentUser(UUID.randomUUID(), "admin5@example.com", "Admin5")

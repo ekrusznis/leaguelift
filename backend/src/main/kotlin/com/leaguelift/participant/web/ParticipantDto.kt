@@ -1,5 +1,6 @@
 package com.leaguelift.participant.web
 
+import com.leaguelift.common.web.PageResponse
 import com.leaguelift.participant.domain.Participant
 import com.leaguelift.participant.domain.ParticipantTeamAssignment
 import jakarta.validation.constraints.NotBlank
@@ -56,3 +57,6 @@ fun Participant.toResponse() = ParticipantResponse(
 fun ParticipantTeamAssignment.toResponse() = ParticipantTeamResponse(
     id, participantId, teamId, status, joinedAt, createdAt,
 )
+
+
+typealias ParticipantPageResponse = PageResponse<ParticipantResponse>

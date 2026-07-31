@@ -23,6 +23,21 @@ class ParticipantService(
     private val auditService: AuditService,
 ) {
 
+    fun listForOrganization(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<Participant> {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        return participantRepository.findAllForOrganization(organizationId, offset, limit)
+    }
+
+    fun countForOrganization(organizationId: UUID, currentUser: CurrentUser): Long {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        return participantRepository.countAllForOrganization(organizationId)
+    }
+
     fun listForHousehold(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): List<Participant> {
         membershipService.requireActiveMembership(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)

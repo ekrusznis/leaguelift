@@ -1,6 +1,7 @@
 package com.leaguelift.participant.web
 
 import com.leaguelift.common.web.CurrentUser
+import com.leaguelift.common.web.PageResponse
 import com.leaguelift.participant.application.ParticipantService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
@@ -20,6 +22,20 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}")
 class ParticipantController(private val participantService: ParticipantService) {
+
+    @GetMapping("/participants")
+    fun listForOrganization(
+        @PathVariable organizationId: UUID,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "200") size: Int,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): ParticipantPageResponse {
+        val boundedSize = size.coerceIn(1, 500)
+        val offset = page.coerceAtLeast(0) * boundedSize
+        val items = participantService.listForOrganization(organizationId, currentUser, offset, boundedSize).map { it.toResponse() }
+        val total = participantService.countForOrganization(organizationId, currentUser)
+        return PageResponse(items, page.coerceAtLeast(0), boundedSize, total)
+    }
 
     @GetMapping("/households/{householdId}/participants")
     fun list(

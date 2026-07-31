@@ -50,6 +50,19 @@ class InvitationRepository(private val jdbcClient: JdbcClient) {
 			.query(Long::class.java)
 			.single()
 
+	fun findPendingForOrganizationAndEmail(organizationId: UUID, email: String): Invitation? =
+		jdbcClient.sql(
+			"""
+			select $INVITATION_COLUMNS from invitation
+			where organization_id = :organizationId and lower(email) = lower(:email) and status = 'PENDING'
+			limit 1
+			""".trimIndent(),
+		)
+			.param("organizationId", organizationId)
+			.param("email", email)
+			.query(::mapRow)
+			.optional().orElse(null)
+
 	fun insert(
 		organizationId: UUID,
 		email: String,

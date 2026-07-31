@@ -43,6 +43,30 @@ class MediaAssignmentRepository(private val jdbcClient: JdbcClient) {
 			.optional()
 			.orElse(null)
 
+	fun findActiveByAssetAndEntity(
+		organizationId: UUID,
+		assetId: UUID,
+		entityType: MediaEntityType,
+		entityId: UUID,
+		usageSlot: MediaUsageSlot,
+	): MediaAssignment? =
+		jdbcClient.sql(
+			"""
+			select $MEDIA_ASSIGNMENT_COLUMNS from media_assignment
+			where organization_id = :organizationId and asset_id = :assetId
+			  and entity_type = :entityType and entity_id = :entityId and usage_slot = :usageSlot
+			  and publication_status <> 'RETIRED'
+			limit 1
+			""".trimIndent(),
+		)
+			.param("organizationId", organizationId)
+			.param("assetId", assetId)
+			.param("entityType", entityType.name)
+			.param("entityId", entityId)
+			.param("usageSlot", usageSlot.name)
+			.query(::mapRow)
+			.optional().orElse(null)
+
 	fun listActive(entityType: MediaEntityType, entityId: UUID): List<MediaAssignment> =
 		jdbcClient.sql(
 			"""

@@ -71,6 +71,8 @@ export function OrganizationBrandingPanel({
 				fileName: file.name,
 				contentType: file.type,
 				fileSizeBytes: file.size,
+				entityType: "ORGANIZATION",
+				entityId: organizationId,
 			});
 			await uploadToSignedUrl(requested.uploadUrl, file, requested.requiredHeaders);
 			const confirmed = await confirmUpload.mutateAsync(requested.assetId);

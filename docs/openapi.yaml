@@ -77,7 +77,8 @@ info:
     and calendar routes carrying the target organizationId query parameter.
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
-  version: "0.24.2"
+    Phase 16 slice 3 extends the media pipeline to team/tournament branding and private adult/participant profile photos, with resource-scoped authorization and published-page rendering (ADR-045).
+  version: "0.25.1"
 servers:
   - url: /api/v1
 tags:
@@ -111,6 +112,7 @@ tags:
   - name: events
   - name: integrations
   - name: platform-admin
+  - name: onboarding
 paths:
   /public/status:
     get:
@@ -1327,6 +1329,200 @@ paths:
 
   # --- Participants ---
 
+  /organizations/{organizationId}/participants:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [participants]
+      summary: List organization participants for onboarding and bulk assignment
+      description: Owner/administrator-only organization-wide participant directory. Guardian and athlete access remains relationship-scoped through existing endpoints.
+      operationId: listOrganizationParticipants
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paged participants
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParticipantPageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/onboarding/imports/preview:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [onboarding]
+      summary: Preview a manual onboarding CSV
+      description: Validates and deduplicates teams, households, guardian contact shells, participants, and participant-team references without mutating data. The CSV body is not persisted.
+      operationId: previewOnboardingImport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingCsvPreviewRequest"
+      responses:
+        "200":
+          description: Side-effect-free import preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingImportPreviewResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/onboarding/imports/execute:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [onboarding]
+      summary: Execute a confirmed manual onboarding CSV import
+      description: Revalidates the CSV and requires the exact SHA-256 content hash returned by preview. Valid rows are processed in dependency order; invalid rows are reported without being written.
+      operationId: executeOnboardingImport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingCsvExecuteRequest"
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingImportResultResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: The external ID or matched record was bound by another import after preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /organizations/{organizationId}/onboarding/bulk-invitations:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [onboarding]
+      summary: Create bulk staff invitations
+      description: Reuses Phase 15 single-use invitation and outbox delivery. It creates no password or active account and does not expose raw acceptance tokens in the bulk response.
+      operationId: createBulkStaffInvitations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkInvitationRequest"
+      responses:
+        "200":
+          description: Per-email result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkActionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/onboarding/bulk-team-assignments:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [onboarding]
+      summary: Assign multiple participants to one team
+      operationId: createBulkTeamAssignments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkTeamAssignmentRequest"
+      responses:
+        "200":
+          description: Per-participant result; existing active assignments are skipped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkActionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/onboarding/bulk-fee-assignments:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [onboarding]
+      summary: Assign one fee template to multiple households
+      operationId: createBulkFeeAssignments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkFeeAssignmentRequest"
+      responses:
+        "200":
+          description: Per-household result; the same active template/due-date assignment is skipped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkActionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/onboarding/bulk-document-assignments:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [onboarding]
+      summary: Assign one uploaded document to multiple households
+      operationId: createBulkDocumentAssignments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkDocumentAssignmentRequest"
+      responses:
+        "200":
+          description: Per-household result; an existing active asset assignment is skipped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkActionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /organizations/{organizationId}/households/{householdId}/participants:
     parameters:
       - $ref: "#/components/parameters/OrganizationIdParam"
@@ -2148,7 +2344,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  # --- Media (organization logo/cover upload — DESIGN-DOC.md section 11, ADR-012) ---
+  # --- Media (organization/team/tournament branding + private profile photos — ADR-012/ADR-045) ---
 
   /organizations/{organizationId}/media/uploads:
     parameters:
@@ -2159,7 +2355,9 @@ paths:
       description: >
         Creates a PENDING_UPLOAD media asset and returns a short-lived presigned PUT
         URL. The browser uploads directly to object storage; the API never proxies
-        file bytes.
+        file bytes. entityType and entityId are optional only for legacy manager-only
+        workflows; when one is supplied both are required and the target is authorized
+        before the upload URL is issued.
       operationId: requestMediaUpload
       requestBody:
         required: true
@@ -2265,6 +2463,82 @@ paths:
       tags: [media]
       summary: Retire the active assignment for a usage slot
       operationId: removeMediaAssignment
+      responses:
+        "204":
+          description: Assignment retired
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+
+  /organizations/{organizationId}/media/assignments/entities/{entityType}/{entityId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/MediaEntityTypeParam"
+      - $ref: "#/components/parameters/MediaEntityIdParam"
+    get:
+      tags: [media]
+      summary: List active media for a scoped entity
+      description: >
+        Returns signed URLs only after resolving the team, tournament, household-adult,
+        or participant target and enforcing the caller's exact resource relationship.
+      operationId: listEntityMediaAssignments
+      responses:
+        "200":
+          description: Active scoped media assignments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaAssignmentListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/media/assignments/entities/{entityType}/{entityId}/{usageSlot}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/MediaEntityTypeParam"
+      - $ref: "#/components/parameters/MediaEntityIdParam"
+      - $ref: "#/components/parameters/UsageSlotParam"
+    put:
+      tags: [media]
+      summary: Assign media to a scoped entity
+      description: >
+        TEAM and TOURNAMENT accept LOGO/COVER. HOUSEHOLD_ADULT and PARTICIPANT
+        accept PROFILE_PHOTO. Backend capability/guardian/athlete-self checks are
+        enforced before replacing the active assignment.
+      operationId: assignEntityMedia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignMediaRequest"
+      responses:
+        "200":
+          description: Updated assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaAssignmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [media]
+      summary: Retire scoped entity media
+      operationId: removeEntityMedia
       responses:
         "204":
           description: Assignment retired
@@ -6038,7 +6312,21 @@ components:
       required: true
       schema:
         type: string
-        enum: [LOGO, COVER, PRODUCT_DESIGN, SPONSOR_LOGO]
+        enum: [LOGO, COVER, PROFILE_PHOTO, PRODUCT_DESIGN, SPONSOR_LOGO, DOCUMENT]
+    MediaEntityTypeParam:
+      name: entityType
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [ORGANIZATION, TEAM, TOURNAMENT, HOUSEHOLD_ADULT, PARTICIPANT]
+    MediaEntityIdParam:
+      name: entityId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     SponsorshipPackageIdParam:
       name: packageId
       in: path
@@ -6824,6 +7112,28 @@ components:
         summary:
           type: string
           nullable: true
+    PublicPageMediaResponse:
+      type: object
+      required: [assetId, url]
+      properties:
+        assetId:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        altText:
+          type: string
+          nullable: true
+        contentType:
+          type: string
+          nullable: true
+        widthPx:
+          type: integer
+          nullable: true
+        heightPx:
+          type: integer
+          nullable: true
     PublicPageResponse:
       type: object
       required: [id, organizationId, pageType, entityId, slug, title, status, createdAt, updatedAt]
@@ -6860,6 +7170,14 @@ components:
         updatedAt:
           type: string
           format: date-time
+        logo:
+          allOf:
+            - $ref: "#/components/schemas/PublicPageMediaResponse"
+          nullable: true
+        cover:
+          allOf:
+            - $ref: "#/components/schemas/PublicPageMediaResponse"
+          nullable: true
     PublicPagePage:
       type: object
       required: [items, page, size, totalElements]
@@ -9162,7 +9480,7 @@ components:
       properties:
         usageSlot:
           type: string
-          enum: [LOGO, COVER]
+          enum: [LOGO, COVER, PROFILE_PHOTO, PRODUCT_DESIGN, SPONSOR_LOGO, DOCUMENT]
         fileName:
           type: string
         contentType:
@@ -9171,6 +9489,14 @@ components:
         fileSizeBytes:
           type: integer
           format: int64
+        entityType:
+          type: string
+          enum: [ORGANIZATION, TEAM, TOURNAMENT, HOUSEHOLD_ADULT, PARTICIPANT]
+          nullable: true
+        entityId:
+          type: string
+          format: uuid
+          nullable: true
     RequestUploadResponse:
       type: object
       required: [assetId, uploadUrl, uploadMethod, requiredHeaders, expiresAt]
@@ -9233,7 +9559,7 @@ components:
       properties:
         usageSlot:
           type: string
-          enum: [LOGO, COVER, PRODUCT_DESIGN, SPONSOR_LOGO, DOCUMENT]
+          enum: [LOGO, COVER, PROFILE_PHOTO, PRODUCT_DESIGN, SPONSOR_LOGO, DOCUMENT]
         assetId:
           type: string
           format: uuid
@@ -10260,6 +10586,269 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CsvImportRowErrorResponse"
+    ParticipantPageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParticipantResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+
+    OnboardingCsvPreviewRequest:
+      type: object
+      required: [csvContent]
+      properties:
+        fileName:
+          type: string
+          maxLength: 255
+          nullable: true
+        csvContent:
+          type: string
+          maxLength: 2097152
+          description: Raw UTF-8 CSV text. Required columns are record_type and external_id. The file itself is never persisted.
+
+    OnboardingCsvExecuteRequest:
+      allOf:
+        - $ref: "#/components/schemas/OnboardingCsvPreviewRequest"
+        - type: object
+          required: [expectedContentHash]
+          properties:
+            expectedContentHash:
+              type: string
+              minLength: 64
+              maxLength: 64
+              description: SHA-256 hash returned by the preview of this exact CSV content.
+
+    OnboardingPreviewRowResponse:
+      type: object
+      required: [rowNumber, label, action, warnings, errors]
+      properties:
+        rowNumber:
+          type: integer
+        recordType:
+          type: string
+          enum: [TEAM, HOUSEHOLD, GUARDIAN, PARTICIPANT]
+          nullable: true
+        externalId:
+          type: string
+          nullable: true
+        label:
+          type: string
+        action:
+          type: string
+          enum: [CREATE, UPDATE, MATCH_EXISTING, ERROR]
+        warnings:
+          type: array
+          items:
+            type: string
+        errors:
+          type: array
+          items:
+            type: string
+
+    OnboardingImportPreviewResponse:
+      type: object
+      required: [contentHash, totalRows, validRows, errorRows, createCount, updateCount, matchCount, rows]
+      properties:
+        fileName:
+          type: string
+          nullable: true
+        contentHash:
+          type: string
+        totalRows:
+          type: integer
+        validRows:
+          type: integer
+        errorRows:
+          type: integer
+        createCount:
+          type: integer
+        updateCount:
+          type: integer
+        matchCount:
+          type: integer
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/OnboardingPreviewRowResponse"
+
+    OnboardingImportRowErrorResponse:
+      type: object
+      required: [rowNumber, message]
+      properties:
+        rowNumber:
+          type: integer
+        recordType:
+          type: string
+          enum: [TEAM, HOUSEHOLD, GUARDIAN, PARTICIPANT]
+          nullable: true
+        externalId:
+          type: string
+          nullable: true
+        message:
+          type: string
+
+    ImportedOnboardingEntityResponse:
+      type: object
+      required: [recordType, externalId, entityId, label, action]
+      properties:
+        recordType:
+          type: string
+          enum: [TEAM, HOUSEHOLD, GUARDIAN, PARTICIPANT]
+        externalId:
+          type: string
+        entityId:
+          type: string
+          format: uuid
+        label:
+          type: string
+        action:
+          type: string
+          enum: [CREATE, UPDATE, MATCH_EXISTING]
+
+    OnboardingImportResultResponse:
+      type: object
+      required: [contentHash, createdCount, updatedCount, matchedCount, teamAssignmentsCreated, errors, entities]
+      properties:
+        fileName:
+          type: string
+          nullable: true
+        contentHash:
+          type: string
+        createdCount:
+          type: integer
+        updatedCount:
+          type: integer
+        matchedCount:
+          type: integer
+        teamAssignmentsCreated:
+          type: integer
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/OnboardingImportRowErrorResponse"
+        entities:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportedOnboardingEntityResponse"
+
+    BulkInvitationItemRequest:
+      type: object
+      required: [email, role]
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [ADMINISTRATOR, FINANCE_MANAGER, TEAM_ADMINISTRATOR, TOURNAMENT_ADMINISTRATOR, VIEWER]
+
+    BulkInvitationRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            $ref: "#/components/schemas/BulkInvitationItemRequest"
+
+    BulkTeamAssignmentRequest:
+      type: object
+      required: [teamId, participantIds]
+      properties:
+        teamId:
+          type: string
+          format: uuid
+        participantIds:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            type: string
+            format: uuid
+
+    BulkFeeAssignmentRequest:
+      type: object
+      required: [feeTemplateId, householdIds]
+      properties:
+        feeTemplateId:
+          type: string
+          format: uuid
+        householdIds:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            type: string
+            format: uuid
+        dueDate:
+          type: string
+          format: date
+          nullable: true
+
+    BulkDocumentAssignmentRequest:
+      type: object
+      required: [assetId, householdIds]
+      properties:
+        assetId:
+          type: string
+          format: uuid
+        householdIds:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            type: string
+            format: uuid
+        title:
+          type: string
+          maxLength: 200
+          nullable: true
+
+    BulkActionItemResponse:
+      type: object
+      required: [reference, status]
+      properties:
+        reference:
+          type: string
+        status:
+          type: string
+          enum: [SUCCEEDED, SKIPPED, FAILED]
+        entityId:
+          type: string
+          format: uuid
+          nullable: true
+        message:
+          type: string
+          nullable: true
+
+    BulkActionResponse:
+      type: object
+      required: [requestedCount, succeededCount, skippedCount, failedCount, items]
+      properties:
+        requestedCount:
+          type: integer
+        succeededCount:
+          type: integer
+        skippedCount:
+          type: integer
+        failedCount:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BulkActionItemResponse"
+
     PlatformOrdersSummary:
       type: object
       required: [confirmed, refunded, pending]

@@ -2,11 +2,13 @@ package com.leaguelift.media.application
 
 import com.leaguelift.audit.application.AuditService
 import com.leaguelift.common.error.FieldError
+import com.leaguelift.common.error.ForbiddenException
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.error.ValidationException
 import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.media.domain.MediaAsset
 import com.leaguelift.media.domain.MediaAssetStatus
+import com.leaguelift.media.domain.MediaEntityType
 import com.leaguelift.media.domain.MediaUsageSlot
 import com.leaguelift.media.domain.UploadLimits
 import com.leaguelift.media.infra.SpacesClient
@@ -46,6 +48,7 @@ class MediaUploadService(
 	private val mediaAssetRepository: MediaAssetRepository,
 	private val spacesClient: SpacesClient,
 	private val membershipService: MembershipService,
+	private val mediaEntityAccessService: MediaEntityAccessService,
 	private val auditService: AuditService,
 	private val outboxWriter: OutboxWriter,
 ) {
@@ -58,8 +61,18 @@ class MediaUploadService(
 		contentType: String,
 		fileSizeBytes: Long,
 		currentUser: CurrentUser,
+		entityType: MediaEntityType? = null,
+		entityId: UUID? = null,
 	): RequestUploadResult {
-		membershipService.requireManagerRole(organizationId, currentUser)
+		if ((entityType == null) != (entityId == null)) {
+			throw ValidationException("entityType and entityId must be supplied together.")
+		}
+		if (entityType != null && entityId != null) {
+			val target = mediaEntityAccessService.resolveForManage(organizationId, entityType, entityId, currentUser)
+			mediaEntityAccessService.requireAllowedSlot(target, usageSlot)
+		} else {
+			membershipService.requireManagerRole(organizationId, currentUser)
+		}
 		if (!UploadLimits.isContentTypeAllowed(usageSlot, contentType)) {
 			throw ValidationException(
 				"This file type is not allowed for $usageSlot.",
@@ -104,9 +117,11 @@ class MediaUploadService(
 
 	@Transactional
 	fun confirmUpload(organizationId: UUID, assetId: UUID, currentUser: CurrentUser): ConfirmUploadResult {
-		membershipService.requireManagerRole(organizationId, currentUser)
 		val asset = mediaAssetRepository.findById(assetId, organizationId)
 			?: throw NotFoundException("MEDIA_ASSET_NOT_FOUND", "The media asset could not be found.")
+		if (asset.uploadedByUserId != currentUser.userId && !membershipService.hasManagerRole(organizationId, currentUser)) {
+			throw ForbiddenException("MEDIA_UPLOAD_ACCESS_DENIED", "You cannot confirm this upload.")
+		}
 		if (asset.status != MediaAssetStatus.PENDING_UPLOAD) {
 			throw ValidationException("This asset has already been confirmed.")
 		}

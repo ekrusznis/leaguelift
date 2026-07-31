@@ -45,6 +45,21 @@ class HouseholdRepository(private val jdbcClient: JdbcClient) {
             .param("organizationId", organizationId)
             .query(Long::class.java).single()
 
+    fun findContactEmailMatches(organizationId: UUID, email: String): List<Household> =
+        jdbcClient.sql(
+            """
+            select $HOUSEHOLD_COLS from household
+            where organization_id = :organizationId and lower(contact_email) = lower(:email)
+              and status = 'ACTIVE'
+            order by created_at asc
+            limit 2
+            """.trimIndent(),
+        )
+            .param("organizationId", organizationId)
+            .param("email", email)
+            .query(::mapHousehold)
+            .list()
+
     /**
      * Every distinct active household with an active participant on [teamId] — the
      * recipient set for Phase 10 slice 4 event-change notifications (ADR-029). Opt-out/
@@ -131,6 +146,29 @@ class HouseholdRepository(private val jdbcClient: JdbcClient) {
             .query(::mapAdult)
             .optional().orElse(null)
 
+
+    fun findActiveAdultEmailMatches(organizationId: UUID, email: String): List<HouseholdAdult> =
+        jdbcClient.sql(
+            """
+            select $ADULT_COLS from household_adult
+            where organization_id = :organizationId and lower(email) = lower(:email)
+              and status = 'ACTIVE'
+            order by created_at asc
+            limit 2
+            """.trimIndent(),
+        )
+            .param("organizationId", organizationId)
+            .param("email", email)
+            .query(::mapAdult)
+            .list()
+
+    fun findAdultById(adultId: UUID, organizationId: UUID): HouseholdAdult? =
+        jdbcClient.sql("select $ADULT_COLS from household_adult where id = :adultId and organization_id = :organizationId")
+            .param("adultId", adultId)
+            .param("organizationId", organizationId)
+            .query(::mapAdult)
+            .optional().orElse(null)
+
     fun listAdults(householdId: UUID, organizationId: UUID): List<HouseholdAdult> =
         jdbcClient.sql(
             """
@@ -167,6 +205,42 @@ class HouseholdRepository(private val jdbcClient: JdbcClient) {
             .param("phone", phone).param("relationship", relationship).param("isPrimary", isPrimary)
             .param("now", Timestamp.from(now)).update()
         return HouseholdAdult(id, householdId, organizationId, firstName, lastName, email, phone, relationship, isPrimary, AdultStatus.ACTIVE, now, now)
+    }
+
+    fun updateAdult(
+        adultId: UUID,
+        organizationId: UUID,
+        firstName: String?,
+        lastName: String?,
+        email: String?,
+        phone: String?,
+        relationship: String?,
+        isPrimary: Boolean?,
+    ): Int {
+        val now = Instant.now()
+        return jdbcClient.sql(
+            """
+            update household_adult
+            set first_name   = coalesce(:firstName, first_name),
+                last_name    = coalesce(:lastName, last_name),
+                email        = coalesce(:email, email),
+                phone        = coalesce(:phone, phone),
+                relationship = coalesce(:relationship, relationship),
+                is_primary   = coalesce(:isPrimary, is_primary),
+                updated_at   = :now
+            where id = :adultId and organization_id = :organizationId and status = 'ACTIVE'
+            """.trimIndent(),
+        )
+            .param("firstName", firstName)
+            .param("lastName", lastName)
+            .param("email", email)
+            .param("phone", phone)
+            .param("relationship", relationship)
+            .param("isPrimary", isPrimary)
+            .param("now", Timestamp.from(now))
+            .param("adultId", adultId)
+            .param("organizationId", organizationId)
+            .update()
     }
 
     fun archiveAdult(adultId: UUID, householdId: UUID, organizationId: UUID): Int {

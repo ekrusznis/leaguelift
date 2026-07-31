@@ -39,10 +39,11 @@ class MediaAssignmentServiceTest {
 	private val mediaAssetRepository = mockk<MediaAssetRepository>()
 	private val publicPageRepository = mockk<PublicPageRepository>()
 	private val membershipService = mockk<MembershipService>()
+	private val mediaEntityAccessService = mockk<MediaEntityAccessService>()
 	private val auditService = mockk<AuditService>()
 	private val outboxWriter = mockk<OutboxWriter>()
 	private val service = MediaAssignmentService(
-		mediaAssignmentRepository, mediaAssetRepository, publicPageRepository, membershipService, auditService, outboxWriter,
+		mediaAssignmentRepository, mediaAssetRepository, publicPageRepository, membershipService, mediaEntityAccessService, auditService, outboxWriter,
 	)
 
 	private val orgId = UUID.randomUUID()
@@ -138,6 +139,35 @@ class MediaAssignmentServiceTest {
 
 		assertEquals(Visibility.ORGANIZATION_PRIVATE, result.visibility)
 		verify(exactly = 0) { outboxWriter.write(any(), any(), any(), any(), any()) }
+	}
+
+	@Test
+	fun `entity assignment rejects an asset uploaded for another slot`() {
+		val target = ResolvedMediaTarget(
+			organizationId = orgId,
+			entityType = MediaEntityType.PARTICIPANT,
+			entityId = UUID.randomUUID(),
+			allowedSlots = setOf(MediaUsageSlot.PROFILE_PHOTO),
+			visibility = Visibility.HOUSEHOLD_PRIVATE,
+		)
+		val asset = readyAsset()
+		every {
+			mediaEntityAccessService.resolveForManage(orgId, target.entityType, target.entityId, currentUser)
+		} returns target
+		every { mediaEntityAccessService.requireAllowedSlot(target, MediaUsageSlot.PROFILE_PHOTO) } just runs
+		every { mediaAssetRepository.findById(asset.id, orgId) } returns asset
+
+		assertFailsWith<ValidationException> {
+			service.assignEntityMedia(
+				orgId,
+				target.entityType,
+				target.entityId,
+				MediaUsageSlot.PROFILE_PHOTO,
+				asset.id,
+				null,
+				currentUser,
+			)
+		}
 	}
 
 	@Test

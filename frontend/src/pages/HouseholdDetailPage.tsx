@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "../auth/AuthContext";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -46,6 +47,7 @@ import { useFeeTemplates } from "../features/fees/api";
 import { useTeams } from "../features/teams/api";
 import { HouseholdDocumentsPanel } from "../features/documents/HouseholdDocumentsPanel";
 import { EventListPanel } from "../features/events/EventListPanel";
+import { ProfilePhotoEditor } from "../features/media/ProfilePhotoEditor";
 import { useContexts } from "../authorization/api";
 import { hasCapability } from "../authorization/capabilities";
 import { Capabilities } from "../authorization/capabilityConstants";
@@ -109,7 +111,9 @@ function AddAdultForm({ organizationId, householdId, onDone }: { organizationId:
 	);
 }
 
-function AdultsPanel({ organizationId, householdId, canManage }: { organizationId: string; householdId: string; canManage: boolean }) {
+function AdultsPanel({ organizationId, householdId, canManage, canManagePhotos }: { organizationId: string; householdId: string; canManage: boolean; canManagePhotos: boolean }) {
+	const { user } = useAuth();
+	const currentUserEmail = user?.email.trim().toLowerCase();
 	const { data, isLoading, isError, refetch } = useAdults(organizationId, householdId);
 	const removeAdult = useRemoveAdult(organizationId, householdId);
 	const [showForm, setShowForm] = useState(false);
@@ -134,6 +138,13 @@ function AdultsPanel({ organizationId, householdId, canManage }: { organizationI
 				<ul className="flex flex-col gap-2" aria-label="Adults list">
 					{data.map((adult) => (
 						<li key={adult.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+							<ProfilePhotoEditor
+								organizationId={organizationId}
+								entityType="HOUSEHOLD_ADULT"
+								entityId={adult.id}
+								name={`${adult.firstName} ${adult.lastName}`}
+								canEdit={canManage || (canManagePhotos && !!currentUserEmail && adult.email?.trim().toLowerCase() === currentUserEmail)}
+							/>
 							<div className="min-w-0 flex-1">
 								<p className="break-words font-medium text-navy">
 									{adult.firstName} {adult.lastName}
@@ -263,7 +274,7 @@ function AddParticipantForm({ organizationId, householdId, onDone }: { organizat
 	);
 }
 
-function ParticipantsPanel({ organizationId, householdId, canManage }: { organizationId: string; householdId: string; canManage: boolean }) {
+function ParticipantsPanel({ organizationId, householdId, canManage, canManagePhotos }: { organizationId: string; householdId: string; canManage: boolean; canManagePhotos: boolean }) {
 	const { data, isLoading, isError, refetch } = useParticipants(organizationId, householdId);
 	const [showForm, setShowForm] = useState(false);
 	const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -289,6 +300,13 @@ function ParticipantsPanel({ organizationId, householdId, canManage }: { organiz
 					{data.map((participant) => (
 						<li key={participant.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
 							<div className="flex flex-wrap items-center justify-between gap-3">
+								<ProfilePhotoEditor
+									organizationId={organizationId}
+									entityType="PARTICIPANT"
+									entityId={participant.id}
+									name={`${participant.firstName} ${participant.lastName}`}
+									canEdit={canManagePhotos}
+								/>
 								<div className="min-w-0 flex-1">
 									<p className="break-words font-medium text-navy">
 										{participant.firstName} {participant.lastName}
@@ -729,6 +747,11 @@ export function HouseholdDetailPage() {
 
 	const activeSection: HouseholdSection = section && isHouseholdSection(section) ? section : "profile";
 	const canAdminister = hasCapability(contexts.data, Capabilities.ORG_MANAGE, { contextType: "ORGANIZATION", resourceId: organizationId });
+	const canManageProfilePhotos = canAdminister || hasCapability(
+		contexts.data,
+		Capabilities.HOUSEHOLD_PROFILE_MANAGE,
+		{ contextType: "HOUSEHOLD", resourceId: householdId },
+	);
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -749,8 +772,8 @@ export function HouseholdDetailPage() {
 				))}
 			</nav>
 
-			{activeSection === "profile" && <AdultsPanel organizationId={organizationId} householdId={householdId} canManage={canAdminister} />}
-			{activeSection === "participants" && <ParticipantsPanel organizationId={organizationId} householdId={householdId} canManage={canAdminister} />}
+			{activeSection === "profile" && <AdultsPanel organizationId={organizationId} householdId={householdId} canManage={canAdminister} canManagePhotos={canManageProfilePhotos} />}
+			{activeSection === "participants" && <ParticipantsPanel organizationId={organizationId} householdId={householdId} canManage={canAdminister} canManagePhotos={canManageProfilePhotos} />}
 			{activeSection === "events" && <EventListPanel scope={{ type: "household", organizationId, householdId }} householdId={householdId} />}
 			{activeSection === "fees" && <FeeAssignmentsPanel organizationId={organizationId} householdId={householdId} canManage={canAdminister} />}
 			{activeSection === "documents" && (

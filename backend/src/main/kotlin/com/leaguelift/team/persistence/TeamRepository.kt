@@ -21,6 +21,15 @@ class TeamRepository(private val jdbcClient: JdbcClient) {
             .optional()
             .orElse(null)
 
+    fun findNameMatches(organizationId: UUID, name: String): List<Team> =
+        jdbcClient.sql(
+            "select $TEAM_COLUMNS from team where organization_id = :organizationId and lower(name) = lower(:name) and status = 'ACTIVE' order by created_at asc limit 2",
+        )
+            .param("organizationId", organizationId)
+            .param("name", name)
+            .query(::mapRow)
+            .list()
+
     fun findAll(organizationId: UUID, offset: Int, limit: Int): List<Team> =
         jdbcClient.sql(
             """

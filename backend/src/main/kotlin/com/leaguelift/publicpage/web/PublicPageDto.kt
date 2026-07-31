@@ -1,6 +1,7 @@
 package com.leaguelift.publicpage.web
 
 import com.leaguelift.common.web.PageResponse
+import com.leaguelift.media.application.MediaDescriptor
 import com.leaguelift.publicpage.domain.PageType
 import com.leaguelift.publicpage.domain.PublicPage
 import jakarta.validation.constraints.NotBlank
@@ -34,6 +35,15 @@ data class UpdatePublicPageRequest(
     val summary: String? = null,
 )
 
+data class PublicPageMediaResponse(
+    val assetId: UUID,
+    val url: String,
+    val altText: String?,
+    val contentType: String?,
+    val widthPx: Int?,
+    val heightPx: Int?,
+)
+
 data class PublicPageResponse(
     val id: UUID,
     val organizationId: UUID,
@@ -46,9 +56,23 @@ data class PublicPageResponse(
     val publishedAt: Instant?,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val logo: PublicPageMediaResponse? = null,
+    val cover: PublicPageMediaResponse? = null,
 )
 
-fun PublicPage.toResponse() = PublicPageResponse(
+fun MediaDescriptor.toPublicPageMediaResponse() = PublicPageMediaResponse(
+    assetId = assignment.assetId,
+    url = url,
+    altText = assignment.altText,
+    contentType = contentType,
+    widthPx = widthPx,
+    heightPx = heightPx,
+)
+
+fun PublicPage.toResponse(
+    logo: MediaDescriptor? = null,
+    cover: MediaDescriptor? = null,
+) = PublicPageResponse(
     id = id,
     organizationId = organizationId,
     pageType = pageType,
@@ -60,6 +84,8 @@ fun PublicPage.toResponse() = PublicPageResponse(
     publishedAt = publishedAt,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    logo = logo?.toPublicPageMediaResponse(),
+    cover = cover?.toPublicPageMediaResponse(),
 )
 
 typealias PublicPagePageResponse = PageResponse<PublicPageResponse>

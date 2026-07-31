@@ -1,4 +1,10 @@
-export type MediaUsageSlot = "LOGO" | "COVER" | "PRODUCT_DESIGN" | "SPONSOR_LOGO" | "DOCUMENT";
+export type MediaUsageSlot = "LOGO" | "COVER" | "PROFILE_PHOTO" | "PRODUCT_DESIGN" | "SPONSOR_LOGO" | "DOCUMENT";
+export type MediaEntityType = "ORGANIZATION" | "TEAM" | "TOURNAMENT" | "HOUSEHOLD_ADULT" | "PARTICIPANT" | "PRODUCT" | "SPONSOR" | "HOUSEHOLD";
+
+export interface MediaTarget {
+	entityType: MediaEntityType;
+	entityId: string;
+}
 
 export interface RequestUploadResponse {
 	assetId: string;

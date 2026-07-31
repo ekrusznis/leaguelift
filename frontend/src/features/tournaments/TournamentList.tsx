@@ -8,6 +8,7 @@ import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { TournamentRoleAssignmentsSection } from "../authorization/TournamentRoleAssignmentsSection";
+import { EntityBrandingPanel } from "../media/EntityBrandingPanel";
 import { useArchiveTournament, useCreateTournament, useTournaments } from "./api";
 import { createTournamentSchema, type CreateTournamentFormValues } from "./schema";
 
@@ -24,6 +25,7 @@ export function TournamentList({ organizationId }: { organizationId: string }) {
 	const archiveTournament = useArchiveTournament(organizationId);
 	const [showForm, setShowForm] = useState(false);
 	const [expandedTournamentId, setExpandedTournamentId] = useState<string | null>(null);
+	const [brandingTournamentId, setBrandingTournamentId] = useState<string | null>(null);
 
 	const {
 		register,
@@ -161,6 +163,13 @@ export function TournamentList({ organizationId }: { organizationId: string }) {
 									<Button
 										type="button"
 										variant="secondary"
+										onClick={() => setBrandingTournamentId(brandingTournamentId === tournament.id ? null : tournament.id)}
+									>
+										{brandingTournamentId === tournament.id ? "Hide branding" : "Branding"}
+									</Button>
+									<Button
+										type="button"
+										variant="secondary"
 										onClick={() => setExpandedTournamentId(expandedTournamentId === tournament.id ? null : tournament.id)}
 									>
 										{expandedTournamentId === tournament.id ? "Hide access" : "Manage access"}
@@ -175,6 +184,11 @@ export function TournamentList({ organizationId }: { organizationId: string }) {
 									</Button>
 								</div>
 							</div>
+							{brandingTournamentId === tournament.id && (
+								<div className="mt-3">
+									<EntityBrandingPanel organizationId={organizationId} entityType="TOURNAMENT" entityId={tournament.id} entityName={tournament.name} />
+								</div>
+							)}
 							{expandedTournamentId === tournament.id && (
 								<div className="mt-3">
 									<TournamentRoleAssignmentsSection organizationId={organizationId} tournamentId={tournament.id} />

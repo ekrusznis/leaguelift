@@ -30,6 +30,25 @@ class ParticipantRepository(private val jdbcClient: JdbcClient) {
             .param("organizationId", organizationId)
             .query(Long::class.java).single()
 
+    fun findAllForOrganization(organizationId: UUID, offset: Int, limit: Int): List<Participant> =
+        jdbcClient.sql(
+            """
+            select $P_COLS from participant
+            where organization_id = :organizationId and status != 'ARCHIVED'
+            order by last_name asc, first_name asc
+            offset :offset limit :limit
+            """.trimIndent(),
+        )
+            .param("organizationId", organizationId)
+            .param("offset", offset)
+            .param("limit", limit)
+            .query(::mapParticipant).list()
+
+    fun countAllForOrganization(organizationId: UUID): Long =
+        jdbcClient.sql("select count(*) from participant where organization_id = :organizationId and status != 'ARCHIVED'")
+            .param("organizationId", organizationId)
+            .query(Long::class.java).single()
+
     fun countActiveForTeam(teamId: UUID, organizationId: UUID): Long =
         jdbcClient.sql(
             """
@@ -118,6 +137,52 @@ class ParticipantRepository(private val jdbcClient: JdbcClient) {
         )
             .param("participantId", participantId).param("organizationId", organizationId)
             .query(::mapAssignment).list()
+
+    fun hasActiveTeamAssignment(participantId: UUID, teamId: UUID, organizationId: UUID): Boolean =
+        jdbcClient.sql(
+            """
+            select exists(
+                select 1 from participant_team
+                where participant_id = :participantId and team_id = :teamId
+                  and organization_id = :organizationId and status = 'ACTIVE'
+            )
+            """.trimIndent(),
+        )
+            .param("participantId", participantId)
+            .param("teamId", teamId)
+            .param("organizationId", organizationId)
+            .query(Boolean::class.java).single()
+
+    /**
+     * Idempotent onboarding/bulk-assignment helper. The V5 unique constraint keeps one
+     * row per participant/team, so an earlier inactive assignment is reactivated rather
+     * than causing a duplicate-key failure.
+     */
+    fun ensureTeamAssignment(participantId: UUID, teamId: UUID, organizationId: UUID, joinedAt: LocalDate?): Boolean {
+        val wasActive = hasActiveTeamAssignment(participantId, teamId, organizationId)
+        if (wasActive) return false
+        val now = Instant.now()
+        jdbcClient.sql(
+            """
+            insert into participant_team
+                (id, participant_id, team_id, organization_id, status, joined_at, created_at, updated_at)
+            values
+                (:id, :participantId, :teamId, :organizationId, 'ACTIVE', :joinedAt, :now, :now)
+            on conflict (participant_id, team_id)
+            do update set status = 'ACTIVE',
+                          joined_at = coalesce(excluded.joined_at, participant_team.joined_at),
+                          updated_at = excluded.updated_at
+            """.trimIndent(),
+        )
+            .param("id", UUID.randomUUID())
+            .param("participantId", participantId)
+            .param("teamId", teamId)
+            .param("organizationId", organizationId)
+            .param("joinedAt", joinedAt?.let { Date.valueOf(it) })
+            .param("now", Timestamp.from(now))
+            .update()
+        return true
+    }
 
     fun assignToTeam(participantId: UUID, teamId: UUID, organizationId: UUID, joinedAt: LocalDate?): ParticipantTeamAssignment {
         val now = Instant.now()

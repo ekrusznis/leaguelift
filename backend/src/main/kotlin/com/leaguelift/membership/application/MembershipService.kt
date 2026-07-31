@@ -52,6 +52,12 @@ class MembershipService(private val membershipRepository: MembershipRepository) 
 		return membership
 	}
 
+	fun hasManagerRole(organizationId: UUID, currentUser: CurrentUser): Boolean {
+		if (currentUser.platformAdministrator) return true
+		val membership = membershipRepository.findActiveMembership(organizationId, currentUser.userId) ?: return false
+		return membership.role == MembershipRole.OWNER || membership.role == MembershipRole.ADMINISTRATOR
+	}
+
 	/** OWNER or ADMINISTRATOR — the roles allowed to invite/manage other members. */
 	fun requireManagerRole(organizationId: UUID, currentUser: CurrentUser): OrganizationMembership {
 		val membership = requireActiveMembership(organizationId, currentUser)

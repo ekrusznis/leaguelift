@@ -5,6 +5,7 @@ import com.leaguelift.common.error.ValidationException
 import com.leaguelift.media.application.MediaDescriptor
 import com.leaguelift.media.application.RequestUploadResult
 import com.leaguelift.media.domain.MediaAsset
+import com.leaguelift.media.domain.MediaEntityType
 import com.leaguelift.media.domain.MediaUsageSlot
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
@@ -21,6 +22,16 @@ fun parseUsageSlot(value: String): MediaUsageSlot = try {
 	)
 }
 
+
+fun parseEntityType(value: String): MediaEntityType = try {
+	MediaEntityType.valueOf(value.uppercase())
+} catch (_: IllegalArgumentException) {
+	throw ValidationException(
+		"Entity type must be one of: ${MediaEntityType.entries.joinToString { it.name }}.",
+		listOf(FieldError("entityType", "Not a recognized media entity type.")),
+	)
+}
+
 data class RequestUploadRequest(
 	@field:NotBlank
 	val usageSlot: String,
@@ -31,6 +42,8 @@ data class RequestUploadRequest(
 	val contentType: String,
 	@field:Min(1)
 	val fileSizeBytes: Long,
+	val entityType: String? = null,
+	val entityId: UUID? = null,
 )
 
 data class RequestUploadResponse(

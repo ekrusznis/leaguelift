@@ -1,5 +1,7 @@
 package com.leaguelift.config
 
+import com.leaguelift.identity.application.PasswordAuthenticationService
+import com.leaguelift.identity.application.TokenService
 import com.leaguelift.testsupport.AbstractIntegrationTest
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -9,7 +11,6 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * Exercises DESIGN-DOC.md section 22.3 critical scenario "a test-profile authentication
@@ -23,50 +24,56 @@ import kotlin.test.assertTrue
  * `TestRestTemplate` in `spring-boot-test` by default.
  */
 class SecurityConfigIntegrationTest : AbstractIntegrationTest() {
+    @Autowired
+    lateinit var passwordAuthenticationService: PasswordAuthenticationService
 
-	@LocalServerPort
-	var port: Int = 0
+    @Autowired
+    lateinit var tokenService: TokenService
 
-	private val httpClient: HttpClient = HttpClient.newHttpClient()
+    @LocalServerPort
+    var port: Int = 0
 
-	private fun get(path: String, bearerToken: String? = null): HttpResponse<String> {
-		val builder = HttpRequest.newBuilder(URI.create("http://localhost:$port$path")).GET()
-		if (bearerToken != null) builder.header("Authorization", "Bearer $bearerToken")
-		return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString())
-	}
+    private val httpClient: HttpClient = HttpClient.newHttpClient()
 
-	@Test
-	fun `an unauthenticated request to a protected endpoint is rejected with 401, not silently allowed`() {
-		val response = get("/api/v1/me")
+    private fun get(path: String, bearerToken: String? = null): HttpResponse<String> {
+        val builder = HttpRequest.newBuilder(URI.create("http://localhost:$port$path")).GET()
+        if (bearerToken != null) builder.header("Authorization", "Bearer $bearerToken")
+        return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+    }
 
-		assertEquals(401, response.statusCode())
-	}
+    @Test
+    fun `an unauthenticated request to a protected endpoint is rejected with 401, not silently allowed`() {
+        val response = get("/api/v1/me")
 
-	@Test
-	fun `an unauthenticated request to a public endpoint still succeeds`() {
-		val response = get("/actuator/health")
+        assertEquals(401, response.statusCode())
+    }
 
-		assertEquals(200, response.statusCode())
-	}
+    @Test
+    fun `an unauthenticated request to a public endpoint still succeeds`() {
+        val response = get("/actuator/health")
 
-	@Test
-	fun `a real, freshly-issued JWT authenticates successfully against the real filter chain`() {
-		val email = "security-config-test-${System.nanoTime()}@example.com"
-		val registerRequest = HttpRequest.newBuilder(URI.create("http://localhost:$port/api/v1/auth/register"))
-			.header("Content-Type", "application/json")
-			.POST(
-				HttpRequest.BodyPublishers.ofString(
-					"""{"email":"$email","password":"password1234","firstName":"Security","lastName":"Test"}""",
-				),
-			)
-			.build()
-		val registerResponse = httpClient.send(registerRequest, HttpResponse.BodyHandlers.ofString())
-		assertEquals(201, registerResponse.statusCode())
-		val accessToken = Regex("\"accessToken\":\"([^\"]+)\"").find(registerResponse.body())?.groupValues?.get(1)
-		assertTrue(accessToken != null, "registration response should carry an accessToken: ${registerResponse.body()}")
+        assertEquals(200, response.statusCode())
+    }
 
-		val meResponse = get("/api/v1/me", bearerToken = accessToken)
+    @Test
+    fun `a real, freshly-issued JWT authenticates successfully against the real filter chain`() {
+        val appUser = passwordAuthenticationService.register(
+            email = "security-config-test-${System.nanoTime()}@example.com",
+            password = "password1234",
+            displayName = "Security Test",
+        )
 
-		assertEquals(200, meResponse.statusCode())
-	}
+        val token = tokenService.issueAccessToken(
+            userId = appUser.id,
+            email = appUser.email,
+            displayName = appUser.displayName,
+        )
+
+        val meResponse = get(
+            path = "/api/v1/me",
+            bearerToken = token.accessToken,
+        )
+
+        assertEquals(200, meResponse.statusCode())
+    }
 }

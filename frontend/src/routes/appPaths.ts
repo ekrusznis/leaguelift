@@ -1,5 +1,6 @@
 export type OrganizationSection =
 	| "overview"
+	| "onboarding"
 	| "teams"
 	| "tournaments"
 	| "households"

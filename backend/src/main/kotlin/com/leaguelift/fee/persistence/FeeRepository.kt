@@ -103,6 +103,32 @@ class FeeRepository(private val jdbcClient: JdbcClient) {
     }
 
     // --- Fee Assignments ---
+    fun hasActiveTemplateAssignment(
+        organizationId: UUID,
+        householdId: UUID,
+        feeTemplateId: UUID,
+        dueDate: LocalDate?,
+    ): Boolean =
+        jdbcClient.sql(
+            """
+        select exists(
+            select 1
+            from fee_assignment
+            where organization_id = :organizationId
+              and household_id = :householdId
+              and fee_template_id = :feeTemplateId
+              and participant_id is null
+              and status != 'CANCELLED'
+              and due_date is not distinct from :dueDate
+        )
+        """.trimIndent(),
+        )
+            .param("organizationId", organizationId)
+            .param("householdId", householdId)
+            .param("feeTemplateId", feeTemplateId)
+            .param("dueDate", dueDate?.let { Date.valueOf(it) })
+            .query(Boolean::class.java)
+            .single()
 
     fun findAssignmentById(id: UUID, organizationId: UUID): FeeAssignment? =
         jdbcClient.sql("select $A_COLS from fee_assignment where id = :id and organization_id = :organizationId")

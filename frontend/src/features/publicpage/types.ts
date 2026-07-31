@@ -1,6 +1,15 @@
 export type PageType = "ORGANIZATION" | "TEAM" | "TOURNAMENT";
 export type PageStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
+export interface PublicPageMedia {
+	assetId: string;
+	url: string;
+	altText: string | null;
+	contentType: string | null;
+	widthPx: number | null;
+	heightPx: number | null;
+}
+
 export interface PublicPage {
 	id: string;
 	organizationId: string;
@@ -13,6 +22,8 @@ export interface PublicPage {
 	publishedAt: string | null;
 	createdAt: string;
 	updatedAt: string;
+	logo: PublicPageMedia | null;
+	cover: PublicPageMedia | null;
 }
 
 export interface PublicPagePage {

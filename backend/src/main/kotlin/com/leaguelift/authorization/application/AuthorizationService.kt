@@ -274,6 +274,20 @@ class AuthorizationService(
 		return capability in CapabilityRegistry.householdCapabilities() && relationship.organizationId == organizationId
 	}
 
+	/** Exact guardian relationship check for privacy-sensitive household actions. */
+	fun hasGuardianRelationship(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): Boolean {
+		if (currentUser.platformAdministrator) return true
+		val relationship = guardianRelationshipRepository.findActiveForHousehold(currentUser.userId, householdId) ?: return false
+		return relationship.organizationId == organizationId
+	}
+
+	/** Exact adult-self relationship check for profile fields that one guardian may not edit for another adult. */
+	fun hasGuardianAdultRelationship(organizationId: UUID, householdAdultId: UUID, currentUser: CurrentUser): Boolean {
+		if (currentUser.platformAdministrator) return true
+		val relationship = guardianRelationshipRepository.findActiveForAdult(currentUser.userId, householdAdultId) ?: return false
+		return relationship.organizationId == organizationId
+	}
+
 	// --- Athlete (participant self) context ----------------------------------------------
 
 	/** The participant this signed-in user is the controlled self-login for, if any. */

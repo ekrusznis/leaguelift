@@ -58,4 +58,59 @@ class MediaAssignmentController(
 		@PathVariable usageSlot: String,
 		@AuthenticationPrincipal currentUser: CurrentUser,
 	) = mediaAssignmentService.removeOrganizationMedia(organizationId, parseUsageSlot(usageSlot), currentUser)
+	@GetMapping("/entities/{entityType}/{entityId}")
+	fun listEntityMedia(
+		@PathVariable organizationId: UUID,
+		@PathVariable entityType: String,
+		@PathVariable entityId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): MediaAssignmentListResponse {
+		val assignments = mediaAssignmentService.listEntityMedia(
+			organizationId,
+			parseEntityType(entityType),
+			entityId,
+			currentUser,
+		)
+		return MediaAssignmentListResponse(mediaReadService.describeAll(assignments).map { it.toResponse() })
+	}
+
+	@PutMapping("/entities/{entityType}/{entityId}/{usageSlot}")
+	fun assignEntityMedia(
+		@PathVariable organizationId: UUID,
+		@PathVariable entityType: String,
+		@PathVariable entityId: UUID,
+		@PathVariable usageSlot: String,
+		@Valid @RequestBody request: AssignMediaRequest,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): MediaAssignmentResponse {
+		val assignment = mediaAssignmentService.assignEntityMedia(
+			organizationId,
+			parseEntityType(entityType),
+			entityId,
+			parseUsageSlot(usageSlot),
+			request.assetId,
+			request.altText,
+			currentUser,
+		)
+		val descriptor = mediaReadService.describe(assignment)
+			?: error("Newly assigned media asset ${assignment.assetId} must exist.")
+		return descriptor.toResponse()
+	}
+
+	@DeleteMapping("/entities/{entityType}/{entityId}/{usageSlot}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	fun removeEntityMedia(
+		@PathVariable organizationId: UUID,
+		@PathVariable entityType: String,
+		@PathVariable entityId: UUID,
+		@PathVariable usageSlot: String,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	) = mediaAssignmentService.removeEntityMedia(
+		organizationId,
+		parseEntityType(entityType),
+		entityId,
+		parseUsageSlot(usageSlot),
+		currentUser,
+	)
+
 }

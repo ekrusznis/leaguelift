@@ -1,6 +1,7 @@
 package com.leaguelift.media.application
 
 import com.leaguelift.audit.application.AuditService
+import com.leaguelift.common.error.ForbiddenException
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.error.ValidationException
 import com.leaguelift.common.web.CurrentUser
@@ -22,20 +23,11 @@ import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 /**
- * Assigns a READY media asset to an entity's usage slot (DESIGN-DOC.md section
- * 11.3) — ORGANIZATION (LOGO/COVER, branding) and PRODUCT (PRODUCT_DESIGN, Phase 4
- * store) for now. Re-assigning a slot retires the prior assignment and archives
- * its asset rather than versioning within one asset — simpler, and nothing in
- * this slice needs upload history beyond what ARCHIVED already preserves.
- *
- * Visibility is computed differently per entity type (an organization's page-
- * publish status vs. a product's own ACTIVE status), and those two questions live
- * in different modules — rather than give this module a dependency back on
- * `store` (or `publicpage` reaching further than it already does), the generic
- * [assign] takes a `visibilityOf` supplier the caller provides, invoked only after
- * asset validation succeeds. [assignOrganizationMedia] preserves the original
- * organization-branding behavior/contract exactly, computing that decision
- * internally as before.
+ * Assigns READY media assets to polymorphic business entities. Existing product,
+ * sponsor, document, and organization workflows retain their manager-only entry
+ * points. Phase 16 branding uses [MediaEntityAccessService] so team/tournament roles,
+ * guardians, and controlled athlete-self accounts are authorized at the exact target
+ * rather than promoted to organization-wide manager access.
  */
 @Service
 class MediaAssignmentService(
@@ -43,6 +35,7 @@ class MediaAssignmentService(
 	private val mediaAssetRepository: MediaAssetRepository,
 	private val publicPageRepository: PublicPageRepository,
 	private val membershipService: MembershipService,
+	private val mediaEntityAccessService: MediaEntityAccessService,
 	private val auditService: AuditService,
 	private val outboxWriter: OutboxWriter,
 ) {
@@ -59,15 +52,63 @@ class MediaAssignmentService(
 		visibilityOf: () -> Visibility,
 	): MediaAssignment {
 		membershipService.requireManagerRole(organizationId, currentUser)
+		return assignInternal(
+			organizationId,
+			entityType,
+			entityId,
+			usageSlot,
+			assetId,
+			altText,
+			currentUser,
+			visibilityOf,
+		)
+	}
+
+	@Transactional
+	fun assignEntityMedia(
+		organizationId: UUID,
+		entityType: MediaEntityType,
+		entityId: UUID,
+		usageSlot: MediaUsageSlot,
+		assetId: UUID,
+		altText: String?,
+		currentUser: CurrentUser,
+	): MediaAssignment {
+		val target = mediaEntityAccessService.resolveForManage(organizationId, entityType, entityId, currentUser)
+		mediaEntityAccessService.requireAllowedSlot(target, usageSlot)
+		return assignInternal(
+			organizationId,
+			entityType,
+			entityId,
+			usageSlot,
+			assetId,
+			altText,
+			currentUser,
+		) { target.visibility }
+	}
+
+	private fun assignInternal(
+		organizationId: UUID,
+		entityType: MediaEntityType,
+		entityId: UUID,
+		usageSlot: MediaUsageSlot,
+		assetId: UUID,
+		altText: String?,
+		currentUser: CurrentUser,
+		visibilityOf: () -> Visibility,
+	): MediaAssignment {
 		val asset = mediaAssetRepository.findById(assetId, organizationId)
 			?: throw NotFoundException("MEDIA_ASSET_NOT_FOUND", "The media asset could not be found.")
 		if (asset.status != MediaAssetStatus.READY) {
 			throw ValidationException("Only a successfully uploaded asset can be assigned.")
 		}
+		if (asset.intendedUsageSlot != usageSlot) {
+			throw ValidationException("The uploaded asset was requested for ${asset.intendedUsageSlot.name}, not ${usageSlot.name}.")
+		}
+		if (asset.uploadedByUserId != currentUser.userId && !membershipService.hasManagerRole(organizationId, currentUser)) {
+			throw ForbiddenException("MEDIA_ASSET_ACCESS_DENIED", "You cannot assign this media asset.")
+		}
 
-		// Deferred until after validation above — computing this eagerly (e.g. an
-		// organization's public-page lookup) would run an extra query even when the
-		// asset lookup/READY check is about to fail the whole call anyway.
 		val visibility = visibilityOf()
 		val publicationStatus = if (visibility == Visibility.PUBLIC) PublicationStatus.PUBLISHED else PublicationStatus.PRIVATE
 
@@ -107,8 +148,37 @@ class MediaAssignmentService(
 	}
 
 	@Transactional
-	fun remove(organizationId: UUID, entityType: MediaEntityType, entityId: UUID, usageSlot: MediaUsageSlot, currentUser: CurrentUser) {
+	fun remove(
+		organizationId: UUID,
+		entityType: MediaEntityType,
+		entityId: UUID,
+		usageSlot: MediaUsageSlot,
+		currentUser: CurrentUser,
+	) {
 		membershipService.requireManagerRole(organizationId, currentUser)
+		removeInternal(organizationId, entityType, entityId, usageSlot, currentUser)
+	}
+
+	@Transactional
+	fun removeEntityMedia(
+		organizationId: UUID,
+		entityType: MediaEntityType,
+		entityId: UUID,
+		usageSlot: MediaUsageSlot,
+		currentUser: CurrentUser,
+	) {
+		val target = mediaEntityAccessService.resolveForManage(organizationId, entityType, entityId, currentUser)
+		mediaEntityAccessService.requireAllowedSlot(target, usageSlot)
+		removeInternal(organizationId, entityType, entityId, usageSlot, currentUser)
+	}
+
+	private fun removeInternal(
+		organizationId: UUID,
+		entityType: MediaEntityType,
+		entityId: UUID,
+		usageSlot: MediaUsageSlot,
+		currentUser: CurrentUser,
+	) {
 		val active = mediaAssignmentRepository.findActiveBySlot(entityType, entityId, usageSlot)
 			?: throw NotFoundException("MEDIA_ASSIGNMENT_NOT_FOUND", "No active assignment for this slot.")
 		mediaAssignmentRepository.retire(active.id, organizationId)
@@ -121,20 +191,41 @@ class MediaAssignmentService(
 		)
 	}
 
-	fun listActive(organizationId: UUID, entityType: MediaEntityType, entityId: UUID, currentUser: CurrentUser): List<MediaAssignment> {
+	fun listActive(
+		organizationId: UUID,
+		entityType: MediaEntityType,
+		entityId: UUID,
+		currentUser: CurrentUser,
+	): List<MediaAssignment> {
 		membershipService.requireActiveMembership(organizationId, currentUser)
 		return mediaAssignmentRepository.listActive(entityType, entityId)
 	}
 
-	/** The only PUBLIC-visibility assignment a fully unauthenticated caller (e.g. a public storefront) may ever see — never returns a PRIVATE one. */
+	fun listEntityMedia(
+		organizationId: UUID,
+		entityType: MediaEntityType,
+		entityId: UUID,
+		currentUser: CurrentUser,
+	): List<MediaAssignment> {
+		mediaEntityAccessService.resolveForRead(organizationId, entityType, entityId, currentUser)
+		return mediaAssignmentRepository.listActive(entityType, entityId)
+	}
+
+	/** The only PUBLIC-visibility assignment a fully unauthenticated caller may see. */
 	fun getPublicAssignment(entityType: MediaEntityType, entityId: UUID, usageSlot: MediaUsageSlot): MediaAssignment? =
 		mediaAssignmentRepository.findActiveBySlot(entityType, entityId, usageSlot)?.takeIf { it.visibility == Visibility.PUBLIC }
 
-	/** No visibility filter — for internal backend-to-provider calls (e.g. handing a design image to Printify at fulfillment time), never for responses sent to a browser. */
+	/** Internal/public-page composition read. Callers must establish their own visibility boundary first. */
 	fun getActiveAssignment(entityType: MediaEntityType, entityId: UUID, usageSlot: MediaUsageSlot): MediaAssignment? =
 		mediaAssignmentRepository.findActiveBySlot(entityType, entityId, usageSlot)
 
-	fun assignOrganizationMedia(organizationId: UUID, usageSlot: MediaUsageSlot, assetId: UUID, altText: String?, currentUser: CurrentUser): MediaAssignment =
+	fun assignOrganizationMedia(
+		organizationId: UUID,
+		usageSlot: MediaUsageSlot,
+		assetId: UUID,
+		altText: String?,
+		currentUser: CurrentUser,
+	): MediaAssignment =
 		assign(organizationId, MediaEntityType.ORGANIZATION, organizationId, usageSlot, assetId, altText, currentUser) {
 			computeOrganizationVisibility(organizationId)
 		}
@@ -145,12 +236,6 @@ class MediaAssignmentService(
 	fun listActiveOrganizationMedia(organizationId: UUID, currentUser: CurrentUser): List<MediaAssignment> =
 		listActive(organizationId, MediaEntityType.ORGANIZATION, organizationId, currentUser)
 
-	/**
-	 * PUBLIC once the organization's public page is PUBLISHED, else ORGANIZATION_PRIVATE
-	 * (DESIGN-DOC.md section 11.3). Computed at assign-time only — not retroactively
-	 * recomputed if the page later publishes/unpublishes (documented gap, cheap
-	 * fast-follow: have PublicPageService touch media assignments on publish/unpublish).
-	 */
 	private fun computeOrganizationVisibility(organizationId: UUID): Visibility {
 		val page = publicPageRepository.findByEntityId(organizationId) ?: return Visibility.ORGANIZATION_PRIVATE
 		return if (page.pageType == PageType.ORGANIZATION && page.status == PageStatus.PUBLISHED) {

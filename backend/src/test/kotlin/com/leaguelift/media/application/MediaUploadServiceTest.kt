@@ -6,6 +6,8 @@ import com.leaguelift.common.error.ValidationException
 import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.media.domain.MediaAsset
 import com.leaguelift.media.domain.MediaAssetStatus
+import com.leaguelift.media.domain.MediaEntityType
+import com.leaguelift.media.domain.Visibility
 import com.leaguelift.media.domain.MediaUsageSlot
 import com.leaguelift.media.infra.ObjectHead
 import com.leaguelift.media.infra.PresignedUpload
@@ -35,9 +37,10 @@ class MediaUploadServiceTest {
 	private val mediaAssetRepository = mockk<MediaAssetRepository>()
 	private val spacesClient = mockk<SpacesClient>()
 	private val membershipService = mockk<MembershipService>()
+	private val mediaEntityAccessService = mockk<MediaEntityAccessService>()
 	private val auditService = mockk<AuditService>()
 	private val outboxWriter = mockk<OutboxWriter>()
-	private val service = MediaUploadService(mediaAssetRepository, spacesClient, membershipService, auditService, outboxWriter)
+	private val service = MediaUploadService(mediaAssetRepository, spacesClient, membershipService, mediaEntityAccessService, auditService, outboxWriter)
 
 	private val orgId = UUID.randomUUID()
 	private val currentUser = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
@@ -52,6 +55,42 @@ class MediaUploadServiceTest {
 		service.requestUpload(orgId, MediaUsageSlot.LOGO, "logo.png", "image/png", 1024, currentUser)
 
 		verify(exactly = 1) { membershipService.requireManagerRole(orgId, currentUser) }
+	}
+
+	@Test
+	fun `target-scoped request uses entity authorization instead of organization manager role`() {
+		val participantId = UUID.randomUUID()
+		val target = ResolvedMediaTarget(
+			organizationId = orgId,
+			entityType = MediaEntityType.PARTICIPANT,
+			entityId = participantId,
+			allowedSlots = setOf(MediaUsageSlot.PROFILE_PHOTO),
+			visibility = Visibility.HOUSEHOLD_PRIVATE,
+		)
+		every {
+			mediaEntityAccessService.resolveForManage(orgId, MediaEntityType.PARTICIPANT, participantId, currentUser)
+		} returns target
+		every { mediaEntityAccessService.requireAllowedSlot(target, MediaUsageSlot.PROFILE_PHOTO) } just runs
+		every { mediaAssetRepository.insert(any(), any(), any(), any(), any(), any(), any()) } returns
+			pendingAsset().copy(intendedUsageSlot = MediaUsageSlot.PROFILE_PHOTO)
+		every { spacesClient.presignedPutUrl(any(), any(), any()) } returns PresignedUpload("https://minio.local/put", Instant.now())
+		every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+
+		service.requestUpload(
+			orgId,
+			MediaUsageSlot.PROFILE_PHOTO,
+			"profile.webp",
+			"image/webp",
+			1024,
+			currentUser,
+			MediaEntityType.PARTICIPANT,
+			participantId,
+		)
+
+		verify(exactly = 0) { membershipService.requireManagerRole(any(), any()) }
+		verify(exactly = 1) {
+			mediaEntityAccessService.resolveForManage(orgId, MediaEntityType.PARTICIPANT, participantId, currentUser)
+		}
 	}
 
 	@Test

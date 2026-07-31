@@ -30,6 +30,8 @@ class MediaUploadController(private val mediaUploadService: MediaUploadService) 
 			request.contentType,
 			request.fileSizeBytes,
 			currentUser,
+			request.entityType?.let(::parseEntityType),
+			request.entityId,
 		)
 		return ResponseEntity.status(HttpStatus.CREATED).body(result.toResponse())
 	}

@@ -8,6 +8,7 @@ import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { TeamRoleAssignmentsSection } from "../authorization/TeamRoleAssignmentsSection";
+import { EntityBrandingPanel } from "../media/EntityBrandingPanel";
 import { useArchiveTeam, useCreateTeam, useTeams } from "./api";
 import { createTeamSchema, type CreateTeamFormValues } from "./schema";
 
@@ -17,6 +18,7 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 	const archiveTeam = useArchiveTeam(organizationId);
 	const [showForm, setShowForm] = useState(false);
 	const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
+	const [brandingTeamId, setBrandingTeamId] = useState<string | null>(null);
 
 	const {
 		register,
@@ -130,6 +132,13 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 									<Button
 										type="button"
 										variant="secondary"
+										onClick={() => setBrandingTeamId(brandingTeamId === team.id ? null : team.id)}
+									>
+										{brandingTeamId === team.id ? "Hide branding" : "Branding"}
+									</Button>
+									<Button
+										type="button"
+										variant="secondary"
 										onClick={() => setExpandedTeamId(expandedTeamId === team.id ? null : team.id)}
 									>
 										{expandedTeamId === team.id ? "Hide access" : "Manage access"}
@@ -144,6 +153,11 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 									</Button>
 								</div>
 							</div>
+							{brandingTeamId === team.id && (
+								<div className="mt-3">
+									<EntityBrandingPanel organizationId={organizationId} entityType="TEAM" entityId={team.id} entityName={team.name} />
+								</div>
+							)}
 							{expandedTeamId === team.id && (
 								<div className="mt-3">
 									<TeamRoleAssignmentsSection organizationId={organizationId} teamId={team.id} />

@@ -3,8 +3,8 @@ package com.leaguelift.media.domain
 import java.time.Instant
 import java.util.UUID
 
-/** ORGANIZATION (branding + org-level documents), PRODUCT (Phase 4 store design), SPONSOR (Phase 6 slice 1 sponsor logo), and HOUSEHOLD (Phase 7 completion, documents only) — team/tournament logos remain an intentional fast-follow (DESIGN-DOC.md section 11.3). */
-enum class MediaEntityType { ORGANIZATION, PRODUCT, SPONSOR, HOUSEHOLD }
+/** Polymorphic media targets. Phase 16 adds TEAM/TOURNAMENT branding and private adult/participant profile photos to the existing organization/product/sponsor/document pipeline. */
+enum class MediaEntityType { ORGANIZATION, TEAM, TOURNAMENT, HOUSEHOLD_ADULT, PARTICIPANT, PRODUCT, SPONSOR, HOUSEHOLD }
 
 enum class PublicationStatus { PRIVATE, APPROVED, PUBLISHED, RETIRED }
 
