@@ -11,6 +11,7 @@ import com.leaguelift.dashboard.web.OwnerSummaryResponse
 import com.leaguelift.dashboard.web.ReportMetric
 import com.leaguelift.dashboard.web.ScheduleItem
 import com.leaguelift.dashboard.web.TeamPerformanceRow
+import com.leaguelift.event.application.EventService
 import com.leaguelift.fee.persistence.FeeRepository
 import com.leaguelift.fundraising.persistence.CampaignRepository
 import com.leaguelift.fundraising.persistence.ContributionRepository
@@ -39,7 +40,7 @@ private const val RECENT_ACTIVITY_LIMIT = 10
  * financial overview's apparel/payout figures and reports snapshot's dollar values,
  * both now read from `ledger_entry`/`PayoutAccountService` instead of hardcoded
  * literals); canned sample data only where the backing model genuinely doesn't exist
- * yet (attention queue, upcoming events, onboarding progress, reports snapshot's
+ * yet (attention queue, onboarding progress, reports snapshot's
  * trend percentages — no historical/time-series tracking exists to compute a real
  * period-over-period change) — each demo-backed response is tagged `isDemoData` /
  * `isFundraisingDemoData` so the frontend can label it rather than presenting it as
@@ -59,6 +60,8 @@ class OwnerDashboardService(
 	private val contributionRepository: ContributionRepository,
 	private val ledgerEntryRepository: LedgerEntryRepository,
 	private val payoutAccountService: PayoutAccountService,
+	private val eventService: EventService,
+	private val dashboardEventMapper: DashboardEventMapper,
 ) {
 
 	fun getSummary(organizationId: UUID, currentUser: CurrentUser): OwnerSummaryResponse {
@@ -118,13 +121,11 @@ class OwnerDashboardService(
 			}
 	}
 
-	fun getUpcomingEvents(organizationId: UUID, currentUser: CurrentUser): List<ScheduleItem> {
-		membershipService.requireActiveMembership(organizationId, currentUser)
-		return listOf(
-			ScheduleItem("evt-1", "MAY", "24", "Boys U12 Blue vs. Northfork FC", "League Game", "10:00 AM", "Home"),
-			ScheduleItem("evt-2", "MAY", "31", "Girls U14 Elite Tournament", "Tournament", "All Day", "Tournament"),
-		)
-	}
+	fun getUpcomingEvents(organizationId: UUID, currentUser: CurrentUser): List<ScheduleItem> =
+		dashboardEventMapper.upcoming(
+			eventService.listForOrganization(organizationId, currentUser, offset = 0, limit = 50),
+			includeDrafts = true,
+		).map { dashboardEventMapper.toScheduleItem(it, organizationId) }
 
 	fun getRecentActivity(organizationId: UUID, currentUser: CurrentUser): List<ActivityItem> {
 		membershipService.requireActiveMembership(organizationId, currentUser)

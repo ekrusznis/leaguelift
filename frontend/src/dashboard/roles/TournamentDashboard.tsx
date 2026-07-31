@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { DashboardShell, type DashNavItem } from "../DashboardShell";
 import { DashCard } from "../components/DashCard";
 import { DashboardPageHeader } from "../components/DashboardPageHeader";
@@ -5,6 +6,8 @@ import { Pill } from "../components/Pill";
 import { CardQuery } from "../components/CardQuery";
 import { sidebarPromoBackground } from "../demoAssets";
 import { useAuth } from "../../auth/AuthContext";
+import { appPaths } from "../../routes/appPaths";
+import { PrimaryButton } from "../../marketing/components/buttons";
 import { useContexts } from "../../authorization/api";
 import { capabilitiesFor } from "../../authorization/capabilities";
 import { navItemsFor } from "../registry/navRegistry";
@@ -27,10 +30,10 @@ export function TournamentDashboard({ organizationId, tournamentId }: { organiza
 
 	const contexts = useContexts();
 	const tournamentCapabilities = capabilitiesFor(contexts.data, "TOURNAMENT", tournamentId);
-	const navItems: DashNavItem[] = navItemsFor("TOURNAMENT", tournamentCapabilities).map((item, index) => ({
+	const navItems: DashNavItem[] = navItemsFor("TOURNAMENT", tournamentCapabilities, { organizationId, tournamentId }).map((item) => ({
 		icon: item.icon,
 		label: item.label,
-		active: index === 0,
+		to: item.to,
 	}));
 	const visibleWidgets = visibleWidgetIds("TOURNAMENT", tournamentCapabilities);
 
@@ -44,16 +47,17 @@ export function TournamentDashboard({ organizationId, tournamentId }: { organiza
 			userName={user?.displayName ?? "Account"}
 			promo={{
 				heading: "Run a tournament families love.",
-				copy: "Manage your tournament page, teams, and revenue in one place.",
-				linkLabel: "Learn more",
+				copy: "Keep the tournament page and changing event schedule easy to find.",
+				linkLabel: "View Schedule",
+				to: appPaths.tournamentEvents(organizationId, tournamentId),
 				backgroundSrc: sidebarPromoBackground,
 			}}
 		>
-			<DashboardPageHeader heading="Tournament Overview" description="Here's what's happening with your tournament." />
+			<DashboardPageHeader heading="Tournament Overview" description="Here's what's happening with your tournament." actions={<PrimaryButton icon="none" to={appPaths.tournamentEvents(organizationId, tournamentId)}>Manage Schedule</PrimaryButton>} />
 
 			<div className="grid gap-5 lg:grid-cols-2">
 				{visibleWidgets.has("tournament.summary") && (
-					<DashCard title="Tournament">
+					<DashCard id="tournament-summary" title="Tournament">
 						<CardQuery query={summary} loadingLabel="Loading tournament…">
 							{(data) => (
 								<div>
@@ -78,7 +82,7 @@ export function TournamentDashboard({ organizationId, tournamentId }: { organiza
 				)}
 
 				{visibleWidgets.has("tournament.page-status") && (
-					<DashCard title="Tournament Page Status" action={{ label: "Edit Page" }}>
+					<DashCard id="tournament-page" title="Tournament Page Status">
 						<CardQuery query={pageStatus} loadingLabel="Loading page status…">
 							{(data) => (
 								<div className="rounded-xl bg-navy-900 p-4 text-white">
@@ -86,7 +90,12 @@ export function TournamentDashboard({ organizationId, tournamentId }: { organiza
 										<p className="font-heading font-bold">{data.tournamentName}</p>
 										<Pill tone={data.status === "PUBLISHED" ? "success" : "neutral"}>{data.status}</Pill>
 									</div>
-									{data.slug && <p className="text-xs text-slate-400">/{data.slug}</p>}
+									{data.slug && (
+									<div className="mt-2 flex items-center justify-between gap-3">
+										<p className="text-xs text-slate-400">/{data.slug}</p>
+										<Link to={`/p/${data.slug}`} className="text-xs font-semibold text-green-400 hover:underline">View page</Link>
+									</div>
+								)}
 								</div>
 							)}
 						</CardQuery>

@@ -1,27 +1,36 @@
 import type { ReactNode } from "react";
 import type { ContextType } from "../../authorization/types";
 import { Capabilities } from "../../authorization/capabilityConstants";
+import { appPaths, type HouseholdSection, type OrganizationSection } from "../../routes/appPaths";
 import {
 	BuildingIcon,
 	CalendarIcon,
 	ChartIcon,
 	DollarIcon,
 	FileTextIcon,
-	GiftIcon,
 	HeartHandshakeIcon,
-	HistoryIcon,
 	HomeIcon,
 	LayoutIcon,
 	MegaphoneIcon,
 	PackageIcon,
 	SettingsIcon,
 	ShieldIcon,
-	ShirtIcon,
 	TrophyIcon,
 	UserIcon,
 	UserPlusIcon,
 	UsersIcon,
 } from "../icons";
+
+export type NavDestination =
+	| { type: "dashboard"; hash?: string }
+	| { type: "organizations" }
+	| { type: "platform-organizations" }
+	| { type: "organization"; section: OrganizationSection }
+	| { type: "household"; section: HouseholdSection }
+	| { type: "team-events" }
+	| { type: "tournament-events" }
+	| { type: "participant-events" }
+	| { type: "platform-reports" };
 
 export interface NavRegistryItem {
 	id: string;
@@ -29,117 +38,123 @@ export interface NavRegistryItem {
 	icon: ReactNode;
 	/** Which context type(s) this item applies to. */
 	contextTypes: ContextType[];
-	/** Any one of these capabilities (in the active context) is enough to show the item. Omit for "always shown in this context type". */
+	/** Any one of these capabilities is enough to show the item. */
 	requiredCapabilities?: string[];
+	/** A concrete route or dashboard anchor. Visible navigation is never decorative. */
+	destination: NavDestination;
+}
+
+export interface NavRouteContext {
+	organizationId?: string | null;
+	householdId?: string | null;
+	teamId?: string | null;
+	tournamentId?: string | null;
+	participantId?: string | null;
+}
+
+export interface ResolvedNavRegistryItem extends NavRegistryItem {
+	to: string;
 }
 
 /**
- * Data-driven nav items, filtered by real context/capability data rather than
- * hardcoded per-role JSX (DESIGN-DOC.md section 4.2/10.3). Covers every persona
- * dashboard's nav, including Owner/Parent/Athlete (migrated off their static
- * NAV_ITEMS arrays post-Phase-7, closing the ADR-020 consequence that only
- * Coach/Tournament/Platform Admin used this registry). Owner/Parent/Athlete items
- * are unconditional (no requiredCapabilities) to preserve their exact pre-migration
- * behavior — only Coach's Fees/Members/Settings were ever capability-gated.
+ * Deliberately small role-specific navigation. Features without a usable route are
+ * omitted instead of appearing as inert labels. Detailed settings remain grouped on
+ * the existing organization/household pages rather than filling the sidebar with
+ * one item per database table.
  */
 export const NAV_REGISTRY: NavRegistryItem[] = [
 	// Owner/Director (ORGANIZATION context)
-	{ id: "owner.overview", label: "Overview", icon: <HomeIcon className="size-5" />, contextTypes: ["ORGANIZATION"] },
-	{ id: "owner.organization", label: "Organization", icon: <BuildingIcon className="size-5" />, contextTypes: ["ORGANIZATION"] },
-	{ id: "owner.teams", label: "Teams", icon: <UsersIcon className="size-5" />, contextTypes: ["ORGANIZATION"] },
-	{ id: "owner.tournaments", label: "Tournaments", icon: <TrophyIcon className="size-5" />, contextTypes: ["ORGANIZATION"] },
-	{ id: "owner.households", label: "Households", icon: <HomeIcon className="size-5" />, contextTypes: ["ORGANIZATION"] },
-	{ id: "owner.participants", label: "Participants", icon: <UserIcon className="size-5" />, contextTypes: ["ORGANIZATION"] },
-	{ id: "owner.fees", label: "Fees & Payments", icon: <DollarIcon className="size-5" />, contextTypes: ["ORGANIZATION"] },
-	{ id: "owner.fundraising", label: "Fundraising", icon: <HeartHandshakeIcon className="size-5" />, contextTypes: ["ORGANIZATION"] },
-	{ id: "owner.apparel", label: "Apparel", icon: <ShirtIcon className="size-5" />, contextTypes: ["ORGANIZATION"] },
-	{ id: "owner.sponsorships", label: "Sponsorships", icon: <MegaphoneIcon className="size-5" />, contextTypes: ["ORGANIZATION"] },
-	{ id: "owner.credits", label: "Credits", icon: <GiftIcon className="size-5" />, contextTypes: ["ORGANIZATION"] },
-	{ id: "owner.reports", label: "Reports", icon: <ChartIcon className="size-5" />, contextTypes: ["ORGANIZATION"] },
-	{ id: "owner.members", label: "Members", icon: <UserPlusIcon className="size-5" />, contextTypes: ["ORGANIZATION"] },
-	{ id: "owner.settings", label: "Settings", icon: <SettingsIcon className="size-5" />, contextTypes: ["ORGANIZATION"] },
+	{ id: "owner.overview", label: "Overview", icon: <HomeIcon className="size-5" />, contextTypes: ["ORGANIZATION"], destination: { type: "dashboard" } },
+	{ id: "owner.organization", label: "Organization", icon: <BuildingIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_MANAGE], destination: { type: "organization", section: "overview" } },
+	{ id: "owner.teams", label: "Teams", icon: <UsersIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_TEAM_MANAGE, Capabilities.ORG_MANAGE], destination: { type: "organization", section: "teams" } },
+	{ id: "owner.tournaments", label: "Tournaments", icon: <TrophyIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_TOURNAMENT_MANAGE, Capabilities.ORG_MANAGE], destination: { type: "organization", section: "tournaments" } },
+	{ id: "owner.households", label: "Households & Athletes", icon: <UsersIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_MANAGE], destination: { type: "organization", section: "households" } },
+	{ id: "owner.events", label: "Events", icon: <CalendarIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.EVENT_READ, Capabilities.ORG_EVENT_MANAGE], destination: { type: "organization", section: "events" } },
+	{ id: "owner.fees", label: "Fees & Payments", icon: <DollarIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_REPORT_VIEW, Capabilities.ORG_MANAGE], destination: { type: "organization", section: "fees" } },
+	{ id: "owner.fundraising", label: "Fundraising", icon: <HeartHandshakeIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_MANAGE], destination: { type: "organization", section: "fundraising" } },
+	{ id: "owner.stores", label: "Stores & Orders", icon: <PackageIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_MANAGE], destination: { type: "organization", section: "stores" } },
+	{ id: "owner.sponsorships", label: "Sponsorships", icon: <MegaphoneIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_MANAGE], destination: { type: "organization", section: "sponsorships" } },
+	{ id: "owner.reports", label: "Reports", icon: <ChartIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_REPORT_VIEW], destination: { type: "organization", section: "reports" } },
+	{ id: "owner.documents", label: "Documents", icon: <FileTextIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_MANAGE], destination: { type: "organization", section: "documents" } },
+	{ id: "owner.members", label: "Members", icon: <UserPlusIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_MEMBERS_MANAGE], destination: { type: "organization", section: "members" } },
+	{ id: "owner.settings", label: "Settings", icon: <SettingsIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_MANAGE, Capabilities.ORG_BILLING_MANAGE, Capabilities.ORG_PAYOUT_MANAGE], destination: { type: "organization", section: "settings" } },
 
 	// Parent/Guardian (HOUSEHOLD context)
-	{ id: "parent.overview", label: "Overview", icon: <HomeIcon className="size-5" />, contextTypes: ["HOUSEHOLD"] },
-	{ id: "parent.athletes", label: "My Athletes", icon: <UsersIcon className="size-5" />, contextTypes: ["HOUSEHOLD"] },
-	{ id: "parent.schedule", label: "Schedule", icon: <CalendarIcon className="size-5" />, contextTypes: ["HOUSEHOLD"] },
-	{ id: "parent.fees", label: "Fees & Payments", icon: <DollarIcon className="size-5" />, contextTypes: ["HOUSEHOLD"] },
-	{ id: "parent.credits", label: "Credits", icon: <GiftIcon className="size-5" />, contextTypes: ["HOUSEHOLD"] },
-	{ id: "parent.fundraising", label: "Fundraising", icon: <HeartHandshakeIcon className="size-5" />, contextTypes: ["HOUSEHOLD"] },
-	{ id: "parent.orders", label: "Orders", icon: <PackageIcon className="size-5" />, contextTypes: ["HOUSEHOLD"] },
-	{ id: "parent.documents", label: "Documents", icon: <FileTextIcon className="size-5" />, contextTypes: ["HOUSEHOLD"] },
-	{ id: "parent.profile", label: "Profile", icon: <UserIcon className="size-5" />, contextTypes: ["HOUSEHOLD"] },
+	{ id: "parent.overview", label: "Overview", icon: <HomeIcon className="size-5" />, contextTypes: ["HOUSEHOLD"], destination: { type: "dashboard" } },
+	{ id: "parent.athletes", label: "My Athletes", icon: <UsersIcon className="size-5" />, contextTypes: ["HOUSEHOLD"], destination: { type: "household", section: "participants" } },
+	{ id: "parent.schedule", label: "Family Schedule", icon: <CalendarIcon className="size-5" />, contextTypes: ["HOUSEHOLD"], requiredCapabilities: [Capabilities.EVENT_READ], destination: { type: "household", section: "events" } },
+	{ id: "parent.fees", label: "Fees & Payments", icon: <DollarIcon className="size-5" />, contextTypes: ["HOUSEHOLD"], requiredCapabilities: [Capabilities.HOUSEHOLD_FEE_VIEW], destination: { type: "household", section: "fees" } },
+	{ id: "parent.fundraising", label: "Fundraising", icon: <HeartHandshakeIcon className="size-5" />, contextTypes: ["HOUSEHOLD"], destination: { type: "dashboard", hash: "parent-fundraising" } },
+	{ id: "parent.documents", label: "Documents", icon: <FileTextIcon className="size-5" />, contextTypes: ["HOUSEHOLD"], destination: { type: "household", section: "documents" } },
+	{ id: "parent.profile", label: "Household Profile", icon: <UserIcon className="size-5" />, contextTypes: ["HOUSEHOLD"], requiredCapabilities: [Capabilities.HOUSEHOLD_VIEW], destination: { type: "household", section: "profile" } },
 
 	// Athlete (ATHLETE context)
-	{ id: "athlete.overview", label: "Overview", icon: <HomeIcon className="size-5" />, contextTypes: ["ATHLETE"] },
-	{ id: "athlete.profile", label: "My Profile", icon: <UserIcon className="size-5" />, contextTypes: ["ATHLETE"] },
-	{ id: "athlete.teams", label: "My Teams", icon: <UsersIcon className="size-5" />, contextTypes: ["ATHLETE"] },
-	{ id: "athlete.schedule", label: "Schedule", icon: <CalendarIcon className="size-5" />, contextTypes: ["ATHLETE"] },
-	{ id: "athlete.history", label: "History", icon: <HistoryIcon className="size-5" />, contextTypes: ["ATHLETE"] },
-	{ id: "athlete.guardians", label: "Guardians", icon: <ShieldIcon className="size-5" />, contextTypes: ["ATHLETE"] },
-	{ id: "athlete.orders", label: "Orders", icon: <PackageIcon className="size-5" />, contextTypes: ["ATHLETE"] },
+	{ id: "athlete.overview", label: "Overview", icon: <HomeIcon className="size-5" />, contextTypes: ["ATHLETE"], destination: { type: "dashboard" } },
+	{ id: "athlete.schedule", label: "Schedule", icon: <CalendarIcon className="size-5" />, contextTypes: ["ATHLETE"], requiredCapabilities: [Capabilities.ATHLETE_SCHEDULE_VIEW, Capabilities.EVENT_RSVP_SELF], destination: { type: "participant-events" } },
+	{ id: "athlete.teams", label: "My Teams", icon: <UsersIcon className="size-5" />, contextTypes: ["ATHLETE"], requiredCapabilities: [Capabilities.ATHLETE_TEAM_VIEW], destination: { type: "dashboard", hash: "athlete-teams" } },
+	{ id: "athlete.profile", label: "Profile & Guardians", icon: <ShieldIcon className="size-5" />, contextTypes: ["ATHLETE"], requiredCapabilities: [Capabilities.ATHLETE_PROFILE_VIEW, Capabilities.ATHLETE_GUARDIAN_VIEW], destination: { type: "dashboard", hash: "athlete-profile" } },
 
 	// Coach (TEAM context)
-	{ id: "coach.overview", label: "Overview", icon: <HomeIcon className="size-5" />, contextTypes: ["TEAM"] },
-	{ id: "coach.my-teams", label: "My Teams", icon: <UsersIcon className="size-5" />, contextTypes: ["TEAM"] },
-	{ id: "coach.schedule", label: "Schedule", icon: <CalendarIcon className="size-5" />, contextTypes: ["TEAM"] },
-	{ id: "coach.roster", label: "Roster", icon: <UserIcon className="size-5" />, contextTypes: ["TEAM"] },
-	{ id: "coach.team-page", label: "Team Page", icon: <LayoutIcon className="size-5" />, contextTypes: ["TEAM"] },
-	{ id: "coach.fundraising", label: "Fundraising", icon: <HeartHandshakeIcon className="size-5" />, contextTypes: ["TEAM"] },
-	{ id: "coach.apparel", label: "Apparel", icon: <ShirtIcon className="size-5" />, contextTypes: ["TEAM"] },
-	{ id: "coach.announcements", label: "Announcements", icon: <MegaphoneIcon className="size-5" />, contextTypes: ["TEAM"] },
-	{ id: "coach.fees", label: "Fees", icon: <DollarIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_FEE_VIEW] },
-	{ id: "coach.members", label: "Members", icon: <UserPlusIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_STAFF_MANAGE] },
-	{ id: "coach.settings", label: "Settings", icon: <SettingsIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_ROSTER_MANAGE] },
+	{ id: "coach.overview", label: "Overview", icon: <HomeIcon className="size-5" />, contextTypes: ["TEAM"], destination: { type: "dashboard" } },
+	{ id: "coach.my-teams", label: "My Teams", icon: <UsersIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_VIEW], destination: { type: "dashboard", hash: "coach-teams" } },
+	{ id: "coach.schedule", label: "Schedule", icon: <CalendarIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.EVENT_READ], destination: { type: "team-events" } },
+	{ id: "coach.roster", label: "Roster Summary", icon: <UserIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_VIEW], destination: { type: "dashboard", hash: "coach-roster" } },
+	{ id: "coach.team-page", label: "Team Page", icon: <LayoutIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_VIEW, Capabilities.TEAM_PAGE_EDIT], destination: { type: "dashboard", hash: "coach-team-page" } },
+	{ id: "coach.fundraising", label: "Fundraising", icon: <HeartHandshakeIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_VIEW, Capabilities.TEAM_FUNDRAISING_MANAGE], destination: { type: "dashboard", hash: "coach-fundraising" } },
 
 	// Tournament Admin (TOURNAMENT context)
-	{ id: "tournament.overview", label: "Overview", icon: <HomeIcon className="size-5" />, contextTypes: ["TOURNAMENT"] },
-	{ id: "tournament.page", label: "Tournament Page", icon: <LayoutIcon className="size-5" />, contextTypes: ["TOURNAMENT"] },
-	{ id: "tournament.teams", label: "Participating Teams", icon: <TrophyIcon className="size-5" />, contextTypes: ["TOURNAMENT"] },
-	{
-		id: "tournament.settings",
-		label: "Settings",
-		icon: <SettingsIcon className="size-5" />,
-		contextTypes: ["TOURNAMENT"],
-		requiredCapabilities: [Capabilities.TOURNAMENT_MANAGE],
-	},
+	{ id: "tournament.overview", label: "Overview", icon: <HomeIcon className="size-5" />, contextTypes: ["TOURNAMENT"], destination: { type: "dashboard" } },
+	{ id: "tournament.events", label: "Schedule & Events", icon: <CalendarIcon className="size-5" />, contextTypes: ["TOURNAMENT"], requiredCapabilities: [Capabilities.EVENT_READ], destination: { type: "tournament-events" } },
+	{ id: "tournament.page", label: "Tournament Page", icon: <LayoutIcon className="size-5" />, contextTypes: ["TOURNAMENT"], requiredCapabilities: [Capabilities.TOURNAMENT_VIEW, Capabilities.TOURNAMENT_PAGE_EDIT], destination: { type: "dashboard", hash: "tournament-page" } },
+	{ id: "tournament.settings", label: "Settings", icon: <SettingsIcon className="size-5" />, contextTypes: ["TOURNAMENT"], requiredCapabilities: [Capabilities.TOURNAMENT_MANAGE], destination: { type: "dashboard", hash: "tournament-summary" } },
 
 	// Platform Admin (PLATFORM_ADMIN context)
-	{ id: "platform.overview", label: "Overview", icon: <HomeIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"] },
-	{
-		id: "platform.organizations",
-		label: "Organizations",
-		icon: <BuildingIcon className="size-5" />,
-		contextTypes: ["PLATFORM_ADMIN"],
-		requiredCapabilities: [Capabilities.PLATFORM_ORG_VIEW],
-	},
-	{
-		id: "platform.users",
-		label: "Users",
-		icon: <UserIcon className="size-5" />,
-		contextTypes: ["PLATFORM_ADMIN"],
-		requiredCapabilities: [Capabilities.PLATFORM_USER_VIEW],
-	},
-	{
-		id: "platform.integrations",
-		label: "Integrations",
-		icon: <ShieldIcon className="size-5" />,
-		contextTypes: ["PLATFORM_ADMIN"],
-		requiredCapabilities: [Capabilities.PLATFORM_INTEGRATION_VIEW],
-	},
-	{
-		id: "platform.reports",
-		label: "Reports",
-		icon: <ChartIcon className="size-5" />,
-		contextTypes: ["PLATFORM_ADMIN"],
-		requiredCapabilities: [Capabilities.PLATFORM_AUDIT_VIEW],
-	},
+	{ id: "platform.overview", label: "Overview", icon: <HomeIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], destination: { type: "dashboard" } },
+	{ id: "platform.organizations", label: "Organizations", icon: <BuildingIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_ORG_VIEW], destination: { type: "platform-organizations" } },
+	{ id: "platform.operations", label: "Integration Operations", icon: <ShieldIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_INTEGRATION_VIEW], destination: { type: "dashboard", hash: "platform-operations" } },
+	{ id: "platform.reports", label: "Reports", icon: <ChartIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_AUDIT_VIEW], destination: { type: "platform-reports" } },
+	{ id: "platform.audit", label: "Audit", icon: <FileTextIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_AUDIT_VIEW], destination: { type: "dashboard", hash: "platform-audit" } },
 ];
 
-export function navItemsFor(contextType: ContextType, capabilities: Set<string>): NavRegistryItem[] {
+function resolveDestination(destination: NavDestination, context: NavRouteContext): string | null {
+	switch (destination.type) {
+		case "dashboard":
+			return appPaths.dashboard(destination.hash);
+		case "organizations":
+			return appPaths.organizations();
+		case "platform-organizations":
+			return appPaths.platformOrganizations();
+		case "organization":
+			return context.organizationId ? appPaths.organization(context.organizationId, destination.section) : null;
+		case "household":
+			return context.organizationId && context.householdId
+				? appPaths.household(context.organizationId, context.householdId, destination.section)
+				: null;
+		case "team-events":
+			return context.organizationId && context.teamId ? appPaths.teamEvents(context.organizationId, context.teamId) : appPaths.dashboard("coach-schedule");
+		case "tournament-events":
+			return context.organizationId && context.tournamentId
+				? appPaths.tournamentEvents(context.organizationId, context.tournamentId)
+				: null;
+		case "participant-events":
+			return context.organizationId && context.participantId
+				? appPaths.participantEvents(context.organizationId, context.participantId)
+				: appPaths.dashboard("athlete-schedule");
+		case "platform-reports":
+			return appPaths.platformReports();
+	}
+}
+
+export function navItemsFor(
+	contextType: ContextType,
+	capabilities: Set<string>,
+	context: NavRouteContext = {},
+): ResolvedNavRegistryItem[] {
 	return NAV_REGISTRY.filter(
 		(item) =>
 			item.contextTypes.includes(contextType) &&
 			(!item.requiredCapabilities || item.requiredCapabilities.some((capability) => capabilities.has(capability))),
-	);
+	)
+		.map((item) => ({ ...item, to: resolveDestination(item.destination, context) }))
+		.filter((item): item is ResolvedNavRegistryItem => Boolean(item.to));
 }

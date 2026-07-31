@@ -142,17 +142,17 @@ export function useCoachTeams(organizationId: string | null | undefined) {
 		enabled: !!organizationId,
 	});
 }
-export function useCoachTeamSchedule(organizationId: string | null | undefined) {
+export function useCoachTeamSchedule(organizationId: string | null | undefined, teamId?: string | null) {
 	return useQuery({
-		queryKey: ["organizations", organizationId, "dashboard", "coach", "team-schedule"],
-		queryFn: () => apiFetch<ScheduleItem[]>(`/organizations/${organizationId}/dashboard/coach/team-schedule`),
+		queryKey: ["organizations", organizationId, "dashboard", "coach", "team-schedule", teamId ?? null],
+		queryFn: () => apiFetch<ScheduleItem[]>(`/organizations/${organizationId}/dashboard/coach/team-schedule${teamId ? `?teamId=${teamId}` : ""}`),
 		enabled: !!organizationId,
 	});
 }
-export function useCoachRosterSummary(organizationId: string | null | undefined) {
+export function useCoachRosterSummary(organizationId: string | null | undefined, teamId?: string | null) {
 	return useQuery({
-		queryKey: ["organizations", organizationId, "dashboard", "coach", "roster-summary"],
-		queryFn: () => apiFetch<RosterSummary>(`/organizations/${organizationId}/dashboard/coach/roster-summary`),
+		queryKey: ["organizations", organizationId, "dashboard", "coach", "roster-summary", teamId ?? null],
+		queryFn: () => apiFetch<RosterSummary>(`/organizations/${organizationId}/dashboard/coach/roster-summary${teamId ? `?teamId=${teamId}` : ""}`),
 		enabled: !!organizationId,
 	});
 }

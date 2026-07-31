@@ -11,6 +11,7 @@ import com.leaguelift.membership.domain.OrganizationMembership
 import com.leaguelift.organization.domain.Organization
 import com.leaguelift.organization.domain.OrganizationStatus
 import com.leaguelift.organization.domain.OrganizationType
+import com.leaguelift.event.application.EventService
 import com.leaguelift.fee.domain.OrganizationFeeFinancialSummary
 import com.leaguelift.fee.persistence.FeeRepository
 import com.leaguelift.fundraising.domain.Campaign
@@ -52,11 +53,14 @@ class OwnerDashboardServiceTest {
 	private val contributionRepository = mockk<ContributionRepository>()
 	private val ledgerEntryRepository = mockk<LedgerEntryRepository>()
 	private val payoutAccountService = mockk<PayoutAccountService>()
+	private val eventService = mockk<EventService>()
+	private val dashboardEventMapper = mockk<DashboardEventMapper>()
 
 	private val service = OwnerDashboardService(
 		membershipService, organizationRepository, teamRepository,
 		householdRepository, participantRepository, tournamentRepository, auditEventRepository, feeRepository,
 		campaignRepository, contributionRepository, ledgerEntryRepository, payoutAccountService,
+		eventService, dashboardEventMapper,
 	)
 
 	private val orgId = UUID.randomUUID()

@@ -80,6 +80,32 @@ class MembershipServiceTest {
 	}
 
 	@Test
+	fun `finance manager can view organization reports without receiving manager mutation access`() {
+		val organizationId = UUID.randomUUID()
+		val financeManager = CurrentUser(UUID.randomUUID(), "finance@example.com", "Finance")
+		every { membershipRepository.findActiveMembership(organizationId, financeManager.userId) } returns
+			membership(organizationId, financeManager.userId, MembershipRole.FINANCE_MANAGER)
+
+		val result = service.requireReportingRole(organizationId, financeManager)
+
+		assertEquals(MembershipRole.FINANCE_MANAGER, result.role)
+		assertFailsWith<ForbiddenException> { service.requireManagerRole(organizationId, financeManager) }
+	}
+
+	@Test
+	fun `viewer can view organization reports without receiving manager mutation access`() {
+		val organizationId = UUID.randomUUID()
+		val viewer = CurrentUser(UUID.randomUUID(), "report-viewer@example.com", "Report Viewer")
+		every { membershipRepository.findActiveMembership(organizationId, viewer.userId) } returns
+			membership(organizationId, viewer.userId, MembershipRole.VIEWER)
+
+		val result = service.requireReportingRole(organizationId, viewer)
+
+		assertEquals(MembershipRole.VIEWER, result.role)
+		assertFailsWith<ForbiddenException> { service.requireManagerRole(organizationId, viewer) }
+	}
+
+	@Test
 	fun `administrator can manage members`() {
 		val organizationId = UUID.randomUUID()
 		val admin = CurrentUser(UUID.randomUUID(), "admin2@example.com", "Admin2")

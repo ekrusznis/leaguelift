@@ -61,15 +61,15 @@ class ReportingServiceTest {
 	)
 
 	@Test
-	fun `getRevenueReport requires manager role`() {
-		every { membershipService.requireManagerRole(orgId, manager) } throws ForbiddenException("DENIED", "no")
+	fun `getRevenueReport requires reporting role`() {
+		every { membershipService.requireReportingRole(orgId, manager) } throws ForbiddenException("DENIED", "no")
 
 		assertFailsWith<ForbiddenException> { service.getRevenueReport(orgId, null, null, manager) }
 	}
 
 	@Test
 	fun `getRevenueReport defaults to a trailing 30-day range when no dates are given`() {
-		every { membershipService.requireManagerRole(orgId, manager) } returns managerMembership()
+		every { membershipService.requireReportingRole(orgId, manager) } returns managerMembership()
 		every { reportingRepository.revenueBySourceType(orgId, any(), any()) } returns listOf(SourceTypeRevenueRow("CONTRIBUTION", 5_000L))
 		every { reportingRepository.revenueByTeam(orgId, any(), any()) } returns emptyList()
 
@@ -82,7 +82,7 @@ class ReportingServiceTest {
 
 	@Test
 	fun `getRevenueReport totalMinor sums across every source type`() {
-		every { membershipService.requireManagerRole(orgId, manager) } returns managerMembership()
+		every { membershipService.requireReportingRole(orgId, manager) } returns managerMembership()
 		every { reportingRepository.revenueBySourceType(orgId, any(), any()) } returns listOf(
 			SourceTypeRevenueRow("CONTRIBUTION", 3_000L), SourceTypeRevenueRow("ORDER", 2_000L),
 		)
@@ -95,7 +95,7 @@ class ReportingServiceTest {
 
 	@Test
 	fun `exportRevenueReportCsv includes a row per source type and per team`() {
-		every { membershipService.requireManagerRole(orgId, manager) } returns managerMembership()
+		every { membershipService.requireReportingRole(orgId, manager) } returns managerMembership()
 		every { reportingRepository.revenueBySourceType(orgId, any(), any()) } returns listOf(SourceTypeRevenueRow("CONTRIBUTION", 10_000L))
 		every { reportingRepository.revenueByTeam(orgId, any(), any()) } returns listOf(TeamRevenueRow(null, null, 10_000L))
 
@@ -108,7 +108,7 @@ class ReportingServiceTest {
 
 	@Test
 	fun `getFeeCollectionsReport combines in-range payments with the point-in-time outstanding balance`() {
-		every { membershipService.requireManagerRole(orgId, manager) } returns managerMembership()
+		every { membershipService.requireReportingRole(orgId, manager) } returns managerMembership()
 		val household = UUID.randomUUID()
 		every { reportingRepository.feeCollections(orgId, any(), any()) } returns listOf(
 			FeeCollectionRow(UUID.randomUUID(), household, "Smith Family", 2_500L, LocalDate.now()),

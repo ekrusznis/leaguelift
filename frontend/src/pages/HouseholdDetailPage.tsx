@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
@@ -45,6 +45,11 @@ import type { FeeAssignment, FeeAssignmentStatus } from "../features/fees/types"
 import { useFeeTemplates } from "../features/fees/api";
 import { useTeams } from "../features/teams/api";
 import { HouseholdDocumentsPanel } from "../features/documents/HouseholdDocumentsPanel";
+import { EventListPanel } from "../features/events/EventListPanel";
+import { useContexts } from "../authorization/api";
+import { hasCapability } from "../authorization/capabilities";
+import { Capabilities } from "../authorization/capabilityConstants";
+import { appPaths, type HouseholdSection } from "../routes/appPaths";
 
 function formatAmount(amountMinor: number, currency: string) {
 	return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amountMinor / 100);
@@ -104,7 +109,7 @@ function AddAdultForm({ organizationId, householdId, onDone }: { organizationId:
 	);
 }
 
-function AdultsPanel({ organizationId, householdId }: { organizationId: string; householdId: string }) {
+function AdultsPanel({ organizationId, householdId, canManage }: { organizationId: string; householdId: string; canManage: boolean }) {
 	const { data, isLoading, isError, refetch } = useAdults(organizationId, householdId);
 	const removeAdult = useRemoveAdult(organizationId, householdId);
 	const [showForm, setShowForm] = useState(false);
@@ -113,11 +118,13 @@ function AdultsPanel({ organizationId, householdId }: { organizationId: string; 
 		<section aria-label="Adults" className="flex flex-col gap-3">
 			<div className="flex items-center justify-between">
 				<h2 className="font-heading text-lg font-semibold text-navy">Adults</h2>
-				<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
-					{showForm ? "Cancel" : "Add adult"}
-				</Button>
+				{canManage && (
+					<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
+						{showForm ? "Cancel" : "Add adult"}
+					</Button>
+				)}
 			</div>
-			{showForm && <AddAdultForm organizationId={organizationId} householdId={householdId} onDone={() => setShowForm(false)} />}
+			{canManage && showForm && <AddAdultForm organizationId={organizationId} householdId={householdId} onDone={() => setShowForm(false)} />}
 			{isLoading && <LoadingState label="Loading adults…" />}
 			{isError && <ErrorState message="Could not load adults." onRetry={() => refetch()} />}
 			{data && data.length === 0 && !showForm && (
@@ -136,9 +143,11 @@ function AdultsPanel({ organizationId, householdId }: { organizationId: string; 
 									{[adult.relationship, adult.email].filter(Boolean).join(" · ")}
 								</p>
 							</div>
-							<Button type="button" variant="secondary" className="shrink-0" onClick={() => removeAdult.mutate(adult.id)} disabled={removeAdult.isPending}>
-								Remove
-							</Button>
+							{canManage && (
+								<Button type="button" variant="secondary" className="shrink-0" onClick={() => removeAdult.mutate(adult.id)} disabled={removeAdult.isPending}>
+									Remove
+								</Button>
+							)}
 						</li>
 					))}
 				</ul>
@@ -149,7 +158,7 @@ function AdultsPanel({ organizationId, householdId }: { organizationId: string; 
 
 // --- Participants Panel ---
 
-function ParticipantTeamRow({ organizationId, participant }: { organizationId: string; participant: Participant }) {
+function ParticipantTeamRow({ organizationId, participant, canManage }: { organizationId: string; participant: Participant; canManage: boolean }) {
 	const { data: teams } = useTeams(organizationId);
 	const { data: assignments, isLoading } = useParticipantTeams(organizationId, participant.id);
 	const assignTeam = useAssignTeam(organizationId, participant.id);
@@ -169,20 +178,22 @@ function ParticipantTeamRow({ organizationId, participant }: { organizationId: s
 						return (
 							<li key={a.id} className="flex items-center gap-1 rounded-full bg-navy/10 px-3 py-1 text-xs text-navy">
 								{team?.name ?? a.teamId}
-								<button
-									type="button"
-									onClick={() => removeFromTeam.mutate(a.teamId)}
-									className="ml-1 text-slate-gray hover:text-error-red"
-									aria-label={`Remove from ${team?.name ?? "team"}`}
-								>
-									×
-								</button>
+								{canManage && (
+									<button
+										type="button"
+										onClick={() => removeFromTeam.mutate(a.teamId)}
+										className="ml-1 text-slate-gray hover:text-error-red"
+										aria-label={`Remove from ${team?.name ?? "team"}`}
+									>
+										×
+									</button>
+								)}
 							</li>
 						);
 					})}
 				</ul>
 			)}
-			{availableTeams.length > 0 && (
+			{canManage && availableTeams.length > 0 && (
 				<div className="flex items-center gap-2">
 					<select
 						value={selectedTeam}
@@ -252,7 +263,7 @@ function AddParticipantForm({ organizationId, householdId, onDone }: { organizat
 	);
 }
 
-function ParticipantsPanel({ organizationId, householdId }: { organizationId: string; householdId: string }) {
+function ParticipantsPanel({ organizationId, householdId, canManage }: { organizationId: string; householdId: string; canManage: boolean }) {
 	const { data, isLoading, isError, refetch } = useParticipants(organizationId, householdId);
 	const [showForm, setShowForm] = useState(false);
 	const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -261,11 +272,13 @@ function ParticipantsPanel({ organizationId, householdId }: { organizationId: st
 		<section aria-label="Participants" className="flex flex-col gap-3">
 			<div className="flex items-center justify-between">
 				<h2 className="font-heading text-lg font-semibold text-navy">Participants</h2>
-				<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
-					{showForm ? "Cancel" : "Add participant"}
-				</Button>
+				{canManage && (
+					<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
+						{showForm ? "Cancel" : "Add participant"}
+					</Button>
+				)}
 			</div>
-			{showForm && <AddParticipantForm organizationId={organizationId} householdId={householdId} onDone={() => setShowForm(false)} />}
+			{canManage && showForm && <AddParticipantForm organizationId={organizationId} householdId={householdId} onDone={() => setShowForm(false)} />}
 			{isLoading && <LoadingState label="Loading participants…" />}
 			{isError && <ErrorState message="Could not load participants." onRetry={() => refetch()} />}
 			{data && data.length === 0 && !showForm && (
@@ -293,7 +306,7 @@ function ParticipantsPanel({ organizationId, householdId }: { organizationId: st
 								</button>
 							</div>
 							{expandedId === participant.id && (
-								<ParticipantTeamRow organizationId={organizationId} participant={participant} />
+								<ParticipantTeamRow organizationId={organizationId} participant={participant} canManage={canManage} />
 							)}
 						</li>
 					))}
@@ -403,7 +416,7 @@ function ApplyAdjustmentForm({ organizationId, householdId, assignmentId, onDone
 	);
 }
 
-function FeeDetailPanel({ organizationId, householdId, fee }: { organizationId: string; householdId: string; fee: FeeAssignment }) {
+function FeeDetailPanel({ organizationId, householdId, fee, canManage }: { organizationId: string; householdId: string; fee: FeeAssignment; canManage: boolean }) {
 	const { data: payments, isLoading: paymentsLoading } = useFeePayments(organizationId, fee.id);
 	const { data: adjustments, isLoading: adjustmentsLoading } = useFeeAdjustments(organizationId, fee.id);
 	const voidPayment = useVoidPayment(organizationId, householdId, fee.id);
@@ -446,7 +459,7 @@ function FeeDetailPanel({ organizationId, householdId, fee }: { organizationId: 
 				</div>
 			</dl>
 
-			{!locked && (
+			{canManage && !locked && (
 				<div className="flex gap-2">
 					<Button type="button" variant="secondary" onClick={() => setActiveForm((f) => (f === "payment" ? null : "payment"))}>
 						{activeForm === "payment" ? "Cancel" : "Record payment"}
@@ -456,10 +469,10 @@ function FeeDetailPanel({ organizationId, householdId, fee }: { organizationId: 
 					</Button>
 				</div>
 			)}
-			{activeForm === "payment" && (
+			{canManage && activeForm === "payment" && (
 				<RecordPaymentForm organizationId={organizationId} householdId={householdId} assignmentId={fee.id} onDone={() => setActiveForm(null)} />
 			)}
-			{activeForm === "adjustment" && (
+			{canManage && activeForm === "adjustment" && (
 				<ApplyAdjustmentForm organizationId={organizationId} householdId={householdId} assignmentId={fee.id} onDone={() => setActiveForm(null)} />
 			)}
 
@@ -474,7 +487,7 @@ function FeeDetailPanel({ organizationId, householdId, fee }: { organizationId: 
 									{formatAmount(payment.amountMinor, payment.currency)} · {payment.method} · {payment.paidAt}
 									{payment.voidedAt ? ` · voided (${payment.voidReason})` : ""}
 								</span>
-								{!payment.voidedAt && (
+								{canManage && !payment.voidedAt && (
 									<button type="button" className="shrink-0 text-azure-blue hover:underline" onClick={() => handleVoidPayment(payment.id)}>
 										Void
 									</button>
@@ -497,7 +510,7 @@ function FeeDetailPanel({ organizationId, householdId, fee }: { organizationId: 
 									{adjustment.reason ? ` · ${adjustment.reason}` : ""}
 									{adjustment.voidedAt ? ` · voided (${adjustment.voidReason})` : ""}
 								</span>
-								{!adjustment.voidedAt && (
+								{canManage && !adjustment.voidedAt && (
 									<button type="button" className="shrink-0 text-azure-blue hover:underline" onClick={() => handleVoidAdjustment(adjustment.id)}>
 										Void
 									</button>
@@ -601,7 +614,7 @@ function AddFeeAssignmentForm({
 	);
 }
 
-function FeeAssignmentsPanel({ organizationId, householdId }: { organizationId: string; householdId: string }) {
+function FeeAssignmentsPanel({ organizationId, householdId, canManage }: { organizationId: string; householdId: string; canManage: boolean }) {
 	const { data, isLoading, isError, refetch } = useFeeAssignments(organizationId, householdId);
 	const { data: participants } = useParticipants(organizationId, householdId);
 	const updateStatus = useUpdateFeeAssignmentStatus(organizationId, householdId);
@@ -615,16 +628,18 @@ function FeeAssignmentsPanel({ organizationId, householdId }: { organizationId: 
 		<section aria-label="Fee assignments" className="flex flex-col gap-3">
 			<div className="flex items-center justify-between">
 				<h2 className="font-heading text-lg font-semibold text-navy">Fees</h2>
-				<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
-					{showForm ? "Cancel" : "Add fee"}
-				</Button>
+				{canManage && (
+					<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
+						{showForm ? "Cancel" : "Add fee"}
+					</Button>
+				)}
 			</div>
 			{data && data.items.length > 0 && (
 				<p className="text-sm text-slate-gray">
 					Household balance: <span className="font-semibold text-navy">{formatAmount(totalBalanceMinor, currency)}</span>
 				</p>
 			)}
-			{showForm && (
+			{canManage && showForm && (
 				<AddFeeAssignmentForm organizationId={organizationId} householdId={householdId} onDone={() => setShowForm(false)} />
 			)}
 			{isLoading && <LoadingState label="Loading fees…" />}
@@ -651,7 +666,7 @@ function FeeAssignmentsPanel({ organizationId, householdId }: { organizationId: 
 										<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[fee.status]}`}>
 											{STATUS_LABELS[fee.status]}
 										</span>
-										{fee.status !== "PAID" && fee.status !== "WAIVED" && fee.status !== "CANCELLED" && (
+										{canManage && fee.status !== "PAID" && fee.status !== "WAIVED" && fee.status !== "CANCELLED" && (
 											<select
 												value=""
 												onChange={(e) => {
@@ -677,7 +692,7 @@ function FeeAssignmentsPanel({ organizationId, householdId }: { organizationId: 
 									</div>
 								</div>
 								{expandedFeeId === fee.id && (
-									<FeeDetailPanel organizationId={organizationId} householdId={householdId} fee={fee} />
+									<FeeDetailPanel organizationId={organizationId} householdId={householdId} fee={fee} canManage={canManage} />
 								)}
 							</li>
 						);
@@ -690,46 +705,60 @@ function FeeAssignmentsPanel({ organizationId, householdId }: { organizationId: 
 
 // --- Main Page ---
 
+const HOUSEHOLD_SECTIONS: Array<{ id: HouseholdSection; label: string }> = [
+	{ id: "profile", label: "Household Profile" },
+	{ id: "participants", label: "My Athletes" },
+	{ id: "events", label: "Family Schedule" },
+	{ id: "fees", label: "Fees & Payments" },
+	{ id: "documents", label: "Documents" },
+];
+
+function isHouseholdSection(value: string | undefined): value is HouseholdSection {
+	return HOUSEHOLD_SECTIONS.some((section) => section.id === value);
+}
+
 export function HouseholdDetailPage() {
-	const { organizationId, householdId } = useParams<{ organizationId: string; householdId: string }>();
+	const { organizationId, householdId, section } = useParams<{ organizationId: string; householdId: string; section?: string }>();
+	const contexts = useContexts();
 	const { data: household, isLoading, isError, refetch } = useHousehold(organizationId ?? "", householdId ?? "");
 
-	if (!organizationId || !householdId) {
-		return <ErrorState message="Invalid URL." />;
-	}
-	if (isLoading) {
-		return <LoadingState label="Loading household…" />;
-	}
-	if (isError || !household) {
-		return <ErrorState message="Could not load this household." onRetry={() => refetch()} />;
-	}
+	if (!organizationId || !householdId) return <ErrorState message="Invalid URL." />;
+	if (section && !isHouseholdSection(section)) return <Navigate to={appPaths.household(organizationId, householdId, "profile")} replace />;
+	if (isLoading) return <LoadingState label="Loading household…" />;
+	if (isError || !household) return <ErrorState message="Could not load this household." onRetry={() => refetch()} />;
+
+	const activeSection: HouseholdSection = section && isHouseholdSection(section) ? section : "profile";
+	const canAdminister = hasCapability(contexts.data, Capabilities.ORG_MANAGE, { contextType: "ORGANIZATION", resourceId: organizationId });
 
 	return (
-		<div className="flex flex-col gap-8">
+		<div className="flex flex-col gap-6">
 			<div>
-				<Link
-					to={`/app/organizations/${organizationId}`}
-					className="mb-2 inline-block text-sm text-azure-blue hover:underline"
-				>
-					← Back to organization
+				<Link to={canAdminister ? appPaths.organization(organizationId, "households") : appPaths.dashboard()} className="mb-2 inline-block text-sm text-azure-blue hover:underline">
+					← {canAdminister ? "Back to households" : "Back to dashboard"}
 				</Link>
 				<h1 className="font-heading text-2xl font-bold text-navy">{household.displayName}</h1>
-				{household.contactEmail && (
-					<p className="text-slate-gray">{household.contactEmail}</p>
-				)}
-				{household.contactPhone && (
-					<p className="text-slate-gray">{household.contactPhone}</p>
-				)}
+				{household.contactEmail && <p className="text-slate-gray">{household.contactEmail}</p>}
+				{household.contactPhone && <p className="text-slate-gray">{household.contactPhone}</p>}
 			</div>
 
-			<AdultsPanel organizationId={organizationId} householdId={householdId} />
-			<ParticipantsPanel organizationId={organizationId} householdId={householdId} />
-			<FeeAssignmentsPanel organizationId={organizationId} householdId={householdId} />
+			<nav aria-label="Household sections" className="flex gap-2 overflow-x-auto border-b border-slate-gray/20 pb-3">
+				{HOUSEHOLD_SECTIONS.map((item) => (
+					<Link key={item.id} to={appPaths.household(organizationId, householdId, item.id)} aria-current={activeSection === item.id ? "page" : undefined} className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium ${activeSection === item.id ? "bg-navy text-white" : "text-slate-gray hover:bg-ice-white hover:text-navy"}`}>
+						{item.label}
+					</Link>
+				))}
+			</nav>
 
-			<section aria-label="Documents" className="flex flex-col gap-3">
-				<h2 className="font-heading text-lg font-semibold text-navy">Documents</h2>
-				<HouseholdDocumentsPanel organizationId={organizationId} householdId={householdId} canManage />
-			</section>
+			{activeSection === "profile" && <AdultsPanel organizationId={organizationId} householdId={householdId} canManage={canAdminister} />}
+			{activeSection === "participants" && <ParticipantsPanel organizationId={organizationId} householdId={householdId} canManage={canAdminister} />}
+			{activeSection === "events" && <EventListPanel scope={{ type: "household", organizationId, householdId }} householdId={householdId} />}
+			{activeSection === "fees" && <FeeAssignmentsPanel organizationId={organizationId} householdId={householdId} canManage={canAdminister} />}
+			{activeSection === "documents" && (
+				<section aria-label="Documents" className="flex flex-col gap-3">
+					<h2 className="font-heading text-lg font-semibold text-navy">Documents</h2>
+					<HouseholdDocumentsPanel organizationId={organizationId} householdId={householdId} canManage={canAdminister} />
+				</section>
+			)}
 		</div>
 	);
 }

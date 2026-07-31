@@ -14,6 +14,7 @@ import com.leaguelift.dashboard.web.OutstandingBalance
 import com.leaguelift.dashboard.web.RequiredActionItem
 import com.leaguelift.dashboard.web.ScheduleItem
 import com.leaguelift.dashboard.web.UpdateItem
+import com.leaguelift.event.application.EventService
 import com.leaguelift.fee.domain.FeeAssignmentStatus
 import com.leaguelift.fee.domain.computeFeeBalance
 import com.leaguelift.fee.persistence.FeeAdjustmentRepository
@@ -37,8 +38,8 @@ private const val CAMPAIGN_LIMIT = 25
 
 /**
  * One method per Parent-dashboard card, each its own controller endpoint. Real data
- * for athletes and outstanding fees; canned sample data for schedule, credits, orders,
- * required actions, and organization updates, which have no backing table yet. See
+ * for athletes, schedule, and outstanding fees; canned sample data only for credits,
+ * orders, required actions, and organization updates, whose attribution/models are not built yet. See
  * [OwnerDashboardService] for the same real/demo split pattern.
  *
  * Authorization (Phase 7/ADR-020): the caller is authorized if they're an active
@@ -59,6 +60,8 @@ class ParentDashboardService(
 	private val feeAdjustmentRepository: FeeAdjustmentRepository,
 	private val campaignRepository: CampaignRepository,
 	private val contributionRepository: ContributionRepository,
+	private val eventService: EventService,
+	private val dashboardEventMapper: DashboardEventMapper,
 ) {
 
 	fun getOverview(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): HouseholdOverviewResponse {
@@ -77,10 +80,9 @@ class ParentDashboardService(
 
 	fun getFamilySchedule(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): List<ScheduleItem> {
 		requireHousehold(organizationId, householdId, currentUser)
-		return listOf(
-			ScheduleItem("fam-1", "SAT", "24", "vs Westview Warriors", "Home Game", "4:30 PM", "Home"),
-			ScheduleItem("fam-2", "WED", "28", "JV Basketball Practice", "Practice", "5:00 PM", null),
-		)
+		return dashboardEventMapper.upcoming(
+			eventService.listForHousehold(organizationId, householdId, currentUser, offset = 0, limit = 50),
+		).map { dashboardEventMapper.toScheduleItem(it, organizationId) }
 	}
 
 	fun getOutstandingBalance(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): OutstandingBalance {

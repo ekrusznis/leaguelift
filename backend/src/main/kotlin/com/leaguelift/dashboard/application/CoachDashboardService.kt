@@ -11,6 +11,7 @@ import com.leaguelift.dashboard.web.RequiredActionItem
 import com.leaguelift.dashboard.web.RosterSummary
 import com.leaguelift.dashboard.web.ScheduleItem
 import com.leaguelift.dashboard.web.TeamPageStatusItem
+import com.leaguelift.event.application.EventService
 import com.leaguelift.fundraising.persistence.CampaignRepository
 import com.leaguelift.fundraising.persistence.ContributionRepository
 import com.leaguelift.participant.persistence.ParticipantRepository
@@ -36,6 +37,8 @@ class CoachDashboardService(
 	private val publicPageRepository: PublicPageRepository,
 	private val campaignRepository: CampaignRepository,
 	private val contributionRepository: ContributionRepository,
+	private val eventService: EventService,
+	private val dashboardEventMapper: DashboardEventMapper,
 ) {
 
 	/** Real: only teams this user has TEAM_VIEW access to (explicit grant or org owner/admin inheritance). */
@@ -47,20 +50,17 @@ class CoachDashboardService(
 			.map { CoachTeamSummary(it.id, it.name, it.sport, participantRepository.countActiveForTeam(it.id, organizationId)) }
 	}
 
-	fun getTeamSchedule(organizationId: UUID, currentUser: CurrentUser): List<ScheduleItem> {
-		requireAnyTeamAccess(organizationId, currentUser)
-		// No schedule/events data model exists yet (DESIGN-DOC.md section 14.1 Phase 10
-		// — "Not started"). Demo data, unlike every other card on this service, which is
-		// real: inventing an events module is out of this phase's scope.
-		return listOf(
-			ScheduleItem("sch-1", "SAT", "24", "vs Northview Falcons", "League Game", "10:00 AM", "Home"),
-			ScheduleItem("sch-2", "SAT", "31", "vs Westlake Warriors", "League Game", "10:00 AM", "Away"),
-		)
+	fun getTeamSchedule(organizationId: UUID, currentUser: CurrentUser, teamId: UUID? = null): List<ScheduleItem> {
+		val team = resolveSelectedOrDefaultTeam(organizationId, currentUser, teamId) ?: return emptyList()
+		return dashboardEventMapper.upcoming(
+			eventService.listForTeam(organizationId, team.id, currentUser, offset = 0, limit = 50),
+			includeDrafts = true,
+		).map { dashboardEventMapper.toScheduleItem(it, organizationId) }
 	}
 
-	fun getRosterSummary(organizationId: UUID, currentUser: CurrentUser): RosterSummary {
-		val teamIds = requireAnyTeamAccess(organizationId, currentUser)
-		val totalAthletes = teamIds.sumOf { participantRepository.countActiveForTeam(it, organizationId) }
+	fun getRosterSummary(organizationId: UUID, currentUser: CurrentUser, teamId: UUID? = null): RosterSummary {
+		val team = resolveSelectedOrDefaultTeam(organizationId, currentUser, teamId)
+		val totalAthletes = team?.let { participantRepository.countActiveForTeam(it.id, organizationId) } ?: 0
 		return RosterSummary(
 			athletes = totalAthletes,
 			isAttendanceDemoData = true,

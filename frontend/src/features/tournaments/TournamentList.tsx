@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Button } from "../../components/Button";
+import { appPaths } from "../../routes/appPaths";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
@@ -152,7 +154,10 @@ export function TournamentList({ organizationId }: { organizationId: string }) {
 											.join(" · ")}
 									</p>
 								</div>
-								<div className="flex shrink-0 items-center gap-2">
+								<div className="flex shrink-0 flex-wrap items-center gap-2">
+									<Link to={appPaths.tournamentEvents(organizationId, tournament.id)} className="inline-flex min-h-11 items-center rounded-md border border-slate-gray/30 bg-pure-white px-4 py-2 text-sm font-medium text-navy hover:bg-ice-white">
+										Schedule
+									</Link>
 									<Button
 										type="button"
 										variant="secondary"

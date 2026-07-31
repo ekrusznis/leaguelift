@@ -100,12 +100,18 @@ class DashboardController(
 		coachDashboardService.getTeams(organizationId, currentUser)
 
 	@GetMapping("/organizations/{organizationId}/dashboard/coach/team-schedule")
-	fun coachTeamSchedule(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		coachDashboardService.getTeamSchedule(organizationId, currentUser)
+	fun coachTeamSchedule(
+		@PathVariable organizationId: UUID,
+		@RequestParam(required = false) teamId: UUID?,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	) = coachDashboardService.getTeamSchedule(organizationId, currentUser, teamId)
 
 	@GetMapping("/organizations/{organizationId}/dashboard/coach/roster-summary")
-	fun coachRosterSummary(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		coachDashboardService.getRosterSummary(organizationId, currentUser)
+	fun coachRosterSummary(
+		@PathVariable organizationId: UUID,
+		@RequestParam(required = false) teamId: UUID?,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	) = coachDashboardService.getRosterSummary(organizationId, currentUser, teamId)
 
 	@GetMapping("/organizations/{organizationId}/dashboard/coach/team-page-status")
 	fun coachTeamPageStatus(

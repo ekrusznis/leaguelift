@@ -1,18 +1,22 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-
-const NAV_ITEMS = [
-	{ to: "/app", label: "Overview" },
-	{ to: "/app/organizations", label: "Organizations" },
-];
+import { useContexts } from "../authorization/api";
 
 /**
- * Only milestone-enabled modules appear here (DESIGN-DOC.md section 17.3) — Phase 0
- * only has Overview and Organizations. Add nav items as their feature module ships,
- * not before.
+ * Compact shell for routed feature pages. Navigation is derived from the caller's
+ * real contexts so a guardian, athlete, coach, or tournament-only user is not shown
+ * an organization-directory link they cannot use. Role-specific module navigation
+ * remains in the dashboard registry and in each routed entity page.
  */
 export function AppShell() {
 	const { user, logout } = useAuth();
+	const contexts = useContexts();
+	const canBrowseOrganizations = contexts.data?.some((context) => context.contextType === "ORGANIZATION") ?? false;
+	const navItems = [
+		{ to: "/app", label: "Dashboard" },
+		...(canBrowseOrganizations ? [{ to: "/app/organizations", label: "Organizations" }] : []),
+		{ to: "/help", label: "Help" },
+	];
 
 	return (
 		<div className="min-h-screen bg-ice-white">
@@ -23,16 +27,16 @@ export function AppShell() {
 				Skip to main content
 			</a>
 			<header className="border-b border-slate-gray/15 bg-navy text-pure-white">
-				<div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-					<span className="font-heading text-lg font-bold">LeagueLift</span>
-					<nav aria-label="Primary" className="flex gap-4">
-						{NAV_ITEMS.map((item) => (
+				<div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+					<NavLink to="/app" className="font-heading text-lg font-bold">LeagueLift</NavLink>
+					<nav aria-label="Primary" className="order-3 flex w-full gap-2 overflow-x-auto sm:order-none sm:w-auto sm:gap-4">
+						{navItems.map((item) => (
 							<NavLink
 								key={item.to}
 								to={item.to}
 								end={item.to === "/app"}
 								className={({ isActive }) =>
-									`rounded-md px-2 py-1 text-sm font-medium ${
+									`shrink-0 rounded-md px-2 py-1 text-sm font-medium ${
 										isActive ? "bg-pure-white/10" : "hover:bg-pure-white/5"
 									}`
 								}
@@ -42,7 +46,7 @@ export function AppShell() {
 						))}
 					</nav>
 					<div className="flex items-center gap-3 text-sm">
-						{user && <span>{user.displayName}</span>}
+						{user && <span className="hidden sm:inline">{user.displayName}</span>}
 						<button
 							type="button"
 							onClick={logout}
