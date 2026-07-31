@@ -1,20 +1,32 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useContexts } from "../authorization/api";
+import { Capabilities } from "../authorization/capabilityConstants";
+import { hasCapability } from "../authorization/capabilities";
+import { SupportAccessBanner } from "../features/platformAdmin/SupportAccessBanner";
+import { useCurrentSupportAccess } from "../features/platformAdmin/api";
 
 /**
- * Compact shell for routed feature pages. Navigation is derived from the caller's
- * real contexts so a guardian, athlete, coach, or tournament-only user is not shown
- * an organization-directory link they cannot use. Role-specific module navigation
- * remains in the dashboard registry and in each routed entity page.
+ * Compact shell for routed feature pages. Platform employees retain their own
+ * platform navigation while an amber, reasoned support-access banner makes it
+ * impossible to confuse a customer workspace with ordinary tenant membership.
  */
 export function AppShell() {
 	const { user, logout } = useAuth();
 	const contexts = useContexts();
+	const isPlatformAdmin = hasCapability(contexts.data, Capabilities.PLATFORM_SUPPORT_ACCESS, {
+		contextType: "PLATFORM_ADMIN",
+		resourceId: null,
+	});
+	const supportAccess = useCurrentSupportAccess(isPlatformAdmin);
 	const canBrowseOrganizations = contexts.data?.some((context) => context.contextType === "ORGANIZATION") ?? false;
 	const navItems = [
 		{ to: "/app", label: "Dashboard" },
-		...(canBrowseOrganizations ? [{ to: "/app/organizations", label: "Organizations" }] : []),
+		...(isPlatformAdmin ? [{ to: "/app/platform/organizations", label: "Platform Console" }] : []),
+		...(!isPlatformAdmin && canBrowseOrganizations ? [{ to: "/app/organizations", label: "Organizations" }] : []),
+		...(isPlatformAdmin && supportAccess.data
+			? [{ to: `/app/platform/organizations/${supportAccess.data.organizationId}`, label: "Organization Console" }]
+			: []),
 		{ to: "/help", label: "Help" },
 	];
 
@@ -58,6 +70,9 @@ export function AppShell() {
 				</div>
 			</header>
 			<main id="main-content" className="mx-auto max-w-6xl px-4 py-8">
+				{isPlatformAdmin && supportAccess.data && (
+					<div className="mb-6"><SupportAccessBanner access={supportAccess.data} /></div>
+				)}
 				<Outlet />
 			</main>
 		</div>

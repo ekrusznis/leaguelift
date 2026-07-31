@@ -42,7 +42,7 @@ function destinationIsActive(pathname: string, hash: string, to: string) {
 	if (targetPath === "/app") {
 		return pathname === "/app" && !hash;
 	}
-	return pathname === targetPath;
+	return pathname === targetPath || pathname.startsWith(`${targetPath}/`);
 }
 
 function scrollToCurrentHash(hash: string) {

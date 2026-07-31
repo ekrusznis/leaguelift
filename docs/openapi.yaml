@@ -68,9 +68,16 @@ info:
     event's source-owned fields (opponent/start-end time/venue/status)
     can no longer be overwritten through the ordinary update endpoint;
     detaching first converts the event back to MANUAL (ADR-034).
+    Phase 14 adds the LeagueLift employee Platform Admin console: platform-wide
+    organization and user directories, organization summaries, and reasoned,
+    time-bounded support-access sessions. A Platform Admin remains the authenticated
+    actor and is never silently converted into an organization member or customer.
+    Customer-data requests require the support-access header on organization-prefixed
+    routes and on resource-first team, tournament, household, participant, event, RSVP,
+    and calendar routes carrying the target organizationId query parameter.
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
-  version: "0.23.0"
+  version: "0.24.2"
 servers:
   - url: /api/v1
 tags:
@@ -103,6 +110,7 @@ tags:
   - name: reporting
   - name: events
   - name: integrations
+  - name: platform-admin
 paths:
   /public/status:
     get:
@@ -5667,6 +5675,141 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /platform/admin/organizations:
+    get:
+      tags: [platform-admin]
+      summary: Search all LeagueLift organizations
+      description: Requires the separately granted PLATFORM_ADMIN role; organization ADMINISTRATOR membership is not sufficient.
+      operationId: listPlatformAdminOrganizations
+      parameters:
+        - name: query
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [ACTIVE, SUSPENDED, ARCHIVED] }
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Platform organization page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformOrganizationPageResponse" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /platform/admin/organizations/{organizationId}:
+    get:
+      tags: [platform-admin]
+      summary: Get a consolidated organization support summary
+      operationId: getPlatformAdminOrganization
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Consolidated organization support summary
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformOrganizationDetailResponse" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /platform/admin/users:
+    get:
+      tags: [platform-admin]
+      summary: Search all LeagueLift users and memberships
+      operationId: listPlatformAdminUsers
+      parameters:
+        - name: query
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [ACTIVE, SUSPENDED] }
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Platform user page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformUserPageResponse" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /platform/admin/support-access:
+    get:
+      tags: [platform-admin]
+      summary: List platform support-access sessions
+      description: Returns reasoned support sessions across LeagueLift employees and organizations. Requires PLATFORM_SUPPORT_ACCESS.
+      operationId: listPlatformSupportAccess
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [ACTIVE, ENDED, EXPIRED] }
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Platform support-access page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformSupportAccessPageResponse" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /platform/admin/organizations/{organizationId}/support-access:
+    post:
+      tags: [platform-admin]
+      summary: Start a reasoned organization support-access session
+      description: Ends the caller's prior active session, records an immutable audit event, and grants two-hour access to one organization. This is not impersonation.
+      operationId: startPlatformSupportAccess
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StartPlatformSupportAccessRequest" }
+      responses:
+        "201":
+          description: Support-access session started
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlatformSupportAccessResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /platform/admin/support-access/current:
+    get:
+      tags: [platform-admin]
+      summary: Get the caller's current support-access session
+      operationId: getCurrentPlatformSupportAccess
+      responses:
+        "200":
+          description: Active support access, or JSON null when none is active
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/PlatformSupportAccessResponse"
+                nullable: true
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /platform/admin/support-access/{accessId}:
+    delete:
+      tags: [platform-admin]
+      summary: End the caller's support-access session
+      operationId: endPlatformSupportAccess
+      parameters:
+        - name: accessId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Support access ended }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -5678,6 +5821,14 @@ components:
       name: organizationId
       in: path
       required: true
+      schema:
+        type: string
+        format: uuid
+    PlatformSupportAccessHeader:
+      name: X-LeagueLift-Support-Access
+      in: header
+      required: true
+      description: Active, organization-scoped Platform Admin support-access session id. Required only when a PLATFORM_ADMIN calls an organization-prefixed customer endpoint or a resource-first team, tournament, household, participant, event, RSVP, or calendar endpoint for the same organization.
       schema:
         type: string
         format: uuid
@@ -5849,6 +6000,131 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
   schemas:
+    PlatformOrganizationListItemResponse:
+      type: object
+      required: [organizationId, name, slug, organizationType, status, createdAt, activeMembers, teams, households, participants, grossVolumeMinor]
+      properties:
+        organizationId: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        organizationType: { type: string }
+        status: { type: string, enum: [ACTIVE, SUSPENDED, ARCHIVED] }
+        contactEmail: { type: string, format: email, nullable: true }
+        primaryOwnerName: { type: string, nullable: true }
+        primaryOwnerEmail: { type: string, format: email, nullable: true }
+        createdAt: { type: string, format: date-time }
+        activeMembers: { type: integer, format: int64 }
+        teams: { type: integer, format: int64 }
+        households: { type: integer, format: int64 }
+        participants: { type: integer, format: int64 }
+        grossVolumeMinor: { type: integer, format: int64 }
+    PlatformOrganizationPageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PlatformOrganizationListItemResponse" }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+    PlatformOrganizationDetailResponse:
+      allOf:
+        - $ref: "#/components/schemas/PlatformOrganizationListItemResponse"
+        - type: object
+          required: [updatedAt, ownerNames, ownerEmails, invitedMembers, tournaments, guardians, events, stores, orders, campaigns, contributions, sponsorships, documents, activeEventConnections, grossVolumeMinor, refundedMinor, organizationEarningsMinor]
+          properties:
+            contactPhone: { type: string, nullable: true }
+            updatedAt: { type: string, format: date-time }
+            ownerNames: { type: array, items: { type: string } }
+            ownerEmails: { type: array, items: { type: string, format: email } }
+            invitedMembers: { type: integer, format: int64 }
+            tournaments: { type: integer, format: int64 }
+            guardians: { type: integer, format: int64 }
+            events: { type: integer, format: int64 }
+            stores: { type: integer, format: int64 }
+            orders: { type: integer, format: int64 }
+            campaigns: { type: integer, format: int64 }
+            contributions: { type: integer, format: int64 }
+            sponsorships: { type: integer, format: int64 }
+            documents: { type: integer, format: int64 }
+            activeEventConnections: { type: integer, format: int64 }
+            grossVolumeMinor: { type: integer, format: int64 }
+            refundedMinor: { type: integer, format: int64 }
+            organizationEarningsMinor: { type: integer, format: int64 }
+    PlatformUserOrganizationMembershipResponse:
+      type: object
+      required: [organizationId, organizationName, role]
+      properties:
+        organizationId: { type: string, format: uuid }
+        organizationName: { type: string }
+        role: { type: string }
+    PlatformUserListItemResponse:
+      type: object
+      required: [userId, email, displayName, status, createdAt, platformAdmin, activeMemberships, organizationMemberships]
+      properties:
+        userId: { type: string, format: uuid }
+        email: { type: string, format: email }
+        displayName: { type: string }
+        status: { type: string, enum: [ACTIVE, SUSPENDED] }
+        createdAt: { type: string, format: date-time }
+        platformAdmin: { type: boolean, description: True only for an active PLATFORM role_assignment with role PLATFORM_ADMIN. }
+        activeMemberships: { type: integer, format: int64 }
+        organizationMemberships:
+          type: array
+          items: { $ref: "#/components/schemas/PlatformUserOrganizationMembershipResponse" }
+    PlatformUserPageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PlatformUserListItemResponse" }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+    PlatformSupportAccessListItemResponse:
+      type: object
+      required: [id, platformAdminUserId, platformAdminName, platformAdminEmail, organizationId, organizationName, reason, status, expiresAt, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        platformAdminUserId: { type: string, format: uuid }
+        platformAdminName: { type: string }
+        platformAdminEmail: { type: string, format: email }
+        organizationId: { type: string, format: uuid }
+        organizationName: { type: string }
+        reason: { type: string }
+        status: { type: string, enum: [ACTIVE, ENDED, EXPIRED] }
+        expiresAt: { type: string, format: date-time }
+        endedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+    PlatformSupportAccessPageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PlatformSupportAccessListItemResponse" }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+    StartPlatformSupportAccessRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 10, maxLength: 500 }
+    PlatformSupportAccessResponse:
+      type: object
+      required: [id, organizationId, organizationName, reason, status, expiresAt, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        organizationId: { type: string, format: uuid }
+        organizationName: { type: string }
+        reason: { type: string }
+        status: { type: string, enum: [ACTIVE, ENDED, EXPIRED] }
+        expiresAt: { type: string, format: date-time }
+        endedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
     StatusResponse:
       type: object
       properties:

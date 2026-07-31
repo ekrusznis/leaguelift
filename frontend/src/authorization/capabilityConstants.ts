@@ -59,9 +59,11 @@ export const Capabilities = {
 	PLATFORM_ORG_VIEW: "platform.organization.view",
 	PLATFORM_ORG_MANAGE: "platform.organization.manage",
 	PLATFORM_USER_VIEW: "platform.user.view",
+	PLATFORM_USER_MANAGE: "platform.user.manage",
 	PLATFORM_INTEGRATION_VIEW: "platform.integration.view",
 	PLATFORM_INTEGRATION_MANAGE: "platform.integration.manage",
 	PLATFORM_AUDIT_VIEW: "platform.audit.view",
 	PLATFORM_FEATURE_FLAG_MANAGE: "platform.feature_flag.manage",
+	PLATFORM_SUPPORT_ACCESS: "platform.support.access",
 	PLATFORM_SUPPORT_IMPERSONATE: "platform.support.impersonate",
 } as const;

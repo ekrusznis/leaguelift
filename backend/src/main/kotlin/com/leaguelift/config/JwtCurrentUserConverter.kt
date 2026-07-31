@@ -18,7 +18,7 @@ import java.util.UUID
  * the token was issued. Platform-administrator status is never derived from the
  * token itself (DESIGN-DOC.md section 18.2/7.2 — "never inferred from email or
  * frontend state") — as of Phase 7/ADR-020 it comes from a real, explicit
- * `role_assignment(context_type = PLATFORM, role = PLATFORM_ADMINISTRATOR)` grant,
+ * `role_assignment(context_type = PLATFORM, role = PLATFORM_ADMIN)` grant,
  * looked up fresh on every request rather than embedded in the token.
  */
 @Component

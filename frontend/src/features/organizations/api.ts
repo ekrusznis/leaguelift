@@ -16,11 +16,11 @@ export function useOrganizations(page = 0, size = 20) {
 	});
 }
 
-export function useOrganization(organizationId: string) {
+export function useOrganization(organizationId: string, enabled = true) {
 	return useQuery({
 		queryKey: organizationQueryKey(organizationId),
 		queryFn: () => apiFetch<Organization>(`/organizations/${organizationId}`),
-		enabled: !!organizationId,
+		enabled: enabled && !!organizationId,
 	});
 }
 

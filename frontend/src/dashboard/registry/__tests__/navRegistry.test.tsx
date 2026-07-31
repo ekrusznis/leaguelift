@@ -73,19 +73,33 @@ describe("dashboard navigation registry", () => {
 		);
 	});
 
-	it("keeps platform navigation limited to implemented operational destinations", () => {
+	it("routes platform employees to the complete support console", () => {
 		const items = navItemsFor(
 			"PLATFORM_ADMIN",
 			new Set([
 				Capabilities.PLATFORM_ORG_VIEW,
+				Capabilities.PLATFORM_USER_VIEW,
 				Capabilities.PLATFORM_INTEGRATION_VIEW,
 				Capabilities.PLATFORM_AUDIT_VIEW,
+				Capabilities.PLATFORM_SUPPORT_ACCESS,
 			]),
 		);
 
-		expect(items.some((item) => item.label === "Users")).toBe(false);
+		expect(items.map((item) => item.id)).toEqual([
+			"platform.overview",
+			"platform.organizations",
+			"platform.users",
+			"platform.operations",
+			"platform.reports",
+			"platform.audit",
+			"platform.support-sessions",
+		]);
 		expect(items.find((item) => item.id === "platform.organizations")?.to).toBe("/app/platform/organizations");
+		expect(items.find((item) => item.id === "platform.users")?.to).toBe("/app/platform/users");
+		expect(items.find((item) => item.id === "platform.operations")?.to).toBe("/app/platform/operations");
 		expect(items.find((item) => item.id === "platform.reports")?.to).toBe("/app/platform/reports");
+		expect(items.find((item) => item.id === "platform.audit")?.to).toBe("/app/platform/audit");
+		expect(items.find((item) => item.id === "platform.support-sessions")?.to).toBe("/app/platform/support-sessions");
 		expect(items.every((item) => item.to.startsWith("/app"))).toBe(true);
 	});
 });

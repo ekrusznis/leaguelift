@@ -68,8 +68,8 @@ class AuthorizationService(
 				resourceId = null,
 				organizationId = null,
 				label = "LeagueLift Platform",
-				role = ResourceRole.PLATFORM_ADMINISTRATOR.name,
-				capabilities = CapabilityRegistry.platformCapabilities(ResourceRole.PLATFORM_ADMINISTRATOR),
+				role = ResourceRole.PLATFORM_ADMIN.name,
+				capabilities = CapabilityRegistry.platformCapabilities(ResourceRole.PLATFORM_ADMIN),
 			)
 		}
 
@@ -256,7 +256,7 @@ class AuthorizationService(
 
 	fun hasPlatformCapability(currentUser: CurrentUser, capability: String): Boolean {
 		if (!currentUser.platformAdministrator) return false
-		return capability in CapabilityRegistry.platformCapabilities(ResourceRole.PLATFORM_ADMINISTRATOR)
+		return capability in CapabilityRegistry.platformCapabilities(ResourceRole.PLATFORM_ADMIN)
 	}
 
 	fun requirePlatformCapability(currentUser: CurrentUser, capability: String) {

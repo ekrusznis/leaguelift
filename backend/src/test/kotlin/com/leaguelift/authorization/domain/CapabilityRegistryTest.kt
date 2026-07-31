@@ -80,7 +80,10 @@ class CapabilityRegistryTest {
 
 	@Test
 	fun `platform administrator is the only role with platform capabilities`() {
-		assertTrue(CapabilityRegistry.platformCapabilities(ResourceRole.PLATFORM_ADMINISTRATOR).isNotEmpty())
+		val platform = CapabilityRegistry.platformCapabilities(ResourceRole.PLATFORM_ADMIN)
+		assertTrue(platform.isNotEmpty())
+		assertTrue(Capabilities.PLATFORM_SUPPORT_ACCESS in platform)
+		assertFalse(Capabilities.PLATFORM_SUPPORT_IMPERSONATE in platform)
 		assertTrue(CapabilityRegistry.platformCapabilities(ResourceRole.COACH_READ).isEmpty())
 		assertTrue(CapabilityRegistry.platformCapabilities(ResourceRole.TEAM_MANAGER).isEmpty())
 	}

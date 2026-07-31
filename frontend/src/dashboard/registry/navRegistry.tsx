@@ -25,6 +25,10 @@ export type NavDestination =
 	| { type: "dashboard"; hash?: string }
 	| { type: "organizations" }
 	| { type: "platform-organizations" }
+	| { type: "platform-users" }
+	| { type: "platform-operations" }
+	| { type: "platform-audit" }
+	| { type: "platform-support-sessions" }
 	| { type: "organization"; section: OrganizationSection }
 	| { type: "household"; section: HouseholdSection }
 	| { type: "team-events" }
@@ -111,9 +115,11 @@ export const NAV_REGISTRY: NavRegistryItem[] = [
 	// Platform Admin (PLATFORM_ADMIN context)
 	{ id: "platform.overview", label: "Overview", icon: <HomeIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], destination: { type: "dashboard" } },
 	{ id: "platform.organizations", label: "Organizations", icon: <BuildingIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_ORG_VIEW], destination: { type: "platform-organizations" } },
-	{ id: "platform.operations", label: "Integration Operations", icon: <ShieldIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_INTEGRATION_VIEW], destination: { type: "dashboard", hash: "platform-operations" } },
+	{ id: "platform.users", label: "Users", icon: <UserIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_USER_VIEW], destination: { type: "platform-users" } },
+	{ id: "platform.operations", label: "Integration Operations", icon: <ShieldIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_INTEGRATION_VIEW], destination: { type: "platform-operations" } },
 	{ id: "platform.reports", label: "Reports", icon: <ChartIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_AUDIT_VIEW], destination: { type: "platform-reports" } },
-	{ id: "platform.audit", label: "Audit", icon: <FileTextIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_AUDIT_VIEW], destination: { type: "dashboard", hash: "platform-audit" } },
+	{ id: "platform.audit", label: "Audit", icon: <FileTextIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_AUDIT_VIEW], destination: { type: "platform-audit" } },
+	{ id: "platform.support-sessions", label: "Support Sessions", icon: <ShieldIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_SUPPORT_ACCESS], destination: { type: "platform-support-sessions" } },
 ];
 
 function resolveDestination(destination: NavDestination, context: NavRouteContext): string | null {
@@ -124,6 +130,14 @@ function resolveDestination(destination: NavDestination, context: NavRouteContex
 			return appPaths.organizations();
 		case "platform-organizations":
 			return appPaths.platformOrganizations();
+		case "platform-users":
+			return appPaths.platformUsers();
+		case "platform-operations":
+			return appPaths.platformOperations();
+		case "platform-audit":
+			return appPaths.platformAudit();
+		case "platform-support-sessions":
+			return appPaths.platformSupportSessions();
 		case "organization":
 			return context.organizationId ? appPaths.organization(context.organizationId, destination.section) : null;
 		case "household":

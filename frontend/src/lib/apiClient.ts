@@ -1,5 +1,6 @@
-import { env } from "./env";
+import { readStoredSupportAccess } from "../features/platformAdmin/supportAccessStorage";
 import { ApiError, type ApiErrorBody } from "./apiError";
+import { env } from "./env";
 
 /**
  * Registered by the active auth provider (dev-mode or real OIDC) so the API client
@@ -9,6 +10,32 @@ import { ApiError, type ApiErrorBody } from "./apiError";
  * shared client layer).
  */
 let accessTokenGetter: () => Promise<string | null> = async () => null;
+
+const ORGANIZATION_PATH = /^\/organizations\/([0-9a-f-]{36})(?:\/|$)/i;
+const RESOURCE_SCOPED_PATH = /^\/(?:teams|tournaments|households|participants|events)\//i;
+
+/**
+ * Platform support sessions are sent only to customer-data endpoints. Organization-
+ * first routes are matched to the active session directly. Resource-first event and
+ * schedule routes carry organizationId in the query string and are validated again
+ * by the backend interceptor before any service is called.
+ */
+function attachSupportAccessHeader(path: string, headers: Record<string, string>) {
+	const supportAccess = readStoredSupportAccess();
+	if (!supportAccess) return;
+	const organizationMatch = ORGANIZATION_PATH.exec(path);
+	if (organizationMatch) {
+		if (organizationMatch[1]?.toLowerCase() === supportAccess.organizationId.toLowerCase()) {
+			headers["X-LeagueLift-Support-Access"] = supportAccess.id;
+		}
+		return;
+	}
+	if (!RESOURCE_SCOPED_PATH.test(path)) return;
+	const queryOrganizationId = new URL(path, "https://leaguelift.invalid").searchParams.get("organizationId");
+	if (queryOrganizationId?.toLowerCase() === supportAccess.organizationId.toLowerCase()) {
+		headers["X-LeagueLift-Support-Access"] = supportAccess.id;
+	}
+}
 
 export function registerAccessTokenGetter(getter: () => Promise<string | null>) {
 	accessTokenGetter = getter;
@@ -33,6 +60,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 	if (token) {
 		headers.Authorization = `Bearer ${token}`;
 	}
+	attachSupportAccessHeader(path, headers);
 
 	const response = await fetch(`${env.apiBaseUrl}${path}`, {
 		method: options.method ?? "GET",
@@ -72,6 +100,7 @@ export async function apiFetchBlob(path: string, signal?: AbortSignal): Promise<
 	if (token) {
 		headers.Authorization = `Bearer ${token}`;
 	}
+	attachSupportAccessHeader(path, headers);
 
 	const response = await fetch(`${env.apiBaseUrl}${path}`, { headers, signal });
 

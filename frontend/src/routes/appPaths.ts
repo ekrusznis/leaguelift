@@ -35,5 +35,10 @@ export const appPaths = {
 	event: (organizationId: string, eventId: string, search?: URLSearchParams) =>
 		`/app/organizations/${organizationId}/events/${eventId}${search && search.size > 0 ? `?${search.toString()}` : ""}`,
 	platformOrganizations: () => "/app/platform/organizations",
+	platformOrganization: (organizationId: string) => `/app/platform/organizations/${organizationId}`,
+	platformUsers: () => "/app/platform/users",
+	platformOperations: () => "/app/platform/operations",
 	platformReports: () => "/app/platform/reports",
+	platformAudit: () => "/app/platform/audit",
+	platformSupportSessions: () => "/app/platform/support-sessions",
 } as const;
