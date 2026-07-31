@@ -297,3 +297,19 @@ Additional, unreserved decisions:
   plain `<span>`, root-caused in `navRegistry.tsx`'s missing route field) —
   the same gap ADR-030 already found and declined to fix as a feature build
   rather than an accessibility bug fix (2026-07-30)
+- ADR-039: Phase 13 slice 4 — operational runbook documentation. Rewrote
+  section 18.3 from four generic paragraphs into seven procedures naming
+  real, currently-existing endpoints/tables/config keys: 5xx and migration
+  failures expanded with real correlation mechanics; a security-incident
+  procedure covering per-secret rotation for every real secret this
+  codebase has; a new financial/ledger-incident procedure (the prior text
+  explicitly deferred this "until Phase 5," which has been live since
+  2026-07-29) documenting the append-only ledger's diagnostic value and the
+  real reversing-entry correction path; a new outbox-backlog/webhook-failure
+  procedure pointing at the real `/api/v1/admin/outbox-events/*` recovery
+  endpoints, honestly noting section 18.2's backlog metric is still
+  unimplemented; and a real four-step backup/restore target procedure once
+  DigitalOcean Managed PostgreSQL is provisioned. Every procedure explicitly
+  labeled written-but-not-yet-rehearsed, per ADR-035's discipline against
+  fabricating live-infrastructure results — completes Phase 13's full
+  four-slice scope (2026-07-30)
