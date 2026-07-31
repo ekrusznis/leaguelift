@@ -42,6 +42,20 @@ class ParticipantRepository(private val jdbcClient: JdbcClient) {
             .param("teamId", teamId).param("organizationId", organizationId)
             .query(Long::class.java).single()
 
+    /** Active participants assigned to a team — used for guardian/athlete event-detail authorization. */
+    fun findActiveByTeam(teamId: UUID, organizationId: UUID): List<Participant> =
+        jdbcClient.sql(
+            """
+            select p.id, p.household_id, p.organization_id, p.first_name, p.last_name, p.date_of_birth, p.notes, p.status, p.created_at, p.updated_at from participant p
+            join participant_team pt on pt.participant_id = p.id and pt.organization_id = p.organization_id
+            where pt.team_id = :teamId and pt.organization_id = :organizationId
+              and pt.status = 'ACTIVE' and p.status = 'ACTIVE'
+            order by p.last_name asc, p.first_name asc
+            """.trimIndent(),
+        )
+            .param("teamId", teamId).param("organizationId", organizationId)
+            .query(::mapParticipant).list()
+
     fun findByHousehold(householdId: UUID, organizationId: UUID): List<Participant> =
         jdbcClient.sql(
             """

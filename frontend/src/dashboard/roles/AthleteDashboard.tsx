@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { DashboardShell, type DashNavItem } from "../DashboardShell";
 import { useContexts } from "../../authorization/api";
 import { capabilitiesFor } from "../../authorization/capabilities";
@@ -9,9 +10,9 @@ import { Pill } from "../components/Pill";
 import { CardQuery } from "../components/CardQuery";
 import { sidebarPromoBackground } from "../demoAssets";
 import { useAuth } from "../../auth/AuthContext";
+import { appPaths } from "../../routes/appPaths";
 import {
 	useAthleteGuardians,
-	useAthleteOrders,
 	useAthleteOverview,
 	useAthleteRecentHistory,
 	useAthleteTeams,
@@ -20,7 +21,6 @@ import {
 import {
 	CalendarIcon,
 	MailIcon,
-	PackageIcon,
 	UserIcon,
 	MapPinIcon,
 } from "../icons";
@@ -37,20 +37,23 @@ export function AthleteDashboard() {
 	const weekEvents = useAthleteWeekEvents();
 	const recentHistory = useAthleteRecentHistory();
 	const guardians = useAthleteGuardians();
-	const orders = useAthleteOrders();
 
 	// Nav/widget visibility are registries filtered by real capabilities for the
 	// caller's athlete self-link (DESIGN-DOC.md section 10.2/10.3) — not hardcoded
 	// arrays. Athlete items are unconditional, matching this dashboard's
 	// pre-migration nav/cards exactly.
 	const contexts = useContexts();
-	const athleteCapabilities = capabilitiesFor(contexts.data, "ATHLETE");
-	const navItems: DashNavItem[] = navItemsFor("ATHLETE", athleteCapabilities).map((item, index) => ({
+	const athleteContext = contexts.data?.find((context) => context.contextType === "ATHLETE");
+	const participantId = athleteContext?.resourceId ?? null;
+	const organizationId = athleteContext?.organizationId ?? null;
+	const athleteCapabilities = capabilitiesFor(contexts.data, "ATHLETE", participantId);
+	const navItems: DashNavItem[] = navItemsFor("ATHLETE", athleteCapabilities, { participantId, organizationId }).map((item) => ({
 		icon: item.icon,
 		label: item.label,
-		active: index === 0,
+		to: item.to,
 	}));
 	const visibleWidgets = visibleWidgetIds("ATHLETE", athleteCapabilities);
+	const eventSearch = participantId ? new URLSearchParams({ participantId, returnTo: appPaths.dashboard() }) : undefined;
 
 	return (
 		<DashboardShell
@@ -62,8 +65,9 @@ export function AthleteDashboard() {
 			userName={user?.displayName ?? "Account"}
 			promo={{
 				heading: "Stay game ready.",
-				copy: "View your schedule, gear, and updates all in one place.",
-				linkLabel: "Explore Features",
+				copy: "View your schedule, teams, and event updates in one place.",
+				linkLabel: "View Schedule",
+				to: organizationId && participantId ? appPaths.participantEvents(organizationId, participantId) : appPaths.dashboard("athlete-week"),
 				backgroundSrc: sidebarPromoBackground,
 			}}
 		>
@@ -71,7 +75,7 @@ export function AthleteDashboard() {
 
 			<div className="grid gap-5 lg:grid-cols-3">
 				{visibleWidgets.has("athlete.next-event") && (
-					<DashCard title="Next Event" className="lg:col-span-1">
+					<DashCard id="athlete-next-event" title="Next Event" className="lg:col-span-1">
 						<CardQuery query={overview} loadingLabel="Loading…">
 							{(data) =>
 								data.nextEvent ? (
@@ -97,7 +101,7 @@ export function AthleteDashboard() {
 				)}
 
 				{visibleWidgets.has("athlete.my-teams") && (
-					<DashCard title="My Teams" action={{ label: "View all teams" }}>
+					<DashCard id="athlete-teams" title="My Teams">
 						<CardQuery query={teams} loadingLabel="Loading teams…" isEmpty={(items) => items.length === 0} emptyTitle="No teams yet">
 							{(items) => (
 								<ul className="flex flex-col gap-4">
@@ -115,7 +119,7 @@ export function AthleteDashboard() {
 				)}
 
 				{visibleWidgets.has("athlete.this-week") && (
-					<DashCard title="This Week" action={{ label: "View full schedule" }}>
+					<DashCard id="athlete-week" title="This Week" action={organizationId && participantId ? { label: "View full schedule", to: appPaths.participantEvents(organizationId, participantId) } : undefined}>
 						<CardQuery query={weekEvents} loadingLabel="Loading schedule…" isEmpty={(items) => items.length === 0} emptyTitle="Nothing scheduled">
 							{(items) => (
 								<ul className="flex flex-col gap-3">
@@ -126,7 +130,11 @@ export function AthleteDashboard() {
 												<span className="font-heading text-base text-navy-900">{event.date}</span>
 											</div>
 											<div className="min-w-0 flex-1">
-												<p className="truncate font-medium text-navy-900">{event.title}</p>
+												{organizationId && eventSearch ? (
+											<Link to={appPaths.event(organizationId, event.id, eventSearch)} className="truncate font-medium text-navy-900 hover:text-green-600 hover:underline">{event.title}</Link>
+										) : (
+											<p className="truncate font-medium text-navy-900">{event.title}</p>
+										)}
 												<p className="text-xs text-slate-500">{event.subtitle}</p>
 											</div>
 											<div className="text-right text-xs">
@@ -142,7 +150,7 @@ export function AthleteDashboard() {
 				)}
 
 				{visibleWidgets.has("athlete.recent-history") && (
-					<DashCard title="Recent History" action={{ label: "View all history" }}>
+					<DashCard id="athlete-history" title="Recent History">
 						<CardQuery query={recentHistory} loadingLabel="Loading history…" isEmpty={(items) => items.length === 0} emptyTitle="No history yet">
 							{(items) => (
 								<ul className="flex flex-col gap-3">
@@ -164,7 +172,7 @@ export function AthleteDashboard() {
 				)}
 
 				{visibleWidgets.has("athlete.guardians") && (
-					<DashCard title="Guardians" action={{ label: "View all" }}>
+					<DashCard id="athlete-profile" title="Guardians">
 						<CardQuery query={guardians} loadingLabel="Loading guardians…" isEmpty={(items) => items.length === 0} emptyTitle="No guardians on file">
 							{(items) => (
 								<ul className="flex flex-col gap-4">
@@ -187,30 +195,6 @@ export function AthleteDashboard() {
 					</DashCard>
 				)}
 
-				{visibleWidgets.has("athlete.orders") && (
-					<DashCard title="Orders" action={{ label: "View all orders" }}>
-						<CardQuery query={orders} loadingLabel="Loading orders…" isEmpty={(items) => items.length === 0} emptyTitle="No orders yet">
-							{(items) => (
-								<ul className="flex flex-col gap-3">
-									{items.map((order) => (
-										<li key={order.id} className="flex items-center gap-3 rounded-xl border border-slate-200 p-3">
-											<span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-ice-50 text-slate-400">
-												<PackageIcon className="size-5" />
-											</span>
-											<div className="min-w-0 flex-1">
-												<p className="truncate font-medium text-navy-900">{order.productName}</p>
-												<p className="text-xs text-slate-500">
-													{order.orderNumber} · {order.orderedAt}
-												</p>
-												<Pill tone="success">{order.status}</Pill>
-											</div>
-										</li>
-									))}
-								</ul>
-							)}
-						</CardQuery>
-					</DashCard>
-				)}
 			</div>
 		</DashboardShell>
 	);

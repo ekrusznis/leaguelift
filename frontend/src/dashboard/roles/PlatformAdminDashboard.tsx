@@ -22,6 +22,7 @@ import {
 import { useMyActivity } from "../../features/activity/api";
 import { describeActivityAction, timeAgo } from "../activity";
 import { formatMoneyMinorUnits } from "../../lib/money";
+import { appPaths } from "../../routes/appPaths";
 import { IconBadge } from "../components/IconBadge";
 import { ChartIcon, ShieldIcon } from "../icons";
 
@@ -47,10 +48,10 @@ export function PlatformAdminDashboard() {
 
 	const contexts = useContexts();
 	const platformCapabilities = capabilitiesFor(contexts.data, "PLATFORM_ADMIN", null);
-	const navItems: DashNavItem[] = navItemsFor("PLATFORM_ADMIN", platformCapabilities).map((item, index) => ({
+	const navItems: DashNavItem[] = navItemsFor("PLATFORM_ADMIN", platformCapabilities, {}).map((item) => ({
 		icon: item.icon,
 		label: item.label,
-		active: index === 0,
+		to: item.to,
 	}));
 	const visibleWidgets = visibleWidgetIds("PLATFORM_ADMIN", platformCapabilities);
 
@@ -67,7 +68,8 @@ export function PlatformAdminDashboard() {
 			promo={{
 				heading: "Platform operations.",
 				copy: "Monitor organizations, users, and integration health across LeagueLift.",
-				linkLabel: "View runbook",
+				linkLabel: "View Help Center",
+				to: "/help",
 				backgroundSrc: sidebarPromoBackground,
 			}}
 		>
@@ -75,7 +77,7 @@ export function PlatformAdminDashboard() {
 
 			<div className="grid gap-5 lg:grid-cols-3">
 				{visibleWidgets.has("platform.summary") && (
-					<DashCard title="Platform Summary" className="lg:col-span-1">
+					<DashCard id="platform-summary" title="Platform Summary" className="lg:col-span-1">
 						<CardQuery query={summary} loadingLabel="Loading…">
 							{(data) => (
 								<div className="grid grid-cols-2 gap-3">
@@ -88,7 +90,7 @@ export function PlatformAdminDashboard() {
 				)}
 
 				{visibleWidgets.has("platform.webhook-health") && (
-					<DashCard title="Webhook Health" className="lg:col-span-1">
+					<DashCard id="platform-operations" title="Webhook Health" className="lg:col-span-1">
 						<CardQuery query={webhookHealth} loadingLabel="Loading…">
 							{(data) => (
 								<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -102,7 +104,7 @@ export function PlatformAdminDashboard() {
 				)}
 
 				{visibleWidgets.has("platform.outbox-health") && (
-					<DashCard title="Outbox Health" className="lg:col-span-1">
+					<DashCard id="platform-outbox" title="Outbox Health" className="lg:col-span-1">
 						<CardQuery query={outboxHealth} loadingLabel="Loading…">
 							{(data) => (
 								<div className="grid grid-cols-2 gap-3">
@@ -117,7 +119,7 @@ export function PlatformAdminDashboard() {
 				)}
 
 				{visibleWidgets.has("platform.orders") && (
-					<DashCard title="Orders" className="lg:col-span-1">
+					<DashCard id="platform-orders" title="Orders" className="lg:col-span-1">
 						<CardQuery query={ordersSummary} loadingLabel="Loading…">
 							{(data) => (
 								<div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -131,7 +133,7 @@ export function PlatformAdminDashboard() {
 				)}
 
 				{visibleWidgets.has("platform.payments") && (
-					<DashCard title="Payments" className="lg:col-span-1">
+					<DashCard id="platform-payments" title="Payments" action={{ label: "Open reports", to: appPaths.platformReports() }} className="lg:col-span-1">
 						<CardQuery query={paymentsSummary} loadingLabel="Loading…">
 							{(data) => (
 								<div className="flex flex-col gap-2 text-sm">
@@ -154,7 +156,7 @@ export function PlatformAdminDashboard() {
 				)}
 
 				{visibleWidgets.has("platform.payouts") && (
-					<DashCard title="Payouts" className="lg:col-span-1">
+					<DashCard id="platform-payouts" title="Payouts" className="lg:col-span-1">
 						<CardQuery query={payoutsSummary} loadingLabel="Loading…">
 							{(data) => (
 								<div className="grid grid-cols-2 gap-3">
@@ -167,7 +169,7 @@ export function PlatformAdminDashboard() {
 				)}
 
 				{visibleWidgets.has("platform.audit") && (
-					<DashCard title="Audit" className="lg:col-span-3">
+					<DashCard id="platform-audit" title="Audit" className="lg:col-span-3">
 						<CardQuery
 							query={activity}
 							loadingLabel="Loading activity…"
@@ -193,7 +195,7 @@ export function PlatformAdminDashboard() {
 				)}
 
 				{visibleWidgets.has("platform.organizations") && (
-					<DashCard title="Organizations" action={{ label: "View all" }} className="lg:col-span-3">
+					<DashCard id="platform-organizations" title="Organizations" action={{ label: "View all", to: appPaths.platformOrganizations() }} className="lg:col-span-3">
 						<CardQuery query={organizations} loadingLabel="Loading organizations…" isEmpty={(items) => items.length === 0} emptyTitle="No organizations yet">
 							{(items) => (
 								<ul className="flex flex-col gap-3">

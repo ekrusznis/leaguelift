@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Button } from "../../components/Button";
@@ -112,7 +113,12 @@ export function StoreList({ organizationId }: { organizationId: string }) {
 									</p>
 									<p className="text-sm text-slate-gray">/{store.slug}</p>
 								</div>
-								<div className="flex shrink-0 gap-2">
+								<div className="flex shrink-0 flex-wrap gap-2">
+									{store.status === "ACTIVE" && (
+										<Link to={`/stores/${store.slug}`} className="inline-flex min-h-11 items-center rounded-md border border-slate-gray/30 bg-pure-white px-4 py-2 text-sm font-medium text-navy hover:bg-ice-white">
+											View store
+										</Link>
+									)}
 									{store.status === "DRAFT" && (
 										<Button
 											type="button"

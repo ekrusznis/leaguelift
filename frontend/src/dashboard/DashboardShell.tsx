@@ -1,17 +1,19 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 import { Logo } from "../marketing/components/Logo";
+import { ActivityFeedPanel } from "./ActivityFeedPanel";
+import { GlobalSearchBox } from "./GlobalSearchBox";
 import { Avatar } from "./components/Avatar";
 import { CardBackground } from "./components/CardBackground";
-import { BellIcon, HelpIcon, SearchIcon, ChevronDownIcon } from "./icons";
-import { ActivityFeedPanel } from "./ActivityFeedPanel";
+import { BellIcon, ChevronDownIcon, HelpIcon } from "./icons";
 import { useMyActivity } from "../features/activity/api";
-import { GlobalSearchBox } from "./GlobalSearchBox";
 import type { SearchScope } from "../features/search/api";
 
 export type DashNavItem = {
 	icon: ReactNode;
 	label: string;
-	active?: boolean;
+	to: string;
 };
 
 export type DashboardShellProps = {
@@ -21,24 +23,38 @@ export type DashboardShellProps = {
 	contextRole: string;
 	navItems: DashNavItem[];
 	showSearch?: boolean;
-	/** When set, the search bar is a real GlobalSearchBox for this scope; when showSearch is true but this is omitted, the search bar stays the decorative placeholder it always was. */
+	/** When set, the search bar is a real GlobalSearchBox for this scope. */
 	searchScope?: SearchScope;
 	showHelp?: boolean;
 	notificationCount?: number;
 	userName: string;
 	userRole?: string;
 	userAvatarSrc?: string;
-	promo: { heading: string; copy: string; linkLabel: string; backgroundSrc?: string };
+	promo: { heading: string; copy: string; linkLabel?: string; to?: string; backgroundSrc?: string };
 	children: ReactNode;
 };
 
+function destinationIsActive(pathname: string, hash: string, to: string) {
+	const [targetPath, targetHash] = to.split("#");
+	if (targetHash) {
+		return pathname === targetPath && hash === `#${targetHash}`;
+	}
+	if (targetPath === "/app") {
+		return pathname === "/app" && !hash;
+	}
+	return pathname === targetPath;
+}
+
+function scrollToCurrentHash(hash: string) {
+	if (!hash) return;
+	const id = decodeURIComponent(hash.slice(1));
+	window.requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+}
+
 /**
- * Shared application chrome for every dashboard role (DESIGN-DOC.md section
- * 10.1-10.3). The context switcher, search, and user menu remain static, inert
- * elements — a fixed role-to-dashboard routing is the intended product behavior
- * (only an org owner reassigning a member's role changes what they land on, not a
- * session-level switcher), not an unbuilt gap. The bell icon is real: it opens the
- * cross-org activity feed (DESIGN-DOC.md section 13, Phase 7 completion).
+ * Shared application chrome for every dashboard role. Sidebar and mobile navigation
+ * are generated from the same capability-filtered registry and every visible item is
+ * a real link. The current role/context is intentionally a label, not a fake switcher.
  */
 export function DashboardShell({
 	contextIcon,
@@ -57,32 +73,89 @@ export function DashboardShell({
 	children,
 }: DashboardShellProps) {
 	const activity = useMyActivity();
+	const { logout } = useAuth();
+	const navigate = useNavigate();
+	const location = useLocation();
 	const [activityOpen, setActivityOpen] = useState(false);
+	const [userMenuOpen, setUserMenuOpen] = useState(false);
+	const userMenuRef = useRef<HTMLDivElement>(null);
 	const badgeCount = notificationCount ?? activity.data?.items.length ?? 0;
 
+	useEffect(() => {
+		scrollToCurrentHash(location.hash);
+	}, [location.hash]);
+
+	useEffect(() => {
+		function closeMenus(event: MouseEvent) {
+			if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+				setUserMenuOpen(false);
+			}
+		}
+		document.addEventListener("mousedown", closeMenus);
+		return () => document.removeEventListener("mousedown", closeMenus);
+	}, []);
+
+	function signOut() {
+		logout();
+		navigate("/auth/sign-in", { replace: true });
+	}
+
+	function navLink(item: DashNavItem, compact = false) {
+		const active = destinationIsActive(location.pathname, location.hash, item.to);
+		return (
+			<Link
+				key={`${compact ? "mobile" : "desktop"}-${item.label}`}
+				to={item.to}
+				aria-current={active ? "page" : undefined}
+				onClick={() => {
+					const hash = item.to.includes("#") ? `#${item.to.split("#")[1]}` : "";
+					if (hash === location.hash) scrollToCurrentHash(hash);
+				}}
+				className={
+					compact
+						? `flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${active ? "bg-green-500/15 text-green-300" : "text-slate-300 hover:bg-white/5 hover:text-white"}`
+						: `flex items-center gap-3 rounded-lg border-l-4 px-3 py-2.5 text-sm font-medium transition ${active ? "border-green-500 bg-white/5 text-white" : "border-transparent text-slate-400 hover:bg-white/5 hover:text-white"}`
+				}
+			>
+				<span className={active ? "text-green-400" : "text-slate-500"}>{item.icon}</span>
+				{item.label}
+			</Link>
+		);
+	}
+
+	const promoContent = (
+		<>
+			<p className="font-heading text-sm font-bold text-white">{promo.heading}</p>
+			<p className="mt-2 text-sm leading-relaxed text-slate-300">{promo.copy}</p>
+			{promo.linkLabel && promo.to && (
+				<Link to={promo.to} className="mt-3 inline-flex text-sm font-semibold text-green-400 hover:text-green-300 hover:underline">
+					{promo.linkLabel} &rarr;
+				</Link>
+			)}
+		</>
+	);
+
 	return (
-		<div className="flex h-full flex-col bg-ice-50">
+		<div className="flex min-h-screen flex-col bg-ice-50">
+			<a
+				href="#dashboard-content"
+				className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-white focus:p-2 focus:text-navy-900"
+			>
+				Skip to dashboard content
+			</a>
 			<header className="flex h-16 shrink-0 items-center gap-4 border-b border-white/10 bg-navy-950 px-4 sm:px-6">
 				<Logo tone="dark" to="/app" compact />
 
-				<div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5">
+				<div aria-label={`${contextName}, ${contextRole}`} className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-1.5">
 					<span className={`flex size-7 shrink-0 items-center justify-center rounded-lg ${contextIconTone}`}>{contextIcon}</span>
 					<span className="hidden flex-col leading-tight sm:flex">
 						<span className="text-sm font-semibold text-white">{contextName}</span>
 						<span className="text-xs text-slate-400">{contextRole}</span>
 					</span>
-					<ChevronDownIcon className="size-4 text-slate-400" />
 				</div>
 
 				{showSearch && searchScope && (
 					<GlobalSearchBox scope={searchScope} organizationId={searchScope.kind === "organization" ? searchScope.organizationId : undefined} />
-				)}
-				{showSearch && !searchScope && (
-					<div className="hidden flex-1 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-slate-400 md:flex">
-						<SearchIcon className="size-4 shrink-0" />
-						<span className="flex-1 text-sm">Search athletes, teams, orders&hellip;</span>
-						<span className="rounded-md border border-white/15 px-1.5 py-0.5 text-xs">&#8984;K</span>
-					</div>
 				)}
 
 				<div className="ml-auto flex items-center gap-3 sm:gap-4">
@@ -102,61 +175,74 @@ export function DashboardShell({
 							)}
 						</button>
 						{activityOpen && (
-							<div className="absolute right-0 top-full z-20 mt-2">
+							<div className="absolute right-0 top-full z-30 mt-2">
 								<ActivityFeedPanel />
 							</div>
 						)}
 					</div>
 					{showHelp && (
-						<span className="hidden size-9 items-center justify-center rounded-full text-slate-300 hover:bg-white/5 hover:text-white sm:flex">
+						<Link
+							to="/help"
+							aria-label="Help center"
+							className="hidden size-9 items-center justify-center rounded-full text-slate-300 hover:bg-white/5 hover:text-white sm:flex"
+						>
 							<HelpIcon className="size-5" />
-						</span>
+						</Link>
 					)}
-					<div className="flex items-center gap-2">
-						<Avatar name={userName} size="sm" src={userAvatarSrc} />
-						<span className="hidden flex-col leading-tight sm:flex">
-							<span className="text-sm font-semibold text-white">{userName}</span>
-							{userRole && <span className="text-xs text-slate-400">{userRole}</span>}
-						</span>
-						<ChevronDownIcon className="hidden size-4 text-slate-400 sm:block" />
+					<div ref={userMenuRef} className="relative">
+						<button
+							type="button"
+							aria-label="Account menu"
+							aria-expanded={userMenuOpen}
+							onClick={() => setUserMenuOpen((open) => !open)}
+							className="flex items-center gap-2 rounded-lg p-1 text-left hover:bg-white/5"
+						>
+							<Avatar name={userName} size="sm" src={userAvatarSrc} />
+							<span className="hidden flex-col leading-tight sm:flex">
+								<span className="text-sm font-semibold text-white">{userName}</span>
+								{userRole && <span className="text-xs text-slate-400">{userRole}</span>}
+							</span>
+							<ChevronDownIcon className="hidden size-4 text-slate-400 sm:block" />
+						</button>
+						{userMenuOpen && (
+							<div className="absolute right-0 top-full z-30 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+								<Link to="/app" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 hover:bg-ice-50">
+									Dashboard
+								</Link>
+								<Link to="/help" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 hover:bg-ice-50">
+									Help center
+								</Link>
+								<button type="button" onClick={signOut} className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-error-600 hover:bg-error-50">
+									Sign out
+								</button>
+							</div>
+						)}
 					</div>
 				</div>
 			</header>
 
+			<nav aria-label="Dashboard mobile navigation" className="flex gap-1 overflow-x-auto border-b border-white/10 bg-navy-900 px-3 py-2 lg:hidden">
+				{navItems.map((item) => navLink(item, true))}
+			</nav>
+
 			<div className="flex min-h-0 flex-1">
 				<aside className="hidden w-64 shrink-0 flex-col justify-between bg-navy-900 lg:flex">
 					<nav aria-label="Dashboard" className="flex flex-col gap-1 p-4">
-						{navItems.map((item) => (
-							<span
-								key={item.label}
-								className={`flex items-center gap-3 rounded-lg border-l-4 px-3 py-2.5 text-sm font-medium ${
-									item.active
-										? "border-green-500 bg-white/5 text-white"
-										: "border-transparent text-slate-400"
-								}`}
-							>
-								<span className={item.active ? "text-green-400" : "text-slate-500"}>{item.icon}</span>
-								{item.label}
-							</span>
-						))}
+						{navItems.map((item) => navLink(item))}
 					</nav>
 
 					{promo.backgroundSrc ? (
 						<CardBackground src={promo.backgroundSrc} className="m-4 p-5">
-							<p className="font-heading text-sm font-bold text-white">{promo.heading}</p>
-							<p className="mt-2 text-sm leading-relaxed text-slate-300">{promo.copy}</p>
-							<p className="mt-3 text-sm font-semibold text-green-400">{promo.linkLabel} &rarr;</p>
+							{promoContent}
 						</CardBackground>
 					) : (
-						<div className="m-4 rounded-2xl bg-navy-800 p-5">
-							<p className="font-heading text-sm font-bold text-white">{promo.heading}</p>
-							<p className="mt-2 text-sm leading-relaxed text-slate-400">{promo.copy}</p>
-							<p className="mt-3 text-sm font-semibold text-green-400">{promo.linkLabel} &rarr;</p>
-						</div>
+						<div className="m-4 rounded-2xl bg-navy-800 p-5">{promoContent}</div>
 					)}
 				</aside>
 
-				<main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">{children}</main>
+				<main id="dashboard-content" className="min-h-0 flex-1 scroll-mt-4 overflow-y-auto p-4 sm:p-6 lg:p-8">
+					{children}
+				</main>
 			</div>
 		</div>
 	);

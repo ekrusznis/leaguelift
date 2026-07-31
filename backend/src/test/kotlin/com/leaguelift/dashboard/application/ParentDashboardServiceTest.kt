@@ -6,6 +6,7 @@ import com.leaguelift.authorization.persistence.GuardianRelationshipRepository
 import com.leaguelift.common.error.ForbiddenException
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.web.CurrentUser
+import com.leaguelift.event.application.EventService
 import com.leaguelift.fee.domain.FeeAssignment
 import com.leaguelift.fee.domain.FeeAssignmentStatus
 import com.leaguelift.fee.persistence.FeeAdjustmentRepository
@@ -44,10 +45,13 @@ class ParentDashboardServiceTest {
 	private val feeAdjustmentRepository = mockk<FeeAdjustmentRepository>()
 	private val campaignRepository = mockk<CampaignRepository>()
 	private val contributionRepository = mockk<ContributionRepository>()
+	private val eventService = mockk<EventService>()
+	private val dashboardEventMapper = mockk<DashboardEventMapper>()
 
 	private val service = ParentDashboardService(
 		householdRepository, membershipRepository, guardianRelationshipRepository, participantRepository, teamRepository,
 		feeRepository, feePaymentRepository, feeAdjustmentRepository, campaignRepository, contributionRepository,
+		eventService, dashboardEventMapper,
 	)
 
 	private val orgId = UUID.randomUUID()

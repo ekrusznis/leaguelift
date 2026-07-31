@@ -160,6 +160,7 @@ class EventService(
 			.map { it.teamId }
 			.toSet()
 		return eventRepository.findByTeams(teamIds, organizationId, offset, limit)
+			.filter { it.status != EventStatus.DRAFT }
 	}
 
 	/** A single participant's schedule (acceptance criterion #3) — every event owned by any team the participant is on. */
@@ -173,6 +174,7 @@ class EventService(
 		}
 		val teamIds = participantRepository.listTeamAssignments(participantId, organizationId).map { it.teamId }.toSet()
 		return eventRepository.findByTeams(teamIds, organizationId, offset, limit)
+			.filter { it.status != EventStatus.DRAFT }
 	}
 
 	@Transactional
@@ -368,12 +370,23 @@ class EventService(
 	}
 
 	private fun requireReadAccess(event: Event, currentUser: CurrentUser) {
+		if (event.teamId != null || event.opponentTeamId != null) {
+			val teamIds = listOfNotNull(event.teamId, event.opponentTeamId).distinct()
+			if (teamIds.any { authorizationService.hasTeamCapability(event.organizationId, it, currentUser, Capabilities.EVENT_READ) }) return
+			if (event.status != EventStatus.DRAFT && teamIds.any { hasFamilyEventAccess(event.organizationId, it, currentUser) }) return
+			throw ForbiddenException("CAPABILITY_DENIED", "You do not have access to this team event.")
+		}
 		when {
-			event.teamId != null -> authorizationService.requireTeamCapability(event.organizationId, event.teamId, currentUser, Capabilities.EVENT_READ)
 			event.tournamentId != null -> authorizationService.requireTournamentCapability(event.organizationId, event.tournamentId, currentUser, Capabilities.EVENT_READ)
 			else -> membershipService.requireActiveMembership(event.organizationId, currentUser)
 		}
 	}
+
+	private fun hasFamilyEventAccess(organizationId: UUID, teamId: UUID, currentUser: CurrentUser): Boolean =
+		participantRepository.findActiveByTeam(teamId, organizationId).any { participant ->
+			authorizationService.hasParticipantCapability(currentUser, participant.id, Capabilities.ATHLETE_SCHEDULE_VIEW) ||
+				authorizationService.hasHouseholdCapability(organizationId, participant.householdId, currentUser, Capabilities.EVENT_READ)
+		}
 
 	/**
 	 * Section 14.1A's source-owned fields (official opponent, start time, venue,

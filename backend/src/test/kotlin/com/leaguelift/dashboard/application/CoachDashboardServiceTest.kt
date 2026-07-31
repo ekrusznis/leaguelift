@@ -4,6 +4,7 @@ import com.leaguelift.authorization.application.AuthorizationService
 import com.leaguelift.authorization.domain.Capabilities
 import com.leaguelift.common.error.ForbiddenException
 import com.leaguelift.common.web.CurrentUser
+import com.leaguelift.event.application.EventService
 import com.leaguelift.fundraising.persistence.CampaignRepository
 import com.leaguelift.fundraising.persistence.ContributionRepository
 import com.leaguelift.participant.persistence.ParticipantRepository
@@ -35,9 +36,12 @@ class CoachDashboardServiceTest {
 	private val publicPageRepository = mockk<PublicPageRepository>()
 	private val campaignRepository = mockk<CampaignRepository>()
 	private val contributionRepository = mockk<ContributionRepository>()
+	private val eventService = mockk<EventService>()
+	private val dashboardEventMapper = mockk<DashboardEventMapper>()
 
 	private val service = CoachDashboardService(
 		authorizationService, teamRepository, participantRepository, publicPageRepository, campaignRepository, contributionRepository,
+		eventService, dashboardEventMapper,
 	)
 
 	private val orgId = UUID.randomUUID()
@@ -69,16 +73,16 @@ class CoachDashboardServiceTest {
 	}
 
 	@Test
-	fun `getRosterSummary sums participant counts across only the caller's accessible teams`() {
+	fun `getRosterSummary uses the selected team instead of combining unrelated team rosters`() {
 		val teamA = team("U12 Blue")
 		val teamB = team("U14 Elite")
 		every { authorizationService.listAccessibleTeamIds(orgId, currentUser, Capabilities.TEAM_VIEW) } returns setOf(teamA.id, teamB.id)
-		every { participantRepository.countActiveForTeam(teamA.id, orgId) } returns 10
+		every { teamRepository.findById(teamB.id, orgId) } returns teamB
 		every { participantRepository.countActiveForTeam(teamB.id, orgId) } returns 8
 
-		val result = service.getRosterSummary(orgId, currentUser)
+		val result = service.getRosterSummary(orgId, currentUser, teamB.id)
 
-		assertEquals(18, result.athletes)
+		assertEquals(8, result.athletes)
 		assertEquals(true, result.isAttendanceDemoData)
 	}
 

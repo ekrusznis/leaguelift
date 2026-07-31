@@ -265,7 +265,7 @@ class EventServiceTest {
 		every { authorizationService.hasHouseholdCapability(orgId, householdId, currentUser, Capabilities.EVENT_READ) } returns true
 		every { participantRepository.findByHousehold(householdId, orgId) } returns listOf(participantA)
 		every { participantRepository.listTeamAssignments(participantA.id, orgId) } returns listOf(teamAssignment)
-		every { eventRepository.findByTeams(setOf(teamId), orgId, 0, 20) } returns listOf(sampleEvent())
+		every { eventRepository.findByTeams(setOf(teamId), orgId, 0, 20) } returns listOf(sampleEvent(status = EventStatus.SCHEDULED))
 
 		val result = service.listForHousehold(orgId, householdId, currentUser, 0, 20)
 
@@ -309,10 +309,41 @@ class EventServiceTest {
 	}
 
 	@Test
+	fun `get allows a guardian to open a published event for a linked participant team`() {
+		val householdId = UUID.randomUUID()
+		val participant = com.leaguelift.participant.domain.Participant(
+			UUID.randomUUID(), householdId, orgId, "Jamie", "Lee", null, null,
+			com.leaguelift.participant.domain.ParticipantStatus.ACTIVE, Instant.now(), Instant.now(),
+		)
+		val event = sampleEvent(status = EventStatus.SCHEDULED)
+		every { eventRepository.findById(event.id, orgId) } returns event
+		every { authorizationService.hasTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_READ) } returns false
+		every { participantRepository.findActiveByTeam(teamId, orgId) } returns listOf(participant)
+		every { authorizationService.hasParticipantCapability(currentUser, participant.id, Capabilities.ATHLETE_SCHEDULE_VIEW) } returns false
+		every { authorizationService.hasHouseholdCapability(orgId, householdId, currentUser, Capabilities.EVENT_READ) } returns true
+
+		val result = service.get(orgId, event.id, currentUser)
+
+		assertEquals(event.id, result.id)
+	}
+
+	@Test
+	fun `get never exposes a draft team event through guardian schedule access`() {
+		val event = sampleEvent(status = EventStatus.DRAFT)
+		every { eventRepository.findById(event.id, orgId) } returns event
+		every { authorizationService.hasTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_READ) } returns false
+
+		assertFailsWith<ForbiddenException> {
+			service.get(orgId, event.id, currentUser)
+		}
+		verify(exactly = 0) { participantRepository.findActiveByTeam(any(), any()) }
+	}
+
+	@Test
 	fun `getIcsForEvent reuses get's read authorization and builds ics from the resolved display title`() {
 		val event = sampleEvent()
 		every { eventRepository.findById(event.id, orgId) } returns event
-		every { authorizationService.requireTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_READ) } just runs
+		every { authorizationService.hasTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_READ) } returns true
 		every { teamRepository.findById(teamId, orgId) } returns team()
 		every { calendarProvider.buildIcs(event, "Varsity Soccer") } returns "BEGIN:VCALENDAR..."
 
@@ -325,7 +356,7 @@ class EventServiceTest {
 	fun `getDirections delegates to MapsProvider using only address and coordinates`() {
 		val event = sampleEvent().copy(address = "123 Main St", latitude = 1.0, longitude = 2.0)
 		every { eventRepository.findById(event.id, orgId) } returns event
-		every { authorizationService.requireTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_READ) } just runs
+		every { authorizationService.hasTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_READ) } returns true
 		every { mapsProvider.buildDirectionsUrl("123 Main St", 1.0, 2.0) } returns "https://maps.example/dir"
 
 		val result = service.getDirections(orgId, event.id, currentUser)

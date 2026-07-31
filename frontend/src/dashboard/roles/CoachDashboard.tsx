@@ -1,38 +1,34 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { DashboardShell, type DashNavItem } from "../DashboardShell";
 import { DashCard } from "../components/DashCard";
 import { DashboardPageHeader } from "../components/DashboardPageHeader";
 import { StatTile } from "../components/StatTile";
 import { Pill } from "../components/Pill";
 import { ProgressBar } from "../components/ProgressBar";
-import { IconBadge } from "../components/IconBadge";
 import { CardQuery } from "../components/CardQuery";
-import { PrimaryButton, SecondaryLightButton } from "../../marketing/components/buttons";
+import { PrimaryButton } from "../../marketing/components/buttons";
 import { adultAvatars, sidebarPromoBackground } from "../demoAssets";
 import { useAuth } from "../../auth/AuthContext";
 import { formatMoneyMinorUnits } from "../../lib/money";
+import { appPaths } from "../../routes/appPaths";
 import { useContexts } from "../../authorization/api";
 import { capabilitiesFor } from "../../authorization/capabilities";
-import { Capabilities } from "../../authorization/capabilityConstants";
 import { navItemsFor } from "../registry/navRegistry";
 import { visibleWidgetIds } from "../registry/widgetRegistry";
 import {
-	useCoachAnnouncements,
 	useCoachFundraisingProgress,
-	useCoachRequiredActions,
 	useCoachRosterSummary,
 	useCoachTeamPageStatus,
 	useCoachTeamSchedule,
 	useCoachTeams,
 } from "../api";
-import { CheckCircleIcon, FileTextIcon, MegaphoneIcon, PlusIcon, UsersIcon } from "../icons";
+import { CheckCircleIcon, UsersIcon } from "../icons";
 
 /** Coach dashboard, wired to real per-card API calls (DESIGN-DOC.md section 10.1/10.2). */
 export function CoachDashboard({ organizationId }: { organizationId: string }) {
 	const { user } = useAuth();
 	const teams = useCoachTeams(organizationId);
-	const teamSchedule = useCoachTeamSchedule(organizationId);
-	const rosterSummary = useCoachRosterSummary(organizationId);
 
 	// A coach with multiple assigned teams picks which one Team Page Status/
 	// Fundraising Progress (and their capability gating below) reflect — the team
@@ -43,10 +39,10 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 	const primaryTeamId = teams.data?.[0]?.teamId ?? null;
 	const activeTeamId = selectedTeamId ?? primaryTeamId;
 
+	const teamSchedule = useCoachTeamSchedule(organizationId, activeTeamId);
+	const rosterSummary = useCoachRosterSummary(organizationId, activeTeamId);
 	const teamPageStatus = useCoachTeamPageStatus(organizationId, activeTeamId);
 	const fundraisingProgress = useCoachFundraisingProgress(organizationId, activeTeamId);
-	const announcements = useCoachAnnouncements(organizationId);
-	const requiredActions = useCoachRequiredActions(organizationId);
 
 	// Nav/widget visibility are registries filtered by real capabilities for the
 	// active team (DESIGN-DOC.md section 10.2/10.3) — not hardcoded arrays.
@@ -56,14 +52,12 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 	// two widgets specifically.
 	const contexts = useContexts();
 	const teamCapabilities = capabilitiesFor(contexts.data, "TEAM", activeTeamId);
-	const navItems: DashNavItem[] = navItemsFor("TEAM", teamCapabilities).map((item, index) => ({
+	const navItems: DashNavItem[] = navItemsFor("TEAM", teamCapabilities, { organizationId, teamId: activeTeamId }).map((item) => ({
 		icon: item.icon,
 		label: item.label,
-		active: index === 0,
+		to: item.to,
 	}));
 	const visibleWidgets = visibleWidgetIds("TEAM", teamCapabilities);
-	const canEditTeamPage = teamCapabilities.has(Capabilities.TEAM_PAGE_EDIT);
-	const canManageFundraising = teamCapabilities.has(Capabilities.TEAM_FUNDRAISING_MANAGE);
 
 	return (
 		<DashboardShell
@@ -76,8 +70,9 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 			userAvatarSrc={adultAvatars.coachJordan}
 			promo={{
 				heading: "Build a stronger team on and off the field.",
-				copy: "LeagueLift helps you save time, communicate better, and bring your team together.",
-				linkLabel: "Learn more",
+				copy: "Keep schedules, roster summaries, team pages, and fundraising connected.",
+				linkLabel: "View Schedule",
+				to: activeTeamId ? appPaths.teamEvents(organizationId, activeTeamId) : appPaths.dashboard("coach-teams"),
 				backgroundSrc: sidebarPromoBackground,
 			}}
 		>
@@ -102,17 +97,18 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 								</select>
 							</label>
 						)}
-						<SecondaryLightButton icon="none">Message Team</SecondaryLightButton>
-						<PrimaryButton icon="none">
-							<PlusIcon className="size-4" /> New Announcement
-						</PrimaryButton>
+						{activeTeamId && (
+							<PrimaryButton icon="none" to={appPaths.teamEvents(organizationId, activeTeamId)}>
+								Manage Schedule
+							</PrimaryButton>
+						)}
 					</>
 				}
 			/>
 
 			<div className="grid gap-5 lg:grid-cols-3">
 				{visibleWidgets.has("coach.my-teams") && (
-					<DashCard title="My Teams" action={{ label: "View all teams" }}>
+					<DashCard id="coach-teams" title="My Teams">
 						<CardQuery query={teams} loadingLabel="Loading teams…" isEmpty={(items) => items.length === 0} emptyTitle="No teams yet">
 							{(items) => (
 								<ul className="flex flex-col gap-3">
@@ -132,7 +128,7 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 				)}
 
 				{visibleWidgets.has("coach.team-schedule") && (
-					<DashCard title="Team Schedule" action={{ label: "View full schedule" }}>
+					<DashCard id="coach-schedule" title="Team Schedule" action={activeTeamId ? { label: "View full schedule", to: appPaths.teamEvents(organizationId, activeTeamId) } : undefined}>
 						<CardQuery query={teamSchedule} loadingLabel="Loading schedule…" isEmpty={(items) => items.length === 0} emptyTitle="No upcoming events">
 							{(items) => (
 								<ul className="flex flex-col gap-3">
@@ -143,7 +139,7 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 												<span className="font-heading text-base text-navy-900">{event.date}</span>
 											</div>
 											<div className="min-w-0 flex-1">
-												<p className="truncate font-medium text-navy-900">{event.title}</p>
+												<Link to={appPaths.event(organizationId, event.id)} className="truncate font-medium text-navy-900 hover:text-green-600 hover:underline">{event.title}</Link>
 												<p className="text-xs text-slate-500">{event.subtitle}</p>
 											</div>
 											{event.tag && <span className={`text-xs font-semibold ${event.tag === "Home" ? "text-green-600" : "text-info-600"}`}>{event.tag}</span>}
@@ -156,7 +152,7 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 				)}
 
 				{visibleWidgets.has("coach.roster-summary") && (
-					<DashCard title="Roster Summary" action={{ label: "View full roster" }}>
+					<DashCard id="coach-roster" title="Roster Summary">
 						<CardQuery query={rosterSummary} loadingLabel="Loading roster…">
 							{(data) => (
 								<>
@@ -176,7 +172,7 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 				)}
 
 				{visibleWidgets.has("coach.team-page-status") && (
-					<DashCard title="Team Page Status" action={canEditTeamPage ? { label: "Edit Page" } : undefined}>
+					<DashCard id="coach-team-page" title="Team Page Status">
 						<CardQuery query={teamPageStatus} loadingLabel="Loading page status…">
 							{(data) =>
 								data ? (
@@ -185,7 +181,12 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 											<p className="font-heading font-bold">{data.teamName}</p>
 											<Pill tone={data.status === "PUBLISHED" ? "success" : "neutral"}>{data.status}</Pill>
 										</div>
-										{data.slug && <p className="text-xs text-slate-400">/{data.slug}</p>}
+										{data.slug && (
+											<div className="mt-2 flex items-center justify-between gap-3">
+												<p className="text-xs text-slate-400">/{data.slug}</p>
+												<Link to={`/p/${data.slug}`} className="text-xs font-semibold text-green-400 hover:underline">View page</Link>
+											</div>
+										)}
 									</div>
 								) : (
 									<p className="text-sm text-slate-500">No team page created yet.</p>
@@ -196,7 +197,7 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 				)}
 
 				{visibleWidgets.has("coach.fundraising-progress") && (
-					<DashCard title="Fundraising Progress" action={canManageFundraising ? { label: "View all fundraisers" } : undefined}>
+					<DashCard id="coach-fundraising" title="Fundraising Progress">
 						<CardQuery query={fundraisingProgress} loadingLabel="Loading fundraiser…">
 							{(data) =>
 								data ? (
@@ -222,50 +223,7 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 					</DashCard>
 				)}
 
-				{visibleWidgets.has("coach.announcements") && (
-					<DashCard title="Announcements" action={{ label: "View all" }} className="lg:col-span-2">
-						<CardQuery query={announcements} loadingLabel="Loading announcements…" isEmpty={(items) => items.length === 0} emptyTitle="No announcements">
-							{(items) => (
-								<ul className="flex flex-col gap-4">
-									{items.map((item) => (
-										<li key={item.id} className="flex items-start gap-3">
-											<IconBadge icon={<MegaphoneIcon className="size-4" />} tone="success" />
-											<div className="min-w-0 flex-1">
-												<div className="flex items-center gap-2">
-													<p className="font-medium text-navy-900">{item.title}</p>
-													{item.isNew && <Pill tone="success">New</Pill>}
-												</div>
-												<p className="text-sm text-slate-500">{item.body}</p>
-											</div>
-											<span className="shrink-0 text-xs text-slate-400">{item.postedLabel}</span>
-										</li>
-									))}
-								</ul>
-							)}
-						</CardQuery>
-					</DashCard>
-				)}
 
-				{visibleWidgets.has("coach.required-actions") && (
-					<DashCard title="Required Actions" action={{ label: "View all" }}>
-						<CardQuery query={requiredActions} loadingLabel="Loading…" isEmpty={(items) => items.length === 0} emptyTitle="Nothing pending">
-							{(items) => (
-								<ul className="flex flex-col gap-3">
-									{items.map((action) => (
-										<li key={action.id} className="flex items-center gap-3">
-											<IconBadge icon={<FileTextIcon className="size-4" />} tone={action.tone === "warning" ? "warning" : action.tone === "error" ? "error" : "info"} />
-											<div className="min-w-0 flex-1">
-												<p className="truncate text-sm font-medium text-navy-900">{action.title}</p>
-												<p className="truncate text-xs text-slate-500">{action.subtitle}</p>
-											</div>
-											<span className="shrink-0 text-xs font-semibold text-error-600">{action.dueLabel}</span>
-										</li>
-									))}
-								</ul>
-							)}
-						</CardQuery>
-					</DashCard>
-				)}
 			</div>
 		</DashboardShell>
 	);

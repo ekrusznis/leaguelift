@@ -3937,13 +3937,20 @@ paths:
   /organizations/{organizationId}/dashboard/coach/team-schedule:
     get:
       tags: [dashboard]
-      summary: Coach dashboard — team schedule (demo)
+      summary: Coach dashboard — upcoming real events for the selected accessible team
       operationId: getCoachTeamSchedule
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: teamId
+          in: query
+          required: false
+          description: Selects which of the caller's accessible teams to show. Defaults to the alphabetically-first accessible team when omitted. 403s if the team is not accessible to the caller.
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
-          description: Team schedule
+          description: Upcoming real event records mapped to the compact dashboard schedule shape
           content:
             application/json:
               schema:
@@ -3958,10 +3965,17 @@ paths:
   /organizations/{organizationId}/dashboard/coach/roster-summary:
     get:
       tags: [dashboard]
-      summary: Coach dashboard — roster summary (real athlete count across the caller's assigned teams; demo attendance)
+      summary: Coach dashboard — roster summary for the selected accessible team (real athlete count; attendance remains demo)
       operationId: getCoachRosterSummary
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: teamId
+          in: query
+          required: false
+          description: Selects which of the caller's accessible teams to summarize. Defaults to the alphabetically-first accessible team when omitted. 403s if the team is not accessible to the caller.
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: Roster summary
@@ -4448,7 +4462,7 @@ paths:
   /organizations/{organizationId}/reports/revenue:
     get:
       tags: [reporting]
-      summary: Org revenue report — by source type (CONTRIBUTION/ORDER) and by team, date-ranged (Phase 9 slice 1, ADR-025; requires manager role)
+      summary: "Org revenue report — by source type (CONTRIBUTION/ORDER) and by team, date-ranged (Phase 9 slice 1, ADR-025; requires an active reporting role: OWNER, ADMINISTRATOR, FINANCE_MANAGER, or VIEWER)"
       operationId: getRevenueReport
       parameters:
         - name: organizationId
@@ -4476,7 +4490,7 @@ paths:
   /organizations/{organizationId}/reports/revenue/export:
     get:
       tags: [reporting]
-      summary: Revenue report as CSV (Phase 9 slice 1, ADR-025; requires manager role)
+      summary: "Revenue report as CSV (Phase 9 slice 1, ADR-025; requires an active reporting role: OWNER, ADMINISTRATOR, FINANCE_MANAGER, or VIEWER)"
       operationId: exportRevenueReport
       parameters:
         - name: organizationId
@@ -4503,7 +4517,7 @@ paths:
   /organizations/{organizationId}/reports/campaigns:
     get:
       tags: [reporting]
-      summary: Revenue by campaign, date-ranged (Phase 9 slice 1, ADR-025; requires manager role)
+      summary: "Revenue by campaign, date-ranged (Phase 9 slice 1, ADR-025; requires an active reporting role: OWNER, ADMINISTRATOR, FINANCE_MANAGER, or VIEWER)"
       operationId: getCampaignRevenueReport
       parameters:
         - name: organizationId
@@ -4533,7 +4547,7 @@ paths:
   /organizations/{organizationId}/reports/products:
     get:
       tags: [reporting]
-      summary: Product performance (quantity sold/revenue) from confirmed orders, date-ranged (Phase 9 slice 1, ADR-025; requires manager role)
+      summary: "Product performance (quantity sold/revenue) from confirmed orders, date-ranged (Phase 9 slice 1, ADR-025; requires an active reporting role: OWNER, ADMINISTRATOR, FINANCE_MANAGER, or VIEWER)"
       operationId: getProductPerformanceReport
       parameters:
         - name: organizationId
@@ -4563,7 +4577,7 @@ paths:
   /organizations/{organizationId}/reports/refunds:
     get:
       tags: [reporting]
-      summary: Refunds report, date-ranged (Phase 9 slice 1, ADR-025; requires manager role)
+      summary: "Refunds report, date-ranged (Phase 9 slice 1, ADR-025; requires an active reporting role: OWNER, ADMINISTRATOR, FINANCE_MANAGER, or VIEWER)"
       operationId: getRefundsReport
       parameters:
         - name: organizationId
@@ -4591,7 +4605,7 @@ paths:
   /organizations/{organizationId}/reports/fee-collections:
     get:
       tags: [reporting]
-      summary: Org-wide fee payments actually collected in range, plus current outstanding total (Phase 9 slice 1, ADR-025; requires manager role)
+      summary: "Org-wide fee payments actually collected in range, plus current outstanding total (Phase 9 slice 1, ADR-025; requires an active reporting role: OWNER, ADMINISTRATOR, FINANCE_MANAGER, or VIEWER)"
       operationId: getFeeCollectionsReport
       parameters:
         - name: organizationId
@@ -4765,7 +4779,7 @@ paths:
   /organizations/{organizationId}/events/{eventId}:
     get:
       tags: [events]
-      summary: Get one event (Phase 10 slice 1, ADR-026; requires event.read at the event's scope)
+      summary: Get one event (staff requires event.read at the event's scope; a linked guardian or athlete may read a published team event on their authorized schedule)
       operationId: getEvent
       parameters:
         - name: organizationId

@@ -10,6 +10,10 @@ import { ResetPasswordPage } from "../pages/auth/ResetPasswordPage";
 import { SignInPage } from "../pages/auth/SignInPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { CollectionsPage } from "../features/collections/CollectionsPage";
+import { EventDetailPage } from "../features/events/EventDetailPage";
+import { EventsPage } from "../features/events/EventsPage";
+import { PlatformOrganizationsPage } from "../features/reporting/PlatformOrganizationsPage";
+import { PlatformReportsPage } from "../features/reporting/PlatformReportsPage";
 import { HouseholdDetailPage } from "../pages/HouseholdDetailPage";
 import { AboutPage } from "../pages/marketing/AboutPage";
 import { BookDemoPage } from "../pages/marketing/BookDemoPage";
@@ -34,6 +38,8 @@ import { OrganizationDetailPage } from "../pages/OrganizationDetailPage";
 import { OrganizationsPage } from "../pages/OrganizationsPage";
 import { PublicPageView } from "../pages/PublicPageView";
 import { ProtectedRoute } from "./ProtectedRoute";
+import { RequireCapability } from "../authorization/RequireCapability";
+import { Capabilities } from "../authorization/capabilityConstants";
 
 export function AppRoutes() {
 	return (
@@ -84,7 +90,15 @@ export function AppRoutes() {
 					<Route path="organizations" element={<OrganizationsPage />} />
 					<Route path="organizations/:organizationId" element={<OrganizationDetailPage />} />
 					<Route path="organizations/:organizationId/collections" element={<CollectionsPage />} />
+					<Route path="organizations/:organizationId/events/:eventId" element={<EventDetailPage />} />
+					<Route path="organizations/:organizationId/teams/:teamId/events" element={<EventsPage scopeType="team" />} />
+					<Route path="organizations/:organizationId/tournaments/:tournamentId/events" element={<EventsPage scopeType="tournament" />} />
+					<Route path="organizations/:organizationId/participants/:participantId/events" element={<EventsPage scopeType="participant" />} />
 					<Route path="organizations/:organizationId/households/:householdId" element={<HouseholdDetailPage />} />
+					<Route path="organizations/:organizationId/households/:householdId/:section" element={<HouseholdDetailPage />} />
+					<Route path="organizations/:organizationId/:section" element={<OrganizationDetailPage />} />
+					<Route path="platform/organizations" element={<RequireCapability capability={Capabilities.PLATFORM_ORG_VIEW} contextType="PLATFORM_ADMIN" resourceId={null}><PlatformOrganizationsPage /></RequireCapability>} />
+					<Route path="platform/reports" element={<RequireCapability capability={Capabilities.PLATFORM_AUDIT_VIEW} contextType="PLATFORM_ADMIN" resourceId={null}><PlatformReportsPage /></RequireCapability>} />
 				</Route>
 			</Route>
 

@@ -1,16 +1,21 @@
-import { useEffect } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useEffect, type ReactNode } from "react";
+import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
+import { Capabilities } from "../authorization/capabilityConstants";
+import { useContexts } from "../authorization/api";
+import { hasCapability } from "../authorization/capabilities";
 import { ErrorState } from "../components/states/ErrorState";
 import { LoadingState } from "../components/states/LoadingState";
 import { OrganizationLogo } from "../dashboard/components/OrganizationLogo";
+import { OrganizationDocumentsPanel } from "../features/documents/OrganizationDocumentsPanel";
+import { EventListPanel } from "../features/events/EventListPanel";
 import { FeeTemplateList } from "../features/fees/FeeTemplateList";
 import { CampaignList } from "../features/fundraising/CampaignList";
 import { HouseholdList } from "../features/households/HouseholdList";
+import { IntegrationsPanel } from "../features/integrations/IntegrationsPanel";
 import { useMediaAssignments } from "../features/media/api";
 import { OrganizationBrandingPanel } from "../features/media/OrganizationBrandingPanel";
-import { OrganizationDocumentsPanel } from "../features/documents/OrganizationDocumentsPanel";
-import { IntegrationsPanel } from "../features/integrations/IntegrationsPanel";
 import { useOrganization } from "../features/organizations/api";
+import type { Organization } from "../features/organizations/types";
 import { InvitationsPanel } from "../features/organizations/InvitationsPanel";
 import { OnboardingChecklist } from "../features/organizations/OnboardingChecklist";
 import { OrganizationProfileForm } from "../features/organizations/OrganizationProfileForm";
@@ -18,114 +23,208 @@ import { useRefreshPayoutStatus } from "../features/payouts/api";
 import { PayoutConnectPanel } from "../features/payouts/PayoutConnectPanel";
 import { PayoutSummaryPanel } from "../features/payouts/PayoutSummaryPanel";
 import { PublicPagesPanel } from "../features/publicpage/PublicPagesPanel";
+import { OrganizationReportsPanel } from "../features/reporting/OrganizationReportsPanel";
 import { SponsorshipPackageList } from "../features/sponsorship/SponsorshipPackageList";
 import { StoreList } from "../features/store/StoreList";
 import { TeamList } from "../features/teams/TeamList";
 import { TournamentList } from "../features/tournaments/TournamentList";
+import { appPaths, type OrganizationSection } from "../routes/appPaths";
+
+const SECTION_LABELS: Array<{ id: OrganizationSection; label: string }> = [
+	{ id: "overview", label: "Overview" },
+	{ id: "teams", label: "Teams" },
+	{ id: "tournaments", label: "Tournaments" },
+	{ id: "households", label: "Households & Athletes" },
+	{ id: "events", label: "Events" },
+	{ id: "fees", label: "Fees & Payments" },
+	{ id: "fundraising", label: "Fundraising" },
+	{ id: "stores", label: "Stores & Orders" },
+	{ id: "sponsorships", label: "Sponsorships" },
+	{ id: "reports", label: "Reports" },
+	{ id: "documents", label: "Documents" },
+	{ id: "members", label: "Members" },
+	{ id: "settings", label: "Settings" },
+];
+
+function isOrganizationSection(value: string | undefined): value is OrganizationSection {
+	return SECTION_LABELS.some((section) => section.id === value);
+}
 
 export function OrganizationDetailPage() {
-	const { organizationId } = useParams<{ organizationId: string }>();
+	const { organizationId, section } = useParams<{ organizationId: string; section?: string }>();
+	const contexts = useContexts();
 	const { data: organization, isLoading, isError, refetch } = useOrganization(organizationId ?? "");
 
-	if (!organizationId) {
-		return <ErrorState message="No organization selected." />;
+	if (!organizationId) return <ErrorState message="No organization selected." />;
+	if (section && !isOrganizationSection(section)) return <Navigate to={appPaths.organization(organizationId, "overview")} replace />;
+	if (isLoading || contexts.isLoading) return <LoadingState label="Loading organization…" />;
+	if (isError || contexts.isError || !organization) {
+		return <ErrorState message="Could not load this organization." onRetry={() => { void refetch(); void contexts.refetch(); }} />;
 	}
-	if (isLoading) {
-		return <LoadingState label="Loading organization…" />;
-	}
-	if (isError || !organization) {
-		return <ErrorState message="Could not load this organization." onRetry={() => refetch()} />;
+
+	const activeSection: OrganizationSection = section && isOrganizationSection(section) ? section : "overview";
+	const canReadEvents = hasCapability(contexts.data, Capabilities.EVENT_READ, { contextType: "ORGANIZATION", resourceId: organization.id });
+	const canManageEvents = hasCapability(contexts.data, Capabilities.ORG_EVENT_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id });
+	const canManageOrganization = hasCapability(contexts.data, Capabilities.ORG_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id });
+	const canManageTeams = hasCapability(contexts.data, Capabilities.ORG_TEAM_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id }) || canManageOrganization;
+	const canManageTournaments = hasCapability(contexts.data, Capabilities.ORG_TOURNAMENT_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id }) || canManageOrganization;
+	const canManageMembers = hasCapability(contexts.data, Capabilities.ORG_MEMBERS_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id });
+	const canManagePayouts = hasCapability(contexts.data, Capabilities.ORG_PAYOUT_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id });
+	const canViewReports = hasCapability(contexts.data, Capabilities.ORG_REPORT_VIEW, { contextType: "ORGANIZATION", resourceId: organization.id });
+
+	const visibleSections = SECTION_LABELS.filter(({ id }) => {
+		if (id === "overview") return true;
+		if (id === "teams") return canManageTeams;
+		if (id === "tournaments") return canManageTournaments;
+		if (id === "events") return canReadEvents || canManageEvents;
+		if (id === "fees" || id === "reports") return canViewReports || canManageOrganization;
+		if (id === "members") return canManageMembers;
+		if (id === "settings") return canManageOrganization || canManagePayouts;
+		if (["households", "fundraising", "stores", "sponsorships", "documents"].includes(id)) return canManageOrganization;
+		return false;
+	});
+
+	if (!visibleSections.some((item) => item.id === activeSection)) {
+		return <Navigate to={appPaths.organization(organization.id, "overview")} replace />;
 	}
 
 	return (
-		<div className="flex flex-col gap-8">
-			<div className="flex items-center gap-4">
-				<OrganizationHeaderLogo organizationId={organization.id} organizationName={organization.name} />
-				<div>
-					<h1 className="font-heading text-2xl font-bold text-navy">{organization.name}</h1>
-					<p className="text-slate-gray">/{organization.slug}</p>
+		<div className="flex flex-col gap-6">
+			<div className="flex flex-wrap items-center justify-between gap-4">
+				<div className="flex items-center gap-4">
+					<OrganizationHeaderLogo organizationId={organization.id} organizationName={organization.name} />
+					<div>
+						<Link to="/app" className="text-sm text-azure-blue hover:underline">← Dashboard</Link>
+						<h1 className="font-heading text-2xl font-bold text-navy">{organization.name}</h1>
+						<p className="text-slate-gray">/{organization.slug}</p>
+					</div>
 				</div>
 			</div>
 
-			<OnboardingChecklist organizationId={organization.id} />
+			{canManagePayouts && <PayoutStripeReturnHandler organizationId={organization.id} />}
 
-			<section aria-label="Branding" className="flex flex-col gap-3">
-				<h2 className="font-heading text-lg font-semibold text-navy">Branding</h2>
-				<OrganizationBrandingPanel organizationId={organization.id} organizationName={organization.name} />
-			</section>
-
-			<section aria-label="Payouts" className="flex flex-col gap-3">
-				<h2 className="font-heading text-lg font-semibold text-navy">Payouts</h2>
-				<PayoutStripeReturnHandler organizationId={organization.id} />
-				<PayoutConnectPanel organizationId={organization.id} />
-				<PayoutSummaryPanel organizationId={organization.id} />
-			</section>
-
-			<section aria-label="Organization profile" className="flex flex-col gap-3">
-				<h2 className="font-heading text-lg font-semibold text-navy">Profile</h2>
-				<OrganizationProfileForm organization={organization} />
-			</section>
-
-			<section aria-label="Teams" className="flex flex-col gap-3">
-				<h2 className="font-heading text-lg font-semibold text-navy">Teams</h2>
-				<TeamList organizationId={organization.id} />
-			</section>
-
-			<section aria-label="Tournaments" className="flex flex-col gap-3">
-				<h2 className="font-heading text-lg font-semibold text-navy">Tournaments</h2>
-				<TournamentList organizationId={organization.id} />
-			</section>
-
-			<section aria-label="Households" className="flex flex-col gap-3">
-				<h2 className="font-heading text-lg font-semibold text-navy">Households</h2>
-				<HouseholdList organizationId={organization.id} />
-			</section>
-
-			<section aria-label="Fee templates" className="flex flex-col gap-3">
-				<div className="flex items-center justify-between">
-					<h2 className="font-heading text-lg font-semibold text-navy">Fee Templates</h2>
-					<Link to={`/app/organizations/${organization.id}/collections`} className="text-sm text-azure-blue hover:underline">
-						View collections →
+			<nav aria-label="Organization sections" className="flex gap-2 overflow-x-auto border-b border-slate-gray/20 pb-3">
+				{visibleSections.map((item) => (
+					<Link
+						key={item.id}
+						to={appPaths.organization(organization.id, item.id)}
+						aria-current={activeSection === item.id ? "page" : undefined}
+						className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium ${activeSection === item.id ? "bg-navy text-white" : "text-slate-gray hover:bg-ice-white hover:text-navy"}`}
+					>
+						{item.label}
 					</Link>
-				</div>
-				<FeeTemplateList organizationId={organization.id} />
-			</section>
+				))}
+			</nav>
 
-			<section aria-label="Fundraising campaigns" className="flex flex-col gap-3">
-				<h2 className="font-heading text-lg font-semibold text-navy">Fundraising Campaigns</h2>
-				<CampaignList organizationId={organization.id} />
-			</section>
-
-			<section aria-label="Stores" className="flex flex-col gap-3">
-				<h2 className="font-heading text-lg font-semibold text-navy">Stores</h2>
-				<StoreList organizationId={organization.id} />
-			</section>
-
-			<section aria-label="Sponsorship packages" className="flex flex-col gap-3">
-				<h2 className="font-heading text-lg font-semibold text-navy">Sponsorship Packages</h2>
-				<SponsorshipPackageList organizationId={organization.id} organizationSlug={organization.slug} />
-			</section>
-
-			<section aria-label="Public pages" className="flex flex-col gap-3">
-				<h2 className="font-heading text-lg font-semibold text-navy">Public Pages</h2>
-				<PublicPagesPanel organizationId={organization.id} organizationName={organization.name} />
-			</section>
-
-			<section aria-label="Documents" className="flex flex-col gap-3">
-				<h2 className="font-heading text-lg font-semibold text-navy">Documents</h2>
-				<OrganizationDocumentsPanel organizationId={organization.id} />
-			</section>
-
-			<section aria-label="Integrations" className="flex flex-col gap-3">
-				<h2 className="font-heading text-lg font-semibold text-navy">Integrations</h2>
-				<IntegrationsPanel organizationId={organization.id} />
-			</section>
-
-			<section aria-label="Administrators" className="flex flex-col gap-3">
-				<h2 className="font-heading text-lg font-semibold text-navy">Administrators</h2>
-				<InvitationsPanel organizationId={organization.id} />
-			</section>
+			<OrganizationSectionContent
+				section={activeSection}
+				organization={organization}
+				canManageEvents={canManageEvents}
+				canManageOrganization={canManageOrganization}
+				canManagePayouts={canManagePayouts}
+				canViewReports={canViewReports}
+				visibleSections={visibleSections}
+			/>
 		</div>
+	);
+}
+
+function OrganizationSectionContent({
+	section,
+	organization,
+	canManageEvents,
+	canManageOrganization,
+	canManagePayouts,
+	canViewReports,
+	visibleSections,
+}: {
+	section: OrganizationSection;
+	organization: Organization;
+	canManageEvents: boolean;
+	canManageOrganization: boolean;
+	canManagePayouts: boolean;
+	canViewReports: boolean;
+	visibleSections: Array<{ id: OrganizationSection; label: string }>;
+}) {
+	switch (section) {
+		case "overview":
+			return (
+				<div className="flex flex-col gap-6">
+					{canManageOrganization && <OnboardingChecklist organizationId={organization.id} />}
+					<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5">
+						<h2 className="font-heading text-lg font-semibold text-navy">Organization workspace</h2>
+						<p className="mt-1 text-sm text-slate-gray">Use the sections above to manage teams, households, events, revenue programs, reports, documents, and integrations.</p>
+						<div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+							{visibleSections.filter((item) => !["overview", "settings"].includes(item.id)).slice(0, 9).map((item) => (
+								<Link key={item.id} to={appPaths.organization(organization.id, item.id)} className="rounded-lg border border-slate-gray/20 p-3 text-sm font-medium text-navy hover:border-green-500 hover:text-green-600">
+									{item.label} →
+								</Link>
+							))}
+						</div>
+					</section>
+				</div>
+			);
+		case "teams":
+			return <Section title="Teams"><TeamList organizationId={organization.id} /></Section>;
+		case "tournaments":
+			return <Section title="Tournaments"><TournamentList organizationId={organization.id} /></Section>;
+		case "households":
+			return <Section title="Households & Athletes"><HouseholdList organizationId={organization.id} /></Section>;
+		case "events":
+			return <Section title="Events" description="Manage organization-wide events or open a team/tournament schedule for scoped events."><EventListPanel scope={{ type: "organization", organizationId: organization.id }} canManage={canManageEvents} /></Section>;
+		case "fees":
+			return canManageOrganization ? (
+				<Section title="Fees & Payments" action={<Link to={appPaths.collections(organization.id)} className="text-sm font-medium text-azure-blue hover:underline">View collections and export →</Link>}>
+					<FeeTemplateList organizationId={organization.id} />
+				</Section>
+			) : (
+				<Section title="Fees & Payments" description="Read-only collections and revenue reporting for your organization role.">
+					{canViewReports ? <OrganizationReportsPanel organizationId={organization.id} /> : <p className="text-sm text-slate-gray">You do not have permission to view financial reports.</p>}
+				</Section>
+			);
+		case "fundraising":
+			return <Section title="Fundraising Campaigns"><CampaignList organizationId={organization.id} /></Section>;
+		case "stores":
+			return <Section title="Stores & Orders"><StoreList organizationId={organization.id} /></Section>;
+		case "sponsorships":
+			return <Section title="Sponsorship Packages"><SponsorshipPackageList organizationId={organization.id} organizationSlug={organization.slug} /></Section>;
+		case "reports":
+			return <Section title="Reports"><OrganizationReportsPanel organizationId={organization.id} /></Section>;
+		case "documents":
+			return <Section title="Documents"><OrganizationDocumentsPanel organizationId={organization.id} /></Section>;
+		case "members":
+			return <Section title="Members & Invitations"><InvitationsPanel organizationId={organization.id} /></Section>;
+		case "settings":
+			return (
+				<div className="flex flex-col gap-8">
+					{canManageOrganization && (
+						<>
+							<Section title="Branding"><OrganizationBrandingPanel organizationId={organization.id} organizationName={organization.name} /></Section>
+							<Section title="Organization Profile"><OrganizationProfileForm organization={organization} /></Section>
+							<Section title="Public Pages"><PublicPagesPanel organizationId={organization.id} organizationName={organization.name} /></Section>
+							<Section title="Integrations"><IntegrationsPanel organizationId={organization.id} /></Section>
+						</>
+					)}
+					{canManagePayouts && (
+						<Section title="Payouts">
+							<PayoutConnectPanel organizationId={organization.id} />
+							<PayoutSummaryPanel organizationId={organization.id} />
+						</Section>
+					)}
+				</div>
+			);
+	}
+}
+
+function Section({ title, description, action, children }: { title: string; description?: string; action?: ReactNode; children: ReactNode }) {
+	return (
+		<section aria-label={title} className="flex flex-col gap-3">
+			<div className="flex flex-wrap items-start justify-between gap-3">
+				<div><h2 className="font-heading text-lg font-semibold text-navy">{title}</h2>{description && <p className="mt-1 text-sm text-slate-gray">{description}</p>}</div>
+				{action}
+			</div>
+			{children}
+		</section>
 	);
 }
 
@@ -136,11 +235,7 @@ function OrganizationHeaderLogo({ organizationId, organizationName }: { organiza
 	return <OrganizationLogo name={organizationName} src={logo?.url} size="lg" />;
 }
 
-/**
- * When Stripe redirects the browser back here (return_url/refresh_url both point at
- * this page with a `stripeOnboarding` marker — see PayoutConnectPanel), re-sync status
- * from Stripe and strip the marker so a page refresh doesn't repeat the call.
- */
+/** Re-syncs Stripe Connect after a return/refresh redirect and removes the marker. */
 function PayoutStripeReturnHandler({ organizationId }: { organizationId: string }) {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const refreshStatus = useRefreshPayoutStatus(organizationId);
@@ -155,8 +250,6 @@ function PayoutStripeReturnHandler({ organizationId }: { organizationId: string 
 				setSearchParams(next, { replace: true });
 			},
 		});
-		// Intentionally only re-runs when the marker itself changes, not on every
-		// searchParams/refreshStatus identity change.
 	}, [stripeOnboarding]);
 
 	return null;

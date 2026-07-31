@@ -72,8 +72,9 @@ data class PlatformReport(
 }
 
 /**
- * Org reports (Phase 9 slice 1, ADR-025) — every report requires manager-role,
- * matching `FeeService.exportCollectionsCsv`'s existing bar for financial exports.
+ * Org reports (Phase 9 slice 1, ADR-025) — every report requires the read-only
+ * reporting role boundary (OWNER, ADMINISTRATOR, FINANCE_MANAGER, or VIEWER).
+ * Mutating fee/payment operations remain behind their existing manager checks.
  * `from`/`to` default to the trailing 30 days when omitted, a common reporting-tool
  * convention this codebase hadn't needed before (every other date-range-shaped query
  * so far — sponsorship/fee reminders — used a forward-looking "due within N days"
@@ -94,7 +95,7 @@ class ReportingService(
 ) {
 
 	fun getRevenueReport(organizationId: UUID, from: LocalDate?, to: LocalDate?, currentUser: CurrentUser): RevenueReport {
-		membershipService.requireManagerRole(organizationId, currentUser)
+		membershipService.requireReportingRole(organizationId, currentUser)
 		val (resolvedFrom, resolvedTo) = resolveRange(from, to)
 		val (fromInstant, toInstant) = toInstantRange(resolvedFrom, resolvedTo)
 		return RevenueReport(
@@ -117,28 +118,28 @@ class ReportingService(
 	}
 
 	fun getCampaignBreakdown(organizationId: UUID, from: LocalDate?, to: LocalDate?, currentUser: CurrentUser): List<CampaignRevenueRow> {
-		membershipService.requireManagerRole(organizationId, currentUser)
+		membershipService.requireReportingRole(organizationId, currentUser)
 		val (resolvedFrom, resolvedTo) = resolveRange(from, to)
 		val (fromInstant, toInstant) = toInstantRange(resolvedFrom, resolvedTo)
 		return reportingRepository.revenueByCampaign(organizationId, fromInstant, toInstant)
 	}
 
 	fun getProductPerformance(organizationId: UUID, from: LocalDate?, to: LocalDate?, currentUser: CurrentUser): List<ProductPerformanceRow> {
-		membershipService.requireManagerRole(organizationId, currentUser)
+		membershipService.requireReportingRole(organizationId, currentUser)
 		val (resolvedFrom, resolvedTo) = resolveRange(from, to)
 		val (fromInstant, toInstant) = toInstantRange(resolvedFrom, resolvedTo)
 		return reportingRepository.productPerformance(organizationId, fromInstant, toInstant)
 	}
 
 	fun getRefundsReport(organizationId: UUID, from: LocalDate?, to: LocalDate?, currentUser: CurrentUser): RefundsReport {
-		membershipService.requireManagerRole(organizationId, currentUser)
+		membershipService.requireReportingRole(organizationId, currentUser)
 		val (resolvedFrom, resolvedTo) = resolveRange(from, to)
 		val (fromInstant, toInstant) = toInstantRange(resolvedFrom, resolvedTo)
 		return RefundsReport(resolvedFrom, resolvedTo, reportingRepository.refunds(organizationId, fromInstant, toInstant))
 	}
 
 	fun getFeeCollectionsReport(organizationId: UUID, from: LocalDate?, to: LocalDate?, currentUser: CurrentUser): FeeCollectionsReport {
-		membershipService.requireManagerRole(organizationId, currentUser)
+		membershipService.requireReportingRole(organizationId, currentUser)
 		val (resolvedFrom, resolvedTo) = resolveRange(from, to)
 		val payments = reportingRepository.feeCollections(organizationId, resolvedFrom, resolvedTo)
 		val outstanding = feeRepository.getFinancialSummary(organizationId).outstandingMinor

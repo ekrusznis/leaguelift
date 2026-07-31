@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { DashboardShell, type DashNavItem } from "../DashboardShell";
 import { useContexts } from "../../authorization/api";
 import { capabilitiesFor } from "../../authorization/capabilities";
@@ -7,28 +8,20 @@ import { DashCard } from "../components/DashCard";
 import { DashboardPageHeader } from "../components/DashboardPageHeader";
 import { Pill } from "../components/Pill";
 import { ProgressBar } from "../components/ProgressBar";
-import { IconBadge } from "../components/IconBadge";
 import { CardQuery } from "../components/CardQuery";
-import { PrimaryButton, SecondaryLightButton, TextButton } from "../../marketing/components/buttons";
+import { PrimaryButton, SecondaryLightButton } from "../../marketing/components/buttons";
 import { adultAvatars, sidebarPromoBackground } from "../demoAssets";
 import { useAuth } from "../../auth/AuthContext";
 import { formatMoneyMinorUnits } from "../../lib/money";
+import { appPaths } from "../../routes/appPaths";
 import {
 	useParentActiveFundraisers,
 	useParentAthletes,
-	useParentFamilyCredits,
 	useParentFamilySchedule,
-	useParentOrganizationUpdates,
 	useParentOutstandingBalance,
 	useParentOverview,
-	useParentRecentOrders,
-	useParentRequiredActions,
 } from "../api";
 import {
-	DollarIcon,
-	GiftIcon,
-	MegaphoneIcon,
-	PackageIcon,
 	ShieldIcon as GuardianIcon,
 } from "../icons";
 import { HouseholdDocumentsPanel } from "../../features/documents/HouseholdDocumentsPanel";
@@ -40,11 +33,7 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 	const athletes = useParentAthletes(organizationId, householdId);
 	const familySchedule = useParentFamilySchedule(organizationId, householdId);
 	const outstandingBalance = useParentOutstandingBalance(organizationId, householdId);
-	const familyCredits = useParentFamilyCredits(organizationId, householdId);
 	const activeFundraisers = useParentActiveFundraisers(organizationId, householdId);
-	const recentOrders = useParentRecentOrders(organizationId, householdId);
-	const requiredActions = useParentRequiredActions(organizationId, householdId);
-	const organizationUpdates = useParentOrganizationUpdates(organizationId, householdId);
 
 	// Nav/widget visibility are registries filtered by real capabilities for this
 	// household (DESIGN-DOC.md section 10.2/10.3) — not hardcoded arrays. Parent
@@ -52,12 +41,13 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 	// exactly.
 	const contexts = useContexts();
 	const householdCapabilities = capabilitiesFor(contexts.data, "HOUSEHOLD", householdId);
-	const navItems: DashNavItem[] = navItemsFor("HOUSEHOLD", householdCapabilities).map((item, index) => ({
+	const navItems: DashNavItem[] = navItemsFor("HOUSEHOLD", householdCapabilities, { organizationId, householdId }).map((item) => ({
 		icon: item.icon,
 		label: item.label,
-		active: index === 0,
+		to: item.to,
 	}));
 	const visibleWidgets = visibleWidgetIds("HOUSEHOLD", householdCapabilities);
+	const eventSearch = new URLSearchParams({ householdId, returnTo: appPaths.dashboard() });
 
 	return (
 		<DashboardShell
@@ -65,23 +55,23 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 			contextName={overview.data?.householdName ?? "Household"}
 			contextRole="Guardian"
 			navItems={navItems}
-			showSearch
 			userName={user?.displayName ?? "Account"}
 			userAvatarSrc={adultAvatars.guardianSarah}
 			promo={{
 				heading: "Stay connected.",
 				copy: "Enable SMS alerts for schedule updates, payments, and more.",
 				linkLabel: "Manage Preferences",
+				to: appPaths.household(organizationId, householdId, "profile"),
 				backgroundSrc: sidebarPromoBackground,
 			}}
 		>
 			<DashboardPageHeader
 				heading="Family Overview"
-				description="Track schedules, fees, credits, and orders for all linked athletes."
+				description="Track schedules, fees, fundraising, and documents for all linked athletes."
 				actions={
 					<>
-						<PrimaryButton icon="none">Pay Fees</PrimaryButton>
-						<SecondaryLightButton>Share Fundraiser</SecondaryLightButton>
+						<PrimaryButton icon="none" to={appPaths.household(organizationId, householdId, "fees")}>View Fees</PrimaryButton>
+						<SecondaryLightButton to={appPaths.dashboard("parent-fundraising")}>View Fundraisers</SecondaryLightButton>
 					</>
 				}
 			/>
@@ -92,7 +82,7 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 						{(items) => (
 							<>
 								{items.map((athlete) => (
-									<DashCard key={athlete.participantId}>
+									<DashCard key={athlete.participantId} id={`parent-athlete-${athlete.participantId}`}>
 										<p className="font-heading font-bold text-navy-900">{athlete.name}</p>
 										{athlete.teamNames.length > 0 ? (
 											<div className="mt-2 flex flex-wrap gap-2">
@@ -113,7 +103,7 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 				)}
 
 				{visibleWidgets.has("parent.family-schedule") && (
-					<DashCard title="Family Schedule" action={{ label: "View full schedule" }}>
+					<DashCard id="parent-schedule" title="Family Schedule" action={{ label: "View full schedule", to: appPaths.householdEvents(organizationId, householdId) }}>
 						<CardQuery query={familySchedule} loadingLabel="Loading schedule…" isEmpty={(items) => items.length === 0} emptyTitle="No upcoming events">
 							{(items) => (
 								<ul className="flex flex-col gap-3">
@@ -124,7 +114,7 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 												<span className="font-heading text-base text-navy-900">{event.date}</span>
 											</div>
 											<div className="min-w-0 flex-1">
-												<p className="truncate font-medium text-navy-900">{event.title}</p>
+												<Link to={appPaths.event(organizationId, event.id, eventSearch)} className="truncate font-medium text-navy-900 hover:text-green-600 hover:underline">{event.title}</Link>
 												<p className="text-xs text-slate-500">{event.subtitle}</p>
 											</div>
 											<div className="text-right text-xs">
@@ -142,7 +132,7 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 				{visibleWidgets.has("parent.outstanding-balance") && (
 					<DashCard
 						title="Outstanding Balance"
-						action={{ label: "View details", to: `/app/organizations/${organizationId}/households/${householdId}` }}
+						action={{ label: "View details", to: appPaths.household(organizationId, householdId, "fees") }}
 					>
 						<CardQuery query={outstandingBalance} loadingLabel="Loading balance…">
 							{(data) => (
@@ -172,65 +162,8 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 					</DashCard>
 				)}
 
-				{visibleWidgets.has("parent.family-credits") && (
-					<DashCard title="Family Credits" action={{ label: "View credits history" }}>
-						<CardQuery query={familyCredits} loadingLabel="Loading credits…">
-							{(data) => (
-								<>
-									<ul className="flex flex-col gap-3">
-										<li className="flex items-center justify-between">
-											<span className="flex items-center gap-2 text-sm text-slate-600">
-												<GiftIcon className="size-4 text-gold-500" /> Pending Credits
-											</span>
-											<span className="font-semibold text-navy-900">{formatMoneyMinorUnits(data.pendingMinor, data.currency)}</span>
-										</li>
-										<li className="flex items-center justify-between">
-											<span className="flex items-center gap-2 text-sm text-slate-600">
-												<GiftIcon className="size-4 text-green-600" /> Available Credits
-											</span>
-											<span className="font-semibold text-green-600">{formatMoneyMinorUnits(data.availableMinor, data.currency)}</span>
-										</li>
-										<li className="flex items-center justify-between">
-											<span className="flex items-center gap-2 text-sm text-slate-600">
-												<GiftIcon className="size-4 text-info-600" /> Applied This Season
-											</span>
-											<span className="font-semibold text-navy-900">{formatMoneyMinorUnits(data.appliedThisSeasonMinor, data.currency)}</span>
-										</li>
-									</ul>
-									{data.isDemoData && <p className="mt-3 text-xs text-slate-400">Demo data — credit rules aren't built yet.</p>}
-								</>
-							)}
-						</CardQuery>
-					</DashCard>
-				)}
-
-				{visibleWidgets.has("parent.recent-orders") && (
-					<DashCard title="Recent Orders" action={{ label: "View all orders" }}>
-						<CardQuery query={recentOrders} loadingLabel="Loading orders…" isEmpty={(items) => items.length === 0} emptyTitle="No orders yet">
-							{(items) => (
-								<ul className="flex flex-col gap-3">
-									{items.map((order) => (
-										<li key={order.id} className="flex items-center gap-3">
-											<span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-ice-50 text-slate-400">
-												<PackageIcon className="size-5" />
-											</span>
-											<div className="min-w-0 flex-1">
-												<p className="truncate text-sm font-medium text-navy-900">{order.productName}</p>
-												<p className="text-xs text-slate-500">
-													{order.orderNumber} · {order.orderedAt}
-												</p>
-											</div>
-											<Pill tone="info">{order.status}</Pill>
-										</li>
-									))}
-								</ul>
-							)}
-						</CardQuery>
-					</DashCard>
-				)}
-
 				{visibleWidgets.has("parent.active-fundraisers") && (
-					<DashCard title="Active Fundraisers" action={{ label: "View all" }}>
+					<DashCard id="parent-fundraising" title="Active Fundraisers">
 						<CardQuery query={activeFundraisers} loadingLabel="Loading fundraisers…" isEmpty={(items) => items.length === 0} emptyTitle="No active fundraisers">
 							{(items) => (
 								<ul className="flex flex-col gap-4">
@@ -238,7 +171,7 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 										<li key={fundraiser.campaignId}>
 											<div className="flex items-center justify-between text-sm">
 												<span className="font-medium text-navy-900">{fundraiser.name}</span>
-												<TextButton className="text-green-600">Share</TextButton>
+												<Pill tone="success">Active</Pill>
 											</div>
 											<p className="mt-1 text-xs text-slate-500">
 												{formatMoneyMinorUnits(fundraiser.raisedMinor, fundraiser.currency)} raised of {formatMoneyMinorUnits(fundraiser.goalMinor, fundraiser.currency)}
@@ -255,53 +188,13 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 					</DashCard>
 				)}
 
-				{visibleWidgets.has("parent.required-actions") && (
-					<DashCard title="Required Actions" action={{ label: "View all" }}>
-						<CardQuery query={requiredActions} loadingLabel="Loading…" isEmpty={(items) => items.length === 0} emptyTitle="Nothing pending">
-							{(items) => (
-								<ul className="flex flex-col gap-3">
-									{items.map((action) => (
-										<li key={action.id} className="flex items-center gap-3">
-											<IconBadge icon={<DollarIcon className="size-4" />} tone={action.tone === "warning" ? "warning" : action.tone === "error" ? "error" : "info"} />
-											<div className="min-w-0 flex-1">
-												<p className="truncate text-sm font-medium text-navy-900">{action.title}</p>
-												<p className="truncate text-xs text-slate-500">{action.subtitle}</p>
-											</div>
-											<span className="shrink-0 text-xs font-semibold text-error-600">{action.dueLabel}</span>
-										</li>
-									))}
-								</ul>
-							)}
-						</CardQuery>
-					</DashCard>
-				)}
-
 				{visibleWidgets.has("parent.documents") && (
-					<DashCard title="Documents">
+					<DashCard id="parent-documents" title="Documents" action={{ label: "View documents", to: appPaths.household(organizationId, householdId, "documents") }}>
 						<HouseholdDocumentsPanel organizationId={organizationId} householdId={householdId} canAcknowledge />
 					</DashCard>
 				)}
 
-				{visibleWidgets.has("parent.organization-updates") && (
-					<DashCard title="Organization Updates" action={{ label: "View all" }}>
-						<CardQuery query={organizationUpdates} loadingLabel="Loading updates…" isEmpty={(items) => items.length === 0} emptyTitle="No updates">
-							{(items) => (
-								<ul className="flex flex-col gap-4">
-									{items.map((update) => (
-										<li key={update.id} className="flex items-start gap-3">
-											<IconBadge icon={<MegaphoneIcon className="size-4" />} tone="info" />
-											<div>
-												<p className="text-sm font-medium text-navy-900">{update.title}</p>
-												<p className="text-xs text-slate-500">{update.body}</p>
-												<p className="mt-0.5 text-xs text-slate-400">{update.postedLabel}</p>
-											</div>
-										</li>
-									))}
-								</ul>
-							)}
-						</CardQuery>
-					</DashCard>
-				)}
+
 			</div>
 		</DashboardShell>
 	);

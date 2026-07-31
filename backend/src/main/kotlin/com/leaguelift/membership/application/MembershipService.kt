@@ -34,6 +34,24 @@ class MembershipService(private val membershipRepository: MembershipRepository) 
 		return membershipRepository.insert(organizationId, userId, role)
 	}
 
+	/**
+	 * Read-only organization reporting access. OWNER/ADMINISTRATOR may manage the
+	 * underlying data; FINANCE_MANAGER and VIEWER may inspect reports but are not
+	 * promoted to manager-level mutation rights. This mirrors the capability registry's
+	 * `organization.report.view` grant instead of routing report reads through the
+	 * broader manager check.
+	 */
+	fun requireReportingRole(organizationId: UUID, currentUser: CurrentUser): OrganizationMembership {
+		val membership = requireActiveMembership(organizationId, currentUser)
+		if (membership.role !in REPORTING_ROLES) {
+			throw ForbiddenException(
+				code = "ORGANIZATION_REPORT_ACCESS_DENIED",
+				message = "You do not have permission to view organization reports.",
+			)
+		}
+		return membership
+	}
+
 	/** OWNER or ADMINISTRATOR — the roles allowed to invite/manage other members. */
 	fun requireManagerRole(organizationId: UUID, currentUser: CurrentUser): OrganizationMembership {
 		val membership = requireActiveMembership(organizationId, currentUser)
@@ -115,4 +133,13 @@ class MembershipService(private val membershipRepository: MembershipRepository) 
 		membershipRepository.listForOrganization(organizationId, offset, limit)
 
 	fun countMembers(organizationId: UUID) = membershipRepository.countForOrganization(organizationId)
+
+	private companion object {
+		val REPORTING_ROLES = setOf(
+			MembershipRole.OWNER,
+			MembershipRole.ADMINISTRATOR,
+			MembershipRole.FINANCE_MANAGER,
+			MembershipRole.VIEWER,
+		)
+	}
 }

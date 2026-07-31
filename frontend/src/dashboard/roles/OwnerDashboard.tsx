@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { DashboardShell, type DashNavItem } from "../DashboardShell";
 import { useContexts } from "../../authorization/api";
 import { capabilitiesFor } from "../../authorization/capabilities";
+import { Capabilities } from "../../authorization/capabilityConstants";
 import { navItemsFor } from "../registry/navRegistry";
 import { visibleWidgetIds } from "../registry/widgetRegistry";
 import { DashCard } from "../components/DashCard";
@@ -9,17 +10,16 @@ import { DashboardPageHeader } from "../components/DashboardPageHeader";
 import { StatTile } from "../components/StatTile";
 import { Pill } from "../components/Pill";
 import { ProgressBar } from "../components/ProgressBar";
-import { IconBadge } from "../components/IconBadge";
 import { CardQuery } from "../components/CardQuery";
-import { PrimaryButton, SecondaryLightButton, TextButton } from "../../marketing/components/buttons";
+import { IconBadge } from "../components/IconBadge";
+import { PrimaryButton, SecondaryLightButton } from "../../marketing/components/buttons";
 import { adultAvatars, sidebarPromoBackground } from "../demoAssets";
 import { useAuth } from "../../auth/AuthContext";
 import { formatMoneyMinorUnits } from "../../lib/money";
+import { appPaths } from "../../routes/appPaths";
 import { describeActivityAction, timeAgo } from "../activity";
 import {
-	useOwnerAttentionRequired,
 	useOwnerFinancialOverview,
-	useOwnerOnboardingProgress,
 	useOwnerRecentActivity,
 	useOwnerReportsSnapshot,
 	useOwnerSummary,
@@ -33,65 +33,65 @@ import {
 	CheckCircleIcon,
 	DownloadIcon,
 	HomeIcon,
-	MegaphoneIcon,
-	PackageIcon,
 	PlusIcon,
 	TrophyIcon,
 	UserIcon,
 	UserPlusIcon,
 	UsersIcon,
-	AlertIcon,
-	ClipboardCheckIcon,
 } from "../icons";
 
-const QUICK_ACTIONS = [
-	{ icon: <TrophyIcon className="size-5" />, label: "Create Tournament" },
-	{ icon: <MegaphoneIcon className="size-5" />, label: "Send Announcement" },
-	{ icon: <ChartIcon className="size-5" />, label: "Run Report" },
-	{ icon: <UserPlusIcon className="size-5" />, label: "Manage Members" },
-];
-
-const ATTENTION_ICONS: Record<string, ReactNode> = {
-	"failed-payments": <AlertIcon className="size-4" />,
-	"pending-approvals": <ClipboardCheckIcon className="size-4" />,
-	"expiring-invitations": <UserPlusIcon className="size-4" />,
-	"fulfillment-issues": <PackageIcon className="size-4" />,
-};
+function quickActions(organizationId: string) {
+	return [
+		{ icon: <TrophyIcon className="size-5" />, label: "Create Tournament", to: appPaths.organization(organizationId, "tournaments") },
+		{ icon: <UsersIcon className="size-5" />, label: "Create Team", to: appPaths.organization(organizationId, "teams") },
+		{ icon: <ChartIcon className="size-5" />, label: "Run Report", to: appPaths.organization(organizationId, "reports") },
+		{ icon: <UserPlusIcon className="size-5" />, label: "Manage Members", to: appPaths.organization(organizationId, "members") },
+	];
+}
 
 /** Owner dashboard, wired to real per-card API calls (DESIGN-DOC.md section 10.1/10.2). */
 export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 	const { user } = useAuth();
-	const summary = useOwnerSummary(organizationId);
-	const financialOverview = useOwnerFinancialOverview(organizationId);
-	const attentionRequired = useOwnerAttentionRequired(organizationId);
-	const teamPerformance = useOwnerTeamPerformance(organizationId);
-	const upcomingEvents = useOwnerUpcomingEvents(organizationId);
-	const recentActivity = useOwnerRecentActivity(organizationId);
-	const onboardingProgress = useOwnerOnboardingProgress(organizationId);
-	const reportsSnapshot = useOwnerReportsSnapshot(organizationId);
-
-	// Nav/widget visibility are registries filtered by real capabilities for this
-	// organization (DESIGN-DOC.md section 10.2/10.3) — not hardcoded arrays. Owner
-	// items are unconditional (org OWNER/ADMINISTRATOR always holds every
-	// ORGANIZATION capability), matching this dashboard's pre-migration nav/cards
-	// exactly.
 	const contexts = useContexts();
+	const organizationContext = contexts.data?.find(
+		(context) => context.contextType === "ORGANIZATION" && context.resourceId === organizationId,
+	);
 	const organizationCapabilities = capabilitiesFor(contexts.data, "ORGANIZATION", organizationId);
-	const navItems: DashNavItem[] = navItemsFor("ORGANIZATION", organizationCapabilities).map((item, index) => ({
+	const visibleWidgets = visibleWidgetIds("ORGANIZATION", organizationCapabilities);
+	const canManageOrganization = organizationCapabilities.has(Capabilities.ORG_MANAGE);
+	const canManageMembers = organizationCapabilities.has(Capabilities.ORG_MEMBERS_MANAGE);
+	const canManageTeams = organizationCapabilities.has(Capabilities.ORG_TEAM_MANAGE) || canManageOrganization;
+	const roleLabel = {
+		OWNER: "Owner",
+		ADMINISTRATOR: "Administrator",
+		FINANCE_MANAGER: "Finance Manager",
+		VIEWER: "Viewer",
+	}[organizationContext?.role ?? ""] ?? "Organization Member";
+
+	const navItems: DashNavItem[] = navItemsFor("ORGANIZATION", organizationCapabilities, { organizationId }).map((item) => ({
 		icon: item.icon,
 		label: item.label,
-		active: index === 0,
+		to: item.to,
 	}));
-	const visibleWidgets = visibleWidgetIds("ORGANIZATION", organizationCapabilities);
+
+	// Pass a null id to hooks for widgets the current organization context cannot see.
+	// The hooks already use `enabled: !!organizationId`, so hidden role-specific data
+	// is not fetched merely because every organization membership lands on this shell.
+	const summary = useOwnerSummary(organizationId);
+	const financialOverview = useOwnerFinancialOverview(visibleWidgets.has("owner.financial-overview") ? organizationId : null);
+	const teamPerformance = useOwnerTeamPerformance(visibleWidgets.has("owner.team-performance") ? organizationId : null);
+	const upcomingEvents = useOwnerUpcomingEvents(visibleWidgets.has("owner.upcoming-events") ? organizationId : null);
+	const recentActivity = useOwnerRecentActivity(visibleWidgets.has("owner.recent-activity") ? organizationId : null);
+	const reportsSnapshot = useOwnerReportsSnapshot(visibleWidgets.has("owner.reports-snapshot") ? organizationId : null);
 
 	return (
 		<DashboardShell
 			contextIcon={<BuildingIcon className="size-4" />}
 			contextIconTone="bg-navy-900"
 			contextName={summary.data?.organizationName ?? "Organization"}
-			contextRole="Director"
+			contextRole={roleLabel}
 			navItems={navItems}
-			showSearch
+			showSearch={canManageOrganization}
 			searchScope={{ kind: "organization", organizationId }}
 			showHelp
 			userName={user?.displayName ?? "Account"}
@@ -100,30 +100,41 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 				heading: "Stronger clubs. Stronger communities.",
 				copy: "We're here to help.",
 				linkLabel: "Visit Resource Center",
+				to: "/help",
 				backgroundSrc: sidebarPromoBackground,
 			}}
 		>
 			<DashboardPageHeader
 				heading="Organization Overview"
 				description="Manage your club, finances, teams, and operations in one place."
-				actions={
+				actions={canManageOrganization || canManageMembers || canManageTeams ? (
 					<>
-						<SecondaryLightButton icon="none" to={`/app/organizations/${organizationId}/collections`}>
-							<DownloadIcon className="size-4" /> Collections &amp; Export
-						</SecondaryLightButton>
-						<SecondaryLightButton icon="none">
-							<UserPlusIcon className="size-4" /> Invite Member
-						</SecondaryLightButton>
-						<PrimaryButton icon="none">
-							<PlusIcon className="size-4" /> Create Team
-						</PrimaryButton>
+						{canManageOrganization && (
+							<SecondaryLightButton icon="none" to={`/app/organizations/${organizationId}/collections`}>
+								<DownloadIcon className="size-4" /> Collections &amp; Export
+							</SecondaryLightButton>
+						)}
+						{canManageMembers && (
+							<SecondaryLightButton icon="none" to={appPaths.organization(organizationId, "members")}>
+								<UserPlusIcon className="size-4" /> Invite Member
+							</SecondaryLightButton>
+						)}
+						{canManageTeams && (
+							<PrimaryButton icon="none" to={appPaths.organization(organizationId, "teams")}>
+								<PlusIcon className="size-4" /> Create Team
+							</PrimaryButton>
+						)}
 					</>
-				}
+				) : undefined}
 			/>
 
 			<div className="grid gap-5 lg:grid-cols-3">
 				{visibleWidgets.has("owner.summary") && (
-					<DashCard title="Organization Summary" action={{ label: "View all" }}>
+					<DashCard
+						id="owner-summary"
+						title="Organization Summary"
+						action={canManageOrganization ? { label: "Open organization", to: appPaths.organization(organizationId, "overview") } : undefined}
+					>
 						<CardQuery query={summary} loadingLabel="Loading summary…">
 							{(data) => (
 								<>
@@ -144,8 +155,9 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 
 				{visibleWidgets.has("owner.financial-overview") && (
 					<DashCard
+						id="owner-financial"
 						title="Financial Overview"
-						action={{ label: "View collections", to: `/app/organizations/${organizationId}/collections` }}
+						action={{ label: "View reports", to: appPaths.organization(organizationId, "reports") }}
 					>
 						<CardQuery query={financialOverview} loadingLabel="Loading financials…">
 							{(data) => (
@@ -183,34 +195,8 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 					</DashCard>
 				)}
 
-				{visibleWidgets.has("owner.attention-required") && (
-					<DashCard title="Attention Required" action={{ label: "View all" }}>
-						<CardQuery
-							query={attentionRequired}
-							loadingLabel="Loading…"
-							isEmpty={(items) => items.length === 0}
-							emptyTitle="Nothing needs attention"
-						>
-							{(items) => (
-								<ul className="flex flex-col gap-3">
-									{items.map((item) => (
-										<li key={item.id} className="flex items-center gap-3">
-											<IconBadge icon={ATTENTION_ICONS[item.id] ?? <AlertIcon className="size-4" />} tone={item.tone === "error" ? "error" : item.tone === "warning" ? "warning" : item.tone === "purple" ? "purple" : "info"} />
-											<div className="min-w-0 flex-1">
-												<p className="truncate text-sm font-medium text-navy-900">{item.title}</p>
-												<p className="truncate text-xs text-slate-500">{item.subtitle}</p>
-											</div>
-											<Pill tone={item.tone === "error" ? "error" : item.tone === "warning" ? "warning" : "info"}>{String(item.count)}</Pill>
-										</li>
-									))}
-								</ul>
-							)}
-						</CardQuery>
-					</DashCard>
-				)}
-
 				{visibleWidgets.has("owner.team-performance") && (
-					<DashCard title="Team Performance Overview" action={{ label: "View all teams" }} className="lg:col-span-1">
+					<DashCard id="owner-teams" title="Team Performance Overview" action={{ label: "View all teams", to: appPaths.organization(organizationId, "teams") }} className="lg:col-span-1">
 						<CardQuery
 							query={teamPerformance}
 							loadingLabel="Loading teams…"
@@ -265,7 +251,7 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 				)}
 
 				{visibleWidgets.has("owner.upcoming-events") && (
-					<DashCard title="Upcoming Events" action={{ label: "View calendar" }}>
+					<DashCard id="owner-events" title="Upcoming Events" action={{ label: "View calendar", to: appPaths.organizationEvents(organizationId) }}>
 						<CardQuery
 							query={upcomingEvents}
 							loadingLabel="Loading events…"
@@ -281,7 +267,7 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 												{event.day} {event.date}
 											</div>
 											<div className="min-w-0 flex-1">
-												<p className="truncate text-sm font-medium text-navy-900">{event.title}</p>
+												<Link to={appPaths.event(organizationId, event.id)} className="truncate text-sm font-medium text-navy-900 hover:text-green-600 hover:underline">{event.title}</Link>
 												<p className="text-xs text-slate-500">{event.subtitle}</p>
 											</div>
 											{event.tag && <Pill tone={event.tag === "Home" ? "success" : "info"}>{event.tag}</Pill>}
@@ -294,7 +280,7 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 				)}
 
 				{visibleWidgets.has("owner.recent-activity") && (
-					<DashCard title="Recent Activity" action={{ label: "View all activity" }}>
+					<DashCard id="owner-recent-activity" title="Recent Activity">
 						<CardQuery
 							query={recentActivity}
 							loadingLabel="Loading activity…"
@@ -319,31 +305,8 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 					</DashCard>
 				)}
 
-				{visibleWidgets.has("owner.onboarding-progress") && (
-					<DashCard title="Onboarding Progress">
-						<CardQuery query={onboardingProgress} loadingLabel="Loading…">
-							{(data) => (
-								<>
-									<p className="text-sm font-medium text-navy-900">You&rsquo;re doing great!</p>
-									<p className="text-xs text-slate-500">
-										{data.completedSteps} of {data.totalSteps} setup tasks completed
-										{data.isDemoData && " (demo data)"}
-									</p>
-									<div className="mt-3">
-										<ProgressBar percent={(data.completedSteps / data.totalSteps) * 100} />
-									</div>
-									<div className="mt-4 flex items-center justify-between">
-										<PrimaryButton icon="none">Continue Setup</PrimaryButton>
-										<TextButton className="text-green-600">View checklist</TextButton>
-									</div>
-								</>
-							)}
-						</CardQuery>
-					</DashCard>
-				)}
-
 				{visibleWidgets.has("owner.reports-snapshot") && (
-					<DashCard title="Reports Snapshot" action={{ label: "View all reports" }}>
+					<DashCard id="owner-reports" title="Reports Snapshot" action={{ label: "View all reports", to: appPaths.organization(organizationId, "reports") }}>
 						<CardQuery
 							query={reportsSnapshot}
 							loadingLabel="Loading reports…"
@@ -372,17 +335,17 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 				)}
 
 				{visibleWidgets.has("owner.quick-actions") && (
-					<DashCard title="Quick Actions">
+					<DashCard id="owner-quick-actions" title="Quick Actions">
 						<div className="grid grid-cols-2 gap-3">
-							{QUICK_ACTIONS.map((action) => (
-								<button
+							{quickActions(organizationId).map((action) => (
+								<Link
 									key={action.label}
-									type="button"
+									to={action.to}
 									className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 p-4 text-center text-xs font-medium text-navy-900 hover:border-green-500 hover:text-green-600"
 								>
 									<span className="text-green-600">{action.icon}</span>
 									{action.label}
-								</button>
+								</Link>
 							))}
 						</div>
 					</DashCard>
