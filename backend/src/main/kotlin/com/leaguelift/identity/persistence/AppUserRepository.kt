@@ -46,22 +46,36 @@ class AppUserRepository(private val jdbcClient: JdbcClient) {
 	 * [org.springframework.dao.DuplicateKeyException] if `email` is already taken —
 	 * callers translate that to a client-facing 409 (see `AuthController`).
 	 */
-	fun insert(email: String, displayName: String, passwordHash: String?): AppUser {
+	fun insert(
+		email: String,
+		displayName: String,
+		passwordHash: String?,
+		status: AppUserStatus = AppUserStatus.ACTIVE,
+	): AppUser {
 		val now = Instant.now()
 		val id = UUID.randomUUID()
 		jdbcClient.sql(
 			"""
 			insert into app_user (id, email, display_name, status, password_hash, created_at, updated_at)
-			values (:id, :email, :displayName, 'ACTIVE', :passwordHash, :now, :now)
+			values (:id, :email, :displayName, :status, :passwordHash, :now, :now)
 			""".trimIndent(),
 		)
 			.param("id", id)
 			.param("email", email)
 			.param("displayName", displayName)
+			.param("status", status.name)
 			.param("passwordHash", passwordHash)
 			.param("now", Timestamp.from(now))
 			.update()
-		return AppUser(id, email, displayName, AppUserStatus.ACTIVE, passwordHash, now, now)
+		return AppUser(id, email, displayName, status, passwordHash, now, now)
+	}
+
+	fun markActive(id: UUID): Int {
+		val now = Instant.now()
+		return jdbcClient.sql("update app_user set status = 'ACTIVE', updated_at = :now where id = :id")
+			.param("now", Timestamp.from(now))
+			.param("id", id)
+			.update()
 	}
 
 	private fun mapRow(rs: java.sql.ResultSet, rowNum: Int): AppUser =

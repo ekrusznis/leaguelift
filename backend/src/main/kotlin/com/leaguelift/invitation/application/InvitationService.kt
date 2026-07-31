@@ -1,6 +1,8 @@
 package com.leaguelift.invitation.application
 
 import com.leaguelift.audit.application.AuditService
+import com.leaguelift.authorization.domain.RoleAssignmentContextType
+import com.leaguelift.authorization.persistence.RoleAssignmentRepository
 import com.leaguelift.common.error.ForbiddenException
 import com.leaguelift.common.error.NotFoundException
 import com.leaguelift.common.error.ValidationException
@@ -15,6 +17,7 @@ import com.leaguelift.outbox.application.OutboxWriter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.security.SecureRandom
+import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
 import java.util.Base64
@@ -26,12 +29,18 @@ private const val INVITATION_VALIDITY_DAYS = 7L
 class InvitationService(
 	private val invitationRepository: InvitationRepository,
 	private val membershipService: MembershipService,
+	private val roleAssignmentRepository: RoleAssignmentRepository,
 	private val auditService: AuditService,
 	private val outboxWriter: OutboxWriter,
 ) {
 
+	data class CreatedInvitation(
+		val invitation: Invitation,
+		val rawToken: String,
+	)
+
 	@Transactional
-	fun invite(organizationId: UUID, email: String, role: MembershipRole, currentUser: CurrentUser): Invitation {
+	fun invite(organizationId: UUID, email: String, role: MembershipRole, currentUser: CurrentUser): CreatedInvitation {
 		membershipService.requireManagerRole(organizationId, currentUser)
 		if (role !in INVITABLE_ROLES) {
 			throw ValidationException(
@@ -40,9 +49,19 @@ class InvitationService(
 			)
 		}
 		val normalizedEmail = email.trim().lowercase()
-		val token = generateToken()
+		val rawToken = generateToken()
+		val tokenHash = sha256Hex(rawToken)
+		val tokenReference = UUID.randomUUID().toString()
 		val expiresAt = Instant.now().plus(Duration.ofDays(INVITATION_VALIDITY_DAYS))
-		val invitation = invitationRepository.insert(organizationId, normalizedEmail, role, currentUser.userId, token, expiresAt)
+		val invitation = invitationRepository.insert(
+			organizationId = organizationId,
+			email = normalizedEmail,
+			role = role,
+			invitedByUserId = currentUser.userId,
+			tokenReference = tokenReference,
+			tokenHash = tokenHash,
+			expiresAt = expiresAt,
+		)
 
 		auditService.record(
 			actorUserId = currentUser.userId,
@@ -51,18 +70,53 @@ class InvitationService(
 			entityType = "invitation",
 			entityId = invitation.id,
 		)
-		// Payload intentionally omits the raw token — outbox events may be inspected by
-		// platform admins (DESIGN-DOC.md section 20.2); the future email-sending worker
-		// should look the invitation back up by ID rather than trusting a token that
-		// traveled through this event.
+		// The persisted invitation row no longer stores the raw accept token; the email
+		// worker receives it through this event payload while still looking up destination
+		// metadata by invitation id.
 		outboxWriter.write(
 			aggregateType = "invitation",
 			aggregateId = invitation.id,
 			organizationId = organizationId,
 			eventType = "membership.invited",
-			payloadJson = """{"invitationId":"${invitation.id}","email":"$normalizedEmail","role":"${role.name}"}""",
+			payloadJson = """{"invitationId":"${invitation.id}","email":"$normalizedEmail","role":"${role.name}","acceptToken":"$rawToken"}""",
 		)
-		return invitation
+		return CreatedInvitation(invitation, rawToken)
+	}
+
+	@Transactional
+	fun resend(organizationId: UUID, invitationId: UUID, currentUser: CurrentUser): CreatedInvitation {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		val invitation = invitationRepository.findById(invitationId)
+			?.takeIf { it.organizationId == organizationId }
+			?: throw NotFoundException("INVITATION_NOT_FOUND", "The invitation could not be found.")
+		if (invitation.status != InvitationStatus.PENDING) {
+			throw ValidationException("Only pending invitations can be resent.")
+		}
+
+		val rawToken = generateToken()
+		val tokenHash = sha256Hex(rawToken)
+		val tokenReference = UUID.randomUUID().toString()
+		val expiresAt = Instant.now().plus(Duration.ofDays(INVITATION_VALIDITY_DAYS))
+		invitationRepository.rotateToken(invitation.id, tokenReference, tokenHash, expiresAt)
+
+		auditService.record(
+			actorUserId = currentUser.userId,
+			organizationId = organizationId,
+			action = "membership.invitation_resent",
+			entityType = "invitation",
+			entityId = invitation.id,
+		)
+		outboxWriter.write(
+			aggregateType = "invitation",
+			aggregateId = invitation.id,
+			organizationId = organizationId,
+			eventType = "membership.invited",
+			payloadJson =
+				"""{"invitationId":"${invitation.id}","email":"${invitation.email}","role":"${invitation.role.name}","acceptToken":"$rawToken"}""",
+		)
+
+		val updated = invitationRepository.findById(invitation.id)!!
+		return CreatedInvitation(updated, rawToken)
 	}
 
 	fun listPending(organizationId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<Invitation> {
@@ -101,7 +155,7 @@ class InvitationService(
 	 */
 	@Transactional
 	fun accept(token: String, currentUser: CurrentUser): Invitation {
-		val invitation = invitationRepository.findByToken(token)
+		val invitation = invitationRepository.findByTokenHash(sha256Hex(token))
 			?: throw NotFoundException("INVITATION_NOT_FOUND", "This invitation link is invalid.")
 
 		if (invitation.status == InvitationStatus.PENDING && invitation.expiresAt.isBefore(Instant.now())) {
@@ -116,6 +170,9 @@ class InvitationService(
 				code = "INVITATION_EMAIL_MISMATCH",
 				message = "This invitation was sent to a different email address.",
 			)
+		}
+		if (roleAssignmentRepository.findActiveForUserAndContext(currentUser.userId, RoleAssignmentContextType.PARTICIPANT).isNotEmpty()) {
+			throw ValidationException("Athlete self-login accounts cannot accept staff or organization invitations.")
 		}
 
 		membershipService.grantMembership(invitation.organizationId, currentUser.userId, invitation.role)
@@ -135,4 +192,9 @@ class InvitationService(
 		SecureRandom().nextBytes(bytes)
 		return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
 	}
+
+	private fun sha256Hex(value: String): String =
+		MessageDigest.getInstance("SHA-256")
+			.digest(value.toByteArray(Charsets.UTF_8))
+			.joinToString("") { "%02x".format(it) }
 }

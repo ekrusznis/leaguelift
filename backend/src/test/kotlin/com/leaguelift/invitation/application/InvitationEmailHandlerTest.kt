@@ -34,7 +34,7 @@ class InvitationEmailHandlerTest {
 		return OutboxEvent(
 			id = UUID.randomUUID(), aggregateType = "invitation", aggregateId = invitationId, organizationId = UUID.randomUUID(),
 			eventType = "membership.invited", schemaVersion = 1,
-			payload = """{"invitationId":"$invitationId","email":"new@example.com","role":"ADMINISTRATOR"}""",
+			payload = """{"invitationId":"$invitationId","email":"new@example.com","role":"ADMINISTRATOR","acceptToken":"token-from-event"}""",
 			status = OutboxEventStatus.PROCESSING, attemptCount = 1, availableAt = now, processedAt = null, lastError = null, createdAt = now,
 		)
 	}
@@ -46,7 +46,7 @@ class InvitationEmailHandlerTest {
 	)
 
 	@Test
-	fun `sends an email with the accept link built from the real token, not the payload`() {
+	fun `sends an email with the accept link built from the payload token`() {
 		val invitationId = UUID.randomUUID()
 		every { invitationRepository.findById(invitationId) } returns pendingInvitation(invitationId)
 		val messageSlot = slot<EmailMessage>()
@@ -56,7 +56,7 @@ class InvitationEmailHandlerTest {
 
 		verify(exactly = 1) { emailProvider.send(any()) }
 		assertEquals("new@example.com", messageSlot.captured.to)
-		assertTrue(messageSlot.captured.body.contains("https://app.leaguelift.test/auth/invitation?token=real-token-value"))
+		assertTrue(messageSlot.captured.body.contains("https://app.leaguelift.test/auth/invitation?token=token-from-event"))
 	}
 
 	@Test

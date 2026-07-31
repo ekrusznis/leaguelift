@@ -25,17 +25,51 @@ export interface RegisterParams {
 	password: string;
 }
 
-export function register(params: RegisterParams): Promise<AuthApiResponse> {
-	return apiFetch<AuthApiResponse>("/auth/register", { method: "POST", body: params });
+export interface RegistrationAcceptedResponse {
+	email: string;
+}
+
+export interface InvitationAcceptanceResponse {
+	id: string;
+	organizationId: string;
+	email: string;
+	role: string;
+	status: string;
+	expiresAt: string;
+	createdAt: string;
+}
+
+export function registerOwner(params: RegisterParams): Promise<RegistrationAcceptedResponse> {
+	return apiFetch<RegistrationAcceptedResponse>("/auth/register-owner", { method: "POST", body: params });
+}
+
+export function verifyEmail(token: string): Promise<void> {
+	return apiFetch<void>("/auth/verify-email", { method: "POST", body: { token } });
+}
+
+export function acceptInvitation(token: string): Promise<InvitationAcceptanceResponse> {
+	return apiFetch<InvitationAcceptanceResponse>(`/invitations/${token}/accept`, { method: "POST" });
 }
 
 /** Maps a failed login/register call to a message safe to show the user. */
 export function messageForAuthError(error: unknown): string {
 	if (error instanceof ApiError) {
 		if (error.code === "INVALID_CREDENTIALS") return "Incorrect email or password.";
+		if (error.code === "EMAIL_NOT_VERIFIED") return "Verify your email before signing in.";
 		if (error.code === "EMAIL_ALREADY_REGISTERED") return "An account with that email already exists.";
 		if (error.fieldErrors.length > 0) return error.fieldErrors[0].message;
 		return error.message;
 	}
 	return "Something went wrong. Please try again.";
 }
+
+export function messageForInvitationError(error: unknown): string {
+	if (error instanceof ApiError) {
+		if (error.status === 401) return "Sign in first to accept this invitation.";
+		if (error.code === "INVITATION_EMAIL_MISMATCH") return "This invitation was sent to a different email address.";
+		if (error.code === "INVITATION_NOT_FOUND") return "This invitation link is invalid or has already been rotated.";
+		return error.message;
+	}
+	return "Could not accept this invitation. Please try again.";
+}
+

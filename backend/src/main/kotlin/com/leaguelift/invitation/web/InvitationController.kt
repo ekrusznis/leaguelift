@@ -27,9 +27,19 @@ class InvitationController(private val invitationService: InvitationService) {
 		@Valid @RequestBody request: CreateInvitationRequest,
 		@AuthenticationPrincipal currentUser: CurrentUser,
 	): ResponseEntity<CreateInvitationResponse> {
-		val invitation = invitationService.invite(organizationId, request.email, request.role, currentUser)
-		val body = CreateInvitationResponse(invitation.toResponse(), invitation.token)
+		val created = invitationService.invite(organizationId, request.email, request.role, currentUser)
+		val body = CreateInvitationResponse(created.invitation.toResponse(), created.rawToken)
 		return ResponseEntity.status(HttpStatus.CREATED).body(body)
+	}
+
+	@PostMapping("/{invitationId}/resend")
+	fun resend(
+		@PathVariable organizationId: UUID,
+		@PathVariable invitationId: UUID,
+		@AuthenticationPrincipal currentUser: CurrentUser,
+	): ResponseEntity<CreateInvitationResponse> {
+		val created = invitationService.resend(organizationId, invitationId, currentUser)
+		return ResponseEntity.ok(CreateInvitationResponse(created.invitation.toResponse(), created.rawToken))
 	}
 
 	@GetMapping

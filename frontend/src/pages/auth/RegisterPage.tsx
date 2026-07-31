@@ -14,13 +14,10 @@ import { useAuth } from "../../auth/AuthContext";
 import { registerAccountSchema, type RegisterAccountFormValues } from "./schema";
 
 /**
- * Account creation only — organization setup happens afterward, inside the app
- * (`/app/organizations`, `CreateOrganizationForm`), rather than being collected here
- * and submitted to an endpoint that doesn't take most of these fields. An earlier
- * version of this page collected organization details in a step before the account
- * step; that was removed when real authentication was wired up, since duplicating
- * organization creation here would either invent an endpoint or silently discard the
- * fields that `POST /organizations` doesn't accept.
+ * Owner registration only — non-owner personas are invitation-only in Phase 15.
+ * Organization setup still happens after sign-in inside the app (`/app/organizations`),
+ * so this page collects only identity credentials and now requires email verification
+ * before first login.
  */
 export function RegisterPage() {
 	const navigate = useNavigate();
@@ -62,14 +59,14 @@ export function RegisterPage() {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<Seo title="Create Account" description="Create your LeagueLift account." noIndex />
+			<Seo title="Create Owner Account" description="Create your LeagueLift organization owner account." noIndex />
 			<AuthTabs active="register" />
 
 			<div className="rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
 				{step === "form" && (
 					<>
-						<h1 className="font-heading text-2xl font-extrabold text-white">Create your account</h1>
-						<p className="mt-1 text-sm text-slate-300">You&rsquo;ll set up your organization next, from your dashboard.</p>
+						<h1 className="font-heading text-2xl font-extrabold text-white">Create your owner account</h1>
+						<p className="mt-1 text-sm text-slate-300">Verify your email to continue with organization setup.</p>
 						<form onSubmit={onAccountSubmit} noValidate className="mt-6 flex flex-col gap-5">
 							<div className="grid gap-5 sm:grid-cols-2">
 								<FormField
@@ -132,7 +129,7 @@ export function RegisterPage() {
 							{submitError && <InlineAlert tone="error" title={submitError} />}
 
 							<PrimaryButton type="submit" loading={accountForm.formState.isSubmitting} className="w-full justify-center">
-								Create Account
+								Create Owner Account
 							</PrimaryButton>
 						</form>
 					</>
@@ -145,12 +142,12 @@ export function RegisterPage() {
 								<path d="m5 12.5 4.5 4.5L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 							</svg>
 						</span>
-						<h1 className="font-heading text-2xl font-extrabold text-white">You&rsquo;re all set, {createdName}</h1>
+						<h1 className="font-heading text-2xl font-extrabold text-white">Check your email, {createdName}</h1>
 						<p className="max-w-sm text-sm text-slate-300">
-							Your LeagueLift account has been created. Set up your organization now from your dashboard.
+							Use the verification link we sent to activate your account, then sign in to create your organization.
 						</p>
-						<PrimaryButton onClick={() => navigate("/app")} icon="arrow" className="mt-2">
-							Go to Dashboard
+						<PrimaryButton onClick={() => navigate("/auth/sign-in")} icon="arrow" className="mt-2">
+							Go to Sign In
 						</PrimaryButton>
 					</div>
 				)}

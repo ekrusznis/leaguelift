@@ -14,11 +14,11 @@ import java.util.UUID
 /**
  * The first real consumer of `membership.invited` (Phase 8 slice 1, ADR-022) — closes
  * the "admin invitations are token-link only, no email delivery" gap called out since
- * Phase 1. Looks the invitation back up by ID rather than trusting anything from the
- * event payload itself (the payload deliberately omits the raw token — see
- * `InvitationService`'s own comment); a revoked/expired/already-accepted invitation by
- * the time this runs just skips sending rather than failing the outbox event, since
- * there's nothing useful left to email.
+ * Phase 1. Keeps the recipient/role/expiry authoritative by looking up the invitation
+ * row by ID, while taking the one-time raw accept token from the event payload (it is
+ * no longer stored in plaintext on the invitation row). A revoked/expired/already-
+ * accepted invitation by the time this runs just skips sending rather than failing the
+ * outbox event, since there's nothing useful left to email.
  */
 @Component
 class InvitationEmailHandler(
@@ -31,11 +31,14 @@ class InvitationEmailHandler(
 	override val eventType: String = "membership.invited"
 
 	override fun handle(event: OutboxEvent) {
-		val invitationId = UUID.fromString(objectMapper.readTree(event.payload).get("invitationId").asText())
+		val payload = objectMapper.readTree(event.payload)
+		val invitationId = UUID.fromString(payload.get("invitationId").asText())
+		val acceptToken = payload.get("acceptToken")?.asText()?.trim().orEmpty()
+		if (acceptToken.isBlank()) return
 		val invitation = invitationRepository.findById(invitationId) ?: return
 		if (invitation.status != InvitationStatus.PENDING) return
 
-		val acceptUrl = "${frontendProperties.baseUrl}/auth/invitation?token=${invitation.token}"
+		val acceptUrl = "${frontendProperties.baseUrl}/auth/invitation?token=$acceptToken"
 		emailProvider.send(
 			EmailMessage(
 				to = invitation.email,

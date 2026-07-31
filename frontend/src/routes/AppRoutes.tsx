@@ -1,4 +1,3 @@
-import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "../app/AppShell";
 import { AuthLayout } from "../app/AuthLayout";
@@ -9,6 +8,14 @@ import { InvitationPage } from "../pages/auth/InvitationPage";
 import { RegisterPage } from "../pages/auth/RegisterPage";
 import { ResetPasswordPage } from "../pages/auth/ResetPasswordPage";
 import { SignInPage } from "../pages/auth/SignInPage";
+import { VerifyEmailPage } from "../pages/auth/VerifyEmailPage";
+import { DashboardPage } from "../pages/DashboardPage";
+import { CollectionsPage } from "../features/collections/CollectionsPage";
+import { EventDetailPage } from "../features/events/EventDetailPage";
+import { EventsPage } from "../features/events/EventsPage";
+import { PlatformOrganizationsPage } from "../features/reporting/PlatformOrganizationsPage";
+import { PlatformReportsPage } from "../features/reporting/PlatformReportsPage";
+import { HouseholdDetailPage } from "../pages/HouseholdDetailPage";
 import { AboutPage } from "../pages/marketing/AboutPage";
 import { BookDemoPage } from "../pages/marketing/BookDemoPage";
 import { ContactPage } from "../pages/marketing/ContactPage";
@@ -28,31 +35,16 @@ import { SolutionDetailPage } from "../pages/marketing/SolutionDetailPage";
 import { SolutionsOverviewPage } from "../pages/marketing/SolutionsOverviewPage";
 import { TalkToSalesPage } from "../pages/marketing/TalkToSalesPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
+import { OrganizationDetailPage } from "../pages/OrganizationDetailPage";
+import { OrganizationsPage } from "../pages/OrganizationsPage";
 import { PublicPageView } from "../pages/PublicPageView";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { RequireCapability } from "../authorization/RequireCapability";
 import { Capabilities } from "../authorization/capabilityConstants";
 
-const DashboardPage = lazy(() => import("../pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
-const CollectionsPage = lazy(() => import("../features/collections/CollectionsPage").then((m) => ({ default: m.CollectionsPage })));
-const EventDetailPage = lazy(() => import("../features/events/EventDetailPage").then((m) => ({ default: m.EventDetailPage })));
-const EventsPage = lazy(() => import("../features/events/EventsPage").then((m) => ({ default: m.EventsPage })));
-const PlatformAdminConsoleLayout = lazy(() => import("../features/platformAdmin/PlatformAdminConsoleLayout").then((m) => ({ default: m.PlatformAdminConsoleLayout })));
-const PlatformAuditPage = lazy(() => import("../features/platformAdmin/PlatformAuditPage").then((m) => ({ default: m.PlatformAuditPage })));
-const PlatformOperationsPage = lazy(() => import("../features/platformAdmin/PlatformOperationsPage").then((m) => ({ default: m.PlatformOperationsPage })));
-const PlatformOrganizationConsolePage = lazy(() => import("../features/platformAdmin/PlatformOrganizationConsolePage").then((m) => ({ default: m.PlatformOrganizationConsolePage })));
-const PlatformOrganizationsPage = lazy(() => import("../features/platformAdmin/PlatformOrganizationsPage").then((m) => ({ default: m.PlatformOrganizationsPage })));
-const PlatformUsersPage = lazy(() => import("../features/platformAdmin/PlatformUsersPage").then((m) => ({ default: m.PlatformUsersPage })));
-const PlatformSupportSessionsPage = lazy(() => import("../features/platformAdmin/PlatformSupportSessionsPage").then((m) => ({ default: m.PlatformSupportSessionsPage })));
-const PlatformReportsPage = lazy(() => import("../features/reporting/PlatformReportsPage").then((m) => ({ default: m.PlatformReportsPage })));
-const HouseholdDetailPage = lazy(() => import("../pages/HouseholdDetailPage").then((m) => ({ default: m.HouseholdDetailPage })));
-const OrganizationDetailPage = lazy(() => import("../pages/OrganizationDetailPage").then((m) => ({ default: m.OrganizationDetailPage })));
-const OrganizationsPage = lazy(() => import("../pages/OrganizationsPage").then((m) => ({ default: m.OrganizationsPage })));
-
 export function AppRoutes() {
 	return (
-		<Suspense fallback={null}>
-			<Routes>
+		<Routes>
 			<Route element={<MarketingLayout />}>
 				<Route index element={<HomePage />} />
 				<Route path="how-it-works" element={<HowItWorksPage />} />
@@ -80,6 +72,7 @@ export function AppRoutes() {
 				<Route path="auth/register" element={<RegisterPage />} />
 				<Route path="auth/forgot-password" element={<ForgotPasswordPage />} />
 				<Route path="auth/reset-password" element={<ResetPasswordPage />} />
+				<Route path="auth/verify-email" element={<VerifyEmailPage />} />
 				<Route path="auth/invitation" element={<InvitationPage />} />
 				<Route path="auth/error" element={<AuthErrorPage />} />
 			</Route>
@@ -95,23 +88,6 @@ export function AppRoutes() {
 				{/* The dashboard-role preview renders its own full shell (docs/LEAGUELIFT_DASHBOARD_DESIGN.md
 				    section 4.2), so it deliberately sits outside AppShell's simpler nav below. */}
 				<Route index element={<DashboardPage />} />
-				<Route
-					path="platform"
-					element={
-						<RequireCapability capability={Capabilities.PLATFORM_ORG_VIEW} contextType="PLATFORM_ADMIN" resourceId={null}>
-							<PlatformAdminConsoleLayout />
-						</RequireCapability>
-					}
-				>
-					<Route index element={<Navigate to="organizations" replace />} />
-					<Route path="organizations" element={<PlatformOrganizationsPage />} />
-					<Route path="organizations/:organizationId" element={<PlatformOrganizationConsolePage />} />
-					<Route path="users" element={<PlatformUsersPage />} />
-					<Route path="operations" element={<PlatformOperationsPage />} />
-					<Route path="reports" element={<PlatformReportsPage />} />
-					<Route path="audit" element={<PlatformAuditPage />} />
-					<Route path="support-sessions" element={<PlatformSupportSessionsPage />} />
-				</Route>
 				<Route element={<AppShell />}>
 					<Route path="organizations" element={<OrganizationsPage />} />
 					<Route path="organizations/:organizationId" element={<OrganizationDetailPage />} />
@@ -123,11 +99,12 @@ export function AppRoutes() {
 					<Route path="organizations/:organizationId/households/:householdId" element={<HouseholdDetailPage />} />
 					<Route path="organizations/:organizationId/households/:householdId/:section" element={<HouseholdDetailPage />} />
 					<Route path="organizations/:organizationId/:section" element={<OrganizationDetailPage />} />
+					<Route path="platform/organizations" element={<RequireCapability capability={Capabilities.PLATFORM_ORG_VIEW} contextType="PLATFORM_ADMIN" resourceId={null}><PlatformOrganizationsPage /></RequireCapability>} />
+					<Route path="platform/reports" element={<RequireCapability capability={Capabilities.PLATFORM_AUDIT_VIEW} contextType="PLATFORM_ADMIN" resourceId={null}><PlatformReportsPage /></RequireCapability>} />
 				</Route>
 			</Route>
 
 			<Route path="*" element={<NotFoundPage />} />
-			</Routes>
-		</Suspense>
+		</Routes>
 	);
 }

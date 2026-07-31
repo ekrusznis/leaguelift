@@ -1,4 +1,8 @@
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../../auth/AuthContext";
+import { acceptInvitation, messageForInvitationError } from "../../auth/authApi";
+import { InlineAlert } from "../../marketing/components/InlineAlert";
 import { Seo } from "../../marketing/components/Seo";
 import { PrimaryButton, SecondaryDarkButton } from "../../marketing/components/buttons";
 
@@ -15,11 +19,27 @@ import { PrimaryButton, SecondaryDarkButton } from "../../marketing/components/b
  */
 export function InvitationPage() {
 	const navigate = useNavigate();
+	const { status } = useAuth();
 	const [searchParams] = useSearchParams();
 	const token = searchParams.get("token");
-	const state = searchParams.get("state");
+	const [submitting, setSubmitting] = useState(false);
+	const [submitError, setSubmitError] = useState<string | null>(null);
 
-	if (!token || state === "expired") {
+	const onAccept = async () => {
+		if (!token) return;
+		setSubmitError(null);
+		setSubmitting(true);
+		try {
+			await acceptInvitation(token);
+			navigate("/app", { replace: true });
+		} catch (error) {
+			setSubmitError(messageForInvitationError(error));
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	if (!token) {
 		return (
 			<div className="flex flex-col items-center gap-4 rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 text-center shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
 				<Seo title="Invitation Expired" description="This LeagueLift invitation has expired." noIndex />
@@ -32,20 +52,6 @@ export function InvitationPage() {
 		);
 	}
 
-	if (state === "wrong-email") {
-		return (
-			<div className="flex flex-col items-center gap-4 rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 text-center shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
-				<Seo title="Invitation Email Mismatch" description="This LeagueLift invitation was sent to a different email address." noIndex />
-				<h1 className="font-heading text-2xl font-extrabold text-white">This invitation was sent to a different email</h1>
-				<p className="max-w-sm text-sm text-slate-300">
-					Sign in with the email address the invitation was sent to, or ask the organization for a new
-					invitation.
-				</p>
-				<PrimaryButton to="/auth/sign-in">Sign in with a different account</PrimaryButton>
-			</div>
-		);
-	}
-
 	return (
 		<div className="flex flex-col items-center gap-4 rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 text-center shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
 			<Seo title="Accept Invitation" description="Accept your invitation to join a LeagueLift organization." noIndex />
@@ -54,9 +60,18 @@ export function InvitationPage() {
 				Sign in or create an account with the email address this invitation was sent to, then accept to join
 				the organization.
 			</p>
+			{submitError && <InlineAlert tone="error" title={submitError} />}
 			<div className="mt-2 flex flex-wrap justify-center gap-3">
-				<PrimaryButton onClick={() => navigate("/app")}>Accept Invitation</PrimaryButton>
-				<SecondaryDarkButton to="/auth/sign-in">Sign In First</SecondaryDarkButton>
+				<PrimaryButton onClick={onAccept} loading={submitting}>
+					Accept Invitation
+				</PrimaryButton>
+				{status === "authenticated" ? (
+					<SecondaryDarkButton to="/app">Go to app</SecondaryDarkButton>
+				) : (
+					<SecondaryDarkButton to={`/auth/sign-in?next=${encodeURIComponent(`/auth/invitation?token=${token}`)}`}>
+						Sign In First
+					</SecondaryDarkButton>
+				)}
 			</div>
 		</div>
 	);

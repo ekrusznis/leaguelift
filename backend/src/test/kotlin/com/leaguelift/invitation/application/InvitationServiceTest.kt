@@ -1,6 +1,8 @@
 package com.leaguelift.invitation.application
 
 import com.leaguelift.audit.application.AuditService
+import com.leaguelift.authorization.domain.RoleAssignmentContextType
+import com.leaguelift.authorization.persistence.RoleAssignmentRepository
 import com.leaguelift.common.error.ForbiddenException
 import com.leaguelift.common.error.ValidationException
 import com.leaguelift.common.web.CurrentUser
@@ -17,6 +19,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
+import io.mockk.verify
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
@@ -27,9 +30,10 @@ class InvitationServiceTest {
 
 	private val invitationRepository = mockk<InvitationRepository>()
 	private val membershipService = mockk<MembershipService>()
+	private val roleAssignmentRepository = mockk<RoleAssignmentRepository>()
 	private val auditService = mockk<AuditService>()
 	private val outboxWriter = mockk<OutboxWriter>()
-	private val service = InvitationService(invitationRepository, membershipService, auditService, outboxWriter)
+	private val service = InvitationService(invitationRepository, membershipService, roleAssignmentRepository, auditService, outboxWriter)
 
 	private val organizationId = UUID.randomUUID()
 	private val admin = CurrentUser(UUID.randomUUID(), "admin@example.com", "Admin")
@@ -58,7 +62,7 @@ class InvitationServiceTest {
 		every { membershipService.requireManagerRole(organizationId, admin) } returns adminMembership()
 		val insertedSlot = slot<String>()
 		every {
-			invitationRepository.insert(organizationId, "new@example.com", MembershipRole.VIEWER, admin.userId, any(), any())
+			invitationRepository.insert(organizationId, "new@example.com", MembershipRole.VIEWER, admin.userId, any(), any(), any())
 		} answers {
 			Invitation(
 				id = UUID.randomUUID(),
@@ -68,7 +72,7 @@ class InvitationServiceTest {
 				status = InvitationStatus.PENDING,
 				invitedByUserId = admin.userId,
 				token = arg<String>(4),
-				expiresAt = arg<Instant>(5),
+				expiresAt = arg<Instant>(6),
 				acceptedAt = null,
 				createdAt = Instant.now(),
 				updatedAt = Instant.now(),
@@ -79,15 +83,17 @@ class InvitationServiceTest {
 
 		val result = service.invite(organizationId, "NEW@Example.com ", MembershipRole.VIEWER, admin)
 
-		assertEquals("new@example.com", result.email) // normalized: trimmed + lowercased
-		assertEquals(InvitationStatus.PENDING, result.status)
+		assertEquals("new@example.com", result.invitation.email) // normalized: trimmed + lowercased
+		assertEquals(InvitationStatus.PENDING, result.invitation.status)
+		assertEquals(43, result.rawToken.length)
 	}
 
 	@Test
 	fun `accepting with a mismatched email is rejected`() {
 		val invitation = pendingInvitation(email = "invitee@example.com")
-		every { invitationRepository.findByToken("tok") } returns invitation
+		every { invitationRepository.findByTokenHash(any()) } returns invitation
 		val wrongUser = CurrentUser(UUID.randomUUID(), "someone-else@example.com", "Someone Else")
+		every { roleAssignmentRepository.findActiveForUserAndContext(any(), RoleAssignmentContextType.PARTICIPANT) } returns emptyList()
 
 		assertFailsWith<ForbiddenException> {
 			service.accept("tok", wrongUser)
@@ -97,13 +103,42 @@ class InvitationServiceTest {
 	@Test
 	fun `accepting an expired invitation is rejected and marks it expired`() {
 		val invitation = pendingInvitation(email = "invitee@example.com", expiresAt = Instant.now().minusSeconds(60))
-		every { invitationRepository.findByToken("tok") } returns invitation
+		every { invitationRepository.findByTokenHash(any()) } returns invitation
 		every { invitationRepository.markStatus(invitation.id, InvitationStatus.EXPIRED) } returns 1
 		val invitee = CurrentUser(UUID.randomUUID(), "invitee@example.com", "Invitee")
+		every { roleAssignmentRepository.findActiveForUserAndContext(any(), RoleAssignmentContextType.PARTICIPANT) } returns emptyList()
 
 		assertFailsWith<ValidationException> {
 			service.accept("tok", invitee)
 		}
+	}
+
+	@Test
+	fun `athlete self account cannot accept organization invitation`() {
+		val invitation = pendingInvitation(email = "athlete@example.com")
+		every { invitationRepository.findByTokenHash(any()) } returns invitation
+		every { roleAssignmentRepository.findActiveForUserAndContext(any(), RoleAssignmentContextType.PARTICIPANT) } returns listOf(mockk())
+		val athlete = CurrentUser(UUID.randomUUID(), "athlete@example.com", "Athlete")
+
+		assertFailsWith<ValidationException> {
+			service.accept("tok", athlete)
+		}
+	}
+
+	@Test
+	fun `resending rotates token and records audit`() {
+		val invitation = pendingInvitation(email = "invitee@example.com")
+		every { membershipService.requireManagerRole(organizationId, admin) } returns adminMembership()
+		every { invitationRepository.findById(invitation.id) } returnsMany listOf(invitation, invitation)
+		every { invitationRepository.rotateToken(invitation.id, any(), any(), any()) } returns 1
+		every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+		every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
+
+		val resent = service.resend(organizationId, invitation.id, admin)
+
+		assertEquals(invitation.id, resent.invitation.id)
+		assertEquals(43, resent.rawToken.length)
+		verify(exactly = 1) { invitationRepository.rotateToken(invitation.id, any(), any(), any()) }
 	}
 
 	private fun adminMembership() = OrganizationMembership(

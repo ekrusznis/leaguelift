@@ -2,6 +2,7 @@ package com.leaguelift.identity.web
 
 import com.leaguelift.identity.application.PasswordAuthenticationService
 import com.leaguelift.identity.application.TokenService
+import com.leaguelift.identity.application.EmailVerificationService
 import com.leaguelift.identity.domain.AppUser
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -16,14 +17,26 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/v1/auth")
 class AuthController(
 	private val passwordAuthenticationService: PasswordAuthenticationService,
+	private val emailVerificationService: EmailVerificationService,
 	private val tokenService: TokenService,
 ) {
 
 	@PostMapping("/register")
-	fun register(@Valid @RequestBody request: RegisterRequest): ResponseEntity<AuthResponse> {
+	fun register(@Valid @RequestBody request: RegisterRequest): ResponseEntity<RegistrationAcceptedResponse> {
+		return registerOwner(request)
+	}
+
+	@PostMapping("/register-owner")
+	fun registerOwner(@Valid @RequestBody request: RegisterRequest): ResponseEntity<RegistrationAcceptedResponse> {
 		val displayName = "${request.firstName} ${request.lastName}".trim()
-		val appUser = passwordAuthenticationService.register(request.email, request.password, displayName)
-		return ResponseEntity.status(HttpStatus.CREATED).body(issueAuthResponse(appUser))
+		val accepted = passwordAuthenticationService.registerOwner(request.email, request.password, displayName)
+		return ResponseEntity.status(HttpStatus.ACCEPTED).body(RegistrationAcceptedResponse(email = accepted.email))
+	}
+
+	@PostMapping("/verify-email")
+	fun verifyEmail(@Valid @RequestBody request: VerifyEmailRequest): ResponseEntity<Void> {
+		emailVerificationService.verify(request.token)
+		return ResponseEntity.noContent().build()
 	}
 
 	@PostMapping("/login")

@@ -10,7 +10,7 @@ import java.time.Instant
 import java.util.UUID
 
 private const val INVITATION_COLUMNS =
-	"id, organization_id, email, role, status, invited_by_user_id, token, expires_at, accepted_at, created_at, updated_at"
+	"id, organization_id, email, role, status, invited_by_user_id, token, token_hash, expires_at, accepted_at, created_at, updated_at"
 
 @Repository
 class InvitationRepository(private val jdbcClient: JdbcClient) {
@@ -22,9 +22,9 @@ class InvitationRepository(private val jdbcClient: JdbcClient) {
 			.optional()
 			.orElse(null)
 
-	fun findByToken(token: String): Invitation? =
-		jdbcClient.sql("select $INVITATION_COLUMNS from invitation where token = :token")
-			.param("token", token)
+	fun findByTokenHash(tokenHash: String): Invitation? =
+		jdbcClient.sql("select $INVITATION_COLUMNS from invitation where token_hash = :tokenHash")
+			.param("tokenHash", tokenHash)
 			.query(::mapRow)
 			.optional()
 			.orElse(null)
@@ -55,7 +55,8 @@ class InvitationRepository(private val jdbcClient: JdbcClient) {
 		email: String,
 		role: MembershipRole,
 		invitedByUserId: UUID,
-		token: String,
+		tokenReference: String,
+		tokenHash: String,
 		expiresAt: Instant,
 	): Invitation {
 		val now = Instant.now()
@@ -63,9 +64,9 @@ class InvitationRepository(private val jdbcClient: JdbcClient) {
 		jdbcClient.sql(
 			"""
 			insert into invitation
-				(id, organization_id, email, role, status, invited_by_user_id, token, expires_at, created_at, updated_at)
+				(id, organization_id, email, role, status, invited_by_user_id, token, token_hash, expires_at, created_at, updated_at)
 			values
-				(:id, :organizationId, :email, :role, 'PENDING', :invitedByUserId, :token, :expiresAt, :now, :now)
+				(:id, :organizationId, :email, :role, 'PENDING', :invitedByUserId, :tokenReference, :tokenHash, :expiresAt, :now, :now)
 			""".trimIndent(),
 		)
 			.param("id", id)
@@ -73,7 +74,8 @@ class InvitationRepository(private val jdbcClient: JdbcClient) {
 			.param("email", email)
 			.param("role", role.name)
 			.param("invitedByUserId", invitedByUserId)
-			.param("token", token)
+			.param("tokenReference", tokenReference)
+			.param("tokenHash", tokenHash)
 			.param("expiresAt", Timestamp.from(expiresAt))
 			.param("now", Timestamp.from(now))
 			.update()
@@ -84,12 +86,32 @@ class InvitationRepository(private val jdbcClient: JdbcClient) {
 			role = role,
 			status = InvitationStatus.PENDING,
 			invitedByUserId = invitedByUserId,
-			token = token,
+			token = tokenReference,
 			expiresAt = expiresAt,
 			acceptedAt = null,
 			createdAt = now,
 			updatedAt = now,
 		)
+	}
+
+	fun rotateToken(id: UUID, tokenReference: String, tokenHash: String, expiresAt: Instant): Int {
+		val now = Instant.now()
+		return jdbcClient.sql(
+			"""
+			update invitation
+			set token = :tokenReference,
+			    token_hash = :tokenHash,
+			    expires_at = :expiresAt,
+			    updated_at = :now
+			where id = :id
+			""".trimIndent(),
+		)
+			.param("tokenReference", tokenReference)
+			.param("tokenHash", tokenHash)
+			.param("expiresAt", Timestamp.from(expiresAt))
+			.param("now", Timestamp.from(now))
+			.param("id", id)
+			.update()
 	}
 
 	fun markStatus(id: UUID, status: InvitationStatus, acceptedAt: Instant? = null): Int {

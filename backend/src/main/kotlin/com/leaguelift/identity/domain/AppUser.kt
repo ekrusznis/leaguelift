@@ -3,7 +3,7 @@ package com.leaguelift.identity.domain
 import java.time.Instant
 import java.util.UUID
 
-enum class AppUserStatus { ACTIVE, SUSPENDED }
+enum class AppUserStatus { ACTIVE, SUSPENDED, PENDING_EMAIL_VERIFICATION }
 
 data class AppUser(
 	val id: UUID,

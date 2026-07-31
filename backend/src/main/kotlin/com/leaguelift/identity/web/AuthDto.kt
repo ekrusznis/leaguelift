@@ -19,12 +19,21 @@ data class RegisterRequest(
 	val lastName: String,
 )
 
+data class RegistrationAcceptedResponse(
+	val email: String,
+)
+
 data class LoginRequest(
 	@field:NotBlank
 	@field:Email
 	val email: String,
 	@field:NotBlank
 	val password: String,
+)
+
+data class VerifyEmailRequest(
+	@field:NotBlank
+	val token: String,
 )
 
 data class AuthResponse(

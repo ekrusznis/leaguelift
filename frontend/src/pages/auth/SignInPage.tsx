@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AuthTabs } from "../../components/forms/AuthTabs";
 import { FormField } from "../../components/forms/FormField";
 import { PasswordField } from "../../components/forms/PasswordField";
@@ -16,6 +16,7 @@ import { signInSchema, type SignInFormValues } from "./schema";
 
 export function SignInPage() {
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
 	const { login } = useAuth();
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const {
@@ -30,7 +31,8 @@ export function SignInPage() {
 		const result = await login(values.email, values.password);
 		if (result.success) {
 			track("sign_in_succeeded");
-			navigate("/app");
+			const next = searchParams.get("next");
+			navigate(next && next.startsWith("/") ? next : "/app");
 		} else {
 			track("sign_in_failed");
 			setSubmitError(result.error ?? "We could not sign you in. Check your information or try again.");

@@ -12,7 +12,7 @@ interface Session {
 
 /**
  * Provides authentication state to the app. Always calls our own backend's
- * `POST /api/v1/auth/login` / `POST /api/v1/auth/register` (`./authApi`) —
+ * `POST /api/v1/auth/login` / `POST /api/v1/auth/register-owner` (`./authApi`) —
  * traditional email/password authentication against our own database (ADR-014).
  * There is no mock/bypass mode on the frontend: local development authenticates the
  * same way production does, using either a real registration or one of the seeded
@@ -59,8 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			},
 			register: async (params: RegisterParams): Promise<AuthResult> => {
 				try {
-					const response = await authApi.register(params);
-					return establishSession(response);
+					await authApi.registerOwner(params);
+					return { success: true };
 				} catch (error) {
 					return { success: false, error: authApi.messageForAuthError(error) };
 				}
