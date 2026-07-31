@@ -78,6 +78,17 @@ class AppUserRepository(private val jdbcClient: JdbcClient) {
 			.update()
 	}
 
+	fun updatePasswordHash(id: UUID, passwordHash: String): Int {
+		val now = Instant.now()
+		return jdbcClient.sql(
+			"update app_user set password_hash = :passwordHash, updated_at = :now where id = :id",
+		)
+			.param("passwordHash", passwordHash)
+			.param("now", Timestamp.from(now))
+			.param("id", id)
+			.update()
+	}
+
 	private fun mapRow(rs: java.sql.ResultSet, rowNum: Int): AppUser =
 		AppUser(
 			id = rs.getObject("id", UUID::class.java),

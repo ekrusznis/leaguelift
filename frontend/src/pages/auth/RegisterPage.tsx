@@ -146,6 +146,9 @@ export function RegisterPage() {
 						<p className="max-w-sm text-sm text-slate-300">
 							Use the verification link we sent to activate your account, then sign in to create your organization.
 						</p>
+						<Link to="/auth/resend-verification" className="text-sm text-green-400 hover:underline">
+							Didn&rsquo;t get the email? Resend verification
+						</Link>
 						<PrimaryButton onClick={() => navigate("/auth/sign-in")} icon="arrow" className="mt-2">
 							Go to Sign In
 						</PrimaryButton>

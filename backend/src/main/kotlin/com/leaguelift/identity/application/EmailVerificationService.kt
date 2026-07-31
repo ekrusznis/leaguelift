@@ -5,6 +5,7 @@ import com.leaguelift.common.error.ValidationException
 import com.leaguelift.identity.domain.AppUserStatus
 import com.leaguelift.identity.persistence.AppUserRepository
 import com.leaguelift.identity.persistence.EmailVerificationTokenRepository
+import com.leaguelift.outbox.application.OutboxWriter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.security.MessageDigest
@@ -20,6 +21,7 @@ private const val EMAIL_VERIFICATION_VALIDITY_HOURS = 24L
 class EmailVerificationService(
 	private val emailVerificationTokenRepository: EmailVerificationTokenRepository,
 	private val appUserRepository: AppUserRepository,
+	private val outboxWriter: OutboxWriter,
 ) {
 
 	data class IssuedVerification(
@@ -42,6 +44,25 @@ class EmailVerificationService(
 			expiresAt = Instant.now().plus(Duration.ofHours(EMAIL_VERIFICATION_VALIDITY_HOURS)),
 		)
 		return IssuedVerification(user.id, user.email, rawToken)
+	}
+
+	@Transactional
+	fun resend(email: String) {
+		val normalizedEmail = email.trim().lowercase()
+		val user = appUserRepository.findByEmail(normalizedEmail) ?: return
+		if (user.status != AppUserStatus.PENDING_EMAIL_VERIFICATION) return
+		enqueueVerificationEmail(issueForUser(user.id))
+	}
+
+	fun enqueueVerificationEmail(issued: IssuedVerification) {
+		outboxWriter.write(
+			aggregateType = "app_user",
+			aggregateId = issued.userId,
+			organizationId = null,
+			eventType = "auth.owner_verification_requested",
+			payloadJson =
+				"""{"userId":"${issued.userId}","email":"${issued.email}","verificationToken":"${issued.rawToken}"}""",
+		)
 	}
 
 	@Transactional

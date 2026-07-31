@@ -47,6 +47,18 @@ export function verifyEmail(token: string): Promise<void> {
 	return apiFetch<void>("/auth/verify-email", { method: "POST", body: { token } });
 }
 
+export function resendVerificationEmail(email: string): Promise<void> {
+	return apiFetch<void>("/auth/verify-email/resend", { method: "POST", body: { email } });
+}
+
+export function requestPasswordReset(email: string): Promise<void> {
+	return apiFetch<void>("/auth/password-reset/request", { method: "POST", body: { email } });
+}
+
+export function completePasswordReset(token: string, password: string): Promise<void> {
+	return apiFetch<void>("/auth/password-reset/complete", { method: "POST", body: { token, password } });
+}
+
 export function acceptInvitation(token: string): Promise<InvitationAcceptanceResponse> {
 	return apiFetch<InvitationAcceptanceResponse>(`/invitations/${token}/accept`, { method: "POST" });
 }
@@ -71,5 +83,14 @@ export function messageForInvitationError(error: unknown): string {
 		return error.message;
 	}
 	return "Could not accept this invitation. Please try again.";
+}
+
+export function messageForPasswordResetError(error: unknown): string {
+	if (error instanceof ApiError) {
+		if (error.code === "PASSWORD_RESET_TOKEN_INVALID") return "This reset link is invalid or has expired.";
+		if (error.fieldErrors.length > 0) return error.fieldErrors[0].message;
+		return error.message;
+	}
+	return "Could not reset your password. Please try again.";
 }
 

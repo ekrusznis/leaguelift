@@ -6,6 +6,7 @@ import { AuthErrorPage } from "../pages/auth/AuthErrorPage";
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage";
 import { InvitationPage } from "../pages/auth/InvitationPage";
 import { RegisterPage } from "../pages/auth/RegisterPage";
+import { ResendVerificationPage } from "../pages/auth/ResendVerificationPage";
 import { ResetPasswordPage } from "../pages/auth/ResetPasswordPage";
 import { SignInPage } from "../pages/auth/SignInPage";
 import { VerifyEmailPage } from "../pages/auth/VerifyEmailPage";
@@ -70,6 +71,7 @@ export function AppRoutes() {
 			<Route element={<AuthLayout />}>
 				<Route path="auth/sign-in" element={<SignInPage />} />
 				<Route path="auth/register" element={<RegisterPage />} />
+				<Route path="auth/resend-verification" element={<ResendVerificationPage />} />
 				<Route path="auth/forgot-password" element={<ForgotPasswordPage />} />
 				<Route path="auth/reset-password" element={<ResetPasswordPage />} />
 				<Route path="auth/verify-email" element={<VerifyEmailPage />} />

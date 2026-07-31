@@ -3,6 +3,7 @@ package com.leaguelift.identity.web
 import com.leaguelift.identity.application.PasswordAuthenticationService
 import com.leaguelift.identity.application.TokenService
 import com.leaguelift.identity.application.EmailVerificationService
+import com.leaguelift.identity.application.PasswordResetService
 import com.leaguelift.identity.domain.AppUser
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController
 class AuthController(
 	private val passwordAuthenticationService: PasswordAuthenticationService,
 	private val emailVerificationService: EmailVerificationService,
+	private val passwordResetService: PasswordResetService,
 	private val tokenService: TokenService,
 ) {
 
@@ -36,6 +38,24 @@ class AuthController(
 	@PostMapping("/verify-email")
 	fun verifyEmail(@Valid @RequestBody request: VerifyEmailRequest): ResponseEntity<Void> {
 		emailVerificationService.verify(request.token)
+		return ResponseEntity.noContent().build()
+	}
+
+	@PostMapping("/verify-email/resend")
+	fun resendVerificationEmail(@Valid @RequestBody request: ResendVerificationRequest): ResponseEntity<Void> {
+		emailVerificationService.resend(request.email)
+		return ResponseEntity.noContent().build()
+	}
+
+	@PostMapping("/password-reset/request")
+	fun requestPasswordReset(@Valid @RequestBody request: PasswordResetRequest): ResponseEntity<Void> {
+		passwordResetService.request(request.email)
+		return ResponseEntity.noContent().build()
+	}
+
+	@PostMapping("/password-reset/complete")
+	fun completePasswordReset(@Valid @RequestBody request: CompletePasswordResetRequest): ResponseEntity<Void> {
+		passwordResetService.complete(request.token, request.password)
 		return ResponseEntity.noContent().build()
 	}
 

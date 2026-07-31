@@ -7,8 +7,11 @@ import com.leaguelift.identity.domain.AppUserStatus
 import com.leaguelift.identity.persistence.AppUserRepository
 import com.leaguelift.identity.persistence.EmailVerificationTokenRecord
 import com.leaguelift.identity.persistence.EmailVerificationTokenRepository
+import com.leaguelift.outbox.application.OutboxWriter
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
 import io.mockk.verify
 import java.time.Instant
 import java.util.*
@@ -20,7 +23,8 @@ class EmailVerificationServiceTest {
 
 	private val tokenRepository = mockk<EmailVerificationTokenRepository>()
 	private val appUserRepository = mockk<AppUserRepository>()
-	private val service = EmailVerificationService(tokenRepository, appUserRepository)
+	private val outboxWriter = mockk<OutboxWriter>()
+	private val service = EmailVerificationService(tokenRepository, appUserRepository, outboxWriter)
 
 	@Test
 	fun `issueForUser creates a new token for pending user`() {
@@ -39,6 +43,48 @@ class EmailVerificationServiceTest {
 		assertEquals(user.id, issued.userId)
 		assertEquals("owner@example.com", issued.email)
 		assertEquals(43, issued.rawToken.length)
+	}
+
+	@Test
+	fun `enqueueVerificationEmail writes outbox event`() {
+		val issued = EmailVerificationService.IssuedVerification(UUID.randomUUID(), "owner@example.com", "token")
+		every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
+
+		service.enqueueVerificationEmail(issued)
+
+		verify(exactly = 1) {
+			outboxWriter.write("app_user", issued.userId, null, "auth.owner_verification_requested", any())
+		}
+	}
+
+	@Test
+	fun `resend is ignored when account is missing`() {
+		every { appUserRepository.findByEmail("missing@example.com") } returns null
+
+		service.resend("missing@example.com")
+
+		verify(exactly = 0) { tokenRepository.replaceActiveToken(any(), any(), any()) }
+		verify(exactly = 0) { outboxWriter.write(any(), any(), any(), any(), any()) }
+	}
+
+	@Test
+	fun `resend issues fresh token and queues email for pending user`() {
+		val user = pendingUser("owner@example.com")
+		every { appUserRepository.findByEmail("owner@example.com") } returns user
+		every { appUserRepository.findById(user.id) } returns user
+		every { tokenRepository.replaceActiveToken(user.id, any(), any()) } returns EmailVerificationTokenRecord(
+			id = UUID.randomUUID(),
+			userId = user.id,
+			tokenHash = "hash",
+			expiresAt = Instant.now().plusSeconds(3600),
+			consumedAt = null,
+		)
+		every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
+
+		service.resend("owner@example.com")
+
+		verify(exactly = 1) { tokenRepository.replaceActiveToken(user.id, any(), any()) }
+		verify(exactly = 1) { outboxWriter.write(any(), any(), any(), any(), any()) }
 	}
 
 	@Test

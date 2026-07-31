@@ -6,7 +6,6 @@ import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.identity.domain.AppUser
 import com.leaguelift.identity.domain.AppUserStatus
 import com.leaguelift.identity.persistence.AppUserRepository
-import com.leaguelift.outbox.application.OutboxWriter
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -21,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional
 class PasswordAuthenticationService(
 	private val appUserRepository: AppUserRepository,
 	private val emailVerificationService: EmailVerificationService,
-	private val outboxWriter: OutboxWriter,
 	private val passwordEncoder: PasswordEncoder,
 ) {
 
@@ -68,14 +66,7 @@ class PasswordAuthenticationService(
 			throw emailAlreadyRegistered()
 		}
 		val issued = emailVerificationService.issueForUser(created.id)
-		outboxWriter.write(
-			aggregateType = "app_user",
-			aggregateId = created.id,
-			organizationId = null,
-			eventType = "auth.owner_verification_requested",
-			payloadJson =
-				"""{"userId":"${issued.userId}","email":"${issued.email}","verificationToken":"${issued.rawToken}"}""",
-		)
+		emailVerificationService.enqueueVerificationEmail(issued)
 		return RegistrationAccepted(email = normalizedEmail)
 	}
 

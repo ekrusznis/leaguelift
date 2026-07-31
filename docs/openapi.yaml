@@ -202,6 +202,62 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /auth/verify-email/resend:
+    post:
+      tags: [auth]
+      summary: Request another owner verification email
+      operationId: resendVerificationEmail
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResendVerificationRequest"
+      responses:
+        "204":
+          description: Request accepted. Response is intentionally non-enumerating.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/password-reset/request:
+    post:
+      tags: [auth]
+      summary: Request a password reset email
+      operationId: requestPasswordReset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetRequest"
+      responses:
+        "204":
+          description: Request accepted. Response is intentionally non-enumerating.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/password-reset/complete:
+    post:
+      tags: [auth]
+      summary: Complete password reset with a one-time token
+      operationId: completePasswordReset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompletePasswordResetRequest"
+      responses:
+        "204":
+          description: Password updated
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /auth/login:
     post:
       tags: [auth]
@@ -6262,6 +6318,30 @@ components:
       properties:
         token:
           type: string
+    ResendVerificationRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    PasswordResetRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    CompletePasswordResetRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 8
+          maxLength: 200
     AuthResponse:
       type: object
       required: [accessToken, tokenType, expiresIn, user]
@@ -6291,7 +6371,7 @@ components:
           type: string
         status:
           type: string
-          enum: [ACTIVE, SUSPENDED]
+          enum: [ACTIVE, SUSPENDED, PENDING_EMAIL_VERIFICATION]
     CreateOrganizationRequest:
       type: object
       required: [name, slug, organizationType]

@@ -36,6 +36,26 @@ data class VerifyEmailRequest(
 	val token: String,
 )
 
+data class ResendVerificationRequest(
+	@field:NotBlank
+	@field:Email
+	val email: String,
+)
+
+data class PasswordResetRequest(
+	@field:NotBlank
+	@field:Email
+	val email: String,
+)
+
+data class CompletePasswordResetRequest(
+	@field:NotBlank
+	val token: String,
+	@field:NotBlank
+	@field:Size(min = 8, max = 200)
+	val password: String,
+)
+
 data class AuthResponse(
 	val accessToken: String,
 	val tokenType: String,
