@@ -79,3 +79,44 @@ export interface EventRsvps {
 export interface DirectionsResponse {
 	url: string | null;
 }
+
+export type EventTemplateStatus = "ACTIVE" | "ARCHIVED";
+
+export interface EventTemplate {
+	id: string;
+	organizationId: string;
+	name: string;
+	eventType: EventType;
+	title: string | null;
+	description: string | null;
+	durationMinutes: number | null;
+	arrivalOffsetMinutes: number | null;
+	meetingOffsetMinutes: number | null;
+	timezone: string;
+	venueName: string | null;
+	address: string | null;
+	area: string | null;
+	meetingPoint: string | null;
+	directionsNotes: string | null;
+	visibility: EventVisibility;
+	status: EventTemplateStatus;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface SaveEventTemplateInput {
+	name: string;
+	eventType: EventType;
+	title?: string | null;
+	description?: string | null;
+	durationMinutes?: number | null;
+	arrivalOffsetMinutes?: number | null;
+	meetingOffsetMinutes?: number | null;
+	timezone: string;
+	venueName?: string | null;
+	address?: string | null;
+	area?: string | null;
+	meetingPoint?: string | null;
+	directionsNotes?: string | null;
+	visibility: EventVisibility;
+}

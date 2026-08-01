@@ -77,8 +77,8 @@ info:
     and calendar routes carrying the target organizationId query parameter.
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
-    Phase 16 slice 3 extends the media pipeline to team/tournament branding and private adult/participant profile photos, with resource-scoped authorization and published-page rendering (ADR-045).
-  version: "0.25.2"
+    Phase 16 slices 3-5 extend the media pipeline to team/tournament branding and private adult/participant profile photos (ADR-045), add typed profile-correction requests (ADR-046), and add manager-controlled reusable event templates that prefill ordinary manual draft events without recurrence or automatic publication (ADR-047).
+  version: "0.25.3"
 servers:
   - url: /api/v1
 tags:
@@ -5092,6 +5092,129 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/event-templates:
+    get:
+      tags: [events]
+      summary: List reusable event templates for an organization (Phase 16 slice 5, ADR-047; active templates require organization membership, archived templates require owner/administrator access)
+      operationId: listEventTemplates
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: includeArchived
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Event templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventTemplateResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [events]
+      summary: Create a reusable event template (Phase 16 slice 5, ADR-047; owner/administrator only)
+      operationId: createEventTemplate
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveEventTemplateRequest"
+      responses:
+        "201":
+          description: Created event template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventTemplateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /organizations/{organizationId}/event-templates/{templateId}:
+    put:
+      tags: [events]
+      summary: Replace the defaults on an active reusable event template (Phase 16 slice 5, ADR-047; owner/administrator only)
+      operationId: updateEventTemplate
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: templateId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveEventTemplateRequest"
+      responses:
+        "200":
+          description: Updated event template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventTemplateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /organizations/{organizationId}/event-templates/{templateId}/archive:
+    post:
+      tags: [events]
+      summary: Archive an event template without changing events previously created from it (Phase 16 slice 5, ADR-047; owner/administrator only)
+      operationId: archiveEventTemplate
+      parameters:
+        - name: organizationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: templateId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Archived event template; repeated archive requests are idempotent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventTemplateResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /organizations/{organizationId}/events:
     get:
@@ -10440,6 +10563,90 @@ components:
         outboxDeadLetter:
           type: integer
           format: int64
+    SaveEventTemplateRequest:
+      type: object
+      required: [name, eventType, timezone, visibility]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        eventType:
+          type: string
+          enum: [COMPETITION, TOURNAMENT, PRACTICE, MEETING, OTHER]
+        title:
+          type: string
+          nullable: true
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+        durationMinutes:
+          type: integer
+          minimum: 1
+          maximum: 1440
+          nullable: true
+        arrivalOffsetMinutes:
+          type: integer
+          minimum: 0
+          maximum: 1440
+          nullable: true
+        meetingOffsetMinutes:
+          type: integer
+          minimum: 0
+          maximum: 1440
+          nullable: true
+        timezone:
+          type: string
+          maxLength: 100
+          description: IANA time zone id, e.g. America/New_York.
+        venueName:
+          type: string
+          nullable: true
+          maxLength: 200
+        address:
+          type: string
+          nullable: true
+          maxLength: 300
+        area:
+          type: string
+          nullable: true
+          maxLength: 120
+        meetingPoint:
+          type: string
+          nullable: true
+          maxLength: 300
+        directionsNotes:
+          type: string
+          nullable: true
+          maxLength: 1000
+        visibility:
+          type: string
+          enum: [PUBLIC, ORGANIZATION, TEAM]
+
+    EventTemplateResponse:
+      allOf:
+        - $ref: "#/components/schemas/SaveEventTemplateRequest"
+        - type: object
+          required: [id, organizationId, status, createdAt, updatedAt]
+          properties:
+            id:
+              type: string
+              format: uuid
+            organizationId:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [ACTIVE, ARCHIVED]
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
     CreateEventRequest:
       type: object
       required: [eventType, timezone]

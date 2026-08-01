@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, apiFetchBlob } from "../../lib/apiClient";
-import type { CreateEventInput, DirectionsResponse, EventRsvps, LeagueLiftEvent, RsvpResponse } from "./types";
+import type { CreateEventInput, DirectionsResponse, EventRsvps, EventTemplate, LeagueLiftEvent, RsvpResponse, SaveEventTemplateInput } from "./types";
 
 export type EventScope =
 	| { type: "organization"; organizationId: string }
@@ -123,4 +123,39 @@ export function downloadEventCalendar(organizationId: string, eventId: string) {
 
 export function downloadHouseholdCalendar(organizationId: string, householdId: string) {
 	return apiFetchBlob(`/households/${householdId}/calendar.ics?organizationId=${organizationId}`);
+}
+
+export function useEventTemplates(organizationId: string, includeArchived = false) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "event-templates", includeArchived],
+		queryFn: () => apiFetch<EventTemplate[]>(`/organizations/${organizationId}/event-templates?includeArchived=${includeArchived}`),
+		enabled: !!organizationId,
+	});
+}
+
+export function useCreateEventTemplate(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (input: SaveEventTemplateInput) =>
+			apiFetch<EventTemplate>(`/organizations/${organizationId}/event-templates`, { method: "POST", body: input }),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["organizations", organizationId, "event-templates"] }),
+	});
+}
+
+export function useUpdateEventTemplate(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ templateId, input }: { templateId: string; input: SaveEventTemplateInput }) =>
+			apiFetch<EventTemplate>(`/organizations/${organizationId}/event-templates/${templateId}`, { method: "PUT", body: input }),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["organizations", organizationId, "event-templates"] }),
+	});
+}
+
+export function useArchiveEventTemplate(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (templateId: string) =>
+			apiFetch<EventTemplate>(`/organizations/${organizationId}/event-templates/${templateId}/archive`, { method: "POST" }),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["organizations", organizationId, "event-templates"] }),
+	});
 }

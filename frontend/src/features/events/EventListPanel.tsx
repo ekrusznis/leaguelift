@@ -5,8 +5,10 @@ import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { appPaths } from "../../routes/appPaths";
-import { downloadEventCalendar, useCreateEvent, useEvents, type EventScope } from "./api";
-import type { CreateEventInput, EventType, EventVisibility, LeagueLiftEvent } from "./types";
+import { EventTemplatePanel } from "./EventTemplatePanel";
+import { deriveTemplateTimes } from "./eventTemplateTiming";
+import { downloadEventCalendar, useCreateEvent, useEvents, useEventTemplates, type EventScope } from "./api";
+import type { CreateEventInput, EventTemplate, EventType, EventVisibility, LeagueLiftEvent } from "./types";
 
 function formatDateTime(value: string | null, timezone: string) {
 	if (!value) return "To be determined";
@@ -58,6 +60,7 @@ export function EventListPanel({
 	const eventsQuery = useEvents(scope);
 	const createEvent = useCreateEvent(scope);
 	const [showCreate, setShowCreate] = useState(false);
+	const [showTemplates, setShowTemplates] = useState(false);
 	const [downloadError, setDownloadError] = useState<string | null>(null);
 
 	const events = useMemo(
@@ -83,20 +86,33 @@ export function EventListPanel({
 	if (eventsQuery.isLoading) return <LoadingState label="Loading events…" />;
 	if (eventsQuery.isError) return <ErrorState message="Could not load events." onRetry={() => eventsQuery.refetch()} />;
 
+	const mutableScope = scope.type !== "household" && scope.type !== "participant";
+
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex flex-wrap items-center justify-between gap-3">
 				<p className="text-sm text-slate-gray">
 					{events.length} event{events.length === 1 ? "" : "s"}
 				</p>
-				{canManage && scope.type !== "household" && scope.type !== "participant" && (
-					<Button type="button" variant="secondary" onClick={() => setShowCreate((value) => !value)}>
-						{showCreate ? "Cancel" : "Create event"}
-					</Button>
+				{canManage && mutableScope && (
+					<div className="flex flex-wrap gap-2">
+						{scope.type === "organization" && (
+							<Button type="button" variant="secondary" onClick={() => setShowTemplates((value) => !value)}>
+								{showTemplates ? "Hide templates" : "Manage templates"}
+							</Button>
+						)}
+						<Button type="button" variant="secondary" onClick={() => setShowCreate((value) => !value)}>
+							{showCreate ? "Cancel" : "Create event"}
+						</Button>
+					</div>
 				)}
 			</div>
 
-			{showCreate && canManage && scope.type !== "household" && scope.type !== "participant" && (
+			{showTemplates && canManage && scope.type === "organization" && (
+				<EventTemplatePanel organizationId={scope.organizationId} />
+			)}
+
+			{showCreate && canManage && mutableScope && (
 				<CreateEventForm
 					scope={scope}
 					isSubmitting={createEvent.isPending}
@@ -165,6 +181,14 @@ function toInstant(value: string) {
 	return value ? new Date(value).toISOString() : null;
 }
 
+function templateTimingSummary(template: EventTemplate) {
+	const parts: string[] = [];
+	if (template.durationMinutes != null) parts.push(`${template.durationMinutes}-minute event`);
+	if (template.arrivalOffsetMinutes != null) parts.push(`arrival ${template.arrivalOffsetMinutes} minutes before`);
+	if (template.meetingOffsetMinutes != null) parts.push(`meeting ${template.meetingOffsetMinutes} minutes before`);
+	return parts.join(" · ");
+}
+
 function CreateEventForm({
 	scope,
 	isSubmitting,
@@ -178,39 +202,88 @@ function CreateEventForm({
 	onCancel: () => void;
 	onSubmit: (input: CreateEventInput) => Promise<void>;
 }) {
+	const templatesQuery = useEventTemplates(scope.organizationId);
+	const templates = templatesQuery.data ?? [];
+	const [selectedTemplateId, setSelectedTemplateId] = useState("");
 	const [eventType, setEventType] = useState<EventType>("COMPETITION");
 	const [title, setTitle] = useState("");
+	const [description, setDescription] = useState("");
 	const [opponentName, setOpponentName] = useState("");
 	const [startAt, setStartAt] = useState("");
+	const [endAt, setEndAt] = useState("");
 	const [arrivalAt, setArrivalAt] = useState("");
+	const [meetingAt, setMeetingAt] = useState("");
 	const [venueName, setVenueName] = useState("");
 	const [address, setAddress] = useState("");
 	const [area, setArea] = useState("");
+	const [meetingPoint, setMeetingPoint] = useState("");
+	const [directionsNotes, setDirectionsNotes] = useState("");
 	const [visibility, setVisibility] = useState<EventVisibility>(scope.type === "organization" ? "ORGANIZATION" : "TEAM");
-	const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+	const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York");
+	const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? null;
+
+	function selectTemplate(templateId: string) {
+		setSelectedTemplateId(templateId);
+		const template = templates.find((candidate) => candidate.id === templateId);
+		if (!template) return;
+		setEventType(template.eventType);
+		setTitle(template.title ?? "");
+		setDescription(template.description ?? "");
+		setTimezone(template.timezone);
+		setVenueName(template.venueName ?? "");
+		setAddress(template.address ?? "");
+		setArea(template.area ?? "");
+		setMeetingPoint(template.meetingPoint ?? "");
+		setDirectionsNotes(template.directionsNotes ?? "");
+		setVisibility(template.visibility);
+		setEndAt("");
+		setArrivalAt("");
+		setMeetingAt("");
+	}
 
 	return (
 		<form
 			className="rounded-xl border border-slate-gray/20 bg-ice-white p-4"
 			onSubmit={async (event) => {
 				event.preventDefault();
+				const startInstant = toInstant(startAt);
+				const derived = deriveTemplateTimes(startInstant, selectedTemplate);
 				await onSubmit({
 					eventType,
 					title: title.trim() || null,
+					description: description.trim() || null,
 					opponentName: opponentName.trim() || null,
-					startAt: toInstant(startAt),
-					arrivalAt: toInstant(arrivalAt),
+					startAt: startInstant,
+					endAt: toInstant(endAt) ?? derived.endAt,
+					arrivalAt: toInstant(arrivalAt) ?? derived.arrivalAt,
+					meetingAt: toInstant(meetingAt) ?? derived.meetingAt,
 					timezone,
 					venueName: venueName.trim() || null,
 					address: address.trim() || null,
 					area: area.trim() || null,
+					meetingPoint: meetingPoint.trim() || null,
+					directionsNotes: directionsNotes.trim() || null,
 					visibility,
 				});
 			}}
 		>
 			<h3 className="font-heading text-base font-semibold text-navy">New event</h3>
-			<p className="mt-1 text-sm text-slate-gray">The event starts as a draft. Open it after creation to publish or update its status.</p>
+			<p className="mt-1 text-sm text-slate-gray">The event starts as a draft. A template only supplies defaults; every field can be reviewed before creation.</p>
 			<div className="mt-4 grid gap-3 md:grid-cols-2">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
+					Reusable template
+					<select
+						value={selectedTemplateId}
+						onChange={(event) => selectTemplate(event.target.value)}
+						disabled={templatesQuery.isLoading || templatesQuery.isError}
+						className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2"
+					>
+						<option value="">Start without a template</option>
+						{templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
+					</select>
+					{templatesQuery.isError && <span className="text-xs font-normal text-error-red">Templates could not be loaded. You can still create the event manually.</span>}
+					{selectedTemplate && templateTimingSummary(selectedTemplate) && <span className="text-xs font-normal text-slate-gray">{templateTimingSummary(selectedTemplate)}</span>}
+				</label>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
 					Event type
 					<select value={eventType} onChange={(event) => setEventType(event.target.value as EventType)} className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2">
@@ -225,29 +298,53 @@ function CreateEventForm({
 					Title
 					<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Optional custom title" maxLength={200} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
+					Description
+					<textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} rows={3} className="rounded-md border border-slate-gray/30 px-3 py-2" />
+				</label>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
 					Opponent
 					<input value={opponentName} onChange={(event) => setOpponentName(event.target.value)} placeholder="External opponent name" maxLength={120} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+				</label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+					Timezone
+					<input required value={timezone} onChange={(event) => setTimezone(event.target.value)} maxLength={100} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
 					Start time
 					<input type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+					End time
+					<input type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+				</label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
 					Arrival time
 					<input type="datetime-local" value={arrivalAt} onChange={(event) => setArrivalAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+				</label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+					Meeting time
+					<input type="datetime-local" value={meetingAt} onChange={(event) => setMeetingAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
 					Venue
 					<input value={venueName} onChange={(event) => setVenueName(event.target.value)} maxLength={200} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+					Field / court / area
+					<input value={area} onChange={(event) => setArea(event.target.value)} maxLength={120} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+				</label>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
 					Address
 					<input value={address} onChange={(event) => setAddress(event.target.value)} maxLength={300} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
-					Field / court / area
-					<input value={area} onChange={(event) => setArea(event.target.value)} maxLength={120} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
+					Meeting point
+					<input value={meetingPoint} onChange={(event) => setMeetingPoint(event.target.value)} maxLength={300} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+				</label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
+					Directions notes
+					<textarea value={directionsNotes} onChange={(event) => setDirectionsNotes(event.target.value)} maxLength={1000} rows={3} className="rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
 					Visibility
