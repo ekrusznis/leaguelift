@@ -48,6 +48,8 @@ import { useTeams } from "../features/teams/api";
 import { HouseholdDocumentsPanel } from "../features/documents/HouseholdDocumentsPanel";
 import { EventListPanel } from "../features/events/EventListPanel";
 import { ProfilePhotoEditor } from "../features/media/ProfilePhotoEditor";
+import { ProfileCorrectionForm } from "../features/profileCorrections/ProfileCorrectionForm";
+import { HouseholdCorrectionRequestsPanel } from "../features/profileCorrections/HouseholdCorrectionRequestsPanel";
 import { useContexts } from "../authorization/api";
 import { hasCapability } from "../authorization/capabilities";
 import { Capabilities } from "../authorization/capabilityConstants";
@@ -117,6 +119,7 @@ function AdultsPanel({ organizationId, householdId, canManage, canManagePhotos }
 	const { data, isLoading, isError, refetch } = useAdults(organizationId, householdId);
 	const removeAdult = useRemoveAdult(organizationId, householdId);
 	const [showForm, setShowForm] = useState(false);
+	const [correctionAdultId, setCorrectionAdultId] = useState<string | null>(null);
 
 	return (
 		<section aria-label="Adults" className="flex flex-col gap-3">
@@ -136,8 +139,11 @@ function AdultsPanel({ organizationId, householdId, canManage, canManagePhotos }
 			)}
 			{data && data.length > 0 && (
 				<ul className="flex flex-col gap-2" aria-label="Adults list">
-					{data.map((adult) => (
-						<li key={adult.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+					{data.map((adult) => {
+						const canRequestForAdult = canManage || (!!currentUserEmail && adult.email?.trim().toLowerCase() === currentUserEmail);
+						return (
+						<li key={adult.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+							<div className="flex flex-wrap items-center justify-between gap-3">
 							<ProfilePhotoEditor
 								organizationId={organizationId}
 								entityType="HOUSEHOLD_ADULT"
@@ -154,13 +160,33 @@ function AdultsPanel({ organizationId, householdId, canManage, canManagePhotos }
 									{[adult.relationship, adult.email].filter(Boolean).join(" · ")}
 								</p>
 							</div>
-							{canManage && (
-								<Button type="button" variant="secondary" className="shrink-0" onClick={() => removeAdult.mutate(adult.id)} disabled={removeAdult.isPending}>
-									Remove
-								</Button>
+							<div className="flex shrink-0 flex-wrap gap-2">
+								{canRequestForAdult && (
+									<Button type="button" variant="secondary" onClick={() => setCorrectionAdultId((id) => id === adult.id ? null : adult.id)}>
+										{correctionAdultId === adult.id ? "Cancel correction" : "Request correction"}
+									</Button>
+								)}
+								{canManage && (
+									<Button type="button" variant="secondary" onClick={() => removeAdult.mutate(adult.id)} disabled={removeAdult.isPending}>
+										Remove
+									</Button>
+								)}
+							</div>
+							</div>
+							{correctionAdultId === adult.id && (
+								<ProfileCorrectionForm
+									organizationId={organizationId}
+									householdId={householdId}
+									targetType="HOUSEHOLD_ADULT"
+									targetId={adult.id}
+									targetLabel={`${adult.firstName} ${adult.lastName}`}
+									fields={["ADULT_FIRST_NAME", "ADULT_LAST_NAME", "ADULT_EMAIL", "ADULT_PHONE", "ADULT_RELATIONSHIP"]}
+									onDone={() => setCorrectionAdultId(null)}
+								/>
 							)}
 						</li>
-					))}
+						);
+					})}
 				</ul>
 			)}
 		</section>
@@ -278,6 +304,7 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 	const { data, isLoading, isError, refetch } = useParticipants(organizationId, householdId);
 	const [showForm, setShowForm] = useState(false);
 	const [expandedId, setExpandedId] = useState<string | null>(null);
+	const [correctionParticipantId, setCorrectionParticipantId] = useState<string | null>(null);
 
 	return (
 		<section aria-label="Participants" className="flex flex-col gap-3">
@@ -315,14 +342,30 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 										<p className="text-sm text-slate-gray">Born {participant.dateOfBirth}</p>
 									)}
 								</div>
-								<button
-									type="button"
-									className="shrink-0 text-sm text-azure-blue hover:underline"
-									onClick={() => setExpandedId((id) => id === participant.id ? null : participant.id)}
-								>
-									{expandedId === participant.id ? "Hide teams" : "Teams"}
-								</button>
+								<div className="flex shrink-0 flex-wrap items-center gap-2">
+									<Button type="button" variant="secondary" onClick={() => setCorrectionParticipantId((id) => id === participant.id ? null : participant.id)}>
+										{correctionParticipantId === participant.id ? "Cancel correction" : "Request correction"}
+									</Button>
+									<button
+										type="button"
+										className="text-sm text-azure-blue hover:underline"
+										onClick={() => setExpandedId((id) => id === participant.id ? null : participant.id)}
+									>
+										{expandedId === participant.id ? "Hide teams" : "Teams"}
+									</button>
+								</div>
 							</div>
+							{correctionParticipantId === participant.id && (
+								<ProfileCorrectionForm
+									organizationId={organizationId}
+									householdId={householdId}
+									targetType="PARTICIPANT"
+									targetId={participant.id}
+									targetLabel={`${participant.firstName} ${participant.lastName}`}
+									fields={["PARTICIPANT_FIRST_NAME", "PARTICIPANT_LAST_NAME", "PARTICIPANT_DATE_OF_BIRTH"]}
+									onDone={() => setCorrectionParticipantId(null)}
+								/>
+							)}
 							{expandedId === participant.id && (
 								<ParticipantTeamRow organizationId={organizationId} participant={participant} canManage={canManage} />
 							)}
@@ -729,6 +772,7 @@ const HOUSEHOLD_SECTIONS: Array<{ id: HouseholdSection; label: string }> = [
 	{ id: "events", label: "Family Schedule" },
 	{ id: "fees", label: "Fees & Payments" },
 	{ id: "documents", label: "Documents" },
+	{ id: "corrections", label: "Correction Requests" },
 ];
 
 function isHouseholdSection(value: string | undefined): value is HouseholdSection {
@@ -776,6 +820,13 @@ export function HouseholdDetailPage() {
 			{activeSection === "participants" && <ParticipantsPanel organizationId={organizationId} householdId={householdId} canManage={canAdminister} canManagePhotos={canManageProfilePhotos} />}
 			{activeSection === "events" && <EventListPanel scope={{ type: "household", organizationId, householdId }} householdId={householdId} />}
 			{activeSection === "fees" && <FeeAssignmentsPanel organizationId={organizationId} householdId={householdId} canManage={canAdminister} />}
+			{activeSection === "corrections" && (
+				<section aria-label="Correction Requests" className="flex flex-col gap-3">
+					<h2 className="font-heading text-lg font-semibold text-navy">Correction Requests</h2>
+					<p className="text-sm text-slate-gray">Track requested profile changes and the organization's review decision.</p>
+					<HouseholdCorrectionRequestsPanel organizationId={organizationId} householdId={householdId} />
+				</section>
+			)}
 			{activeSection === "documents" && (
 				<section aria-label="Documents" className="flex flex-col gap-3">
 					<h2 className="font-heading text-lg font-semibold text-navy">Documents</h2>

@@ -97,6 +97,36 @@ class HouseholdService(
     }
 
     @Transactional
+    fun updateAdult(
+        organizationId: UUID,
+        householdId: UUID,
+        adultId: UUID,
+        firstName: String?,
+        lastName: String?,
+        email: String?,
+        phone: String?,
+        relationship: String?,
+        currentUser: CurrentUser,
+    ): HouseholdAdult {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        householdRepository.findAdultById(adultId, organizationId)
+            ?.takeIf { it.householdId == householdId }
+            ?: throw NotFoundException("ADULT_NOT_FOUND", "The household adult could not be found.")
+        householdRepository.updateAdult(
+            adultId = adultId,
+            organizationId = organizationId,
+            firstName = firstName,
+            lastName = lastName,
+            email = email,
+            phone = phone,
+            relationship = relationship,
+            isPrimary = null,
+        )
+        auditService.record(currentUser.userId, organizationId, "household.adult.updated", "household_adult", adultId)
+        return householdRepository.findAdultById(adultId, organizationId)!!
+    }
+
+    @Transactional
     fun removeAdult(organizationId: UUID, householdId: UUID, adultId: UUID, currentUser: CurrentUser) {
         membershipService.requireManagerRole(organizationId, currentUser)
         val rows = householdRepository.archiveAdult(adultId, householdId, organizationId)

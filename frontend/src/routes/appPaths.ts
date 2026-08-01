@@ -1,6 +1,7 @@
 export type OrganizationSection =
 	| "overview"
 	| "onboarding"
+	| "corrections"
 	| "teams"
 	| "tournaments"
 	| "households"
@@ -14,7 +15,7 @@ export type OrganizationSection =
 	| "members"
 	| "settings";
 
-export type HouseholdSection = "profile" | "participants" | "fees" | "events" | "documents";
+export type HouseholdSection = "profile" | "participants" | "fees" | "events" | "documents" | "corrections";
 
 export const appPaths = {
 	dashboard: (hash?: string) => `/app${hash ? `#${hash}` : ""}`,

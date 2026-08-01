@@ -9,6 +9,7 @@ import { LoadingState } from "../components/states/LoadingState";
 import { OrganizationLogo } from "../dashboard/components/OrganizationLogo";
 import { OrganizationDocumentsPanel } from "../features/documents/OrganizationDocumentsPanel";
 import { OnboardingPanel } from "../features/onboarding/OnboardingPanel";
+import { OrganizationCorrectionReviewPanel } from "../features/profileCorrections/OrganizationCorrectionReviewPanel";
 import { EventListPanel } from "../features/events/EventListPanel";
 import { FeeTemplateList } from "../features/fees/FeeTemplateList";
 import { CampaignList } from "../features/fundraising/CampaignList";
@@ -35,6 +36,7 @@ import { appPaths, type OrganizationSection } from "../routes/appPaths";
 const SECTION_LABELS: Array<{ id: OrganizationSection; label: string }> = [
 	{ id: "overview", label: "Overview" },
 	{ id: "onboarding", label: "Onboarding" },
+	{ id: "corrections", label: "Corrections" },
 	{ id: "teams", label: "Teams" },
 	{ id: "tournaments", label: "Tournaments" },
 	{ id: "households", label: "Households & Athletes" },
@@ -91,7 +93,7 @@ export function OrganizationDetailPage() {
 
 	const visibleSections = SECTION_LABELS.filter(({ id }) => {
 		if (id === "overview") return true;
-		if (id === "onboarding") return canManageOrganization;
+		if (id === "onboarding" || id === "corrections") return canManageOrganization;
 		if (id === "teams") return canManageTeams;
 		if (id === "tournaments") return canManageTournaments;
 		if (id === "events") return canReadEvents || canManageEvents;
@@ -186,6 +188,8 @@ function OrganizationSectionContent({
 			);
 		case "onboarding":
 			return <Section title="Manual onboarding" description="Preview and import organization setup data, then complete repeatable bulk actions."><OnboardingPanel organizationId={organization.id} /></Section>;
+		case "corrections":
+			return <Section title="Profile correction requests" description="Review guardian, athlete, and scoped-staff requests before organization-owned profile fields change."><OrganizationCorrectionReviewPanel organizationId={organization.id} /></Section>;
 		case "teams":
 			return <Section title="Teams"><TeamList organizationId={organization.id} /></Section>;
 		case "tournaments":
