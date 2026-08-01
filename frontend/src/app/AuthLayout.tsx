@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { Logo } from "../marketing/components/Logo";
 import { SportIconRow } from "../marketing/components/SportIcons";
 import { heroImages } from "../marketing/heroImages";
+import { AppFooter } from "../marketing/components/AppFooter";
 
 const VALUE_STATEMENTS = [
 	"Built for multiple sports",
@@ -62,10 +63,11 @@ export function AuthLayout() {
 				</div>
 			</div>
 
-			<div id="auth-main" className="flex flex-1 items-center justify-center px-5 py-10 sm:px-10 lg:px-14">
-				<div className="w-full max-w-md">
-					<Outlet />
+			<div className="flex min-w-0 flex-1 flex-col bg-ice-50">
+				<div id="auth-main" className="flex flex-1 items-center justify-center px-5 py-10 sm:px-10 lg:px-14">
+					<div className="w-full max-w-md"><Outlet /></div>
 				</div>
+				<AppFooter authenticated={false} />
 			</div>
 		</div>
 	);

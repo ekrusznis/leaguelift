@@ -29,6 +29,7 @@ import { PublicPagesPanel } from "../features/publicpage/PublicPagesPanel";
 import { OrganizationReportsPanel } from "../features/reporting/OrganizationReportsPanel";
 import { SponsorshipPackageList } from "../features/sponsorship/SponsorshipPackageList";
 import { StoreList } from "../features/store/StoreList";
+import { SeasonRolloverPanel } from "../features/seasonRollover/SeasonRolloverPanel";
 import { TeamList } from "../features/teams/TeamList";
 import { TournamentList } from "../features/tournaments/TournamentList";
 import { appPaths, type OrganizationSection } from "../routes/appPaths";
@@ -191,7 +192,14 @@ function OrganizationSectionContent({
 		case "corrections":
 			return <Section title="Profile correction requests" description="Review guardian, athlete, and scoped-staff requests before organization-owned profile fields change."><OrganizationCorrectionReviewPanel organizationId={organization.id} /></Section>;
 		case "teams":
-			return <Section title="Teams"><TeamList organizationId={organization.id} /></Section>;
+			return (
+				<Section title="Teams">
+					<div className="flex flex-col gap-6">
+						<TeamList organizationId={organization.id} />
+						{canManageOrganization && <SeasonRolloverPanel organizationId={organization.id} />}
+					</div>
+				</Section>
+			);
 		case "tournaments":
 			return <Section title="Tournaments"><TournamentList organizationId={organization.id} /></Section>;
 		case "households":

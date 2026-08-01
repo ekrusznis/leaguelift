@@ -3,6 +3,7 @@ import { ErrorState } from "../components/states/ErrorState";
 import { LoadingState } from "../components/states/LoadingState";
 import { usePublicPage } from "../features/publicpage/api";
 import type { PageType } from "../features/publicpage/types";
+import { SiteFooter } from "../marketing/components/SiteFooter";
 
 const TYPE_LABELS: Record<PageType, string> = {
 	ORGANIZATION: "Organization",
@@ -14,17 +15,19 @@ export function PublicPageView() {
 	const { slug } = useParams<{ slug: string }>();
 	const { data: page, isLoading, isError } = usePublicPage(slug ?? "");
 
-	if (isLoading) return <LoadingState label="Loading page…" />;
+	if (isLoading) return <div className="flex min-h-screen flex-col"><main className="flex flex-1 items-center justify-center"><LoadingState label="Loading page…" /></main><SiteFooter /></div>;
 	if (isError || !page) {
 		return (
-			<div className="flex min-h-screen items-center justify-center bg-ice-white">
-				<ErrorState message="This page could not be found or is not published." />
+			<div className="flex min-h-screen flex-col bg-ice-white">
+				<main className="flex flex-1 items-center justify-center"><ErrorState message="This page could not be found or is not published." /></main>
+				<SiteFooter />
 			</div>
 		);
 	}
 
 	return (
-		<div className="min-h-screen bg-ice-white">
+		<div className="flex min-h-screen flex-col bg-ice-white">
+			<main className="flex-1">
 			{page.cover ? (
 				<div className="h-52 w-full overflow-hidden bg-navy sm:h-72">
 					<img src={page.cover.url} alt={page.cover.altText ?? `${page.title} cover`} className="size-full object-cover" />
@@ -63,6 +66,8 @@ export function PublicPageView() {
 					</p>
 				</div>
 			</div>
+			</main>
+			<SiteFooter />
 		</div>
 	);
 }

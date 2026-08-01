@@ -54,6 +54,7 @@ import { useContexts } from "../authorization/api";
 import { hasCapability } from "../authorization/capabilities";
 import { Capabilities } from "../authorization/capabilityConstants";
 import { appPaths, type HouseholdSection } from "../routes/appPaths";
+import { ReminderButton } from "../features/communications/ReminderButton";
 
 function formatAmount(amountMinor: number, currency: string) {
 	return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amountMinor / 100);
@@ -727,6 +728,9 @@ function FeeAssignmentsPanel({ organizationId, householdId, canManage }: { organ
 										<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[fee.status]}`}>
 											{STATUS_LABELS[fee.status]}
 										</span>
+										{canManage && fee.balanceMinor > 0 && fee.status !== "WAIVED" && fee.status !== "CANCELLED" && (
+											<ReminderButton organizationId={organizationId} resourceType="FEE_ASSIGNMENT" resourceId={fee.id} label="Send payment reminder" />
+										)}
 										{canManage && fee.status !== "PAID" && fee.status !== "WAIVED" && fee.status !== "CANCELLED" && (
 											<select
 												value=""

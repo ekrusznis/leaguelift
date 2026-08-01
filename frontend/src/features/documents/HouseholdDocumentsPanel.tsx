@@ -5,6 +5,7 @@ import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { formatBytes } from "./format";
 import { DocumentUploadForm } from "./DocumentUploadForm";
+import { ReminderButton } from "../communications/ReminderButton";
 import { householdDocumentsQueryKey, useAcknowledgeDocument, useAssignHouseholdDocument, useHouseholdDocuments, useRemoveDocument } from "./api";
 
 /**
@@ -82,6 +83,9 @@ export function HouseholdDocumentsPanel({
 										>
 											{justAcknowledged ? "Acknowledged" : "Acknowledge"}
 										</Button>
+									)}
+									{canManage && (
+										<ReminderButton organizationId={organizationId} resourceType="DOCUMENT" resourceId={doc.id} label="Remind household" />
 									)}
 									{canManage && (
 										<Button type="button" variant="secondary" onClick={() => removeDocument.mutate(doc.id)} disabled={removeDocument.isPending}>

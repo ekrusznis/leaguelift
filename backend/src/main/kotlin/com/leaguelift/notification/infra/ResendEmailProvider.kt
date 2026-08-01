@@ -4,12 +4,21 @@ import com.leaguelift.common.error.ServiceUnavailableException
 import com.leaguelift.config.ResendProperties
 import com.leaguelift.notification.EmailMessage
 import com.leaguelift.notification.EmailProvider
+import com.fasterxml.jackson.annotation.JsonProperty
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
+import java.util.UUID
 
-private data class SendEmailRequestDto(val from: String, val to: List<String>, val subject: String, val text: String)
+private data class SendEmailRequestDto(
+	val from: String,
+	val to: List<String>,
+	val subject: String,
+	val text: String,
+	val cc: List<String>? = null,
+	@JsonProperty("reply_to") val replyTo: String? = null,
+)
 private data class SendEmailResponseDto(val id: String)
 
 /**
@@ -32,12 +41,15 @@ class ResendEmailProvider(
 		try {
 			resendRestClient.post()
 				.uri("/emails")
+				.header("Idempotency-Key", message.idempotencyKey ?: "leaguelift-${UUID.randomUUID()}")
 				.body(
 					SendEmailRequestDto(
 						from = resendProperties.fromAddress,
 						to = listOf(message.to),
 						subject = message.subject,
 						text = message.body,
+						cc = message.cc.takeIf { it.isNotEmpty() },
+						replyTo = message.replyTo,
 					),
 				)
 				.retrieve()

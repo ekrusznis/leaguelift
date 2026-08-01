@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import { FOOTER_COLUMNS, FOOTER_LEGAL_LINKS } from "../content/footer";
+import { SOCIAL_LINKS } from "../content/social";
 import { Logo } from "./Logo";
 import { PageContainer } from "./PageContainer";
 
-/** Global footer (section 9) — social icons stay hidden until real profiles exist. */
+/** Global footer. Social links appear only when a real profile URL is configured. */
 export function SiteFooter() {
 	const year = new Date().getFullYear();
 
@@ -39,13 +40,18 @@ export function SiteFooter() {
 					<p>
 						© {year} LeagueLift
 					</p>
-					<nav aria-label="Legal" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-						{FOOTER_LEGAL_LINKS.map((link) => (
-							<Link key={link.to} to={link.to} className="hover:text-white">
-								{link.label}
-							</Link>
-						))}
-					</nav>
+					<div className="flex flex-col items-center gap-3 sm:items-end">
+						<nav aria-label="Legal" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+							{FOOTER_LEGAL_LINKS.map((link) => (
+								<Link key={link.to} to={link.to} className="hover:text-white">{link.label}</Link>
+							))}
+						</nav>
+						{SOCIAL_LINKS.length > 0 && (
+							<nav aria-label="LeagueLift social profiles" className="flex flex-wrap gap-4 text-xs">
+								{SOCIAL_LINKS.map((link) => <a key={link.label} href={link.href} target="_blank" rel="noreferrer" className="hover:text-white">{link.label}</a>)}
+							</nav>
+						)}
+					</div>
 				</PageContainer>
 			</div>
 		</footer>

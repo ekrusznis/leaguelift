@@ -10,6 +10,7 @@ import { formatMoneyMinorUnits } from "../../lib/money";
 import { useTeams } from "../teams/api";
 import { useCampaigns, useCreateCampaign, usePublishCampaign } from "./api";
 import { ContributionList } from "./ContributionList";
+import { ReminderButton } from "../communications/ReminderButton";
 import { CAMPAIGN_TYPES, createCampaignSchema } from "./schema";
 import type { CampaignType } from "./types";
 
@@ -242,6 +243,9 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 									>
 										{expandedCampaignId === campaign.id ? "Hide contributions" : "View contributions"}
 									</Button>
+									{campaign.status === "ACTIVE" && (
+										<ReminderButton organizationId={organizationId} resourceType="CAMPAIGN" resourceId={campaign.id} label="Send launch notice" />
+									)}
 									{campaign.status === "DRAFT" && (
 										<Button
 											type="button"

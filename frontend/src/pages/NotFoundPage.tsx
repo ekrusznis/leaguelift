@@ -5,7 +5,7 @@ import { PrimaryButton, SecondaryLightButton, TextButton } from "../marketing/co
 /** Route fallback (section 31) — restrained sports language, no repeated puns. */
 export function NotFoundPage() {
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-ice-50">
+		<div className="flex min-h-[60vh] items-center justify-center bg-ice-50">
 			<Seo title="Page Not Found" description="The page you're looking for is not available." noIndex />
 			<PageContainer className="flex flex-col items-center gap-5 py-20 text-center">
 				<h1 className="font-heading text-3xl font-extrabold text-navy-900 sm:text-4xl">That page is out of bounds.</h1>

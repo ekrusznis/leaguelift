@@ -1,7 +1,34 @@
+import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "../app/AppShell";
 import { AuthLayout } from "../app/AuthLayout";
 import { MarketingLayout } from "../app/MarketingLayout";
+import { Capabilities } from "../authorization/capabilityConstants";
+import { RequireCapability } from "../authorization/RequireCapability";
+import { ActionCenterPage } from "../features/actionCenter/ActionCenterPage";
+import { AnnouncementsPage } from "../features/communications/AnnouncementsPage";
+import { CollectionsPage } from "../features/collections/CollectionsPage";
+import { EventDetailPage } from "../features/events/EventDetailPage";
+import { EventsPage } from "../features/events/EventsPage";
+import { PlatformAdminConsoleLayout } from "../features/platformAdmin/PlatformAdminConsoleLayout";
+import { PlatformAuditPage } from "../features/platformAdmin/PlatformAuditPage";
+import { PlatformOperationsPage } from "../features/platformAdmin/PlatformOperationsPage";
+import { PlatformOrganizationConsolePage } from "../features/platformAdmin/PlatformOrganizationConsolePage";
+import { PlatformOrganizationsPage } from "../features/platformAdmin/PlatformOrganizationsPage";
+import { PlatformSupportSessionsPage } from "../features/platformAdmin/PlatformSupportSessionsPage";
+import { PlatformUsersPage } from "../features/platformAdmin/PlatformUsersPage";
+import { PlatformReportsPage } from "../features/reporting/PlatformReportsPage";
+import { HelpArticlePage } from "../features/support/HelpArticlePage";
+import { HelpCenterPage } from "../features/support/HelpCenterPage";
+import { PlatformHelpArticlesPage } from "../features/support/PlatformHelpArticlesPage";
+import { PlatformSupportCasesPage } from "../features/support/PlatformSupportCasesPage";
+import { SupportRequestPage } from "../features/support/SupportRequestPage";
+import { HouseholdDetailPage } from "../pages/HouseholdDetailPage";
+import { OrganizationDetailPage } from "../pages/OrganizationDetailPage";
+import { OrganizationsPage } from "../pages/OrganizationsPage";
+import { PublicPageView } from "../pages/PublicPageView";
+import { DashboardPage } from "../pages/DashboardPage";
+import { NotFoundPage } from "../pages/NotFoundPage";
 import { AuthErrorPage } from "../pages/auth/AuthErrorPage";
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage";
 import { InvitationPage } from "../pages/auth/InvitationPage";
@@ -10,23 +37,12 @@ import { ResendVerificationPage } from "../pages/auth/ResendVerificationPage";
 import { ResetPasswordPage } from "../pages/auth/ResetPasswordPage";
 import { SignInPage } from "../pages/auth/SignInPage";
 import { VerifyEmailPage } from "../pages/auth/VerifyEmailPage";
-import { DashboardPage } from "../pages/DashboardPage";
-import { CollectionsPage } from "../features/collections/CollectionsPage";
-import { EventDetailPage } from "../features/events/EventDetailPage";
-import { EventsPage } from "../features/events/EventsPage";
-import { PlatformOrganizationsPage } from "../features/reporting/PlatformOrganizationsPage";
-import { PlatformReportsPage } from "../features/reporting/PlatformReportsPage";
-import { HouseholdDetailPage } from "../pages/HouseholdDetailPage";
 import { AboutPage } from "../pages/marketing/AboutPage";
 import { BookDemoPage } from "../pages/marketing/BookDemoPage";
 import { ContactPage } from "../pages/marketing/ContactPage";
-import { HelpPage } from "../pages/marketing/HelpPage";
 import { HomePage } from "../pages/marketing/HomePage";
 import { HowItWorksPage } from "../pages/marketing/HowItWorksPage";
 import { LandingPreviewPage } from "../pages/marketing/LandingPreviewPage";
-import { AccessibilityPage } from "../pages/marketing/legal/AccessibilityPage";
-import { PrivacyPage } from "../pages/marketing/legal/PrivacyPage";
-import { TermsPage } from "../pages/marketing/legal/TermsPage";
 import { PricingPage } from "../pages/marketing/PricingPage";
 import { PublicCampaignView } from "../pages/marketing/PublicCampaignView";
 import { PublicSponsorshipView } from "../pages/marketing/PublicSponsorshipView";
@@ -35,13 +51,14 @@ import { SecurityPage } from "../pages/marketing/SecurityPage";
 import { SolutionDetailPage } from "../pages/marketing/SolutionDetailPage";
 import { SolutionsOverviewPage } from "../pages/marketing/SolutionsOverviewPage";
 import { TalkToSalesPage } from "../pages/marketing/TalkToSalesPage";
-import { NotFoundPage } from "../pages/NotFoundPage";
-import { OrganizationDetailPage } from "../pages/OrganizationDetailPage";
-import { OrganizationsPage } from "../pages/OrganizationsPage";
-import { PublicPageView } from "../pages/PublicPageView";
+import { AccessibilityPage } from "../pages/marketing/legal/AccessibilityPage";
+import { PrivacyPage } from "../pages/marketing/legal/PrivacyPage";
+import { TermsPage } from "../pages/marketing/legal/TermsPage";
 import { ProtectedRoute } from "./ProtectedRoute";
-import { RequireCapability } from "../authorization/RequireCapability";
-import { Capabilities } from "../authorization/capabilityConstants";
+
+function platformGuard(capability: string, child: ReactNode) {
+	return <RequireCapability capability={capability} contextType="PLATFORM_ADMIN" resourceId={null}>{child}</RequireCapability>;
+}
 
 export function AppRoutes() {
 	return (
@@ -58,7 +75,9 @@ export function AppRoutes() {
 				<Route path="about" element={<AboutPage />} />
 				<Route path="contact" element={<ContactPage />} />
 				<Route path="security" element={<SecurityPage />} />
-				<Route path="help" element={<HelpPage />} />
+				<Route path="help" element={<HelpCenterPage />} />
+				<Route path="help/support" element={<SupportRequestPage />} />
+				<Route path="help/:slug" element={<HelpArticlePage />} />
 				<Route path="privacy" element={<PrivacyPage />} />
 				<Route path="terms" element={<TermsPage />} />
 				<Route path="accessibility" element={<AccessibilityPage />} />
@@ -79,18 +98,17 @@ export function AppRoutes() {
 				<Route path="auth/error" element={<AuthErrorPage />} />
 			</Route>
 
-			{/* Single-page redesign preview — not nested under MarketingLayout since it
-			    brings its own header/footer to demo an anchor-nav IA (see sales-site
-			    redesign review). Remove once the comparison is settled. */}
 			<Route path="landing-preview" element={<LandingPreviewPage />} />
-
 			<Route path="p/:slug" element={<PublicPageView />} />
 
 			<Route path="app" element={<ProtectedRoute />}>
-				{/* The dashboard-role preview renders its own full shell (docs/LEAGUELIFT_DASHBOARD_DESIGN.md
-				    section 4.2), so it deliberately sits outside AppShell's simpler nav below. */}
 				<Route index element={<DashboardPage />} />
 				<Route element={<AppShell />}>
+					<Route path="action-center" element={<ActionCenterPage />} />
+					<Route path="announcements" element={<AnnouncementsPage />} />
+					<Route path="help" element={<HelpCenterPage authenticated />} />
+					<Route path="help/support" element={<SupportRequestPage authenticated />} />
+					<Route path="help/:slug" element={<HelpArticlePage authenticated />} />
 					<Route path="organizations" element={<OrganizationsPage />} />
 					<Route path="organizations/:organizationId" element={<OrganizationDetailPage />} />
 					<Route path="organizations/:organizationId/collections" element={<CollectionsPage />} />
@@ -101,12 +119,25 @@ export function AppRoutes() {
 					<Route path="organizations/:organizationId/households/:householdId" element={<HouseholdDetailPage />} />
 					<Route path="organizations/:organizationId/households/:householdId/:section" element={<HouseholdDetailPage />} />
 					<Route path="organizations/:organizationId/:section" element={<OrganizationDetailPage />} />
-					<Route path="platform/organizations" element={<RequireCapability capability={Capabilities.PLATFORM_ORG_VIEW} contextType="PLATFORM_ADMIN" resourceId={null}><PlatformOrganizationsPage /></RequireCapability>} />
-					<Route path="platform/reports" element={<RequireCapability capability={Capabilities.PLATFORM_AUDIT_VIEW} contextType="PLATFORM_ADMIN" resourceId={null}><PlatformReportsPage /></RequireCapability>} />
+				</Route>
+
+				<Route path="platform" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformAdminConsoleLayout />)}>
+					<Route index element={<Navigate to="organizations" replace />} />
+					<Route path="organizations" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformOrganizationsPage />)} />
+					<Route path="organizations/:organizationId" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformOrganizationConsolePage />)} />
+					<Route path="users" element={platformGuard(Capabilities.PLATFORM_USER_VIEW, <PlatformUsersPage />)} />
+					<Route path="operations" element={platformGuard(Capabilities.PLATFORM_INTEGRATION_VIEW, <PlatformOperationsPage />)} />
+					<Route path="reports" element={platformGuard(Capabilities.PLATFORM_AUDIT_VIEW, <PlatformReportsPage />)} />
+					<Route path="audit" element={platformGuard(Capabilities.PLATFORM_AUDIT_VIEW, <PlatformAuditPage />)} />
+					<Route path="support-sessions" element={platformGuard(Capabilities.PLATFORM_SUPPORT_ACCESS, <PlatformSupportSessionsPage />)} />
+					<Route path="help-articles" element={platformGuard(Capabilities.PLATFORM_HELP_MANAGE, <PlatformHelpArticlesPage />)} />
+					<Route path="support-cases" element={platformGuard(Capabilities.PLATFORM_SUPPORT_CASE_MANAGE, <PlatformSupportCasesPage />)} />
 				</Route>
 			</Route>
 
-			<Route path="*" element={<NotFoundPage />} />
+			<Route element={<MarketingLayout />}>
+				<Route path="*" element={<NotFoundPage />} />
+			</Route>
 		</Routes>
 	);
 }

@@ -3,8 +3,12 @@ import { useAuth } from "../auth/AuthContext";
 import { useContexts } from "../authorization/api";
 import { Capabilities } from "../authorization/capabilityConstants";
 import { hasCapability } from "../authorization/capabilities";
+import { ActionCenterLink } from "../features/actionCenter/ActionCenterLink";
+import { AnnouncementInboxLink } from "../features/communications/AnnouncementInboxLink";
 import { SupportAccessBanner } from "../features/platformAdmin/SupportAccessBanner";
 import { useCurrentSupportAccess } from "../features/platformAdmin/api";
+import { AppFooter } from "../marketing/components/AppFooter";
+import { Logo } from "../marketing/components/Logo";
 
 /**
  * Compact shell for routed feature pages. Platform employees retain their own
@@ -27,11 +31,11 @@ export function AppShell() {
 		...(isPlatformAdmin && supportAccess.data
 			? [{ to: `/app/platform/organizations/${supportAccess.data.organizationId}`, label: "Organization Console" }]
 			: []),
-		{ to: "/help", label: "Help" },
+		{ to: "/app/help", label: "Help" },
 	];
 
 	return (
-		<div className="min-h-screen bg-ice-white">
+		<div className="flex min-h-screen flex-col bg-ice-white">
 			<a
 				href="#main-content"
 				className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-pure-white focus:p-2"
@@ -40,7 +44,7 @@ export function AppShell() {
 			</a>
 			<header className="border-b border-slate-gray/15 bg-navy text-pure-white">
 				<div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-					<NavLink to="/app" className="font-heading text-lg font-bold">LeagueLift</NavLink>
+					<Logo tone="dark" to="/app" />
 					<nav aria-label="Primary" className="order-3 flex w-full gap-2 overflow-x-auto sm:order-none sm:w-auto sm:gap-4">
 						{navItems.map((item) => (
 							<NavLink
@@ -57,7 +61,9 @@ export function AppShell() {
 							</NavLink>
 						))}
 					</nav>
-					<div className="flex items-center gap-3 text-sm">
+					<div className="flex items-center gap-1 text-sm">
+						<ActionCenterLink compact />
+						<AnnouncementInboxLink compact />
 						{user && <span className="hidden sm:inline">{user.displayName}</span>}
 						<button
 							type="button"
@@ -69,12 +75,13 @@ export function AppShell() {
 					</div>
 				</div>
 			</header>
-			<main id="main-content" className="mx-auto max-w-6xl px-4 py-8">
+			<main id="main-content" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
 				{isPlatformAdmin && supportAccess.data && (
 					<div className="mb-6"><SupportAccessBanner access={supportAccess.data} /></div>
 				)}
 				<Outlet />
 			</main>
+			<AppFooter />
 		</div>
 	);
 }

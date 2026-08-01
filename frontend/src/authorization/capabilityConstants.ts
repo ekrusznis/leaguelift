@@ -16,6 +16,7 @@ export const Capabilities = {
 	ORG_REPORT_VIEW: "organization.report.view",
 	ORG_TEAM_MANAGE: "organization.team.manage",
 	ORG_TOURNAMENT_MANAGE: "organization.tournament.manage",
+	ORG_COMMUNICATION_MANAGE: "organization.communication.manage",
 
 	TEAM_VIEW: "team.view",
 	TEAM_PAGE_EDIT: "team.page.edit",
@@ -24,11 +25,13 @@ export const Capabilities = {
 	TEAM_ROSTER_MANAGE: "team.roster.manage",
 	TEAM_STAFF_MANAGE: "team.staff.manage",
 	TEAM_FEE_VIEW: "team.fee.view",
+	TEAM_COMMUNICATION_MANAGE: "team.communication.manage",
 
 	TOURNAMENT_VIEW: "tournament.view",
 	TOURNAMENT_MANAGE: "tournament.manage",
 	TOURNAMENT_PAGE_EDIT: "tournament.page.edit",
 	TOURNAMENT_TEAM_MANAGE: "tournament.team.manage",
+	TOURNAMENT_COMMUNICATION_MANAGE: "tournament.communication.manage",
 
 	HOUSEHOLD_VIEW: "household.view",
 	HOUSEHOLD_FEE_VIEW: "household.fee.view",
@@ -65,5 +68,7 @@ export const Capabilities = {
 	PLATFORM_AUDIT_VIEW: "platform.audit.view",
 	PLATFORM_FEATURE_FLAG_MANAGE: "platform.feature_flag.manage",
 	PLATFORM_SUPPORT_ACCESS: "platform.support.access",
+	PLATFORM_HELP_MANAGE: "platform.help.manage",
+	PLATFORM_SUPPORT_CASE_MANAGE: "platform.support_case.manage",
 	PLATFORM_SUPPORT_IMPERSONATE: "platform.support.impersonate",
 } as const;

@@ -77,8 +77,8 @@ info:
     and calendar routes carrying the target organizationId query parameter.
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
-    Phase 16 slices 3-5 extend the media pipeline to team/tournament branding and private adult/participant profile photos (ADR-045), add typed profile-correction requests (ADR-046), and add manager-controlled reusable event templates that prefill ordinary manual draft events without recurrence or automatic publication (ADR-047).
-  version: "0.25.3"
+    Phase 17 now includes the Help Center/support foundation plus role-aware Action Center aggregation, one-way organization/team/tournament announcements, recipient-snapshotted in-app/email/SMS delivery, and campaign/event/fee/document reminders through one audited pipeline with idempotent resource creation (ADR-049/ADR-050). Phase 16 slices 3-6 extend the media pipeline to team/tournament branding and private adult/participant profile photos (ADR-045), add typed profile-correction requests (ADR-046), add manager-controlled reusable event templates that prefill ordinary manual draft events without recurrence or automatic publication (ADR-047), and complete the phase with preview-confirmed, idempotent season rollover limited to active roster links, explicit TEAM staff grants, and ready logo/cover assignments (ADR-048).
+  version: "0.25.6"
 servers:
   - url: /api/v1
 tags:
@@ -113,7 +113,501 @@ tags:
   - name: integrations
   - name: platform-admin
   - name: onboarding
+  - name: season-rollovers
+  - name: help
+  - name: support-cases
+  - name: action-center
+  - name: announcements
 paths:
+  /me/action-center:
+    get:
+      tags: [action-center]
+      summary: Aggregate the signed-in user's current role-specific actions
+      operationId: getMyActionCenter
+      responses:
+        "200":
+          description: Current action items derived from source-of-truth records
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ActionCenterResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /me/announcements:
+    get:
+      tags: [announcements]
+      summary: List published announcements addressed to the signed-in user
+      operationId: listMyAnnouncements
+      parameters:
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200":
+          description: Recipient-snapshotted in-app announcement inbox
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MyAnnouncementPageResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /me/announcements/{announcementId}/read:
+    post:
+      tags: [announcements]
+      summary: Mark one announcement addressed to the signed-in user as read
+      operationId: markMyAnnouncementRead
+      parameters:
+        - $ref: "#/components/parameters/AnnouncementIdParam"
+      responses:
+        "204": { description: Announcement marked read }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /organizations/{organizationId}/announcements:
+    get:
+      tags: [announcements]
+      summary: List announcements manageable in an authorized organization, team, or tournament scope
+      operationId: listManagedAnnouncements
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - { name: scopeType, in: query, required: false, schema: { $ref: "#/components/schemas/AnnouncementScopeType" } }
+        - { name: scopeId, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: status, in: query, required: false, schema: { $ref: "#/components/schemas/AnnouncementStatus" } }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200":
+          description: Announcement management page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AnnouncementPageResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [announcements]
+      summary: Create an idempotent one-way announcement draft
+      operationId: createAnnouncementDraft
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveAnnouncementRequest" }
+      responses:
+        "201":
+          description: Announcement draft created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AnnouncementResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /organizations/{organizationId}/announcements/{announcementId}:
+    get:
+      tags: [announcements]
+      summary: Read one manageable announcement
+      operationId: getManagedAnnouncement
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/AnnouncementIdParam"
+      responses:
+        "200":
+          description: Announcement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AnnouncementResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [announcements]
+      summary: Update an announcement while it remains a draft
+      operationId: updateAnnouncementDraft
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/AnnouncementIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateAnnouncementRequest" }
+      responses:
+        "200":
+          description: Updated draft
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AnnouncementResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /organizations/{organizationId}/announcements/{announcementId}/publish:
+    post:
+      tags: [announcements]
+      summary: Snapshot recipients and publish a draft announcement once
+      operationId: publishAnnouncement
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/AnnouncementIdParam"
+      responses:
+        "200":
+          description: Published announcement with delivery counts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AnnouncementResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /organizations/{organizationId}/announcements/{announcementId}/archive:
+    post:
+      tags: [announcements]
+      summary: Archive a draft or published announcement without deleting its history
+      operationId: archiveAnnouncement
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/AnnouncementIdParam"
+      responses:
+        "200":
+          description: Archived announcement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AnnouncementResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /organizations/{organizationId}/reminders:
+    post:
+      tags: [announcements]
+      summary: Publish an idempotent campaign, event, fee, or document reminder through the announcement pipeline
+      operationId: sendResourceReminder
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SendReminderRequest" }
+      responses:
+        "201":
+          description: Published reminder announcement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AnnouncementResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /public/help/articles:
+    get:
+      tags: [help]
+      summary: Search published public help articles
+      operationId: listPublicHelpArticles
+      security: []
+      parameters:
+        - { name: query, in: query, required: false, schema: { type: string, maxLength: 120 } }
+        - { name: category, in: query, required: false, schema: { type: string, maxLength: 80 } }
+      responses:
+        "200":
+          description: Published PUBLIC articles matching the filters
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SupportArticleResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /public/help/articles/{slug}:
+    get:
+      tags: [help]
+      summary: Read one published public help article
+      operationId: getPublicHelpArticle
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/SupportArticleSlugParam"
+      responses:
+        "200":
+          description: Published PUBLIC help article
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportArticleResponse" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /help/articles:
+    get:
+      tags: [help]
+      summary: Search published help articles allowed for the caller's audiences
+      operationId: listAuthenticatedHelpArticles
+      parameters:
+        - { name: query, in: query, required: false, schema: { type: string, maxLength: 120 } }
+        - { name: category, in: query, required: false, schema: { type: string, maxLength: 80 } }
+      responses:
+        "200":
+          description: Published audience-eligible articles
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SupportArticleResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /help/articles/{slug}:
+    get:
+      tags: [help]
+      summary: Read one published help article allowed for the caller
+      operationId: getAuthenticatedHelpArticle
+      parameters:
+        - $ref: "#/components/parameters/SupportArticleSlugParam"
+      responses:
+        "200":
+          description: Published audience-eligible article
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportArticleResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /public/support-cases:
+    post:
+      tags: [support-cases]
+      summary: Create a public support case
+      description: Creates the durable case before queuing confirmation/routing email. Reusing the same idempotency key for the same public requester returns the existing case.
+      operationId: createPublicSupportCase
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PublicSupportCaseRequest" }
+      responses:
+        "200":
+          description: Created case, or the existing idempotent result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportCaseResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /support-cases:
+    get:
+      tags: [support-cases]
+      summary: List the authenticated caller's support cases
+      operationId: listMySupportCases
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Caller-owned support cases
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportCasePageResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [support-cases]
+      summary: Create an authenticated support case
+      description: The caller identity is bound automatically. An optional organization is accepted only when the caller has active membership.
+      operationId: createAuthenticatedSupportCase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AuthenticatedSupportCaseRequest" }
+      responses:
+        "200":
+          description: Created case, or the existing idempotent result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportCaseResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /support-cases/{caseId}:
+    get:
+      tags: [support-cases]
+      summary: Read one support case owned by the authenticated caller
+      operationId: getMySupportCase
+      parameters:
+        - $ref: "#/components/parameters/SupportCaseIdParam"
+      responses:
+        "200":
+          description: Caller-owned support case
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportCaseResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /platform/admin/help/articles:
+    get:
+      tags: [help, platform-admin]
+      summary: Search all help article lifecycle states
+      operationId: listPlatformHelpArticles
+      parameters:
+        - { name: query, in: query, required: false, schema: { type: string, maxLength: 120 } }
+        - { name: status, in: query, required: false, schema: { $ref: "#/components/schemas/SupportArticleStatus" } }
+        - { name: audience, in: query, required: false, schema: { $ref: "#/components/schemas/SupportAudience" } }
+        - { name: category, in: query, required: false, schema: { type: string, maxLength: 80 } }
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Platform help article page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportArticlePageResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [help, platform-admin]
+      summary: Create a draft help article
+      operationId: createPlatformHelpArticle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveSupportArticleRequest" }
+      responses:
+        "200":
+          description: Created draft article
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportArticleResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /platform/admin/help/articles/{articleId}:
+    put:
+      tags: [help, platform-admin]
+      summary: Update a non-archived help article
+      operationId: updatePlatformHelpArticle
+      parameters:
+        - $ref: "#/components/parameters/SupportArticleIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveSupportArticleRequest" }
+      responses:
+        "200":
+          description: Updated article
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportArticleResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /platform/admin/help/articles/{articleId}/publish:
+    post:
+      tags: [help, platform-admin]
+      summary: Publish a help article
+      operationId: publishPlatformHelpArticle
+      parameters:
+        - $ref: "#/components/parameters/SupportArticleIdParam"
+      responses:
+        "200":
+          description: Published article
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportArticleResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /platform/admin/help/articles/{articleId}/archive:
+    post:
+      tags: [help, platform-admin]
+      summary: Archive a help article
+      operationId: archivePlatformHelpArticle
+      parameters:
+        - $ref: "#/components/parameters/SupportArticleIdParam"
+      responses:
+        "200":
+          description: Archived article
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportArticleResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /platform/admin/support-cases:
+    get:
+      tags: [support-cases, platform-admin]
+      summary: Search the Platform Admin support queue
+      operationId: listPlatformSupportCases
+      parameters:
+        - { name: query, in: query, required: false, schema: { type: string, maxLength: 120 } }
+        - { name: status, in: query, required: false, schema: { $ref: "#/components/schemas/SupportCaseStatus" } }
+        - { name: priority, in: query, required: false, schema: { $ref: "#/components/schemas/SupportCasePriority" } }
+        - { name: category, in: query, required: false, schema: { $ref: "#/components/schemas/SupportCaseCategory" } }
+        - { name: organizationId, in: query, required: false, schema: { type: string, format: uuid } }
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Platform support-case page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportCasePageResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /platform/admin/support-cases/{caseId}:
+    get:
+      tags: [support-cases, platform-admin]
+      summary: Read one support case from the Platform Admin queue
+      operationId: getPlatformSupportCase
+      parameters:
+        - $ref: "#/components/parameters/SupportCaseIdParam"
+      responses:
+        "200":
+          description: Support case
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportCaseResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [support-cases, platform-admin]
+      summary: Triage, assign, resolve, or close a support case
+      operationId: updatePlatformSupportCase
+      parameters:
+        - $ref: "#/components/parameters/SupportCaseIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateSupportCaseRequest" }
+      responses:
+        "200":
+          description: Updated support case
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupportCaseResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /public/status:
     get:
       tags: [system]
@@ -1351,6 +1845,88 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+
+  /organizations/{organizationId}/season-rollovers/preview:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [season-rollovers]
+      summary: Preview a team season rollover
+      description: >
+        Owner/administrator only. Produces an exact, side-effect-free preview and SHA-256
+        confirmation hash for a new team identity plus any selected active roster links,
+        explicit TEAM role assignments, and ready logo/cover assignments. Financial,
+        event/RSVP, identity, guardian, invitation, and consent state is never copied.
+      operationId: previewSeasonRollover
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeasonRolloverPreviewRequest"
+      responses:
+        "200":
+          description: Exact side-effect-free rollover preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeasonRolloverPreviewResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Destination team name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /organizations/{organizationId}/season-rollovers/execute:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [season-rollovers]
+      summary: Execute a confirmed team season rollover
+      description: >
+        Recomputes the complete selected snapshot under repeatable-read isolation and
+        requires the exact confirmation hash returned by preview. Creates one active
+        destination team, optionally copies only the three selected safe setup categories,
+        optionally archives the source team, records an immutable run, and is idempotent
+        for retries with the same confirmation hash.
+      operationId: executeSeasonRollover
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeasonRolloverExecuteRequest"
+      responses:
+        "200":
+          description: Completed or previously completed rollover
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeasonRolloverResultResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Preview is stale, selected data changed, or destination name is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /organizations/{organizationId}/onboarding/imports/preview:
     parameters:
@@ -6654,6 +7230,29 @@ components:
         minimum: 1
         maximum: 100
         default: 20
+    SupportArticleSlugParam:
+      name: slug
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 120 }
+    SupportArticleIdParam:
+      name: articleId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SupportCaseIdParam:
+      name: caseId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AnnouncementIdParam:
+      name: announcementId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
   responses:
     BadRequest:
       description: Validation failure
@@ -6692,6 +7291,119 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
   schemas:
+
+    SupportAudience:
+      type: string
+      enum: [PUBLIC, OWNER_ADMIN, COACH, GUARDIAN, ATHLETE, PLATFORM]
+    SupportArticleStatus:
+      type: string
+      enum: [DRAFT, PUBLISHED, ARCHIVED]
+    SupportArticleResponse:
+      type: object
+      required: [id, slug, title, summary, bodyMarkdown, category, audience, status, sortOrder, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        title: { type: string }
+        summary: { type: string }
+        bodyMarkdown: { type: string }
+        category: { type: string }
+        audience: { $ref: "#/components/schemas/SupportAudience" }
+        status: { $ref: "#/components/schemas/SupportArticleStatus" }
+        sortOrder: { type: integer, minimum: 0, maximum: 10000 }
+        publishedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    SupportArticlePageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SupportArticleResponse" }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+    SaveSupportArticleRequest:
+      type: object
+      required: [slug, title, summary, bodyMarkdown, category, audience, sortOrder]
+      properties:
+        slug: { type: string, minLength: 1, maxLength: 120, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+        title: { type: string, minLength: 3, maxLength: 180 }
+        summary: { type: string, minLength: 10, maxLength: 400 }
+        bodyMarkdown: { type: string, minLength: 20, maxLength: 20000 }
+        category: { type: string, minLength: 3, maxLength: 80 }
+        audience: { $ref: "#/components/schemas/SupportAudience" }
+        sortOrder: { type: integer, minimum: 0, maximum: 10000 }
+
+    SupportCaseCategory:
+      type: string
+      enum: [ACCOUNT_ACCESS, ORGANIZATION_SETUP, TEAM_OR_ROSTER, FEES_OR_PAYMENTS, FUNDRAISING, STORE_OR_ORDER, SPONSORSHIP, EVENT_OR_RSVP, TECHNICAL_PROBLEM, PRIVACY_OR_SAFETY, OTHER]
+    SupportCasePriority:
+      type: string
+      enum: [LOW, NORMAL, HIGH, URGENT]
+    SupportCaseStatus:
+      type: string
+      enum: [OPEN, IN_PROGRESS, WAITING_ON_CUSTOMER, RESOLVED, CLOSED]
+    PublicSupportCaseRequest:
+      type: object
+      required: [idempotencyKey, requesterName, requesterEmail, category, subject, description]
+      properties:
+        idempotencyKey: { type: string, minLength: 8, maxLength: 120 }
+        requesterName: { type: string, minLength: 2, maxLength: 120 }
+        requesterEmail: { type: string, format: email, maxLength: 320 }
+        category: { $ref: "#/components/schemas/SupportCaseCategory" }
+        subject: { type: string, minLength: 5, maxLength: 200 }
+        description: { type: string, minLength: 20, maxLength: 5000 }
+    AuthenticatedSupportCaseRequest:
+      type: object
+      required: [idempotencyKey, category, subject, description]
+      properties:
+        idempotencyKey: { type: string, minLength: 8, maxLength: 120 }
+        organizationId: { type: string, format: uuid, nullable: true }
+        category: { $ref: "#/components/schemas/SupportCaseCategory" }
+        subject: { type: string, minLength: 5, maxLength: 200 }
+        description: { type: string, minLength: 20, maxLength: 5000 }
+    UpdateSupportCaseRequest:
+      type: object
+      required: [status, priority]
+      properties:
+        status: { $ref: "#/components/schemas/SupportCaseStatus" }
+        priority: { $ref: "#/components/schemas/SupportCasePriority" }
+        assignedPlatformUserId: { type: string, format: uuid, nullable: true }
+        resolution: { type: string, minLength: 3, maxLength: 4000, nullable: true }
+    SupportCaseResponse:
+      type: object
+      required: [id, requesterName, requesterEmail, category, priority, subject, description, status, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        organizationId: { type: string, format: uuid, nullable: true }
+        organizationName: { type: string, nullable: true }
+        requesterUserId: { type: string, format: uuid, nullable: true }
+        requesterName: { type: string }
+        requesterEmail: { type: string, format: email }
+        category: { $ref: "#/components/schemas/SupportCaseCategory" }
+        priority: { $ref: "#/components/schemas/SupportCasePriority" }
+        subject: { type: string }
+        description: { type: string }
+        status: { $ref: "#/components/schemas/SupportCaseStatus" }
+        assignedPlatformUserId: { type: string, format: uuid, nullable: true }
+        assignedPlatformUserName: { type: string, nullable: true }
+        resolution: { type: string, nullable: true }
+        closedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    SupportCasePageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SupportCaseResponse" }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+
 
     ProfileCorrectionTargetType:
       type: string
@@ -11073,6 +11785,194 @@ components:
           type: integer
           format: int64
 
+
+    SeasonRolloverPreviewRequest:
+      type: object
+      required: [sourceTeamId, newTeamName, newSeason]
+      properties:
+        sourceTeamId:
+          type: string
+          format: uuid
+        newTeamName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        newSeason:
+          type: string
+          minLength: 1
+          maxLength: 120
+        archiveSourceTeam:
+          type: boolean
+          default: true
+        copyRoster:
+          type: boolean
+          default: false
+          description: Copies active participant-team links only; prior joined dates reset to null.
+        copyStaff:
+          type: boolean
+          default: false
+          description: Copies explicit active TEAM role assignments only.
+        copyBranding:
+          type: boolean
+          default: false
+          description: Reuses active ready TEAM logo/cover assets without duplicating files.
+
+    SeasonRolloverExecuteRequest:
+      allOf:
+        - $ref: "#/components/schemas/SeasonRolloverPreviewRequest"
+        - type: object
+          required: [expectedConfirmationHash]
+          properties:
+            expectedConfirmationHash:
+              type: string
+              minLength: 64
+              maxLength: 64
+              pattern: "^[a-fA-F0-9]{64}$"
+
+    SeasonRolloverTeamResponse:
+      type: object
+      required: [name, sport]
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Null for the not-yet-created destination in preview.
+        name:
+          type: string
+        sport:
+          type: string
+        season:
+          type: string
+          nullable: true
+        contactEmail:
+          type: string
+          format: email
+          nullable: true
+
+    SeasonRolloverRosterItemResponse:
+      type: object
+      required: [participantId, displayName]
+      properties:
+        participantId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        priorJoinedAt:
+          type: string
+          format: date
+          nullable: true
+          description: Preview-only historical value; it is not copied to the new link.
+
+    SeasonRolloverStaffItemResponse:
+      type: object
+      required: [assignmentId, userId, displayName, email, role]
+      properties:
+        assignmentId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [COACH_READ, TEAM_EDITOR, TEAM_MANAGER]
+
+    SeasonRolloverBrandingItemResponse:
+      type: object
+      required: [assignmentId, assetId, usageSlot, fileName, publicationStatus, visibility]
+      properties:
+        assignmentId:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+          format: uuid
+        usageSlot:
+          type: string
+          enum: [LOGO, COVER]
+        fileName:
+          type: string
+        publicationStatus:
+          type: string
+          enum: [PRIVATE, APPROVED, PUBLISHED]
+        visibility:
+          type: string
+          enum: [PUBLIC, AUTHENTICATED, ORGANIZATION_PRIVATE, TEAM_PRIVATE, HOUSEHOLD_PRIVATE, SELF_PRIVATE, PLATFORM_PRIVATE]
+        altText:
+          type: string
+          nullable: true
+
+    SeasonRolloverPreviewResponse:
+      type: object
+      required: [confirmationHash, sourceTeam, destinationTeam, archiveSourceTeam, roster, staff, branding, warnings, excludedData]
+      properties:
+        confirmationHash:
+          type: string
+          minLength: 64
+          maxLength: 64
+        sourceTeam:
+          $ref: "#/components/schemas/SeasonRolloverTeamResponse"
+        destinationTeam:
+          $ref: "#/components/schemas/SeasonRolloverTeamResponse"
+        archiveSourceTeam:
+          type: boolean
+        roster:
+          type: array
+          items:
+            $ref: "#/components/schemas/SeasonRolloverRosterItemResponse"
+        staff:
+          type: array
+          items:
+            $ref: "#/components/schemas/SeasonRolloverStaffItemResponse"
+        branding:
+          type: array
+          items:
+            $ref: "#/components/schemas/SeasonRolloverBrandingItemResponse"
+        warnings:
+          type: array
+          items:
+            type: string
+        excludedData:
+          type: array
+          items:
+            type: string
+
+    SeasonRolloverResultResponse:
+      type: object
+      required: [runId, confirmationHash, sourceTeamId, destinationTeam, sourceArchived, rosterCopiedCount, staffCopiedCount, brandingCopiedCount, completedAt]
+      properties:
+        runId:
+          type: string
+          format: uuid
+        confirmationHash:
+          type: string
+        sourceTeamId:
+          type: string
+          format: uuid
+        destinationTeam:
+          $ref: "#/components/schemas/SeasonRolloverTeamResponse"
+        sourceArchived:
+          type: boolean
+        rosterCopiedCount:
+          type: integer
+          minimum: 0
+        staffCopiedCount:
+          type: integer
+          minimum: 0
+        brandingCopiedCount:
+          type: integer
+          minimum: 0
+        completedAt:
+          type: string
+          format: date-time
+
     OnboardingCsvPreviewRequest:
       type: object
       required: [csvContent]
@@ -11356,6 +12256,148 @@ components:
         totalTransferredMinor:
           type: integer
           format: int64
+
+    ActionCenterPriority:
+      type: string
+      enum: [INFO, NORMAL, HIGH, URGENT]
+
+    ActionCenterType:
+      type: string
+      enum: [PROFILE_CORRECTION_REVIEW, OVERDUE_FEES, EVENT_REVIEW, FEE_PAYMENT, DOCUMENT_ACKNOWLEDGMENT, EVENT_RSVP, SUPPORT_CASE_RESPONSE, PLATFORM_SUPPORT_QUEUE, PLATFORM_DELIVERY_FAILURES]
+
+    ActionCenterItem:
+      type: object
+      required: [id, type, priority, title, description, actionPath]
+      properties:
+        id: { type: string }
+        type: { $ref: "#/components/schemas/ActionCenterType" }
+        priority: { $ref: "#/components/schemas/ActionCenterPriority" }
+        title: { type: string }
+        description: { type: string }
+        actionPath: { type: string }
+        organizationId: { type: string, format: uuid, nullable: true }
+        contextType: { type: string, nullable: true }
+        contextId: { type: string, format: uuid, nullable: true }
+        dueAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time, nullable: true }
+
+    ActionCenterResponse:
+      type: object
+      required: [items, totalCount, highPriorityCount]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ActionCenterItem" }
+        totalCount: { type: integer }
+        highPriorityCount: { type: integer }
+
+    AnnouncementScopeType:
+      type: string
+      enum: [ORGANIZATION, TEAM, TOURNAMENT]
+
+    AnnouncementAudience:
+      type: string
+      enum: [ALL, STAFF, GUARDIANS, ATHLETES]
+
+    AnnouncementStatus:
+      type: string
+      enum: [DRAFT, PUBLISHED, ARCHIVED]
+
+    AnnouncementKind:
+      type: string
+      enum: [GENERAL, CAMPAIGN_LAUNCH, EVENT_REMINDER, FEE_REMINDER, DOCUMENT_REMINDER]
+
+    AnnouncementResponse:
+      type: object
+      required: [id, organizationId, scopeType, scopeId, kind, title, body, audience, status, emailEnabled, smsEnabled, recipientCount, emailSentCount, emailFailedCount, smsSentCount, smsFailedCount, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        organizationId: { type: string, format: uuid }
+        scopeType: { $ref: "#/components/schemas/AnnouncementScopeType" }
+        scopeId: { type: string, format: uuid }
+        scopeName: { type: string, nullable: true }
+        kind: { $ref: "#/components/schemas/AnnouncementKind" }
+        relatedEntityType: { type: string, nullable: true }
+        relatedEntityId: { type: string, format: uuid, nullable: true }
+        title: { type: string }
+        body: { type: string }
+        audience: { $ref: "#/components/schemas/AnnouncementAudience" }
+        status: { $ref: "#/components/schemas/AnnouncementStatus" }
+        emailEnabled: { type: boolean }
+        smsEnabled: { type: boolean }
+        publishedAt: { type: string, format: date-time, nullable: true }
+        recipientCount: { type: integer, format: int64 }
+        emailSentCount: { type: integer, format: int64 }
+        emailFailedCount: { type: integer, format: int64 }
+        smsSentCount: { type: integer, format: int64 }
+        smsFailedCount: { type: integer, format: int64 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    MyAnnouncementResponse:
+      type: object
+      required: [announcement]
+      properties:
+        announcement: { $ref: "#/components/schemas/AnnouncementResponse" }
+        readAt: { type: string, format: date-time, nullable: true }
+
+    AnnouncementPageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AnnouncementResponse" }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+
+    MyAnnouncementPageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/MyAnnouncementResponse" }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+
+    SaveAnnouncementRequest:
+      type: object
+      required: [scopeType, idempotencyKey, title, body, audience]
+      properties:
+        scopeType: { $ref: "#/components/schemas/AnnouncementScopeType" }
+        scopeId: { type: string, format: uuid, nullable: true }
+        idempotencyKey: { type: string, minLength: 8, maxLength: 120 }
+        title: { type: string, minLength: 3, maxLength: 180 }
+        body: { type: string, minLength: 10, maxLength: 5000 }
+        audience: { $ref: "#/components/schemas/AnnouncementAudience" }
+        emailEnabled: { type: boolean, default: true }
+        smsEnabled: { type: boolean, default: false }
+
+    UpdateAnnouncementRequest:
+      type: object
+      required: [title, body, audience]
+      properties:
+        title: { type: string, minLength: 3, maxLength: 180 }
+        body: { type: string, minLength: 10, maxLength: 5000 }
+        audience: { $ref: "#/components/schemas/AnnouncementAudience" }
+        emailEnabled: { type: boolean, default: true }
+        smsEnabled: { type: boolean, default: false }
+
+    SendReminderRequest:
+      type: object
+      required: [resourceType, resourceId, idempotencyKey]
+      properties:
+        resourceType:
+          type: string
+          enum: [CAMPAIGN, EVENT, FEE_ASSIGNMENT, DOCUMENT]
+        resourceId: { type: string, format: uuid }
+        idempotencyKey: { type: string, minLength: 8, maxLength: 100 }
+        emailEnabled: { type: boolean, default: true }
+        smsEnabled: { type: boolean, default: false }
+
 
 security:
   - bearerAuth: []

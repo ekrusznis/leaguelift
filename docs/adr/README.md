@@ -313,3 +313,11 @@ Additional, unreserved decisions:
   labeled written-but-not-yet-rehearsed, per ADR-035's discipline against
   fabricating live-infrastructure results — completes Phase 13's full
   four-slice scope (2026-07-30)
+- ADR-040: Phase 14 prerequisite dashboard connectivity and routed navigation (2026-07-31)
+- ADR-043: Phase 14 Platform Admin support console and reasoned support access (2026-07-31)
+- ADR-045: Phase 16 slice 3 branding and private profile photos (2026-07-31)
+- ADR-046: Phase 16 slice 4 typed profile-correction requests (2026-07-31)
+- ADR-047: Phase 16 slice 5 reusable event templates (2026-07-31)
+- ADR-048: Phase 16 slice 6 preview-confirmed season rollover (2026-08-01)
+- ADR-049: Phase 17 Help Center, support intake, and shared footer foundation (2026-08-01)
+- ADR-050: Phase 17 Action Center, announcements, and reminder delivery (2026-08-01)

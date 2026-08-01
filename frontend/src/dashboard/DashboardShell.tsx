@@ -2,12 +2,15 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Logo } from "../marketing/components/Logo";
+import { ActionCenterLink } from "../features/actionCenter/ActionCenterLink";
+import { AnnouncementInboxLink } from "../features/communications/AnnouncementInboxLink";
 import { ActivityFeedPanel } from "./ActivityFeedPanel";
 import { GlobalSearchBox } from "./GlobalSearchBox";
 import { Avatar } from "./components/Avatar";
 import { CardBackground } from "./components/CardBackground";
 import { BellIcon, ChevronDownIcon, HelpIcon } from "./icons";
 import { useMyActivity } from "../features/activity/api";
+import { AppFooter } from "../marketing/components/AppFooter";
 import type { SearchScope } from "../features/search/api";
 
 export type DashNavItem = {
@@ -64,7 +67,7 @@ export function DashboardShell({
 	navItems,
 	showSearch = false,
 	searchScope,
-	showHelp = false,
+	showHelp = true,
 	notificationCount,
 	userName,
 	userRole,
@@ -158,7 +161,9 @@ export function DashboardShell({
 					<GlobalSearchBox scope={searchScope} organizationId={searchScope.kind === "organization" ? searchScope.organizationId : undefined} />
 				)}
 
-				<div className="ml-auto flex items-center gap-3 sm:gap-4">
+				<div className="ml-auto flex items-center gap-2 sm:gap-3">
+					<ActionCenterLink compact />
+					<AnnouncementInboxLink compact />
 					<div className="relative">
 						<button
 							type="button"
@@ -182,7 +187,7 @@ export function DashboardShell({
 					</div>
 					{showHelp && (
 						<Link
-							to="/help"
+							to="/app/help"
 							aria-label="Help center"
 							className="hidden size-9 items-center justify-center rounded-full text-slate-300 hover:bg-white/5 hover:text-white sm:flex"
 						>
@@ -209,7 +214,13 @@ export function DashboardShell({
 								<Link to="/app" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 hover:bg-ice-50">
 									Dashboard
 								</Link>
-								<Link to="/help" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 hover:bg-ice-50">
+								<Link to="/app/action-center" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 hover:bg-ice-50">
+									Action center
+								</Link>
+								<Link to="/app/announcements" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 hover:bg-ice-50">
+									Announcements
+								</Link>
+								<Link to="/app/help" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 hover:bg-ice-50">
 									Help center
 								</Link>
 								<button type="button" onClick={signOut} className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-error-600 hover:bg-error-50">
@@ -241,7 +252,8 @@ export function DashboardShell({
 				</aside>
 
 				<main id="dashboard-content" className="min-h-0 flex-1 scroll-mt-4 overflow-y-auto p-4 sm:p-6 lg:p-8">
-					{children}
+					<div className="min-h-[calc(100vh-10rem)]">{children}</div>
+					<AppFooter className="-mx-4 -mb-4 mt-10 sm:-mx-6 sm:-mb-6 lg:-mx-8 lg:-mb-8" />
 				</main>
 			</div>
 		</div>

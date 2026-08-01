@@ -23,6 +23,7 @@ object Capabilities {
 	const val ORG_REPORT_VIEW = "organization.report.view"
 	const val ORG_TEAM_MANAGE = "organization.team.manage"
 	const val ORG_TOURNAMENT_MANAGE = "organization.tournament.manage"
+	const val ORG_COMMUNICATION_MANAGE = "organization.communication.manage"
 
 	// Team (resource-scoped, see the Coach capability tiers in DESIGN-DOC.md section 4.4)
 	const val TEAM_VIEW = "team.view"
@@ -32,12 +33,14 @@ object Capabilities {
 	const val TEAM_ROSTER_MANAGE = "team.roster.manage"
 	const val TEAM_STAFF_MANAGE = "team.staff.manage"
 	const val TEAM_FEE_VIEW = "team.fee.view"
+	const val TEAM_COMMUNICATION_MANAGE = "team.communication.manage"
 
 	// Tournament (resource-scoped)
 	const val TOURNAMENT_VIEW = "tournament.view"
 	const val TOURNAMENT_MANAGE = "tournament.manage"
 	const val TOURNAMENT_PAGE_EDIT = "tournament.page.edit"
 	const val TOURNAMENT_TEAM_MANAGE = "tournament.team.manage"
+	const val TOURNAMENT_COMMUNICATION_MANAGE = "tournament.communication.manage"
 
 	// Household (guardian context)
 	const val HOUSEHOLD_VIEW = "household.view"
@@ -86,6 +89,8 @@ object Capabilities {
 	const val PLATFORM_AUDIT_VIEW = "platform.audit.view"
 	const val PLATFORM_FEATURE_FLAG_MANAGE = "platform.feature_flag.manage"
 	const val PLATFORM_SUPPORT_ACCESS = "platform.support.access"
+	const val PLATFORM_HELP_MANAGE = "platform.help.manage"
+	const val PLATFORM_SUPPORT_CASE_MANAGE = "platform.support_case.manage"
 	const val PLATFORM_SUPPORT_IMPERSONATE = "platform.support.impersonate"
 }
 
@@ -122,11 +127,11 @@ object CapabilityRegistry {
 		MembershipRole.OWNER -> setOf(
 			Capabilities.ORG_MANAGE, Capabilities.ORG_MEMBERS_MANAGE, Capabilities.ORG_BILLING_MANAGE,
 			Capabilities.ORG_PAYOUT_MANAGE, Capabilities.ORG_REPORT_VIEW, Capabilities.ORG_TEAM_MANAGE,
-			Capabilities.ORG_TOURNAMENT_MANAGE, Capabilities.ORG_EVENT_MANAGE, Capabilities.EVENT_READ,
+			Capabilities.ORG_TOURNAMENT_MANAGE, Capabilities.ORG_COMMUNICATION_MANAGE, Capabilities.ORG_EVENT_MANAGE, Capabilities.EVENT_READ,
 		)
 		MembershipRole.ADMINISTRATOR -> setOf(
 			Capabilities.ORG_MANAGE, Capabilities.ORG_MEMBERS_MANAGE, Capabilities.ORG_REPORT_VIEW,
-			Capabilities.ORG_TEAM_MANAGE, Capabilities.ORG_TOURNAMENT_MANAGE, Capabilities.ORG_EVENT_MANAGE, Capabilities.EVENT_READ,
+			Capabilities.ORG_TEAM_MANAGE, Capabilities.ORG_TOURNAMENT_MANAGE, Capabilities.ORG_COMMUNICATION_MANAGE, Capabilities.ORG_EVENT_MANAGE, Capabilities.EVENT_READ,
 		)
 		MembershipRole.FINANCE_MANAGER, MembershipRole.VIEWER -> setOf(Capabilities.ORG_REPORT_VIEW)
 		MembershipRole.TEAM_ADMINISTRATOR, MembershipRole.TOURNAMENT_ADMINISTRATOR -> emptySet()
@@ -137,13 +142,13 @@ object CapabilityRegistry {
 		ResourceRole.TEAM_EDITOR -> setOf(
 			Capabilities.TEAM_VIEW, Capabilities.TEAM_PAGE_EDIT, Capabilities.TEAM_FUNDRAISING_MANAGE, Capabilities.TEAM_STORE_MANAGE,
 			Capabilities.EVENT_READ, Capabilities.EVENT_CREATE, Capabilities.EVENT_UPDATE, Capabilities.EVENT_PUBLISH,
-			Capabilities.EVENT_RSVP_READ_TEAM, Capabilities.TEAM_EVENT_MANAGE,
+			Capabilities.EVENT_RSVP_READ_TEAM, Capabilities.TEAM_EVENT_MANAGE, Capabilities.TEAM_COMMUNICATION_MANAGE,
 		)
 		ResourceRole.TEAM_MANAGER -> setOf(
 			Capabilities.TEAM_VIEW, Capabilities.TEAM_PAGE_EDIT, Capabilities.TEAM_FUNDRAISING_MANAGE, Capabilities.TEAM_STORE_MANAGE,
 			Capabilities.TEAM_ROSTER_MANAGE, Capabilities.TEAM_STAFF_MANAGE, Capabilities.TEAM_FEE_VIEW,
 			Capabilities.EVENT_READ, Capabilities.EVENT_CREATE, Capabilities.EVENT_UPDATE, Capabilities.EVENT_CANCEL, Capabilities.EVENT_PUBLISH,
-			Capabilities.EVENT_RSVP_READ_TEAM, Capabilities.TEAM_EVENT_MANAGE,
+			Capabilities.EVENT_RSVP_READ_TEAM, Capabilities.TEAM_EVENT_MANAGE, Capabilities.TEAM_COMMUNICATION_MANAGE,
 		)
 		else -> emptySet()
 	}
@@ -153,7 +158,7 @@ object CapabilityRegistry {
 		ResourceRole.TOURNAMENT_ADMINISTRATOR -> setOf(
 			Capabilities.TOURNAMENT_VIEW, Capabilities.TOURNAMENT_MANAGE, Capabilities.TOURNAMENT_PAGE_EDIT, Capabilities.TOURNAMENT_TEAM_MANAGE,
 			Capabilities.EVENT_READ, Capabilities.EVENT_CREATE, Capabilities.EVENT_UPDATE, Capabilities.EVENT_CANCEL, Capabilities.EVENT_PUBLISH,
-			Capabilities.EVENT_RSVP_READ_TEAM, Capabilities.TOURNAMENT_EVENT_MANAGE,
+			Capabilities.EVENT_RSVP_READ_TEAM, Capabilities.TOURNAMENT_EVENT_MANAGE, Capabilities.TOURNAMENT_COMMUNICATION_MANAGE,
 		)
 		else -> emptySet()
 	}
@@ -163,6 +168,7 @@ object CapabilityRegistry {
 			Capabilities.PLATFORM_ORG_VIEW, Capabilities.PLATFORM_ORG_MANAGE, Capabilities.PLATFORM_USER_VIEW, Capabilities.PLATFORM_USER_MANAGE,
 			Capabilities.PLATFORM_INTEGRATION_VIEW, Capabilities.PLATFORM_INTEGRATION_MANAGE, Capabilities.PLATFORM_AUDIT_VIEW,
 			Capabilities.PLATFORM_FEATURE_FLAG_MANAGE, Capabilities.PLATFORM_SUPPORT_ACCESS,
+			Capabilities.PLATFORM_HELP_MANAGE, Capabilities.PLATFORM_SUPPORT_CASE_MANAGE,
 		)
 		else -> emptySet()
 	}

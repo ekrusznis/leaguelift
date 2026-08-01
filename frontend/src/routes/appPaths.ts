@@ -36,6 +36,11 @@ export const appPaths = {
 		`/app/organizations/${organizationId}/participants/${participantId}/events`,
 	event: (organizationId: string, eventId: string, search?: URLSearchParams) =>
 		`/app/organizations/${organizationId}/events/${eventId}${search && search.size > 0 ? `?${search.toString()}` : ""}`,
+	actionCenter: () => "/app/action-center",
+	announcements: () => "/app/announcements",
+	help: () => "/app/help",
+	helpArticle: (slug: string) => `/app/help/${slug}`,
+	helpSupport: () => "/app/help/support",
 	platformOrganizations: () => "/app/platform/organizations",
 	platformOrganization: (organizationId: string) => `/app/platform/organizations/${organizationId}`,
 	platformUsers: () => "/app/platform/users",
@@ -43,4 +48,6 @@ export const appPaths = {
 	platformReports: () => "/app/platform/reports",
 	platformAudit: () => "/app/platform/audit",
 	platformSupportSessions: () => "/app/platform/support-sessions",
+	platformHelpArticles: () => "/app/platform/help-articles",
+	platformSupportCases: () => "/app/platform/support-cases",
 } as const;

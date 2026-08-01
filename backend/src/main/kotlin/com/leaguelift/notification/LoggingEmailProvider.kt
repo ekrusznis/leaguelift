@@ -24,6 +24,6 @@ private val log = LoggerFactory.getLogger(LoggingEmailProvider::class.java)
 @ConditionalOnProperty(prefix = "leaguelift.email", name = ["provider"], havingValue = "logging", matchIfMissing = true)
 class LoggingEmailProvider : EmailProvider {
 	override fun send(message: EmailMessage) {
-		log.info("Email would be sent to {} — subject: \"{}\"", message.to, message.subject)
+		log.info("Email would be sent to {} (cc={}) — subject: \"{}\"", message.to, message.cc, message.subject)
 	}
 }

@@ -22,12 +22,14 @@ describe("dashboard navigation registry", () => {
 		expect(items.every((item) => item.to.startsWith("/app"))).toBe(true);
 		expect(items.find((item) => item.id === "owner.events")?.to).toBe("/app/organizations/org-1/events");
 		expect(items.find((item) => item.id === "owner.reports")?.to).toBe("/app/organizations/org-1/reports");
+		expect(items.find((item) => item.id === "owner.action-center")?.to).toBe("/app/action-center");
+		expect(items.find((item) => item.id === "owner.announcements")?.to).toBe("/app/announcements");
 	});
 
 	it("keeps a finance or viewer context focused on read-only financial areas", () => {
 		const items = navItemsFor("ORGANIZATION", new Set([Capabilities.ORG_REPORT_VIEW]), { organizationId: "org-1" });
 
-		expect(items.map((item) => item.id)).toEqual(["owner.overview", "owner.fees", "owner.reports"]);
+		expect(items.map((item) => item.id)).toEqual(["owner.overview", "owner.action-center", "owner.announcements", "owner.fees", "owner.reports"]);
 	});
 
 	it("does not advertise unimplemented parent credit or order destinations", () => {
@@ -87,6 +89,8 @@ describe("dashboard navigation registry", () => {
 
 		expect(items.map((item) => item.id)).toEqual([
 			"platform.overview",
+			"platform.action-center",
+			"platform.announcements",
 			"platform.organizations",
 			"platform.users",
 			"platform.operations",

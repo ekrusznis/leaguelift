@@ -9,10 +9,11 @@ export const organizationQueryKey = (id: string) => ["organizations", id] as con
 const onboardingQueryKey = (id: string) => ["organizations", id, "onboarding"] as const;
 const invitationsQueryKey = (organizationId: string) => ["organizations", organizationId, "invitations"] as const;
 
-export function useOrganizations(page = 0, size = 20) {
+export function useOrganizations(page = 0, size = 20, enabled = true) {
 	return useQuery({
 		queryKey: organizationsQueryKey(page, size),
 		queryFn: () => apiFetch<OrganizationPage>(`/organizations?page=${page}&size=${size}`),
+		enabled,
 	});
 }
 

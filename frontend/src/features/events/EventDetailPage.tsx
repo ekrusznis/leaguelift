@@ -21,6 +21,7 @@ import {
 	useSubmitRsvp,
 } from "./api";
 import type { LeagueLiftEvent, RsvpResponse } from "./types";
+import { ReminderButton } from "../communications/ReminderButton";
 
 function formatDateTime(value: string | null, timezone: string) {
 	if (!value) return "To be determined";
@@ -163,7 +164,7 @@ export function EventDetailPage() {
 				</section>
 			</div>
 
-			{canManage && <EventManagementActions event={event} publish={() => runAction(() => publish.mutateAsync())} cancel={() => runAction(() => cancel.mutateAsync())} postpone={() => runAction(() => postpone.mutateAsync())} detach={() => runAction(() => detach.mutateAsync())} />}
+			{canManage && <EventManagementActions organizationId={organizationId} event={event} publish={() => runAction(() => publish.mutateAsync())} cancel={() => runAction(() => cancel.mutateAsync())} postpone={() => runAction(() => postpone.mutateAsync())} detach={() => runAction(() => detach.mutateAsync())} />}
 		</div>
 	);
 }
@@ -219,13 +220,16 @@ function RsvpCount({ label, value }: { label: string; value: number }) {
 	return <div className="rounded-lg bg-ice-white p-3 text-center"><p className="font-heading text-xl font-bold text-navy">{value}</p><p className="text-xs text-slate-gray">{label}</p></div>;
 }
 
-function EventManagementActions({ event, publish, cancel, postpone, detach }: { event: LeagueLiftEvent; publish: () => void; cancel: () => void; postpone: () => void; detach: () => void }) {
+function EventManagementActions({ organizationId, event, publish, cancel, postpone, detach }: { organizationId: string; event: LeagueLiftEvent; publish: () => void; cancel: () => void; postpone: () => void; detach: () => void }) {
 	return (
 		<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5">
 			<h2 className="font-heading text-lg font-semibold text-navy">Event actions</h2>
 			<p className="mt-1 text-sm text-slate-gray">Only actions allowed by the backend for your role will succeed.</p>
 			<div className="mt-4 flex flex-wrap gap-2">
 				{event.status === "DRAFT" && <Button type="button" onClick={publish}>Publish</Button>}
+				{event.status !== "DRAFT" && event.status !== "CANCELLED" && event.status !== "COMPLETED" && event.startAt && new Date(event.startAt).getTime() > Date.now() && (
+					<ReminderButton organizationId={organizationId} resourceType="EVENT" resourceId={event.id} label="Send event reminder" />
+				)}
 				{event.status !== "CANCELLED" && event.status !== "COMPLETED" && <Button type="button" variant="secondary" onClick={postpone}>Postpone</Button>}
 				{event.status !== "CANCELLED" && event.status !== "COMPLETED" && <Button type="button" variant="danger" onClick={cancel}>Cancel event</Button>}
 				{event.sourceType !== "MANUAL" && <Button type="button" variant="secondary" onClick={detach}>Detach from source</Button>}
