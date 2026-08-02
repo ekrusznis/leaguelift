@@ -40,6 +40,9 @@ class SecurityConfig(
 				authorize
 					.requestMatchers("/api/v1/public/**").permitAll()
 					.requestMatchers("/api/v1/auth/**").permitAll()
+					// OAuth providers redirect without a LeagueLift bearer token; callback authenticity
+					// comes from the hashed, expiring, single-use state record (ADR-054).
+					.requestMatchers("/api/v1/integrations/oauth/**").permitAll()
 					// Stripe calls this directly — no JWT, authenticity comes from the
 					// Stripe-Signature header instead (verified in StripeWebhookController).
 					.requestMatchers("/api/v1/webhooks/**").permitAll()

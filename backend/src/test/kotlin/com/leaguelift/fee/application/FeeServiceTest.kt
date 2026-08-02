@@ -12,10 +12,10 @@ import com.leaguelift.fee.domain.FeePayment
 import com.leaguelift.fee.domain.FeeTemplate
 import com.leaguelift.fee.domain.FeeTemplateStatus
 import com.leaguelift.fee.domain.PaymentMethod
+import com.leaguelift.fee.paymentplan.persistence.FeePaymentPlanRepository
 import com.leaguelift.fee.persistence.FeeAdjustmentRepository
 import com.leaguelift.fee.persistence.FeePaymentRepository
 import com.leaguelift.fee.persistence.FeeRepository
-import com.leaguelift.fee.paymentplan.persistence.FeePaymentPlanRepository
 import com.leaguelift.household.persistence.HouseholdRepository
 import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.membership.domain.MembershipRole
@@ -34,7 +34,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class FeeServiceTest {
-
     private val feeRepository = mockk<FeeRepository>()
     private val feePaymentRepository = mockk<FeePaymentRepository>()
     private val feeAdjustmentRepository = mockk<FeeAdjustmentRepository>()
@@ -42,7 +41,16 @@ class FeeServiceTest {
     private val householdRepository = mockk<HouseholdRepository>()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
-    private val service = FeeService(feeRepository, feePaymentRepository, feeAdjustmentRepository, feePaymentPlanRepository, householdRepository, membershipService, auditService)
+    private val service =
+        FeeService(
+            feeRepository,
+            feePaymentRepository,
+            feeAdjustmentRepository,
+            feePaymentPlanRepository,
+            householdRepository,
+            membershipService,
+            auditService,
+        )
 
     private val orgId = UUID.randomUUID()
     private val householdId = UUID.randomUUID()
@@ -69,10 +77,19 @@ class FeeServiceTest {
     fun `createTemplate requires manager role and records audit`() {
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
         val template = sampleTemplate()
-        every { feeRepository.insertTemplate(orgId, template.name, template.description, template.amountMinor, template.currency) } returns template
+        every { feeRepository.insertTemplate(orgId, template.name, template.description, template.amountMinor, template.currency) } returns
+            template
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 
-        val result = service.createTemplate(orgId, template.name, template.description, template.amountMinor, template.currency, currentUser)
+        val result =
+            service.createTemplate(
+                orgId,
+                template.name,
+                template.description,
+                template.amountMinor,
+                template.currency,
+                currentUser,
+            )
 
         assertEquals(template.id, result.id)
         verify(exactly = 1) { membershipService.requireManagerRole(orgId, currentUser) }
@@ -139,19 +156,38 @@ class FeeServiceTest {
         every { householdRepository.findById(householdId, orgId) } returns mockk()
         val assignment = sampleAssignment()
         every {
-            feeRepository.insertAssignment(orgId, householdId, assignment.participantId, assignment.feeTemplateId, assignment.description, assignment.originalAmountMinor, assignment.currency, assignment.dueDate)
+            feeRepository.insertAssignment(
+                orgId,
+                householdId,
+                assignment.participantId,
+                assignment.feeTemplateId,
+                assignment.description,
+                assignment.originalAmountMinor,
+                assignment.currency,
+                assignment.dueDate,
+            )
         } returns assignment
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
         stubZeroBalance(assignment.id)
 
-        val result = service.createAssignment(
-            orgId, householdId, assignment.participantId, assignment.feeTemplateId,
-            assignment.description, assignment.originalAmountMinor, assignment.currency, assignment.dueDate, currentUser,
-        )
+        val result =
+            service.createAssignment(
+                orgId,
+                householdId,
+                assignment.participantId,
+                assignment.feeTemplateId,
+                assignment.description,
+                assignment.originalAmountMinor,
+                assignment.currency,
+                assignment.dueDate,
+                currentUser,
+            )
 
         assertEquals(assignment.id, result.assignment.id)
         assertEquals(15000L, result.balance.balanceMinor)
-        verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "fee_assignment.created", "fee_assignment", assignment.id, any()) }
+        verify(
+            exactly = 1,
+        ) { auditService.record(currentUser.userId, orgId, "fee_assignment.created", "fee_assignment", assignment.id, any()) }
     }
 
     @Test
@@ -177,7 +213,9 @@ class FeeServiceTest {
         val result = service.updateAssignmentStatus(orgId, assignment.id, FeeAssignmentStatus.PAID, currentUser)
 
         assertEquals(FeeAssignmentStatus.PAID, result.assignment.status)
-        verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "fee_assignment.status_updated", "fee_assignment", assignment.id, any()) }
+        verify(exactly = 1) {
+            auditService.record(currentUser.userId, orgId, "fee_assignment.status_updated", "fee_assignment", assignment.id, any())
+        }
     }
 
     // --- Payments ---
@@ -187,11 +225,24 @@ class FeeServiceTest {
         val assignment = sampleAssignment()
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
         every { feeRepository.findAssignmentById(assignment.id, orgId) } returns assignment
-        every { feePaymentRepository.insert(orgId, assignment.id, householdId, 5000L, "USD", PaymentMethod.CASH, LocalDate.of(2026, 1, 1), null, currentUser.userId) } returns samplePayment(assignment.id)
+        every {
+            feePaymentRepository.insert(
+                orgId,
+                assignment.id,
+                householdId,
+                5000L,
+                "USD",
+                PaymentMethod.CASH,
+                LocalDate.of(2026, 1, 1),
+                null,
+                currentUser.userId,
+            )
+        } returns samplePayment(assignment.id)
         every { feePaymentRepository.sumActiveByAssignment(assignment.id, orgId) } returns 5000L
         every { feeAdjustmentRepository.sumActiveByAssignment(assignment.id, orgId) } returns 0L
         every { feeRepository.updateAssignmentStatus(assignment.id, orgId, FeeAssignmentStatus.PARTIALLY_PAID) } returns 1
-        every { feeRepository.findAssignmentById(assignment.id, orgId) } returnsMany listOf(assignment, assignment.copy(status = FeeAssignmentStatus.PARTIALLY_PAID))
+        every { feeRepository.findAssignmentById(assignment.id, orgId) } returnsMany
+            listOf(assignment, assignment.copy(status = FeeAssignmentStatus.PARTIALLY_PAID))
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 
         val result = service.recordPayment(orgId, assignment.id, 5000L, PaymentMethod.CASH, LocalDate.of(2026, 1, 1), null, currentUser)
@@ -199,16 +250,20 @@ class FeeServiceTest {
         assertEquals(FeeAssignmentStatus.PARTIALLY_PAID, result.assignment.status)
         assertEquals(10000L, result.balance.balanceMinor)
         verify(exactly = 1) { membershipService.requireManagerRole(orgId, currentUser) }
-        verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "fee_assignment.payment_recorded", "fee_assignment", assignment.id, any()) }
+        verify(exactly = 1) {
+            auditService.record(currentUser.userId, orgId, "fee_assignment.payment_recorded", "fee_assignment", assignment.id, any())
+        }
     }
 
     @Test
     fun `recordPayment transitions to PAID when balance reaches zero`() {
         val assignment = sampleAssignment()
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
-        every { feeRepository.findAssignmentById(assignment.id, orgId) } returnsMany listOf(assignment, assignment.copy(status = FeeAssignmentStatus.PAID))
-        every { feePaymentRepository.insert(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns samplePayment(assignment.id)
-        every { feePaymentRepository.sumActiveByAssignment(assignment.id, orgId) } returns 15000L
+        every { feeRepository.findAssignmentById(assignment.id, orgId) } returnsMany
+            listOf(assignment, assignment.copy(status = FeeAssignmentStatus.PAID))
+        every { feePaymentRepository.insert(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+            samplePayment(assignment.id)
+        every { feePaymentRepository.sumActiveByAssignment(assignment.id, orgId) } returnsMany listOf(0L, 15000L)
         every { feeAdjustmentRepository.sumActiveByAssignment(assignment.id, orgId) } returns 0L
         every { feeRepository.updateAssignmentStatus(assignment.id, orgId, FeeAssignmentStatus.PAID) } returns 1
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
@@ -218,6 +273,20 @@ class FeeServiceTest {
         assertEquals(0L, result.balance.balanceMinor)
         assertEquals(FeeAssignmentStatus.PAID, result.assignment.status)
         verify(exactly = 1) { feeRepository.updateAssignmentStatus(assignment.id, orgId, FeeAssignmentStatus.PAID) }
+    }
+
+    @Test
+    fun `recordPayment rejects an additional payment when the balance is already zero`() {
+        val assignment = sampleAssignment().copy(status = FeeAssignmentStatus.PAID)
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { feeRepository.findAssignmentById(assignment.id, orgId) } returns assignment
+        every { feePaymentRepository.sumActiveByAssignment(assignment.id, orgId) } returns assignment.originalAmountMinor
+        every { feeAdjustmentRepository.sumActiveByAssignment(assignment.id, orgId) } returns 0L
+
+        assertFailsWith<ValidationException> {
+            service.recordPayment(orgId, assignment.id, 1L, PaymentMethod.CASH, LocalDate.of(2026, 1, 1), null, currentUser)
+        }
+        verify(exactly = 0) { feePaymentRepository.insert(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -247,7 +316,8 @@ class FeeServiceTest {
         val assignment = sampleAssignment().copy(status = FeeAssignmentStatus.PAID)
         val payment = samplePayment(assignment.id)
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
-        every { feeRepository.findAssignmentById(assignment.id, orgId) } returnsMany listOf(assignment, assignment.copy(status = FeeAssignmentStatus.OPEN))
+        every { feeRepository.findAssignmentById(assignment.id, orgId) } returnsMany
+            listOf(assignment, assignment.copy(status = FeeAssignmentStatus.OPEN))
         every { feePaymentRepository.findById(payment.id, orgId) } returns payment
         every { feePaymentRepository.void(payment.id, orgId, currentUser.userId, "Entered in error") } returns 1
         every { feePaymentRepository.sumActiveByAssignment(assignment.id, orgId) } returns 0L
@@ -259,7 +329,9 @@ class FeeServiceTest {
 
         assertEquals(FeeAssignmentStatus.OPEN, result.assignment.status)
         assertEquals(15000L, result.balance.balanceMinor)
-        verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "fee_assignment.payment_voided", "fee_assignment", assignment.id, any()) }
+        verify(exactly = 1) {
+            auditService.record(currentUser.userId, orgId, "fee_assignment.payment_voided", "fee_assignment", assignment.id, any())
+        }
     }
 
     @Test
@@ -281,8 +353,20 @@ class FeeServiceTest {
     fun `applyAdjustment requires manager role and records audit`() {
         val assignment = sampleAssignment()
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
-        every { feeRepository.findAssignmentById(assignment.id, orgId) } returnsMany listOf(assignment, assignment.copy(status = FeeAssignmentStatus.PARTIALLY_PAID))
-        every { feeAdjustmentRepository.insert(orgId, assignment.id, householdId, AdjustmentType.DISCOUNT, 5000L, "USD", "Sibling discount", currentUser.userId) } returns sampleAdjustment(assignment.id)
+        every { feeRepository.findAssignmentById(assignment.id, orgId) } returnsMany
+            listOf(assignment, assignment.copy(status = FeeAssignmentStatus.PARTIALLY_PAID))
+        every {
+            feeAdjustmentRepository.insert(
+                orgId,
+                assignment.id,
+                householdId,
+                AdjustmentType.DISCOUNT,
+                5000L,
+                "USD",
+                "Sibling discount",
+                currentUser.userId,
+            )
+        } returns sampleAdjustment(assignment.id)
         every { feePaymentRepository.sumActiveByAssignment(assignment.id, orgId) } returns 0L
         every { feeAdjustmentRepository.sumActiveByAssignment(assignment.id, orgId) } returns 5000L
         every { feeRepository.updateAssignmentStatus(assignment.id, orgId, FeeAssignmentStatus.PARTIALLY_PAID) } returns 1
@@ -292,7 +376,9 @@ class FeeServiceTest {
 
         assertEquals(10000L, result.balance.balanceMinor)
         verify(exactly = 1) { membershipService.requireManagerRole(orgId, currentUser) }
-        verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "fee_assignment.adjustment_applied", "fee_assignment", assignment.id, any()) }
+        verify(exactly = 1) {
+            auditService.record(currentUser.userId, orgId, "fee_assignment.adjustment_applied", "fee_assignment", assignment.id, any())
+        }
     }
 
     @Test
@@ -337,73 +423,78 @@ class FeeServiceTest {
         every { feeAdjustmentRepository.sumActiveByAssignment(assignmentId, orgId) } returns 0L
     }
 
-    private fun sampleTemplate() = FeeTemplate(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        name = "Spring Registration",
-        description = "Annual spring season fee",
-        amountMinor = 15000L,
-        currency = "USD",
-        status = FeeTemplateStatus.ACTIVE,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun sampleTemplate() =
+        FeeTemplate(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            name = "Spring Registration",
+            description = "Annual spring season fee",
+            amountMinor = 15000L,
+            currency = "USD",
+            status = FeeTemplateStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
-    private fun sampleAssignment() = FeeAssignment(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        householdId = householdId,
-        participantId = null,
-        feeTemplateId = null,
-        description = "Spring 2026 Registration",
-        originalAmountMinor = 15000L,
-        currency = "USD",
-        dueDate = LocalDate.of(2026, 3, 1),
-        status = FeeAssignmentStatus.OPEN,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun sampleAssignment() =
+        FeeAssignment(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            householdId = householdId,
+            participantId = null,
+            feeTemplateId = null,
+            description = "Spring 2026 Registration",
+            originalAmountMinor = 15000L,
+            currency = "USD",
+            dueDate = LocalDate.of(2026, 3, 1),
+            status = FeeAssignmentStatus.OPEN,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
-    private fun samplePayment(feeAssignmentId: UUID) = FeePayment(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        feeAssignmentId = feeAssignmentId,
-        householdId = householdId,
-        amountMinor = 5000L,
-        currency = "USD",
-        method = PaymentMethod.CASH,
-        paidAt = LocalDate.of(2026, 1, 1),
-        note = null,
-        recordedByUserId = currentUser.userId,
-        voidedAt = null,
-        voidedByUserId = null,
-        voidReason = null,
-        createdAt = Instant.now(),
-    )
+    private fun samplePayment(feeAssignmentId: UUID) =
+        FeePayment(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            feeAssignmentId = feeAssignmentId,
+            householdId = householdId,
+            amountMinor = 5000L,
+            currency = "USD",
+            method = PaymentMethod.CASH,
+            paidAt = LocalDate.of(2026, 1, 1),
+            note = null,
+            recordedByUserId = currentUser.userId,
+            voidedAt = null,
+            voidedByUserId = null,
+            voidReason = null,
+            createdAt = Instant.now(),
+        )
 
-    private fun sampleAdjustment(feeAssignmentId: UUID) = FeeAdjustment(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        feeAssignmentId = feeAssignmentId,
-        householdId = householdId,
-        adjustmentType = AdjustmentType.DISCOUNT,
-        amountMinor = 5000L,
-        currency = "USD",
-        reason = "Sibling discount",
-        createdByUserId = currentUser.userId,
-        voidedAt = null,
-        voidedByUserId = null,
-        voidReason = null,
-        createdAt = Instant.now(),
-    )
+    private fun sampleAdjustment(feeAssignmentId: UUID) =
+        FeeAdjustment(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            feeAssignmentId = feeAssignmentId,
+            householdId = householdId,
+            adjustmentType = AdjustmentType.DISCOUNT,
+            amountMinor = 5000L,
+            currency = "USD",
+            reason = "Sibling discount",
+            createdByUserId = currentUser.userId,
+            voidedAt = null,
+            voidedByUserId = null,
+            voidReason = null,
+            createdAt = Instant.now(),
+        )
 
-    private fun managerMembership() = OrganizationMembership(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        userId = currentUser.userId,
-        role = MembershipRole.ADMINISTRATOR,
-        status = MembershipStatus.ACTIVE,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun managerMembership() =
+        OrganizationMembership(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            userId = currentUser.userId,
+            role = MembershipRole.ADMINISTRATOR,
+            status = MembershipStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 }

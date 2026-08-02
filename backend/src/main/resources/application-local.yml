@@ -97,6 +97,41 @@ leaguelift:
       enabled: ${ICS_FEED_SYNC_ENABLED:true}
       cron: ${ICS_FEED_SYNC_CRON:0 */30 * * * *}
 
+  # Phase 19 connection/OAuth foundation (ADR-054). Disabled by default. Stubs
+  # are local/test-only and RuntimeGuard rejects them in staging/prod.
+  integrations:
+    encryption-key: ${INTEGRATION_ENCRYPTION_KEY:}
+    encryption-key-version: ${INTEGRATION_ENCRYPTION_KEY_VERSION:1}
+    oauth-state-ttl-minutes: ${INTEGRATION_OAUTH_STATE_TTL_MINUTES:10}
+    oauth-callback-base-url: ${INTEGRATION_OAUTH_CALLBACK_BASE_URL:http://localhost:8080/api/v1/integrations/oauth}
+    stub-mode: ${INTEGRATION_STUB_MODE:false}
+    providers:
+      google-calendar:
+        enabled: ${GOOGLE_CALENDAR_INTEGRATION_ENABLED:false}
+        client-id: ${GOOGLE_CALENDAR_CLIENT_ID:}
+        client-secret: ${GOOGLE_CALENDAR_CLIENT_SECRET:}
+        authorization-uri: ${GOOGLE_CALENDAR_AUTHORIZATION_URI:}
+        token-uri: ${GOOGLE_CALENDAR_TOKEN_URI:}
+        revocation-uri: ${GOOGLE_CALENDAR_REVOCATION_URI:}
+      quickbooks-online:
+        enabled: ${QUICKBOOKS_INTEGRATION_ENABLED:false}
+        client-id: ${QUICKBOOKS_CLIENT_ID:}
+        client-secret: ${QUICKBOOKS_CLIENT_SECRET:}
+        authorization-uri: ${QUICKBOOKS_AUTHORIZATION_URI:}
+        token-uri: ${QUICKBOOKS_TOKEN_URI:}
+        revocation-uri: ${QUICKBOOKS_REVOCATION_URI:}
+      sportsengine:
+        enabled: ${SPORTSENGINE_INTEGRATION_ENABLED:false}
+        client-id: ${SPORTSENGINE_CLIENT_ID:}
+        client-secret: ${SPORTSENGINE_CLIENT_SECRET:}
+        authorization-uri: ${SPORTSENGINE_AUTHORIZATION_URI:}
+        token-uri: ${SPORTSENGINE_TOKEN_URI:}
+        revocation-uri: ${SPORTSENGINE_REVOCATION_URI:}
+
+  # Phase 17 support-case routing. The mailbox is public configuration; real delivery activation is Phase 20.
+  support:
+    inbox-email: ${LEAGUELIFT_SUPPORT_INBOX_EMAIL:support@leaguelift.io}
+
 management:
   endpoint:
     health:
@@ -105,3 +140,4 @@ management:
 logging:
   level:
     com.leaguelift: DEBUG
+

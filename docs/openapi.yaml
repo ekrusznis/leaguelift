@@ -78,7 +78,13 @@ info:
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
     Phase 17 now includes the Help Center/support foundation plus role-aware Action Center aggregation, one-way organization/team/tournament announcements, recipient-snapshotted in-app/email/SMS delivery, and campaign/event/fee/document reminders through one audited pipeline with idempotent resource creation (ADR-049/ADR-050). Phase 16 slices 3-6 extend the media pipeline to team/tournament branding and private adult/participant profile photos (ADR-045), add typed profile-correction requests (ADR-046), add manager-controlled reusable event templates that prefill ordinary manual draft events without recurrence or automatic publication (ADR-047), and complete the phase with preview-confirmed, idempotent season rollover limited to active roster links, explicit TEAM staff grants, and ready logo/cover assignments (ADR-048).
-  version: "0.25.9"
+    Phase 19 slices 19.0-19.2 add the disabled-by-default provider catalog,
+    generalized owner-scoped connection registry, sanitized readiness and connection
+    APIs, OAuth authorization/callback/refresh/revoke/disconnect/health seams, encrypted
+    credential references, hashed single-use state, PKCE, deterministic local stubs,
+    and production fail-closed guards (ADR-054). No provider-specific production client
+    or credential activation is claimed in this slice.
+  version: "0.26.0"
 servers:
   - url: /api/v1
 tags:
@@ -7749,6 +7755,198 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /organizations/{organizationId}/integrations/catalog:
+    get:
+      tags: [integrations]
+      summary: List organization integration readiness
+      operationId: listOrganizationIntegrationCatalog
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Provider catalog entries with sanitized readiness and latest connection state
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/IntegrationCatalogResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /organizations/{organizationId}/integration-connections:
+    get:
+      tags: [integrations]
+      summary: List sanitized organization integration connections
+      operationId: listOrganizationIntegrationConnections
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Integration connections; credentials are never returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/IntegrationConnectionResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /me/integrations/catalog:
+    get:
+      tags: [integrations]
+      summary: List personal integration readiness
+      operationId: listPersonalIntegrationCatalog
+      responses:
+        "200":
+          description: User-owned provider readiness
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/IntegrationCatalogResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /me/integration-connections:
+    get:
+      tags: [integrations]
+      summary: List sanitized personal integration connections
+      operationId: listPersonalIntegrationConnections
+      responses:
+        "200":
+          description: User-owned integration connections
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/IntegrationConnectionResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /organizations/{organizationId}/integrations/{provider}/oauth/start:
+    post:
+      tags: [integrations]
+      summary: Start an organization OAuth authorization
+      description: Returns an authorization URL only when the provider adapter and runtime configuration are explicitly available. Partner-pending and unconfigured providers fail closed.
+      operationId: startOrganizationIntegrationAuthorization
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: provider
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/IntegrationProvider" }
+      responses:
+        "200": { description: Authorization started, content: { application/json: { schema: { $ref: "#/components/schemas/AuthorizationStartResponse" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /me/integrations/{provider}/oauth/start:
+    post:
+      tags: [integrations]
+      summary: Start a personal OAuth authorization
+      operationId: startPersonalIntegrationAuthorization
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/IntegrationProvider" }
+      responses:
+        "200": { description: Authorization started, content: { application/json: { schema: { $ref: "#/components/schemas/AuthorizationStartResponse" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /integrations/oauth/{provider}/callback:
+    get:
+      tags: [integrations]
+      summary: Consume a provider OAuth callback
+      description: Public redirect endpoint secured by hashed, expiring, single-use state and PKCE. No provider token is returned.
+      operationId: completeIntegrationAuthorization
+      security: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/IntegrationProvider" }
+        - name: code
+          in: query
+          schema: { type: string }
+        - name: state
+          in: query
+          schema: { type: string }
+        - name: error
+          in: query
+          schema: { type: string }
+      responses:
+        "200": { description: Sanitized connected integration, content: { application/json: { schema: { $ref: "#/components/schemas/AuthorizationCallbackResponse" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /organizations/{organizationId}/integration-connections/{connectionId}:
+    delete:
+      tags: [integrations]
+      summary: Disconnect an integration locally
+      description: Stops LeagueLift use and revokes the stored local credential reference. This does not claim the provider accepted remote revocation.
+      operationId: disconnectOrganizationIntegration
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: connectionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Disconnected connection, content: { application/json: { schema: { $ref: "#/components/schemas/IntegrationConnectionResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /organizations/{organizationId}/integration-connections/{connectionId}/refresh:
+    post:
+      tags: [integrations]
+      summary: Refresh an organization integration token
+      operationId: refreshOrganizationIntegration
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: connectionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Refreshed sanitized connection, content: { application/json: { schema: { $ref: "#/components/schemas/IntegrationConnectionResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /organizations/{organizationId}/integration-connections/{connectionId}/revoke:
+    post:
+      tags: [integrations]
+      summary: Revoke an organization integration at the provider
+      operationId: revokeOrganizationIntegration
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: connectionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Revoked sanitized connection, content: { application/json: { schema: { $ref: "#/components/schemas/IntegrationConnectionResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /organizations/{organizationId}/integration-connections/{connectionId}/health-check:
+    post:
+      tags: [integrations]
+      summary: Run an organization integration health check
+      operationId: healthCheckOrganizationIntegration
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: connectionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Durable health result, content: { application/json: { schema: { $ref: "#/components/schemas/IntegrationHealthResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -13770,6 +13968,83 @@ components:
         page: { type: integer }
         size: { type: integer }
         totalElements: { type: integer, format: int64 }
+
+    IntegrationProvider:
+      type: string
+      enum: [GOOGLE_CALENDAR, QUICKBOOKS_ONLINE, SPORTSENGINE, GAMECHANGER, MAXPREPS, ICS_FEED, CSV_IMPORT, STRIPE, PRINTIFY, RESEND, TWILIO, DIGITALOCEAN_SPACES, GOOGLE_MAPS]
+    IntegrationReadiness:
+      type: string
+      enum: [AVAILABLE, NOT_CONFIGURED, PARTNER_PENDING, PLATFORM_MANAGED, UNSUPPORTED]
+    IntegrationConnectionStatus:
+      type: string
+      enum: [NOT_CONFIGURED, AVAILABLE, AUTHORIZATION_PENDING, CONNECTED, DEGRADED, REVOKED, DISCONNECTED, UNSUPPORTED]
+    IntegrationConnectionResponse:
+      type: object
+      required: [id, provider, category, ownerType, authMode, status, grantedScopes, hasStoredCredential, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        provider: { $ref: "#/components/schemas/IntegrationProvider" }
+        category: { type: string }
+        ownerType: { type: string, enum: [PLATFORM, ORGANIZATION, USER] }
+        organizationId: { type: string, format: uuid, nullable: true }
+        userId: { type: string, format: uuid, nullable: true }
+        authMode: { type: string, enum: [NONE, PLATFORM_SECRET, OAUTH2, API_TOKEN, FILE_IMPORT, URL, WEBHOOK] }
+        status: { $ref: "#/components/schemas/IntegrationConnectionStatus" }
+        grantedScopes: { type: array, items: { type: string } }
+        externalAccountId: { type: string, nullable: true }
+        externalAccountName: { type: string, nullable: true }
+        hasStoredCredential: { type: boolean, description: Indicates only that encrypted credentials exist; no credential identifier or token is returned. }
+        accessTokenExpiresAt: { type: string, format: date-time, nullable: true }
+        lastSuccessfulSyncAt: { type: string, format: date-time, nullable: true }
+        lastHealthCheckAt: { type: string, format: date-time, nullable: true }
+        lastErrorCode: { type: string, nullable: true }
+        lastErrorMessage: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        connectedAt: { type: string, format: date-time, nullable: true }
+        revokedAt: { type: string, format: date-time, nullable: true }
+        disconnectedAt: { type: string, format: date-time, nullable: true }
+    IntegrationCatalogResponse:
+      type: object
+      required: [provider, displayName, category, ownerType, authMode, supportedAuthModes, readiness, adapterMode, description, activationRequirement, defaultScopes, stub]
+      properties:
+        provider: { $ref: "#/components/schemas/IntegrationProvider" }
+        displayName: { type: string }
+        category: { type: string }
+        ownerType: { type: string, enum: [PLATFORM, ORGANIZATION, USER] }
+        authMode: { type: string }
+        supportedAuthModes: { type: array, items: { type: string } }
+        readiness: { $ref: "#/components/schemas/IntegrationReadiness" }
+        adapterMode: { type: string }
+        description: { type: string }
+        activationRequirement: { type: string }
+        defaultScopes: { type: array, items: { type: string } }
+        stub: { type: boolean, description: True only for an explicitly configured local/test stub; production rejects stub mode. }
+        connection: { allOf: [{ $ref: "#/components/schemas/IntegrationConnectionResponse" }], nullable: true }
+    AuthorizationStartResponse:
+      type: object
+      required: [provider, connectionId, authorizationUrl, expiresAt]
+      properties:
+        provider: { $ref: "#/components/schemas/IntegrationProvider" }
+        connectionId: { type: string, format: uuid }
+        authorizationUrl: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+    AuthorizationCallbackResponse:
+      type: object
+      required: [connection]
+      properties:
+        connection: { $ref: "#/components/schemas/IntegrationConnectionResponse" }
+    IntegrationHealthResponse:
+      type: object
+      required: [id, connectionId, status, checkedAt]
+      properties:
+        id: { type: string, format: uuid }
+        connectionId: { type: string, format: uuid }
+        status: { type: string, enum: [HEALTHY, DEGRADED, FAILED] }
+        latencyMs: { type: integer, format: int64, nullable: true }
+        errorCode: { type: string, nullable: true }
+        errorMessage: { type: string, nullable: true }
+        checkedAt: { type: string, format: date-time }
 
 
 security:

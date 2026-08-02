@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/apiClient";
-import type { CsvImportResult, EventSourceConnection } from "./types";
+import type { CsvImportResult, EventSourceConnection, IntegrationCatalogItem, IntegrationConnectionSummary } from "./types";
 
 const connectionsKey = (organizationId: string) => ["organizations", organizationId, "event-source-connections"] as const;
 
@@ -44,5 +44,24 @@ export function useImportEventsCsv(organizationId: string) {
 				method: "POST",
 				body: params,
 			}),
+	});
+}
+
+
+const integrationCatalogKey = (organizationId: string) => ["organizations", organizationId, "integration-catalog"] as const;
+
+export function useOrganizationIntegrationCatalog(organizationId: string) {
+	return useQuery({
+		queryKey: integrationCatalogKey(organizationId),
+		queryFn: () => apiFetch<IntegrationCatalogItem[]>(`/organizations/${organizationId}/integrations/catalog`),
+		enabled: !!organizationId,
+	});
+}
+
+export function useOrganizationIntegrationConnections(organizationId: string) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "integration-connections"],
+		queryFn: () => apiFetch<IntegrationConnectionSummary[]>(`/organizations/${organizationId}/integration-connections`),
+		enabled: !!organizationId,
 	});
 }
