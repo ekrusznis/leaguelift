@@ -21,6 +21,7 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class LedgerServiceTest {
 
@@ -123,6 +124,41 @@ class LedgerServiceTest {
 		assertEquals(LedgerDirection.DEBIT, earning.direction)
 		// gross 1000, cost 1200, fee 50 -> net = 1000 - 1200 - 50 = -250 -> abs = 250
 		assertEquals(250L, earning.amountMinor)
+	}
+
+	@Test
+	fun `recordOfflineContribution clears the external receipt without creating payout earnings`() {
+		val contribution = confirmedContribution(amountMinor = 10_000L)
+		val captured = mutableListOf<InsertCall>()
+		stubInsert(captured)
+
+		service.recordOfflineContribution(contribution, "CHK-104")
+
+		assertEquals(2, captured.size)
+		assertEquals(LedgerEntryType.CONTRIBUTION to LedgerDirection.CREDIT, captured[0].entryType to captured[0].direction)
+		assertEquals(LedgerEntryType.OFFLINE_SETTLEMENT to LedgerDirection.DEBIT, captured[1].entryType to captured[1].direction)
+		assertEquals(10_000L, captured[0].amountMinor)
+		assertEquals(10_000L, captured[1].amountMinor)
+		assertTrue(captured.none { it.entryType == LedgerEntryType.ORGANIZATION_EARNING })
+	}
+
+	@Test
+	fun `recordOfflineOrder records gross settlement and vendor cost without payout earnings`() {
+		val order = confirmedOrder()
+		val items = listOf(orderItem(order.id, quantity = 2, unitPriceMinor = 2_500L, unitCostMinor = 1_000L))
+		val captured = mutableListOf<InsertCall>()
+		stubInsert(captured)
+
+		service.recordOfflineOrder(order, items, "EXT-ORDER-9")
+
+		assertEquals(3, captured.size)
+		assertEquals(LedgerEntryType.GROSS_SALE to LedgerDirection.CREDIT, captured[0].entryType to captured[0].direction)
+		assertEquals(LedgerEntryType.OFFLINE_SETTLEMENT to LedgerDirection.DEBIT, captured[1].entryType to captured[1].direction)
+		assertEquals(LedgerEntryType.PRODUCTION_COST to LedgerDirection.DEBIT, captured[2].entryType to captured[2].direction)
+		assertEquals(5_000L, captured[0].amountMinor)
+		assertEquals(5_000L, captured[1].amountMinor)
+		assertEquals(2_000L, captured[2].amountMinor)
+		assertTrue(captured.none { it.entryType == LedgerEntryType.ORGANIZATION_EARNING })
 	}
 
 	@Test

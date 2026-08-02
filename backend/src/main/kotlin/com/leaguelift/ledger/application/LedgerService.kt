@@ -195,6 +195,108 @@ class LedgerService(
 		)
 	}
 
+	/**
+	 * Records money the organization received outside LeagueLift. The matching
+	 * OFFLINE_SETTLEMENT debit documents that the funds were already settled
+	 * externally. No ORGANIZATION_EARNING row is created, so this record can never
+	 * be included in a LeagueLift payout transfer.
+	 */
+	@Transactional
+	fun recordOfflineContribution(contribution: Contribution, paymentReference: String?) {
+		recordOfflineReceipt(
+			organizationId = contribution.organizationId,
+			entryType = LedgerEntryType.CONTRIBUTION,
+			accountCode = LedgerEntryType.CONTRIBUTION.name,
+			amountMinor = contribution.amountMinor,
+			currency = contribution.currency,
+			sourceType = LedgerSourceType.CONTRIBUTION,
+			sourceId = contribution.id,
+			paymentReference = paymentReference,
+			description = "Offline campaign contribution recorded",
+		)
+	}
+
+	@Transactional
+	fun recordOfflineSponsorship(sponsorship: Sponsorship, paymentReference: String?) {
+		recordOfflineReceipt(
+			organizationId = sponsorship.organizationId,
+			entryType = LedgerEntryType.CONTRIBUTION,
+			accountCode = LedgerEntryType.CONTRIBUTION.name,
+			amountMinor = sponsorship.amountMinor,
+			currency = sponsorship.currency,
+			sourceType = LedgerSourceType.SPONSORSHIP,
+			sourceId = sponsorship.id,
+			paymentReference = paymentReference,
+			description = "Offline sponsorship purchase recorded",
+		)
+	}
+
+	@Transactional
+	fun recordOfflineOrder(order: Order, orderItems: List<OrderItem>, paymentReference: String?) {
+		val gross = orderItems.sumOf { it.unitPriceMinor * it.quantity }
+		val cost = orderItems.sumOf { it.unitCostMinor * it.quantity }
+		recordOfflineReceipt(
+			organizationId = order.organizationId,
+			entryType = LedgerEntryType.GROSS_SALE,
+			accountCode = LedgerEntryType.GROSS_SALE.name,
+			amountMinor = gross,
+			currency = order.currency,
+			sourceType = LedgerSourceType.ORDER,
+			sourceId = order.id,
+			paymentReference = paymentReference,
+			description = "Offline store order recorded",
+		)
+		ledgerEntryRepository.insert(
+			organizationId = order.organizationId,
+			accountCode = LedgerEntryType.PRODUCTION_COST.name,
+			entryType = LedgerEntryType.PRODUCTION_COST,
+			direction = LedgerDirection.DEBIT,
+			amountMinor = cost,
+			currency = order.currency,
+			sourceType = LedgerSourceType.ORDER,
+			sourceId = order.id,
+			externalReference = paymentReference,
+			description = "Manual vendor cost snapshotted for offline order",
+		)
+	}
+
+	private fun recordOfflineReceipt(
+		organizationId: UUID,
+		entryType: LedgerEntryType,
+		accountCode: String,
+		amountMinor: Long,
+		currency: String,
+		sourceType: LedgerSourceType,
+		sourceId: UUID,
+		paymentReference: String?,
+		description: String,
+	) {
+		ledgerEntryRepository.insert(
+			organizationId = organizationId,
+			accountCode = accountCode,
+			entryType = entryType,
+			direction = LedgerDirection.CREDIT,
+			amountMinor = amountMinor,
+			currency = currency,
+			sourceType = sourceType,
+			sourceId = sourceId,
+			externalReference = paymentReference,
+			description = description,
+		)
+		ledgerEntryRepository.insert(
+			organizationId = organizationId,
+			accountCode = LedgerEntryType.OFFLINE_SETTLEMENT.name,
+			entryType = LedgerEntryType.OFFLINE_SETTLEMENT,
+			direction = LedgerDirection.DEBIT,
+			amountMinor = amountMinor,
+			currency = currency,
+			sourceType = sourceType,
+			sourceId = sourceId,
+			externalReference = paymentReference,
+			description = "Funds received directly by the organization outside LeagueLift",
+		)
+	}
+
 	fun getPayoutSummary(organizationId: UUID): PayoutSummary {
 		val cutoff = holdingPeriodCutoff()
 		val eligible = ledgerEntryRepository.findEligibleOrganizationEarningCredits(organizationId, cutoff).sumOf { it.amountMinor }

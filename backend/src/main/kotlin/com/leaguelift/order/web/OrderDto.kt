@@ -3,6 +3,10 @@ package com.leaguelift.order.web
 import com.leaguelift.order.application.OrderCheckout
 import com.leaguelift.order.application.OrderLineItemRequest
 import com.leaguelift.order.domain.Fulfillment
+import com.leaguelift.order.domain.FulfillmentHistory
+import com.leaguelift.order.domain.FulfillmentReprint
+import com.leaguelift.order.domain.FulfillmentReprintStatus
+import com.leaguelift.order.domain.FulfillmentStatus
 import com.leaguelift.order.domain.Order
 import com.leaguelift.order.domain.ShippingAddress
 import jakarta.validation.Valid
@@ -11,6 +15,7 @@ import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import java.time.Instant
 import java.util.UUID
@@ -31,23 +36,19 @@ data class CreateOrderCheckoutRequest(
 )
 
 data class OrderCheckoutResponse(val orderId: UUID, val checkoutUrl: String)
-
 fun OrderCheckout.toResponse() = OrderCheckoutResponse(orderId, checkoutUrl)
 
 data class ShippingAddressResponse(val name: String?, val line1: String?, val line2: String?, val city: String?, val state: String?, val postalCode: String?, val country: String?)
-
 fun ShippingAddress.toResponse() = ShippingAddressResponse(name, line1, line2, city, state, postalCode, country)
 
-/** Public status-poll shape — no supporter contact info exposed back to the browser (mirrors ContributionStatusResponse). */
 data class OrderStatusResponse(val id: UUID, val status: String, val currency: String, val confirmedAt: Instant?)
-
 fun Order.toStatusResponse() = OrderStatusResponse(id, status.name, currency, confirmedAt)
 
-/** Org-admin shape. */
 data class OrderResponse(
 	val id: UUID,
 	val storeId: UUID,
 	val status: String,
+	val paymentSource: String,
 	val currency: String,
 	val supporterName: String?,
 	val supporterEmail: String?,
@@ -56,9 +57,90 @@ data class OrderResponse(
 	val refundedAt: Instant?,
 	val createdAt: Instant,
 )
+fun Order.toResponse() = OrderResponse(id, storeId, status.name, paymentSource.name, currency, supporterName, supporterEmail, shippingAddress?.toResponse(), confirmedAt, refundedAt, createdAt)
 
-fun Order.toResponse() = OrderResponse(id, storeId, status.name, currency, supporterName, supporterEmail, shippingAddress?.toResponse(), confirmedAt, refundedAt, createdAt)
+data class UpdateFulfillmentRequest(
+	@field:NotNull val status: FulfillmentStatus,
+	val manualVendorId: UUID? = null,
+	@field:Size(max = 200) val vendorOrderReference: String? = null,
+	@field:Size(max = 120) val carrier: String? = null,
+	@field:Size(max = 200) val trackingNumber: String? = null,
+	@field:Pattern(regexp = "^https://.*", message = "Tracking URL must use HTTPS.") @field:Size(max = 1000) val trackingUrl: String? = null,
+	@field:Size(max = 4000) val internalNotes: String? = null,
+	@field:Size(max = 1000) val attentionReason: String? = null,
+	@field:NotBlank @field:Size(min = 3, max = 500) val note: String,
+)
 
-data class FulfillmentResponse(val status: String, val printifyOrderId: String?, val lastError: String?)
+data class CreateFulfillmentReprintRequest(
+	@field:NotBlank @field:Size(min = 3, max = 1000) val reason: String,
+	@field:Size(max = 200) val vendorOrderReference: String? = null,
+	@field:Size(max = 4000) val internalNotes: String? = null,
+)
 
-fun Fulfillment.toResponse() = FulfillmentResponse(status.name, printifyOrderId, lastError)
+data class UpdateFulfillmentReprintRequest(
+	@field:NotNull val status: FulfillmentReprintStatus,
+	@field:Size(max = 200) val vendorOrderReference: String? = null,
+	@field:Size(max = 120) val carrier: String? = null,
+	@field:Size(max = 200) val trackingNumber: String? = null,
+	@field:Pattern(regexp = "^https://.*", message = "Tracking URL must use HTTPS.") @field:Size(max = 1000) val trackingUrl: String? = null,
+	@field:Size(max = 4000) val internalNotes: String? = null,
+)
+
+data class FulfillmentResponse(
+	val id: UUID,
+	val orderId: UUID,
+	val source: String,
+	val status: String,
+	val printifyOrderId: String?,
+	val manualVendorId: UUID?,
+	val manualVendorName: String?,
+	val vendorOrderReference: String?,
+	val carrier: String?,
+	val trackingNumber: String?,
+	val trackingUrl: String?,
+	val internalNotes: String?,
+	val attentionReason: String?,
+	val lastError: String?,
+	val statusChangedAt: Instant,
+	val shippedAt: Instant?,
+	val deliveredAt: Instant?,
+	val createdAt: Instant,
+	val updatedAt: Instant,
+)
+fun Fulfillment.toResponse() = FulfillmentResponse(
+	id, orderId, source.name, status.name, printifyOrderId, manualVendorId, manualVendorName,
+	vendorOrderReference, carrier, trackingNumber, trackingUrl, internalNotes, attentionReason,
+	lastError, statusChangedAt, shippedAt, deliveredAt, createdAt, updatedAt,
+)
+
+data class FulfillmentHistoryResponse(
+	val id: UUID,
+	val previousStatus: String?,
+	val newStatus: String,
+	val note: String,
+	val actorUserId: UUID?,
+	val createdAt: Instant,
+)
+fun FulfillmentHistory.toResponse() = FulfillmentHistoryResponse(id, previousStatus?.name, newStatus.name, note, actorUserId, createdAt)
+
+data class FulfillmentReprintResponse(
+	val id: UUID,
+	val fulfillmentId: UUID,
+	val orderId: UUID,
+	val status: String,
+	val reason: String,
+	val vendorOrderReference: String?,
+	val carrier: String?,
+	val trackingNumber: String?,
+	val trackingUrl: String?,
+	val internalNotes: String?,
+	val requestedByUserId: UUID,
+	val createdAt: Instant,
+	val updatedAt: Instant,
+	val shippedAt: Instant?,
+	val deliveredAt: Instant?,
+)
+fun FulfillmentReprint.toResponse() = FulfillmentReprintResponse(
+	id, fulfillmentId, orderId, status.name, reason, vendorOrderReference, carrier, trackingNumber,
+	trackingUrl, internalNotes, requestedByUserId, createdAt, updatedAt, shippedAt, deliveredAt,
+)

@@ -25,6 +25,7 @@ import com.leaguelift.organization.application.OrganizationService
 import com.leaguelift.organization.domain.OrganizationType
 import com.leaguelift.store.application.ProductService
 import com.leaguelift.store.application.StoreService
+import com.leaguelift.store.domain.CatalogSource
 import com.leaguelift.store.domain.ProductStatus
 import com.leaguelift.store.domain.StoreStatus
 import com.leaguelift.testsupport.AbstractIntegrationTest
@@ -87,8 +88,9 @@ class StoreOrderIntegrationTest : AbstractIntegrationTest() {
 		val store = storeService.create(organization.id, null, "Spring Store", "spring-store-${System.nanoTime()}", owner)
 		storeService.updateStatus(organization.id, store.id, StoreStatus.ACTIVE, owner)
 
-		val product = productService.create(organization.id, store.id, "Team Hoodie", null, 12L, "front", owner)
-		productService.updateStatus(organization.id, product.id, ProductStatus.ACTIVE, owner)
+		val product = productService.create(
+			organization.id, store.id, "Team Hoodie", null, CatalogSource.PRINTIFY, null, 12L, "front", owner,
+		)
 		assignReadyDesign(organization.id, product.id, owner)
 
 		every { printifyProductClient.createProduct("Team Hoodie", 12L, 5L, listOf(100L), 2500L, any(), "front") } returns
@@ -96,6 +98,7 @@ class StoreOrderIntegrationTest : AbstractIntegrationTest() {
 
 		val variant = productService.createVariant(organization.id, product.id, 5L, 100L, "M / Navy", 2500L, owner)
 		assertEquals(1200L, variant.costMinor, "cost must be Printify's real returned value, never guessed")
+		productService.updateStatus(organization.id, product.id, ProductStatus.ACTIVE, owner)
 
 		val fixedSessionId = "cs_test_${System.nanoTime()}"
 		every { stripeOrderCheckoutClient.createOrderCheckoutSession(any(), any(), any(), any()) } returns

@@ -1,5 +1,6 @@
 package com.leaguelift.sponsorship.persistence
 
+import com.leaguelift.finance.domain.PaymentSource
 import com.leaguelift.sponsorship.domain.Sponsorship
 import com.leaguelift.sponsorship.domain.SponsorshipReviewStatus
 import com.leaguelift.sponsorship.domain.SponsorshipStatus
@@ -12,7 +13,7 @@ import java.util.UUID
 private const val COLUMNS = """
     id, organization_id, package_id, sponsor_id, amount_minor, currency, status,
     stripe_checkout_session_id, stripe_payment_intent_id, confirmed_at, refunded_at,
-    review_status, reviewed_at, reviewed_by, renewal_reminder_sent_at, created_at
+    review_status, reviewed_at, reviewed_by, renewal_reminder_sent_at, created_at, payment_source
 """
 
 /** A renewal-reminder candidate — the join of a confirmed+approved sponsorship, its package's placement end date, and its sponsor's contact email (`SponsorshipRenewalReminderService`'s data source). */
@@ -129,6 +130,38 @@ class SponsorshipRepository(private val jdbcClient: JdbcClient) {
 			.param("id", id)
 			.update()
 
+	fun insertOfflinePending(organizationId: UUID, packageId: UUID, sponsorId: UUID, amountMinor: Long, currency: String): Sponsorship {
+		val id = UUID.randomUUID()
+		val now = Instant.now()
+		jdbcClient.sql(
+			"""
+			insert into sponsorship
+				(id, organization_id, package_id, sponsor_id, amount_minor, currency, status, payment_source, created_at)
+			values
+				(:id, :organizationId, :packageId, :sponsorId, :amountMinor, :currency, 'PENDING', 'OFFLINE', :now)
+			""".trimIndent(),
+		)
+			.param("id", id)
+			.param("organizationId", organizationId)
+			.param("packageId", packageId)
+			.param("sponsorId", sponsorId)
+			.param("amountMinor", amountMinor)
+			.param("currency", currency)
+			.param("now", Timestamp.from(now))
+			.update()
+		return findById(id)!!
+	}
+
+	fun markOfflineConfirmed(id: UUID, confirmedAt: Instant): Int = jdbcClient.sql(
+		"""
+		update sponsorship set status = 'CONFIRMED', confirmed_at = :confirmedAt
+		where id = :id and status = 'PENDING' and payment_source = 'OFFLINE'
+		""".trimIndent(),
+	)
+		.param("confirmedAt", Timestamp.from(confirmedAt))
+		.param("id", id)
+		.update()
+
 	/** Only flips PENDING -> CONFIRMED. Returns rows affected (0 if already confirmed — the webhook idempotency guard). `review_status` is left at its PENDING_REVIEW default — confirmation alone must never grant public visibility (Phase 6 remainder approval workflow, ADR-019). */
 	fun markConfirmed(id: UUID, stripePaymentIntentId: String?): Int {
 		val now = Instant.now()
@@ -231,5 +264,6 @@ class SponsorshipRepository(private val jdbcClient: JdbcClient) {
 			reviewedById = rs.getObject("reviewed_by", UUID::class.java),
 			renewalReminderSentAt = rs.getTimestamp("renewal_reminder_sent_at")?.toInstant(),
 			createdAt = rs.getTimestamp("created_at").toInstant(),
+			paymentSource = PaymentSource.valueOf(rs.getString("payment_source")),
 		)
 }

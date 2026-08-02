@@ -1,5 +1,6 @@
 package com.leaguelift.fundraising.persistence
 
+import com.leaguelift.finance.domain.PaymentSource
 import com.leaguelift.fundraising.domain.Contribution
 import com.leaguelift.fundraising.domain.ContributionStatus
 import org.springframework.jdbc.core.simple.JdbcClient
@@ -8,7 +9,7 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
-private const val COLUMNS = "id, organization_id, campaign_id, amount_minor, currency, supporter_name, is_anonymous, supporter_email, status, stripe_checkout_session_id, stripe_payment_intent_id, confirmed_at, refunded_at, created_at"
+private const val COLUMNS = "id, organization_id, campaign_id, amount_minor, currency, supporter_name, is_anonymous, supporter_email, status, stripe_checkout_session_id, stripe_payment_intent_id, confirmed_at, refunded_at, created_at, payment_source"
 
 @Repository
 class ContributionRepository(private val jdbcClient: JdbcClient) {
@@ -116,6 +117,50 @@ class ContributionRepository(private val jdbcClient: JdbcClient) {
 			.param("id", id)
 			.update()
 
+	fun insertOfflinePending(
+		organizationId: UUID,
+		campaignId: UUID,
+		amountMinor: Long,
+		currency: String,
+		supporterName: String?,
+		isAnonymous: Boolean,
+		supporterEmail: String?,
+	): Contribution {
+		val id = UUID.randomUUID()
+		val now = Instant.now()
+		jdbcClient.sql(
+			"""
+			insert into contribution
+				(id, organization_id, campaign_id, amount_minor, currency, supporter_name, is_anonymous,
+				 supporter_email, status, payment_source, created_at)
+			values
+				(:id, :organizationId, :campaignId, :amountMinor, :currency, :supporterName, :isAnonymous,
+				 :supporterEmail, 'PENDING', 'OFFLINE', :now)
+			""".trimIndent(),
+		)
+			.param("id", id)
+			.param("organizationId", organizationId)
+			.param("campaignId", campaignId)
+			.param("amountMinor", amountMinor)
+			.param("currency", currency)
+			.param("supporterName", supporterName)
+			.param("isAnonymous", isAnonymous)
+			.param("supporterEmail", supporterEmail)
+			.param("now", Timestamp.from(now))
+			.update()
+		return findById(id)!!
+	}
+
+	fun markOfflineConfirmed(id: UUID, confirmedAt: Instant): Int = jdbcClient.sql(
+		"""
+		update contribution set status = 'CONFIRMED', confirmed_at = :confirmedAt
+		where id = :id and status = 'PENDING' and payment_source = 'OFFLINE'
+		""".trimIndent(),
+	)
+		.param("confirmedAt", Timestamp.from(confirmedAt))
+		.param("id", id)
+		.update()
+
 	/** Only flips PENDING -> CONFIRMED. Returns rows affected (0 if already confirmed/canceled — the idempotency guard). */
 	fun markConfirmed(id: UUID, stripePaymentIntentId: String?): Int {
 		val now = Instant.now()
@@ -156,5 +201,6 @@ class ContributionRepository(private val jdbcClient: JdbcClient) {
 			confirmedAt = rs.getTimestamp("confirmed_at")?.toInstant(),
 			refundedAt = rs.getTimestamp("refunded_at")?.toInstant(),
 			createdAt = rs.getTimestamp("created_at").toInstant(),
+			paymentSource = PaymentSource.valueOf(rs.getString("payment_source")),
 		)
 }

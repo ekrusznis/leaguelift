@@ -14,7 +14,7 @@ function jsonResponse(body: unknown, status = 200) {
 
 const confirmedContribution: Contribution = {
 	id: "33333333-3333-3333-3333-333333333333",
-	status: "CONFIRMED",
+	status: "CONFIRMED", paymentSource: "STRIPE",
 	amountMinor: 10_000,
 	currency: "USD",
 	supporterName: "Jane Doe",

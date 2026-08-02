@@ -2,6 +2,7 @@ package com.leaguelift.store.application
 
 import com.leaguelift.audit.application.AuditService
 import com.leaguelift.common.error.ValidationException
+import com.leaguelift.common.web.CurrentUser
 import com.leaguelift.integration.printify.application.VendorSelectionService
 import com.leaguelift.integration.printify.infra.PrintifyCatalogClient
 import com.leaguelift.integration.printify.infra.PrintifyImageClient
@@ -21,7 +22,7 @@ import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.membership.domain.MembershipRole
 import com.leaguelift.membership.domain.MembershipStatus
 import com.leaguelift.membership.domain.OrganizationMembership
-import com.leaguelift.common.web.CurrentUser
+import com.leaguelift.store.domain.CatalogSource
 import com.leaguelift.store.domain.Product
 import com.leaguelift.store.domain.ProductStatus
 import com.leaguelift.store.domain.ProductVariant
@@ -40,10 +41,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class ProductServiceTest {
-
 	private val productRepository = mockk<ProductRepository>()
 	private val productVariantRepository = mockk<ProductVariantRepository>()
 	private val storeRepository = mockk<StoreRepository>()
+	private val manualVendorService = mockk<ManualVendorService>()
 	private val membershipService = mockk<MembershipService>()
 	private val auditService = mockk<AuditService>()
 	private val mediaAssignmentService = mockk<MediaAssignmentService>()
@@ -53,16 +54,28 @@ class ProductServiceTest {
 	private val printifyProductClient = mockk<PrintifyProductClient>()
 	private val vendorSelectionService = mockk<VendorSelectionService>()
 	private val service = ProductService(
-		productRepository, productVariantRepository, storeRepository, membershipService, auditService,
-		mediaAssignmentService, mediaReadService, printifyCatalogClient, printifyImageClient, printifyProductClient, vendorSelectionService,
+		productRepository, productVariantRepository, storeRepository, manualVendorService, membershipService,
+		auditService, mediaAssignmentService, mediaReadService, printifyCatalogClient, printifyImageClient,
+		printifyProductClient, vendorSelectionService,
 	)
 
 	private val orgId = UUID.randomUUID()
 	private val currentUser = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
 
 	@Test
+	fun `createVariant rejects a manual product`() {
+		val product = product(CatalogSource.MANUAL, printifyImageId = null)
+		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+		every { productRepository.findById(product.id, orgId) } returns product
+
+		assertFailsWith<ValidationException> {
+			service.createVariant(orgId, product.id, 5L, 100L, "M / Navy", 2500L, currentUser)
+		}
+	}
+
+	@Test
 	fun `createVariant throws ValidationException when no design has been assigned yet`() {
-		val product = product(printifyImageId = null)
+		val product = product(CatalogSource.PRINTIFY, printifyImageId = null)
 		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
 		every { productRepository.findById(product.id, orgId) } returns product
 		every { mediaAssignmentService.listActive(orgId, MediaEntityType.PRODUCT, product.id, currentUser) } returns emptyList()
@@ -73,8 +86,8 @@ class ProductServiceTest {
 	}
 
 	@Test
-	fun `createVariant uploads the design to Printify on first use and snapshots the real returned cost`() {
-		val product = product(printifyImageId = null)
+	fun `createVariant uploads the design to Printify on first use and snapshots the returned cost`() {
+		val product = product(CatalogSource.PRINTIFY, printifyImageId = null)
 		val assignment = mediaAssignment(product.id)
 		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
 		every { productRepository.findById(product.id, orgId) } returns product
@@ -85,78 +98,87 @@ class ProductServiceTest {
 		every {
 			printifyProductClient.createProduct("Team Hoodie", 12L, 5L, listOf(100L), 2500L, "printify_img_1", "front")
 		} returns PrintifyProductResult("printify_product_1", listOf(PrintifyProductVariantCost(100L, costMinor = 1200L, priceMinor = 2500L)))
-		every { productVariantRepository.insert(orgId, product.id, "M / Navy", 5L, 100L, "USD", 1200L, 2500L) } returns productVariant(product.id, 1200L, 2500L)
+		every { productVariantRepository.insertPrintify(orgId, product.id, "M / Navy", 5L, 100L, "USD", 1200L, 2500L) } returns productVariant(product.id, CatalogSource.PRINTIFY, 1200L, 2500L)
 		every { auditService.record(any(), any(), any(), any(), any()) } just runs
 
 		service.createVariant(orgId, product.id, 5L, 100L, "M / Navy", 2500L, currentUser)
 
 		verify(exactly = 1) { printifyImageClient.uploadImage(any(), any()) }
 		verify(exactly = 1) { productRepository.updatePrintifyImageId(product.id, orgId, "printify_img_1") }
-		verify(exactly = 1) { productVariantRepository.insert(orgId, product.id, "M / Navy", 5L, 100L, "USD", 1200L, 2500L) }
+		verify(exactly = 1) { productVariantRepository.insertPrintify(orgId, product.id, "M / Navy", 5L, 100L, "USD", 1200L, 2500L) }
 	}
 
 	@Test
-	fun `createVariant reuses an already-uploaded printify image id without re-uploading`() {
-		val product = product(printifyImageId = "printify_img_existing")
+	fun `createManualVariant records entered cost without calling Printify`() {
+		val product = product(CatalogSource.MANUAL, printifyImageId = null)
+		val created = productVariant(product.id, CatalogSource.MANUAL, 900L, 1800L)
 		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
 		every { productRepository.findById(product.id, orgId) } returns product
-		every {
-			printifyProductClient.createProduct("Team Hoodie", 12L, 5L, listOf(100L), 2500L, "printify_img_existing", "front")
-		} returns PrintifyProductResult("printify_product_1", listOf(PrintifyProductVariantCost(100L, costMinor = 1300L, priceMinor = 2500L)))
-		every { productVariantRepository.insert(orgId, product.id, "M / Navy", 5L, 100L, "USD", 1300L, 2500L) } returns productVariant(product.id, 1300L, 2500L)
+		every { productVariantRepository.insertManual(orgId, product.id, "Youth M", "Y-M", "M", "Navy", "USD", 900L, 1800L) } returns created
 		every { auditService.record(any(), any(), any(), any(), any()) } just runs
 
-		service.createVariant(orgId, product.id, 5L, 100L, "M / Navy", 2500L, currentUser)
+		val result = service.createManualVariant(orgId, product.id, "Youth M", "Y-M", "M", "Navy", "usd", 900L, 1800L, currentUser)
 
-		verify(exactly = 0) { printifyImageClient.uploadImage(any(), any()) }
+		assertEquals(CatalogSource.MANUAL, result.catalogSource)
+		verify(exactly = 0) { printifyProductClient.createProduct(any(), any(), any(), any(), any(), any(), any()) }
 	}
 
 	@Test
-	fun `listPublicProducts returns only ACTIVE products, never DRAFT or ARCHIVED`() {
+	fun `createManualVariant rejects a price below vendor cost`() {
+		val product = product(CatalogSource.MANUAL, printifyImageId = null)
+		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+		every { productRepository.findById(product.id, orgId) } returns product
+
+		assertFailsWith<ValidationException> {
+			service.createManualVariant(orgId, product.id, "Youth M", null, null, null, "USD", 1800L, 900L, currentUser)
+		}
+	}
+
+	@Test
+	fun `listPublicProducts returns only ACTIVE products`() {
 		val storeId = UUID.randomUUID()
-		val active = product(printifyImageId = "img_1").copy(storeId = storeId, status = ProductStatus.ACTIVE)
-		val draft = product(printifyImageId = null).copy(storeId = storeId, status = ProductStatus.DRAFT)
-		val archived = product(printifyImageId = "img_2").copy(storeId = storeId, status = ProductStatus.ARCHIVED)
+		val active = product(CatalogSource.PRINTIFY, "img_1").copy(storeId = storeId, status = ProductStatus.ACTIVE)
+		val draft = product(CatalogSource.MANUAL, null).copy(storeId = storeId, status = ProductStatus.DRAFT)
+		val archived = product(CatalogSource.PRINTIFY, "img_2").copy(storeId = storeId, status = ProductStatus.ARCHIVED)
 		every { productRepository.findByStore(storeId, 0, 100) } returns listOf(active, draft, archived)
 
-		val result = service.listPublicProducts(storeId)
-
-		assertEquals(listOf(active.id), result.map { it.id })
+		assertEquals(listOf(active.id), service.listPublicProducts(storeId).map { it.id })
 	}
 
 	@Test
-	fun `getPublicDesignUrl returns null when the design assignment isn't PUBLIC-visibility`() {
-		val product = product(printifyImageId = "img_1")
+	fun `getPublicDesignUrl returns null without a public assignment`() {
+		val product = product(CatalogSource.MANUAL, null)
 		every { mediaAssignmentService.getPublicAssignment(MediaEntityType.PRODUCT, product.id, MediaUsageSlot.PRODUCT_DESIGN) } returns null
 
-		val result = service.getPublicDesignUrl(product.id)
-
-		assertEquals(null, result)
+		assertEquals(null, service.getPublicDesignUrl(product.id))
 		verify(exactly = 0) { mediaReadService.describe(any()) }
 	}
 
 	@Test
-	fun `getPublicDesignUrl resolves the signed url once a PUBLIC assignment exists`() {
-		val product = product(printifyImageId = "img_1")
+	fun `getPublicDesignUrl resolves a public assignment`() {
+		val product = product(CatalogSource.PRINTIFY, "img_1")
 		val assignment = mediaAssignment(product.id).copy(visibility = Visibility.PUBLIC, publicationStatus = PublicationStatus.APPROVED)
 		every { mediaAssignmentService.getPublicAssignment(MediaEntityType.PRODUCT, product.id, MediaUsageSlot.PRODUCT_DESIGN) } returns assignment
 		every { mediaReadService.describe(assignment) } returns MediaDescriptor(assignment, "https://signed.example.com/design.png", "image/png", 1024, 500, 500)
 
-		val result = service.getPublicDesignUrl(product.id)
-
-		assertEquals("https://signed.example.com/design.png", result)
+		assertEquals("https://signed.example.com/design.png", service.getPublicDesignUrl(product.id))
 	}
 
-	private fun product(printifyImageId: String?) = Product(
+	private fun product(source: CatalogSource, printifyImageId: String?) = Product(
 		id = UUID.randomUUID(), organizationId = orgId, storeId = UUID.randomUUID(), name = "Team Hoodie", description = null,
-		printifyBlueprintId = 12L, printifyImageId = printifyImageId, printifyPrintPosition = "front",
+		catalogSource = source, manualVendorId = null, manualVendorName = null,
+		printifyBlueprintId = if (source == CatalogSource.PRINTIFY) 12L else null,
+		printifyImageId = printifyImageId, printifyPrintPosition = "front",
 		status = ProductStatus.DRAFT, createdAt = Instant.now(), updatedAt = Instant.now(),
 	)
 
-	private fun productVariant(productId: UUID, costMinor: Long, priceMinor: Long) = ProductVariant(
-		id = UUID.randomUUID(), organizationId = orgId, productId = productId, label = "M / Navy",
-		printifyPrintProviderId = 5L, printifyVariantId = 100L, currency = "USD", costMinor = costMinor, priceMinor = priceMinor,
-		isActive = true, createdAt = Instant.now(), updatedAt = Instant.now(),
+	private fun productVariant(productId: UUID, source: CatalogSource, costMinor: Long, priceMinor: Long) = ProductVariant(
+		id = UUID.randomUUID(), organizationId = orgId, productId = productId, catalogSource = source, label = "M / Navy",
+		sku = if (source == CatalogSource.MANUAL) "M-NAVY" else null, size = "M", color = "Navy",
+		printifyPrintProviderId = if (source == CatalogSource.PRINTIFY) 5L else null,
+		printifyVariantId = if (source == CatalogSource.PRINTIFY) 100L else null,
+		currency = "USD", costMinor = costMinor, priceMinor = priceMinor, isActive = true,
+		createdAt = Instant.now(), updatedAt = Instant.now(),
 	)
 
 	private fun mediaAssignment(productId: UUID) = MediaAssignment(

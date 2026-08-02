@@ -16,16 +16,19 @@ import com.leaguelift.media.domain.MediaEntityType
 import com.leaguelift.media.domain.MediaUsageSlot
 import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.order.domain.Fulfillment
+import com.leaguelift.order.domain.FulfillmentSource
 import com.leaguelift.order.domain.FulfillmentStatus
 import com.leaguelift.order.domain.Order
 import com.leaguelift.order.domain.OrderStatus
 import com.leaguelift.order.domain.ShippingAddress
 import com.leaguelift.order.infra.OrderCheckoutLineItem
 import com.leaguelift.order.infra.StripeOrderCheckoutClient
+import com.leaguelift.order.persistence.FulfillmentHistoryRepository
 import com.leaguelift.order.persistence.FulfillmentRepository
 import com.leaguelift.order.persistence.OrderItemRepository
 import com.leaguelift.order.persistence.OrderRepository
 import com.leaguelift.outbox.application.OutboxWriter
+import com.leaguelift.store.domain.CatalogSource
 import com.leaguelift.store.domain.ProductStatus
 import com.leaguelift.store.domain.StoreStatus
 import com.leaguelift.store.persistence.ProductRepository
@@ -69,6 +72,7 @@ class OrderService(
 	private val orderRepository: OrderRepository,
 	private val orderItemRepository: OrderItemRepository,
 	private val fulfillmentRepository: FulfillmentRepository,
+	private val fulfillmentHistoryRepository: FulfillmentHistoryRepository,
 	private val storeRepository: StoreRepository,
 	private val productRepository: ProductRepository,
 	private val productVariantRepository: ProductVariantRepository,
@@ -113,6 +117,19 @@ class OrderService(
 		if (resolvedItems.any { it.second.currency != currency }) {
 			throw ValidationException("All items in a single checkout must use the same currency.")
 		}
+		val catalogSources = resolvedItems.map { it.first.catalogSource }.toSet()
+		if (catalogSources.size != 1) {
+			throw ValidationException("Printify and manually fulfilled products cannot be combined in one order.")
+		}
+		if (resolvedItems.any { (product, variant, _) -> product.catalogSource != variant.catalogSource }) {
+			throw ValidationException("A product variant has an invalid fulfillment source.")
+		}
+		if (catalogSources.single() == CatalogSource.MANUAL) {
+			val vendorIds = resolvedItems.map { it.first.manualVendorId }.toSet()
+			if (vendorIds.size != 1) {
+				throw ValidationException("Manually fulfilled products from different vendors cannot be combined in one order.")
+			}
+		}
 
 		return try {
 			val order = orderRepository.insertPending(store.organizationId, store.id, currency, supporterName, supporterEmail)
@@ -145,7 +162,7 @@ class OrderService(
 			auditService.record(null, order.organizationId, "order.confirmed", "order", order.id)
 			val items = orderItemRepository.findByOrder(order.id)
 			ledgerService.recordConfirmedOrder(order.copy(status = OrderStatus.CONFIRMED), items)
-			submitFulfillment(order.id, order.organizationId)
+			createInitialFulfillment(order.id, order.organizationId)
 			if (order.supporterEmail != null) {
 				val totalMinor = items.sumOf { it.unitPriceMinor * it.quantity }
 				outboxWriter.write(
@@ -172,18 +189,18 @@ class OrderService(
 	}
 
 	fun listForStore(organizationId: UUID, storeId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<Order> {
-		membershipService.requireActiveMembership(organizationId, currentUser)
+		membershipService.requireManagerRole(organizationId, currentUser)
 		storeRepository.findById(storeId, organizationId) ?: throw NotFoundException("STORE_NOT_FOUND", "The store could not be found.")
 		return orderRepository.findByStore(storeId, offset, limit)
 	}
 
 	fun getConfirmedCount(organizationId: UUID, storeId: UUID, currentUser: CurrentUser): Long {
-		membershipService.requireActiveMembership(organizationId, currentUser)
+		membershipService.requireManagerRole(organizationId, currentUser)
 		return orderRepository.countConfirmedByStore(storeId)
 	}
 
 	fun getFulfillment(organizationId: UUID, orderId: UUID, currentUser: CurrentUser): Fulfillment? {
-		membershipService.requireActiveMembership(organizationId, currentUser)
+		membershipService.requireManagerRole(organizationId, currentUser)
 		orderRepository.findById(orderId, organizationId) ?: throw NotFoundException("ORDER_NOT_FOUND", "The order could not be found.")
 		return fulfillmentRepository.findByOrder(orderId)
 	}
@@ -217,33 +234,68 @@ class OrderService(
 		return orderRepository.findById(order.id, organizationId)!!
 	}
 
-	private fun submitFulfillment(orderId: UUID, organizationId: UUID) {
+	private fun createInitialFulfillment(orderId: UUID, organizationId: UUID) {
+		val items = orderItemRepository.findByOrder(orderId)
+		val resolved = items.map { item ->
+			val variant = productVariantRepository.findById(item.productVariantId, organizationId)
+				?: error("order_item ${item.id} references a missing product_variant")
+			val product = productRepository.findById(variant.productId, organizationId)
+				?: error("product_variant ${variant.id} references a missing product")
+			Triple(item, product, variant)
+		}
+		val source = resolved.map { it.second.catalogSource }.distinct().singleOrNull()
+			?: error("order $orderId contains mixed catalog sources")
+		if (source == CatalogSource.MANUAL) {
+			val vendorId = resolved.map { it.second.manualVendorId }.distinct().singleOrNull()
+			val fulfillment = fulfillmentRepository.insert(
+				orderId = orderId, source = FulfillmentSource.MANUAL, status = FulfillmentStatus.READY,
+				printifyOrderId = null, manualVendorId = vendorId, lastError = null,
+			)
+			fulfillmentHistoryRepository.insert(
+				organizationId, fulfillment.id, null, fulfillment.status,
+				"Manual fulfillment created after payment confirmation.", null,
+			)
+			return
+		}
+
 		try {
-			val lineItems = orderItemRepository.findByOrder(orderId).map { item ->
-				val variant = productVariantRepository.findById(item.productVariantId, organizationId)
-					?: error("order_item ${item.id} references a missing product_variant")
-				val product = productRepository.findById(variant.productId, organizationId)
-					?: error("product_variant ${variant.id} references a missing product")
+			val lineItems = resolved.map { (item, product, variant) ->
 				val designAssignment = mediaAssignmentService.getActiveAssignment(MediaEntityType.PRODUCT, product.id, MediaUsageSlot.PRODUCT_DESIGN)
 					?: error("product ${product.id} has no design assigned")
 				val designUrl = mediaReadService.describe(designAssignment)?.url
 					?: error("product ${product.id}'s design asset could not be found")
 				PrintifyOrderLineItem(
-					printifyBlueprintId = product.printifyBlueprintId,
-					printifyPrintProviderId = variant.printifyPrintProviderId,
-					printifyVariantId = variant.printifyVariantId,
+					printifyBlueprintId = product.printifyBlueprintId ?: error("PRINTIFY product ${product.id} has no blueprint ID"),
+					printifyPrintProviderId = variant.printifyPrintProviderId ?: error("PRINTIFY variant ${variant.id} has no provider ID"),
+					printifyVariantId = variant.printifyVariantId ?: error("PRINTIFY variant ${variant.id} has no variant ID"),
 					quantity = item.quantity,
 					printAreaImagesByPosition = mapOf(product.printifyPrintPosition to designUrl),
 				)
 			}
 			val draftOrder = printifyOrderClient.createDraftOrder(orderId.toString(), lineItems)
-			fulfillmentRepository.insert(orderId, FulfillmentStatus.DRAFT_CREATED, draftOrder.printifyOrderId, null)
+			val fulfillment = fulfillmentRepository.insert(
+				orderId, FulfillmentSource.PRINTIFY, FulfillmentStatus.DRAFT_CREATED, draftOrder.printifyOrderId, null, null,
+			)
+			fulfillmentHistoryRepository.insert(
+				organizationId, fulfillment.id, null, fulfillment.status,
+				"Printify draft order created after payment confirmation.", null,
+			)
 		} catch (e: RestClientException) {
-			log.error("Printify draft-order creation failed for order {}: {}", orderId, e.message, e)
-			fulfillmentRepository.insert(orderId, FulfillmentStatus.FAILED, null, e.message ?: e.javaClass.simpleName)
+			recordPrintifyFailure(orderId, organizationId, e.message ?: e.javaClass.simpleName, e)
 		} catch (e: Exception) {
-			log.error("Fulfillment submission failed for order {}: {}", orderId, e.message, e)
-			fulfillmentRepository.insert(orderId, FulfillmentStatus.FAILED, null, e.message ?: e.javaClass.simpleName)
+			recordPrintifyFailure(orderId, organizationId, e.message ?: e.javaClass.simpleName, e)
 		}
 	}
+
+	private fun recordPrintifyFailure(orderId: UUID, organizationId: UUID, message: String, exception: Exception) {
+		log.error("Fulfillment submission failed for order {}: {}", orderId, message, exception)
+		val fulfillment = fulfillmentRepository.insert(
+			orderId, FulfillmentSource.PRINTIFY, FulfillmentStatus.FAILED, null, null, message,
+		)
+		fulfillmentHistoryRepository.insert(
+			organizationId, fulfillment.id, null, fulfillment.status,
+			"Printify draft-order creation failed; payment remains confirmed.", null,
+		)
+	}
+
 }

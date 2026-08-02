@@ -1,5 +1,6 @@
 package com.leaguelift.order.domain
 
+import com.leaguelift.finance.domain.PaymentSource
 import java.time.Instant
 import java.util.UUID
 
@@ -30,4 +31,5 @@ data class Order(
 	val confirmedAt: Instant?,
 	val refundedAt: Instant?,
 	val createdAt: Instant,
+	val paymentSource: PaymentSource = PaymentSource.STRIPE,
 )

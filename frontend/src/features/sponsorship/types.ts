@@ -64,6 +64,7 @@ export interface SponsorshipStatusResult {
 export interface Sponsorship {
 	id: string;
 	status: SponsorshipStatus;
+	paymentSource: "STRIPE" | "OFFLINE";
 	amountMinor: number;
 	currency: string;
 	sponsorId: string;

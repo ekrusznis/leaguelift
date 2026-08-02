@@ -23,6 +23,20 @@ describe("SignInPage", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("uses surface-aware text contrast on the auth layout", () => {
+		renderWithProviders(
+			<Routes>
+				<Route path="/auth/sign-in" element={<SignInPage />} />
+			</Routes>,
+			{ route: "/auth/sign-in" },
+		);
+
+		const emailInput = screen.getByLabelText(/email address/i);
+		expect(emailInput).toHaveClass("bg-white", "text-navy-900");
+		expect(screen.getByText("Email address")).toHaveClass("text-white");
+		expect(screen.getByRole("tab", { name: "Sign In" })).toHaveClass("text-navy-900");
+	});
+
 	it("calls the real login endpoint and only navigates once it succeeds", async () => {
 		vi.mocked(fetch).mockResolvedValue(
 			mockFetchResponse(200, {

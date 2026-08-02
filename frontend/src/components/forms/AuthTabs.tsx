@@ -1,14 +1,16 @@
 import { Link } from "react-router-dom";
 
 /** Sign In / Create Account tabs at the top of the auth card (section 24.1). */
-export function AuthTabs({ active }: { active: "sign-in" | "register" }) {
+export function AuthTabs({ active, tone = "light" }: { active: "sign-in" | "register"; tone?: "light" | "dark" }) {
 	const tabs = [
 		{ key: "sign-in", label: "Sign In", to: "/auth/sign-in" },
 		{ key: "register", label: "Create Account", to: "/auth/register" },
 	] as const;
 
+	const borderClassName = tone === "dark" ? "border-white/10" : "border-slate-300";
+
 	return (
-		<div role="tablist" aria-label="Authentication" className="flex gap-6 border-b border-white/10">
+		<div role="tablist" aria-label="Authentication" className={`flex gap-6 border-b ${borderClassName}`}>
 			{tabs.map((tab) => {
 				const isActive = tab.key === active;
 				return (
@@ -17,7 +19,11 @@ export function AuthTabs({ active }: { active: "sign-in" | "register" }) {
 						to={tab.to}
 						role="tab"
 						aria-selected={isActive}
-						className={`relative pb-3 text-sm font-semibold ${isActive ? "text-white" : "text-slate-400 hover:text-slate-200"}`}
+						className={`relative pb-3 text-sm font-semibold ${
+						isActive
+							? tone === "dark" ? "text-white" : "text-navy-900"
+							: tone === "dark" ? "text-slate-400 hover:text-slate-200" : "text-slate-600 hover:text-navy-900"
+					}`}
 					>
 						{tab.label}
 						{isActive && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-green-500" aria-hidden="true" />}

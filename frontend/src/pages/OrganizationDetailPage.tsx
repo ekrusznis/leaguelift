@@ -9,6 +9,7 @@ import { LoadingState } from "../components/states/LoadingState";
 import { OrganizationLogo } from "../dashboard/components/OrganizationLogo";
 import { OrganizationDocumentsPanel } from "../features/documents/OrganizationDocumentsPanel";
 import { OnboardingPanel } from "../features/onboarding/OnboardingPanel";
+import { OfflineFinancialRecordsPanel } from "../features/offlineFinance/OfflineFinancialRecordsPanel";
 import { OrganizationCorrectionReviewPanel } from "../features/profileCorrections/OrganizationCorrectionReviewPanel";
 import { EventListPanel } from "../features/events/EventListPanel";
 import { FeeTemplateList } from "../features/fees/FeeTemplateList";
@@ -45,6 +46,7 @@ const SECTION_LABELS: Array<{ id: OrganizationSection; label: string }> = [
 	{ id: "fees", label: "Fees & Payments" },
 	{ id: "fundraising", label: "Fundraising" },
 	{ id: "stores", label: "Stores & Orders" },
+	{ id: "financial-operations", label: "Financial Operations" },
 	{ id: "sponsorships", label: "Sponsorships" },
 	{ id: "reports", label: "Reports" },
 	{ id: "documents", label: "Documents" },
@@ -101,7 +103,7 @@ export function OrganizationDetailPage() {
 		if (id === "fees" || id === "reports") return canViewReports || canManageOrganization;
 		if (id === "members") return canManageMembers;
 		if (id === "settings") return canManageOrganization || canManagePayouts;
-		if (["households", "fundraising", "stores", "sponsorships", "documents"].includes(id)) return canManageOrganization;
+		if (["households", "fundraising", "stores", "financial-operations", "sponsorships", "documents"].includes(id)) return canManageOrganization;
 		return false;
 	});
 
@@ -220,6 +222,8 @@ function OrganizationSectionContent({
 			return <Section title="Fundraising Campaigns"><CampaignList organizationId={organization.id} /></Section>;
 		case "stores":
 			return <Section title="Stores & Orders"><StoreList organizationId={organization.id} /></Section>;
+		case "financial-operations":
+			return <Section title="Financial Operations" description="Record and verify money received outside LeagueLift without fabricating provider activity."><OfflineFinancialRecordsPanel organizationId={organization.id} /></Section>;
 		case "sponsorships":
 			return <Section title="Sponsorship Packages"><SponsorshipPackageList organizationId={organization.id} organizationSlug={organization.slug} /></Section>;
 		case "reports":

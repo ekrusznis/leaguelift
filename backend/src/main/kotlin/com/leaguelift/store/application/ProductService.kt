@@ -19,6 +19,7 @@ import com.leaguelift.media.domain.MediaEntityType
 import com.leaguelift.media.domain.MediaUsageSlot
 import com.leaguelift.media.domain.Visibility
 import com.leaguelift.membership.application.MembershipService
+import com.leaguelift.store.domain.CatalogSource
 import com.leaguelift.store.domain.Product
 import com.leaguelift.store.domain.ProductStatus
 import com.leaguelift.store.domain.ProductVariant
@@ -29,25 +30,24 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.client.RestClientException
+import java.util.Currency
 import java.util.UUID
 
 private val log = LoggerFactory.getLogger(ProductService::class.java)
 private const val PUBLIC_STORE_PRODUCT_LIMIT = 100
 
 /**
- * Products are backed by a real Printify blueprint/print-provider/variant
- * (Phase 4 slice 1). A variant's real `cost_minor` is only knowable once
- * [PrintifyProductClient.createProduct] is called for it — see
- * `integration/printify/infra/PrintifyProductClient.kt` for why the catalog
- * alone can't answer this. Auto-design/personalization (logo placement, per-
- * buyer name/number) is explicitly out of scope — an admin uploads one
- * pre-made design via the existing media pipeline (`MediaUsageSlot.PRODUCT_DESIGN`).
+ * One catalog supports two honest sources. PRINTIFY preserves real provider IDs
+ * and provider-returned cost snapshots. MANUAL stores no provider IDs and uses
+ * administrator-entered vendor/cost/SKU details. Order items still snapshot both
+ * price and cost, so later catalog edits never rewrite transaction history.
  */
 @Service
 class ProductService(
 	private val productRepository: ProductRepository,
 	private val productVariantRepository: ProductVariantRepository,
 	private val storeRepository: StoreRepository,
+	private val manualVendorService: ManualVendorService,
 	private val membershipService: MembershipService,
 	private val auditService: AuditService,
 	private val mediaAssignmentService: MediaAssignmentService,
@@ -57,7 +57,6 @@ class ProductService(
 	private val printifyProductClient: PrintifyProductClient,
 	private val vendorSelectionService: VendorSelectionService,
 ) {
-
 	fun listBlueprints(organizationId: UUID, currentUser: CurrentUser): List<PrintifyBlueprint> {
 		membershipService.requireActiveMembership(organizationId, currentUser)
 		return withPrintifyErrorTranslation { printifyCatalogClient.listBlueprints() }
@@ -79,18 +78,26 @@ class ProductService(
 		return productRepository.findByStore(storeId, offset, limit)
 	}
 
+	fun countForStore(organizationId: UUID, storeId: UUID, currentUser: CurrentUser): Long {
+		membershipService.requireActiveMembership(organizationId, currentUser)
+		requireStore(organizationId, storeId)
+		return productRepository.countByStore(storeId)
+	}
+
 	fun get(organizationId: UUID, productId: UUID, currentUser: CurrentUser): Product {
 		membershipService.requireActiveMembership(organizationId, currentUser)
 		return findProduct(organizationId, productId)
 	}
 
-	/** Public/unauthenticated — only ACTIVE products, mirrors CampaignService.getPublic's ACTIVE-only gate. */
+	fun hasAssignedDesign(productId: UUID): Boolean =
+		mediaAssignmentService.getActiveAssignment(MediaEntityType.PRODUCT, productId, MediaUsageSlot.PRODUCT_DESIGN) != null
+
+	/** Public/unauthenticated — only ACTIVE products. */
 	fun listPublicProducts(storeId: UUID): List<Product> =
 		productRepository.findByStore(storeId, 0, PUBLIC_STORE_PRODUCT_LIMIT).filter { it.status == ProductStatus.ACTIVE }
 
 	fun listPublicVariants(productId: UUID): List<ProductVariant> = productVariantRepository.findActiveByProduct(productId)
 
-	/** Null if no design has been assigned, or its assignment isn't PUBLIC-visibility (e.g. the product isn't ACTIVE yet). */
 	fun getPublicDesignUrl(productId: UUID): String? {
 		val assignment = mediaAssignmentService.getPublicAssignment(MediaEntityType.PRODUCT, productId, MediaUsageSlot.PRODUCT_DESIGN) ?: return null
 		return mediaReadService.describe(assignment)?.url
@@ -99,7 +106,7 @@ class ProductService(
 	fun listVariants(organizationId: UUID, productId: UUID, currentUser: CurrentUser): List<ProductVariant> {
 		membershipService.requireActiveMembership(organizationId, currentUser)
 		findProduct(organizationId, productId)
-		return productVariantRepository.findActiveByProduct(productId)
+		return productVariantRepository.findByProduct(productId)
 	}
 
 	@Transactional
@@ -108,15 +115,54 @@ class ProductService(
 		storeId: UUID,
 		name: String,
 		description: String?,
-		printifyBlueprintId: Long,
+		catalogSource: CatalogSource,
+		manualVendorId: UUID?,
+		printifyBlueprintId: Long?,
 		printifyPrintPosition: String,
 		currentUser: CurrentUser,
 	): Product {
 		membershipService.requireManagerRole(organizationId, currentUser)
 		requireStore(organizationId, storeId)
-		val product = productRepository.insert(organizationId, storeId, name, description, printifyBlueprintId, printifyPrintPosition)
+		when (catalogSource) {
+			CatalogSource.PRINTIFY -> {
+				if (printifyBlueprintId == null || printifyBlueprintId <= 0) throw ValidationException("Choose a Printify product type.")
+				if (manualVendorId != null) throw ValidationException("A Printify product cannot reference a manual vendor.")
+			}
+			CatalogSource.MANUAL -> {
+				if (printifyBlueprintId != null) throw ValidationException("Manual products cannot contain a Printify blueprint ID.")
+				manualVendorId?.let { manualVendorService.requireActiveVendor(organizationId, it) }
+			}
+		}
+		val product = productRepository.insert(
+			organizationId = organizationId,
+			storeId = storeId,
+			name = name.trim(),
+			description = description.normalized(),
+			catalogSource = catalogSource,
+			manualVendorId = manualVendorId,
+			printifyBlueprintId = printifyBlueprintId,
+			printifyPrintPosition = printifyPrintPosition.trim().ifEmpty { "front" },
+		)
 		auditService.record(currentUser.userId, organizationId, "product.created", "product", product.id)
 		return product
+	}
+
+	@Transactional
+	fun updateManualProduct(
+		organizationId: UUID,
+		productId: UUID,
+		name: String,
+		description: String?,
+		manualVendorId: UUID?,
+		currentUser: CurrentUser,
+	): Product {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		val product = findProduct(organizationId, productId)
+		if (product.catalogSource != CatalogSource.MANUAL) throw ValidationException("Only manual products can be edited with this workflow.")
+		manualVendorId?.let { manualVendorService.requireActiveVendor(organizationId, it) }
+		productRepository.updateManualProduct(productId, organizationId, name.trim(), description.normalized(), manualVendorId)
+		auditService.record(currentUser.userId, organizationId, "product.manual_updated", "product", productId)
+		return findProduct(organizationId, productId)
 	}
 
 	@Transactional
@@ -127,12 +173,6 @@ class ProductService(
 		}
 	}
 
-	/**
-	 * Calls Printify once to learn this specific provider+variant's real cost
-	 * (uploading the product's design to Printify's image library first, if this
-	 * is the product's first variant) and snapshots it. No cross-provider price
-	 * comparison happens here — see VendorSelectionService.
-	 */
 	@Transactional
 	fun createVariant(
 		organizationId: UUID,
@@ -145,12 +185,14 @@ class ProductService(
 	): ProductVariant {
 		membershipService.requireManagerRole(organizationId, currentUser)
 		val product = findProduct(organizationId, productId)
+		if (product.catalogSource != CatalogSource.PRINTIFY) throw ValidationException("Use the manual-variant workflow for a manual product.")
+		val blueprintId = product.printifyBlueprintId ?: error("PRINTIFY product ${product.id} has no blueprint ID")
 		val printifyImageId = product.printifyImageId ?: uploadDesignToPrintify(organizationId, product, currentUser)
 
 		val result = withPrintifyErrorTranslation {
 			printifyProductClient.createProduct(
 				title = product.name,
-				blueprintId = product.printifyBlueprintId,
+				blueprintId = blueprintId,
 				printProviderId = printifyPrintProviderId,
 				printifyVariantIds = listOf(printifyVariantId),
 				requestedPriceMinor = priceMinor,
@@ -161,8 +203,8 @@ class ProductService(
 		val variantCost = result.variantCosts.firstOrNull { it.printifyVariantId == printifyVariantId }
 			?: throw ServiceUnavailableException("PRINTIFY_PROVIDER_UNAVAILABLE", "Printify did not return pricing for the selected variant.")
 
-		val variant = productVariantRepository.insert(
-			organizationId, productId, label, printifyPrintProviderId, printifyVariantId,
+		val variant = productVariantRepository.insertPrintify(
+			organizationId, productId, label.trim(), printifyPrintProviderId, printifyVariantId,
 			currency = "USD", costMinor = variantCost.costMinor, priceMinor = variantCost.priceMinor,
 		)
 		auditService.record(currentUser.userId, organizationId, "product_variant.created", "product_variant", variant.id)
@@ -170,9 +212,85 @@ class ProductService(
 	}
 
 	@Transactional
+	fun createManualVariant(
+		organizationId: UUID,
+		productId: UUID,
+		label: String,
+		sku: String?,
+		size: String?,
+		color: String?,
+		currency: String,
+		costMinor: Long,
+		priceMinor: Long,
+		currentUser: CurrentUser,
+	): ProductVariant {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		val product = findProduct(organizationId, productId)
+		if (product.catalogSource != CatalogSource.MANUAL) throw ValidationException("Manual variants can only be added to manual products.")
+		validateMoney(currency, costMinor, priceMinor)
+		val variant = productVariantRepository.insertManual(
+			organizationId, productId, label.trim(), sku.normalized(), size.normalized(), color.normalized(),
+			currency.uppercase(), costMinor, priceMinor,
+		)
+		auditService.record(currentUser.userId, organizationId, "product_variant.manual_created", "product_variant", variant.id)
+		return variant
+	}
+
+	@Transactional
+	fun updateManualVariant(
+		organizationId: UUID,
+		productId: UUID,
+		variantId: UUID,
+		label: String,
+		sku: String?,
+		size: String?,
+		color: String?,
+		currency: String,
+		costMinor: Long,
+		priceMinor: Long,
+		isActive: Boolean,
+		currentUser: CurrentUser,
+	): ProductVariant {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		val product = findProduct(organizationId, productId)
+		if (product.catalogSource != CatalogSource.MANUAL) throw ValidationException("Only manual variants can be edited with this workflow.")
+		val variant = requireVariant(organizationId, productId, variantId)
+		if (variant.catalogSource != CatalogSource.MANUAL) throw ValidationException("Only manual variants can be edited with this workflow.")
+		validateMoney(currency, costMinor, priceMinor)
+		productVariantRepository.updateManual(
+			variantId, organizationId, label.trim(), sku.normalized(), size.normalized(), color.normalized(),
+			currency.uppercase(), costMinor, priceMinor, isActive,
+		)
+		auditService.record(currentUser.userId, organizationId, "product_variant.manual_updated", "product_variant", variantId)
+		return requireVariant(organizationId, productId, variantId)
+	}
+
+	@Transactional
+	fun updateVariantActive(
+		organizationId: UUID,
+		productId: UUID,
+		variantId: UUID,
+		isActive: Boolean,
+		currentUser: CurrentUser,
+	): ProductVariant {
+		membershipService.requireManagerRole(organizationId, currentUser)
+		requireVariant(organizationId, productId, variantId)
+		productVariantRepository.updateActive(variantId, organizationId, isActive)
+		auditService.record(currentUser.userId, organizationId, "product_variant.status_updated", "product_variant", variantId)
+		return requireVariant(organizationId, productId, variantId)
+	}
+
+	@Transactional
 	fun updateStatus(organizationId: UUID, productId: UUID, status: ProductStatus, currentUser: CurrentUser): Product {
 		membershipService.requireManagerRole(organizationId, currentUser)
-		findProduct(organizationId, productId)
+		val product = findProduct(organizationId, productId)
+		if (status == ProductStatus.ACTIVE) {
+			if (!hasAssignedDesign(productId)) throw ValidationException("Assign a product image before activating this product.")
+			if (productVariantRepository.findActiveByProduct(productId).isEmpty()) throw ValidationException("Add at least one active variant before activating this product.")
+			if (product.catalogSource == CatalogSource.PRINTIFY && product.printifyImageId == null) {
+				throw ValidationException("Create a Printify variant before activating this product.")
+			}
+		}
 		productRepository.updateStatus(productId, organizationId, status)
 		auditService.record(currentUser.userId, organizationId, "product.status_updated", "product", productId)
 		return findProduct(organizationId, productId)
@@ -196,10 +314,26 @@ class ProductService(
 		productRepository.findById(productId, organizationId)
 			?: throw NotFoundException("PRODUCT_NOT_FOUND", "The product could not be found.")
 
+	private fun requireVariant(organizationId: UUID, productId: UUID, variantId: UUID): ProductVariant =
+		productVariantRepository.findById(variantId, organizationId)?.takeIf { it.productId == productId }
+			?: throw NotFoundException("PRODUCT_VARIANT_NOT_FOUND", "The product variant could not be found.")
+
 	private fun requireStore(organizationId: UUID, storeId: UUID) {
 		storeRepository.findById(storeId, organizationId)
 			?: throw NotFoundException("STORE_NOT_FOUND", "The store could not be found.")
 	}
+
+	private fun validateMoney(currency: String, costMinor: Long, priceMinor: Long) {
+		try {
+			Currency.getInstance(currency.uppercase())
+		} catch (_: IllegalArgumentException) {
+			throw ValidationException("Use a valid three-letter currency code.")
+		}
+		if (costMinor < 0 || priceMinor < 0) throw ValidationException("Cost and price must be zero or greater.")
+		if (priceMinor < costMinor) throw ValidationException("Price cannot be lower than the recorded vendor cost.")
+	}
+
+	private fun String?.normalized(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
 
 	private fun <T> withPrintifyErrorTranslation(block: () -> T): T =
 		try {

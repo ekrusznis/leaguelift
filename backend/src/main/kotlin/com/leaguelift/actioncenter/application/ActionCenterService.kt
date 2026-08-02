@@ -13,7 +13,8 @@ import org.springframework.stereotype.Service
 import java.text.NumberFormat
 import java.time.Clock
 import java.time.LocalDate
-import java.util.*
+import java.util.Locale
+import java.util.UUID
 
 private const val ACTION_LIMIT = 50
 
@@ -42,6 +43,18 @@ class ActionCenterService(
                 "org:$organizationId:overdue-fees", ActionCenterType.OVERDUE_FEES, ActionCenterPriority.HIGH,
                 "Follow up on overdue fees", "$overdueFees fee assignment${plural(overdueFees)} are past due.",
                 "/app/organizations/$organizationId/fees", organizationId,
+            )
+            val fulfillmentExceptions = repository.countFulfillmentExceptions(organizationId)
+            if (fulfillmentExceptions > 0) items += aggregate(
+                "org:$organizationId:fulfillment-exceptions", ActionCenterType.FULFILLMENT_EXCEPTION, ActionCenterPriority.URGENT,
+                "Resolve fulfillment exceptions", "$fulfillmentExceptions order fulfillment item${plural(fulfillmentExceptions)} failed or require attention.",
+                "/app/organizations/$organizationId/stores", organizationId,
+            )
+            val pendingOfflineRecords = repository.countPendingOfflineFinancialRecords(organizationId)
+            if (pendingOfflineRecords > 0) items += aggregate(
+                "org:$organizationId:offline-financial-review", ActionCenterType.OFFLINE_FINANCIAL_REVIEW, ActionCenterPriority.HIGH,
+                "Verify offline financial records", "$pendingOfflineRecords externally received transaction${plural(pendingOfflineRecords)} still need verification.",
+                "/app/organizations/$organizationId/financial-operations", organizationId,
             )
             val events = repository.countReviewableEvents(organizationId)
             if (events > 0) items += aggregate(

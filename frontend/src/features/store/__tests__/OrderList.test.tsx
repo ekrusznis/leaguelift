@@ -15,7 +15,7 @@ function jsonResponse(body: unknown, status = 200) {
 const confirmedOrder: Order = {
 	id: "33333333-3333-3333-3333-333333333333",
 	storeId,
-	status: "CONFIRMED",
+	status: "CONFIRMED", paymentSource: "STRIPE",
 	currency: "USD",
 	supporterName: "Jane Doe",
 	supporterEmail: "jane@example.com",

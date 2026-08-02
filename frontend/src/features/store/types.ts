@@ -18,6 +18,22 @@ export interface StorePage {
 	totalElements: number;
 }
 
+export type ManualVendorStatus = "ACTIVE" | "ARCHIVED";
+export interface ManualVendor {
+	id: string;
+	organizationId: string;
+	name: string;
+	contactName: string | null;
+	contactEmail: string | null;
+	phone: string | null;
+	websiteUrl: string | null;
+	notes: string | null;
+	status: ManualVendorStatus;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export type CatalogSource = "PRINTIFY" | "MANUAL";
 export type ProductStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
 
 export interface Product {
@@ -26,9 +42,11 @@ export interface Product {
 	storeId: string;
 	name: string;
 	description: string | null;
-	printifyBlueprintId: number;
+	catalogSource: CatalogSource;
+	manualVendorId: string | null;
+	manualVendorName: string | null;
+	printifyBlueprintId: number | null;
 	printifyPrintPosition: string;
-	/** True once a design has been pushed to Printify's image library (first variant creation) — not just "an image was assigned" in our own system. */
 	hasDesign: boolean;
 	status: ProductStatus;
 	createdAt: string;
@@ -45,11 +63,14 @@ export interface ProductPage {
 export interface ProductVariant {
 	id: string;
 	productId: string;
+	catalogSource: CatalogSource;
 	label: string;
-	printifyPrintProviderId: number;
-	printifyVariantId: number;
+	sku: string | null;
+	size: string | null;
+	color: string | null;
+	printifyPrintProviderId: number | null;
+	printifyVariantId: number | null;
 	currency: string;
-	/** Printify's real cost for this variant/provider, in minor units — never guessed. */
 	costMinor: number;
 	priceMinor: number;
 	isActive: boolean;
@@ -68,7 +89,6 @@ export interface PrintifyLocation {
 	city: string | null;
 }
 
-/** A location (and, where available, decoration-method) filtered list — not a price comparison. Printify's catalog has no cost signal to rank by until a product is actually created. */
 export interface EligiblePrintProvider {
 	id: number;
 	title: string;
@@ -146,6 +166,7 @@ export interface Order {
 	id: string;
 	storeId: string;
 	status: OrderStatus;
+	paymentSource: "STRIPE" | "OFFLINE";
 	currency: string;
 	supporterName: string | null;
 	supporterEmail: string | null;
@@ -162,12 +183,66 @@ export interface OrderPage {
 	totalElements: number;
 }
 
-export type FulfillmentStatus = "NOT_SUBMITTED" | "DRAFT_CREATED" | "FAILED";
+export type FulfillmentSource = "PRINTIFY" | "MANUAL";
+export type FulfillmentStatus =
+	| "NOT_SUBMITTED"
+	| "DRAFT_CREATED"
+	| "FAILED"
+	| "READY"
+	| "IN_PRODUCTION"
+	| "SHIPPED"
+	| "DELIVERED"
+	| "NEEDS_ATTENTION"
+	| "CANCELED";
 
 export interface Fulfillment {
+	id: string;
+	orderId: string;
+	source: FulfillmentSource;
 	status: FulfillmentStatus;
 	printifyOrderId: string | null;
+	manualVendorId: string | null;
+	manualVendorName: string | null;
+	vendorOrderReference: string | null;
+	carrier: string | null;
+	trackingNumber: string | null;
+	trackingUrl: string | null;
+	internalNotes: string | null;
+	attentionReason: string | null;
 	lastError: string | null;
+	statusChangedAt: string;
+	shippedAt: string | null;
+	deliveredAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface FulfillmentHistory {
+	id: string;
+	previousStatus: FulfillmentStatus | null;
+	newStatus: FulfillmentStatus;
+	note: string;
+	actorUserId: string | null;
+	createdAt: string;
+}
+
+export type FulfillmentReprintStatus = "REQUESTED" | "IN_PRODUCTION" | "SHIPPED" | "DELIVERED" | "CANCELED";
+export interface FulfillmentReprint {
+	id: string;
+	fulfillmentId: string;
+	orderId: string;
+	status: FulfillmentReprintStatus;
+	reason: string;
+	vendorOrderReference: string | null;
+	carrier: string | null;
+	trackingNumber: string | null;
+	trackingUrl: string | null;
+	internalNotes: string | null;
+	requestedByUserId: string;
+	createdAt: string;
+	updatedAt: string;
+	shippedAt: string | null;
+	deliveredAt: string | null;
 }
 
 export interface CartLine {

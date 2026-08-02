@@ -37,6 +37,8 @@ class ActionCenterServiceTest {
         every { repository.countPendingCorrections(organizationId) } returns 2
         every { repository.countOverdueFees(organizationId) } returns 3
         every { repository.countReviewableEvents(organizationId) } returns 1
+        every { repository.countFulfillmentExceptions(organizationId) } returns 0
+        every { repository.countPendingOfflineFinancialRecords(organizationId) } returns 0
         every { repository.listGuardianFeeActions(user.userId, any()) } returns emptyList()
         every { repository.listGuardianDocumentActions(user.userId, any()) } returns emptyList()
         every { repository.listGuardianRsvpActions(user.userId, any()) } returns emptyList()
@@ -50,4 +52,31 @@ class ActionCenterServiceTest {
         assertTrue(result.items.take(2).all { it.priority == ActionCenterPriority.HIGH })
         assertTrue(result.items.any { it.type == ActionCenterType.EVENT_REVIEW })
     }
+    @Test
+    fun `organization manager sees pending offline financial verification work`() {
+        every { authorizationService.listContexts(user) } returns listOf(
+            AuthorizationContext(
+                ContextType.ORGANIZATION, organizationId, organizationId, "North Jersey Volleyball", "OWNER",
+                setOf(Capabilities.ORG_MANAGE),
+            ),
+        )
+        every { repository.countPendingCorrections(organizationId) } returns 0
+        every { repository.countOverdueFees(organizationId) } returns 0
+        every { repository.countFulfillmentExceptions(organizationId) } returns 0
+        every { repository.countPendingOfflineFinancialRecords(organizationId) } returns 2
+        every { repository.countReviewableEvents(organizationId) } returns 0
+        every { repository.listGuardianFeeActions(user.userId, any()) } returns emptyList()
+        every { repository.listGuardianDocumentActions(user.userId, any()) } returns emptyList()
+        every { repository.listGuardianRsvpActions(user.userId, any()) } returns emptyList()
+        every { repository.listAthleteRsvpActions(user.userId, any()) } returns emptyList()
+        every { repository.listSupportCaseActions(user.userId, any()) } returns emptyList()
+
+        val result = service.get(user)
+
+        assertEquals(1, result.totalCount)
+        assertEquals(ActionCenterType.OFFLINE_FINANCIAL_REVIEW, result.items.single().type)
+        assertEquals(ActionCenterPriority.HIGH, result.items.single().priority)
+        assertTrue(result.items.single().actionPath.endsWith("/financial-operations"))
+    }
+
 }

@@ -79,6 +79,7 @@ export interface ContributionStatusResult {
 export interface Contribution {
 	id: string;
 	status: ContributionStatus;
+	paymentSource: "STRIPE" | "OFFLINE";
 	amountMinor: number;
 	currency: string;
 	supporterName: string | null;

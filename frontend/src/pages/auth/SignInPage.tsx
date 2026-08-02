@@ -50,6 +50,7 @@ export function SignInPage() {
 
 				<form onSubmit={onSubmit} noValidate className="mt-6 flex flex-col gap-5">
 					<FormField
+						tone="dark"
 						label="Email address"
 						type="email"
 						autoComplete="email"
@@ -59,6 +60,7 @@ export function SignInPage() {
 					/>
 					<div className="flex flex-col gap-2">
 						<PasswordField
+							tone="dark"
 							label="Password"
 							autoComplete="current-password"
 							required
@@ -101,9 +103,9 @@ export function SignInPage() {
 				</p>
 			</div>
 
-			<p className="text-center text-sm text-slate-400">
+			<p className="text-center text-sm text-slate-700">
 				Need help?{" "}
-				<Link to="/contact" className="text-green-400 hover:underline">
+				<Link to="/contact" className="font-medium text-green-700 hover:underline">
 					Contact support
 				</Link>
 			</p>

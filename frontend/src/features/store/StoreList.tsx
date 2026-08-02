@@ -8,6 +8,7 @@ import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { useCreateStore, useStores, useUpdateStoreStatus } from "./api";
 import { createStoreSchema, type CreateStoreFormValues } from "./schema";
+import { ManualVendorPanel } from "./ManualVendorPanel";
 import { ProductManagementPanel } from "./ProductManagementPanel";
 
 export function StoreList({ organizationId }: { organizationId: string }) {
@@ -35,6 +36,7 @@ export function StoreList({ organizationId }: { organizationId: string }) {
 
 	return (
 		<div className="flex flex-col gap-4">
+			<ManualVendorPanel organizationId={organizationId} />
 			<div className="flex items-center justify-between">
 				<span className="text-sm text-slate-gray">
 					{data ? `${data.totalElements} store${data.totalElements !== 1 ? "s" : ""}` : ""}

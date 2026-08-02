@@ -321,3 +321,5 @@ Additional, unreserved decisions:
 - ADR-048: Phase 16 slice 6 preview-confirmed season rollover (2026-08-01)
 - ADR-049: Phase 17 Help Center, support intake, and shared footer foundation (2026-08-01)
 - ADR-050: Phase 17 Action Center, announcements, and reminder delivery (2026-08-01)
+- ADR-051: Phase 18 slices 1-2 manual catalog/vendor records and controlled fulfillment, tracking, exception, and reprint operations (2026-08-01)
+- ADR-052: Phase 18 slice 3 explicit offline contribution, sponsorship, and manual-order records with pending verification, idempotency/duplicate protection, balanced non-payout ledger settlement, Action Center review work, acknowledgement delivery, and the cross-phase Help Center coverage standard (2026-08-01)

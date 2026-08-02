@@ -104,7 +104,7 @@ describe("SponsorshipPackageList", () => {
 
 	const pendingReviewSponsorship: Sponsorship = {
 		id: "33333333-3333-3333-3333-333333333333",
-		status: "CONFIRMED",
+		status: "CONFIRMED", paymentSource: "STRIPE",
 		amountMinor: 50000,
 		currency: "USD",
 		sponsorId: "44444444-4444-4444-4444-444444444444",

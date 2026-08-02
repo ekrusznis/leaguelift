@@ -1,5 +1,6 @@
 package com.leaguelift.sponsorship.domain
 
+import com.leaguelift.finance.domain.PaymentSource
 import java.time.Instant
 import java.util.UUID
 
@@ -49,4 +50,5 @@ data class Sponsorship(
 	val reviewedById: UUID? = null,
 	val renewalReminderSentAt: Instant? = null,
 	val createdAt: Instant,
+	val paymentSource: PaymentSource = PaymentSource.STRIPE,
 )

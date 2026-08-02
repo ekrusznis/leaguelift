@@ -308,6 +308,9 @@ function SponsorshipManagementPanel({ organizationId, packageId }: { organizatio
 								<span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${reviewStatusBadgeClass(sponsorship.reviewStatus)}`}>
 									{sponsorship.reviewStatus === "PENDING_REVIEW" ? "Pending review" : sponsorship.reviewStatus}
 								</span>
+								{sponsorship.paymentSource === "OFFLINE" && (
+									<span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Recorded offline</span>
+								)}
 								{sponsorship.status === "REFUNDED" && (
 									<span className="ml-2 rounded-full bg-slate-gray/10 px-2 py-0.5 text-xs font-medium text-slate-gray">Refunded</span>
 								)}
@@ -332,7 +335,7 @@ function SponsorshipManagementPanel({ organizationId, packageId }: { organizatio
 						>
 							{editingSponsorId === sponsorship.sponsorId ? "Hide contact details" : "Edit contact details"}
 						</Button>
-						{sponsorship.status === "CONFIRMED" && (
+						{sponsorship.status === "CONFIRMED" && sponsorship.paymentSource === "STRIPE" && (
 							<Button
 								type="button"
 								variant="secondary"

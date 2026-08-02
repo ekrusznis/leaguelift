@@ -4,11 +4,12 @@ type PasswordFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & 
 	label: string;
 	error?: string;
 	hint?: string;
+	tone?: "light" | "dark";
 };
 
 /** Show/hide toggle, allows paste and browser-generated passwords (section 11.4). */
 export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(function PasswordField(
-	{ label, error, hint, id, required, className = "", ...props },
+	{ label, error, hint, tone = "light", id, required, className = "", ...props },
 	ref,
 ) {
 	const [visible, setVisible] = useState(false);
@@ -16,13 +17,17 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(fu
 	const fieldId = id ?? generatedId;
 	const hintId = hint ? `${fieldId}-hint` : undefined;
 	const errorId = error ? `${fieldId}-error` : undefined;
+	const labelClassName = tone === "dark" ? "text-white" : "text-navy-900";
+	const hintClassName = tone === "dark" ? "text-slate-300" : "text-slate-500";
+	const requiredClassName = tone === "dark" ? "text-gold-400" : "text-error-600";
+	const errorClassName = tone === "dark" ? "text-gold-400" : "text-error-600";
 
 	return (
 		<div className="flex flex-col gap-1.5">
-			<label htmlFor={fieldId} className="text-sm font-semibold text-navy-900">
+			<label htmlFor={fieldId} className={`text-sm font-semibold ${labelClassName}`}>
 				{label}
 				{required && (
-					<span aria-hidden="true" className="text-error-600">
+					<span aria-hidden="true" className={requiredClassName}>
 						{" "}
 						*
 					</span>
@@ -36,7 +41,7 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(fu
 					required={required}
 					aria-invalid={!!error}
 					aria-describedby={[hintId, errorId].filter(Boolean).join(" ") || undefined}
-					className={`min-h-12 w-full rounded-[10px] border px-3.5 py-2.5 pr-12 text-navy-900 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400 ${
+					className={`min-h-12 w-full rounded-[10px] border bg-white px-3.5 py-2.5 pr-12 text-navy-900 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400 ${
 						error ? "border-error-600" : "border-slate-200"
 					} ${className}`}
 					{...props}
@@ -72,12 +77,12 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(fu
 				</button>
 			</div>
 			{hint && !error && (
-				<p id={hintId} className="text-sm text-slate-500">
+				<p id={hintId} className={`text-sm ${hintClassName}`}>
 					{hint}
 				</p>
 			)}
 			{error && (
-				<p id={errorId} role="alert" className="text-sm text-error-600">
+				<p id={errorId} role="alert" className={`text-sm ${errorClassName}`}>
 					{error}
 				</p>
 			)}

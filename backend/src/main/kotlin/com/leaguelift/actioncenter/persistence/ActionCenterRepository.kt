@@ -26,6 +26,18 @@ class ActionCenterRepository(private val jdbcClient: JdbcClient) {
         """.trimIndent(),
     ).param("organizationId", organizationId).query(Long::class.java).single()
 
+    fun countFulfillmentExceptions(organizationId: UUID): Long = jdbcClient.sql(
+        """
+        select count(*) from fulfillment f
+        join "order" o on o.id = f.order_id
+        where o.organization_id = :organizationId and f.status in ('FAILED', 'NEEDS_ATTENTION')
+        """.trimIndent(),
+    ).param("organizationId", organizationId).query(Long::class.java).single()
+
+    fun countPendingOfflineFinancialRecords(organizationId: UUID): Long = jdbcClient.sql(
+        "select count(*) from offline_financial_record where organization_id = :organizationId and verification_status = 'PENDING_VERIFICATION'",
+    ).param("organizationId", organizationId).query(Long::class.java).single()
+
     fun countReviewableEvents(organizationId: UUID, teamId: UUID? = null, tournamentId: UUID? = null): Long {
         val sql = buildString {
             append("select count(*) from event where organization_id = :organizationId and status in ('DRAFT', 'TENTATIVE')")

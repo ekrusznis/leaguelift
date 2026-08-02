@@ -38,6 +38,7 @@ fun Contribution.toStatusResponse() = ContributionStatusResponse(id, status.name
 data class ContributionResponse(
     val id: UUID,
     val status: String,
+    val paymentSource: String,
     val amountMinor: Long,
     val currency: String,
     val supporterName: String?,
@@ -48,4 +49,4 @@ data class ContributionResponse(
     val createdAt: Instant,
 )
 
-fun Contribution.toResponse() = ContributionResponse(id, status.name, amountMinor, currency, supporterName, isAnonymous, supporterEmail, confirmedAt, refundedAt, createdAt)
+fun Contribution.toResponse() = ContributionResponse(id, status.name, paymentSource.name, amountMinor, currency, supporterName, isAnonymous, supporterEmail, confirmedAt, refundedAt, createdAt)

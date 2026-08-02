@@ -78,7 +78,7 @@ info:
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
     Phase 17 now includes the Help Center/support foundation plus role-aware Action Center aggregation, one-way organization/team/tournament announcements, recipient-snapshotted in-app/email/SMS delivery, and campaign/event/fee/document reminders through one audited pipeline with idempotent resource creation (ADR-049/ADR-050). Phase 16 slices 3-6 extend the media pipeline to team/tournament branding and private adult/participant profile photos (ADR-045), add typed profile-correction requests (ADR-046), add manager-controlled reusable event templates that prefill ordinary manual draft events without recurrence or automatic publication (ADR-047), and complete the phase with preview-confirmed, idempotent season rollover limited to active roster links, explicit TEAM staff grants, and ready logo/cover assignments (ADR-048).
-  version: "0.25.6"
+  version: "0.25.8"
 servers:
   - url: /api/v1
 tags:
@@ -118,6 +118,7 @@ tags:
   - name: support-cases
   - name: action-center
   - name: announcements
+  - name: offline-finance
 paths:
   /me/action-center:
     get:
@@ -3602,6 +3603,270 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /organizations/{organizationId}/offline-financial-records:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [offline-finance]
+      summary: List organization-recorded offline financial transactions
+      description: Manager-only. These records describe money received outside LeagueLift and never fabricate payment-provider identifiers.
+      operationId: listOfflineFinancialRecords
+      parameters:
+        - { name: verificationStatus, in: query, required: false, schema: { $ref: "#/components/schemas/OfflineVerificationStatus" } }
+        - { name: recordType, in: query, required: false, schema: { $ref: "#/components/schemas/OfflineFinancialRecordType" } }
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200":
+          description: Offline financial records
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OfflineFinancialRecordPageResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /organizations/{organizationId}/offline-financial-records/{recordId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - { name: recordId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [offline-finance]
+      summary: Get an offline financial record
+      operationId: getOfflineFinancialRecord
+      responses:
+        "200":
+          description: Offline financial record
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OfflineFinancialRecordResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /organizations/{organizationId}/offline-financial-records/{recordId}/verify:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - { name: recordId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [offline-finance]
+      summary: Verify an externally received transaction
+      description: Confirms the linked OFFLINE contribution, sponsorship, or order and appends balanced non-payout ledger entries. It never creates a Stripe or other provider transaction.
+      operationId: verifyOfflineFinancialRecord
+      responses:
+        "200":
+          description: Verified record
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OfflineFinancialRecordResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /organizations/{organizationId}/offline-financial-records/contributions:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [offline-finance]
+      summary: Record an offline campaign contribution
+      operationId: createOfflineContribution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateOfflineContributionRequest" }
+      responses:
+        "201":
+          description: Offline contribution record created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OfflineFinancialRecordResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /organizations/{organizationId}/offline-financial-records/sponsorships:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [offline-finance]
+      summary: Record an offline sponsorship purchase
+      operationId: createOfflineSponsorship
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateOfflineSponsorshipRequest" }
+      responses:
+        "201":
+          description: Offline sponsorship record created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OfflineFinancialRecordResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /organizations/{organizationId}/offline-financial-records/orders:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [offline-finance]
+      summary: Record an offline manual-product order
+      description: The order may contain only active MANUAL variants from one active store and one manual vendor.
+      operationId: createOfflineOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateOfflineOrderRequest" }
+      responses:
+        "201":
+          description: Offline order record created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OfflineFinancialRecordResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /organizations/{organizationId}/manual-vendors:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [stores]
+      summary: List manual catalog and fulfillment vendors
+      operationId: listManualVendors
+      parameters:
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Vendors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ManualVendorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [stores]
+      summary: Create a manual vendor
+      description: Manager-only. Records a real local/in-house vendor without creating a Printify or other provider identity.
+      operationId: createManualVendor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualVendorMutationRequest"
+      responses:
+        "201":
+          description: Vendor created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManualVendorResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/manual-vendors/{vendorId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - name: vendorId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [stores]
+      summary: Get a manual vendor
+      operationId: getManualVendor
+      responses:
+        "200":
+          description: Vendor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManualVendorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [stores]
+      summary: Update a manual vendor
+      operationId: updateManualVendor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualVendorMutationRequest"
+      responses:
+        "200":
+          description: Vendor updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManualVendorResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/manual-vendors/{vendorId}/archive:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - name: vendorId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [stores]
+      summary: Archive a manual vendor
+      operationId: archiveManualVendor
+      responses:
+        "200":
+          description: Archived vendor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManualVendorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /organizations/{organizationId}/stores/{storeId}:
     parameters:
       - $ref: "#/components/parameters/OrganizationIdParam"
@@ -3720,6 +3985,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProductResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/products/{productId}/manual-details:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/ProductIdParam"
+    put:
+      tags: [stores]
+      summary: Update a manual product's descriptive and vendor details
+      operationId: updateManualProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateManualProductRequest"
+      responses:
+        "200":
+          description: Manual product updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -3847,6 +4142,109 @@ paths:
         "503":
           $ref: "#/components/responses/PrintifyUnavailable"
 
+  /organizations/{organizationId}/products/{productId}/manual-variants:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/ProductIdParam"
+    post:
+      tags: [stores]
+      summary: Create a manual product variant
+      description: Manager-entered SKU/size/color, vendor cost, and sale price. No provider IDs are generated.
+      operationId: createManualProductVariant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualProductVariantRequest"
+      responses:
+        "201":
+          description: Manual variant created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductVariantResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/products/{productId}/manual-variants/{variantId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/ProductIdParam"
+      - name: variantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [stores]
+      summary: Update a manual product variant
+      operationId: updateManualProductVariant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualProductVariantRequest"
+      responses:
+        "200":
+          description: Manual variant updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductVariantResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/products/{productId}/variants/{variantId}/status:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - $ref: "#/components/parameters/ProductIdParam"
+      - name: variantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [stores]
+      summary: Activate or deactivate a product variant
+      operationId: updateProductVariantStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductVariantStatusRequest"
+      responses:
+        "200":
+          description: Variant updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductVariantResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /public/stores/{slug}:
     parameters:
       - name: slug
@@ -3910,20 +4308,167 @@ paths:
           format: uuid
     get:
       tags: [orders]
-      summary: Get an order's fulfillment status
-      description: >
-        Null until the order is confirmed. DRAFT_CREATED means a Printify order
-        object exists but send_to_production.json was never called this slice —
-        see ADR-016. FAILED means payment was confirmed but the Printify
-        draft-order call itself failed; the order/payment record still stands.
+      summary: Get an order's fulfillment operations record
+      description: Null until payment confirmation. The source is explicitly PRINTIFY or MANUAL; manual records never contain invented provider IDs.
       operationId: getOrderFulfillment
       responses:
         "200":
-          description: Fulfillment status, or null if not yet created
+          description: Fulfillment record, or null if not yet created
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/FulfillmentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [orders]
+      summary: Update fulfillment status, vendor reference, tracking, and exception details
+      description: Manager-only controlled transition. Status changes append a history record and never rewrite the paid order or ledger.
+      operationId: updateOrderFulfillment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFulfillmentRequest"
+      responses:
+        "200":
+          description: Fulfillment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/orders/{orderId}/fulfillment/history:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [orders]
+      summary: List append-only fulfillment status history
+      operationId: listFulfillmentHistory
+      responses:
+        "200":
+          description: Fulfillment history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FulfillmentHistoryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/orders/{orderId}/fulfillment/reprints:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [orders]
+      summary: List replacement and reprint records
+      operationId: listFulfillmentReprints
+      responses:
+        "200":
+          description: Reprint records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FulfillmentReprintResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [orders]
+      summary: Record a replacement or reprint request
+      description: Creates a durable operational record; the original order and financial history remain unchanged.
+      operationId: createFulfillmentReprint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFulfillmentReprintRequest"
+      responses:
+        "201":
+          description: Reprint request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentReprintResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/orders/{orderId}/fulfillment/reprints/{reprintId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: reprintId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [orders]
+      summary: Update replacement or reprint fulfillment
+      operationId: updateFulfillmentReprint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFulfillmentReprintRequest"
+      responses:
+        "200":
+          description: Reprint updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentReprintResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -9089,6 +9634,10 @@ components:
     ContributionStatus:
       type: string
       enum: [PENDING, CONFIRMED, CANCELED, REFUNDED]
+    PaymentSource:
+      type: string
+      enum: [STRIPE, OFFLINE]
+      description: Whether LeagueLift processed the payment through Stripe or only recorded money received outside LeagueLift.
     CreateContributionCheckoutRequest:
       type: object
       required: [amountMinor, successUrl, cancelUrl]
@@ -9156,7 +9705,7 @@ components:
           nullable: true
     ContributionResponse:
       type: object
-      required: [id, status, amountMinor, currency, isAnonymous, createdAt]
+      required: [id, status, paymentSource, amountMinor, currency, isAnonymous, createdAt]
       description: Org-admin list shape — contributions that were confirmed at some point (CONFIRMED or REFUNDED).
       properties:
         id:
@@ -9164,6 +9713,8 @@ components:
           format: uuid
         status:
           $ref: "#/components/schemas/ContributionStatus"
+        paymentSource:
+          $ref: "#/components/schemas/PaymentSource"
         amountMinor:
           type: integer
           format: int64
@@ -9338,13 +9889,207 @@ components:
         totalElements:
           type: integer
 
+    ManualVendorStatus:
+      type: string
+      enum: [ACTIVE, ARCHIVED]
+
+    ManualVendorMutationRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        contactName:
+          type: string
+          maxLength: 160
+          nullable: true
+        contactEmail:
+          type: string
+          format: email
+          maxLength: 254
+          nullable: true
+        phone:
+          type: string
+          maxLength: 40
+          nullable: true
+        websiteUrl:
+          type: string
+          format: uri
+          pattern: ^https://.*
+          maxLength: 500
+          nullable: true
+        notes:
+          type: string
+          maxLength: 2000
+          nullable: true
+
+    OfflineFinancialRecordType:
+      type: string
+      enum: [CONTRIBUTION, SPONSORSHIP, ORDER]
+
+    OfflinePaymentMethod:
+      type: string
+      enum: [CASH, CHECK, ACH, EXTERNAL_CARD, VENMO, ZELLE, OTHER]
+
+    OfflineVerificationStatus:
+      type: string
+      enum: [PENDING_VERIFICATION, VERIFIED]
+
+    OfflineCommonFields:
+      type: object
+      required: [paymentMethod, receivedAt, idempotencyKey]
+      properties:
+        paymentMethod: { $ref: "#/components/schemas/OfflinePaymentMethod" }
+        paymentReference: { type: string, maxLength: 200, nullable: true }
+        receivedAt: { type: string, format: date-time }
+        internalNotes: { type: string, maxLength: 4000, nullable: true }
+        idempotencyKey: { type: string, minLength: 8, maxLength: 120 }
+        markVerified: { type: boolean, default: false }
+        sendAcknowledgement: { type: boolean, default: false }
+
+    CreateOfflineContributionRequest:
+      allOf:
+        - $ref: "#/components/schemas/OfflineCommonFields"
+        - type: object
+          required: [campaignId, amountMinor]
+          properties:
+            campaignId: { type: string, format: uuid }
+            amountMinor: { type: integer, format: int64, minimum: 1 }
+            supporterName: { type: string, maxLength: 120, nullable: true }
+            isAnonymous: { type: boolean, default: false }
+            supporterEmail: { type: string, format: email, maxLength: 254, nullable: true }
+
+    CreateOfflineSponsorshipRequest:
+      allOf:
+        - $ref: "#/components/schemas/OfflineCommonFields"
+        - type: object
+          required: [packageId, sponsorName]
+          properties:
+            packageId: { type: string, format: uuid }
+            sponsorName: { type: string, minLength: 1, maxLength: 120 }
+            sponsorContactEmail: { type: string, format: email, maxLength: 254, nullable: true }
+            sponsorPhone: { type: string, maxLength: 40, nullable: true }
+            sponsorCompanyName: { type: string, maxLength: 200, nullable: true }
+
+    OfflineOrderLineItemRequest:
+      type: object
+      required: [productVariantId, quantity]
+      properties:
+        productVariantId: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1, maximum: 100 }
+
+    OfflineShippingAddressRequest:
+      type: object
+      properties:
+        name: { type: string, maxLength: 120, nullable: true }
+        line1: { type: string, maxLength: 200, nullable: true }
+        line2: { type: string, maxLength: 200, nullable: true }
+        city: { type: string, maxLength: 120, nullable: true }
+        state: { type: string, maxLength: 120, nullable: true }
+        postalCode: { type: string, maxLength: 40, nullable: true }
+        country: { type: string, maxLength: 2, nullable: true }
+
+    CreateOfflineOrderRequest:
+      allOf:
+        - $ref: "#/components/schemas/OfflineCommonFields"
+        - type: object
+          required: [storeId, items]
+          properties:
+            storeId: { type: string, format: uuid }
+            items:
+              type: array
+              minItems: 1
+              maxItems: 50
+              items: { $ref: "#/components/schemas/OfflineOrderLineItemRequest" }
+            supporterName: { type: string, maxLength: 120, nullable: true }
+            supporterEmail: { type: string, format: email, maxLength: 254, nullable: true }
+            shippingAddress: { $ref: "#/components/schemas/OfflineShippingAddressRequest" }
+
+    OfflineFinancialRecordResponse:
+      type: object
+      required: [id, organizationId, recordType, recordId, displayLabel, paymentMethod, verificationStatus, amountMinor, currency, receivedAt, sendAcknowledgement, recordedByUserId, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        organizationId: { type: string, format: uuid }
+        recordType: { $ref: "#/components/schemas/OfflineFinancialRecordType" }
+        recordId: { type: string, format: uuid }
+        displayLabel: { type: string }
+        paymentMethod: { $ref: "#/components/schemas/OfflinePaymentMethod" }
+        verificationStatus: { $ref: "#/components/schemas/OfflineVerificationStatus" }
+        amountMinor: { type: integer, format: int64 }
+        currency: { type: string }
+        payerName: { type: string, nullable: true }
+        payerEmail: { type: string, nullable: true }
+        paymentReference: { type: string, nullable: true }
+        receivedAt: { type: string, format: date-time }
+        internalNotes: { type: string, nullable: true }
+        sendAcknowledgement: { type: boolean }
+        recordedByUserId: { type: string, format: uuid }
+        verifiedByUserId: { type: string, format: uuid, nullable: true }
+        verifiedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    OfflineFinancialRecordPageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/OfflineFinancialRecordResponse" }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+
+    ManualVendorResponse:
+      type: object
+      required: [id, organizationId, name, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        contactName:
+          type: string
+          nullable: true
+        contactEmail:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        websiteUrl:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ManualVendorStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CatalogSource:
+      type: string
+      enum: [PRINTIFY, MANUAL]
+
     ProductStatus:
       type: string
       enum: [DRAFT, ACTIVE, ARCHIVED]
 
     CreateProductRequest:
       type: object
-      required: [name, printifyBlueprintId]
+      required: [name]
       properties:
         name:
           type: string
@@ -9354,13 +10099,37 @@ components:
           type: string
           maxLength: 2000
           nullable: true
+        catalogSource:
+          $ref: "#/components/schemas/CatalogSource"
+        manualVendorId:
+          type: string
+          format: uuid
+          nullable: true
         printifyBlueprintId:
           type: integer
           format: int64
+          nullable: true
         printifyPrintPosition:
           type: string
           default: front
-          description: Which of the blueprint's print-area placeholders (e.g. "front", "back") the single design image goes on — one design slot per product this slice.
+      description: PRINTIFY requires a real blueprint ID and no manual vendor. MANUAL permits an optional real manual vendor and forbids Printify IDs.
+
+    UpdateManualProductRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 2000
+          nullable: true
+        manualVendorId:
+          type: string
+          format: uuid
+          nullable: true
 
     UpdateProductStatusRequest:
       type: object
@@ -9383,7 +10152,7 @@ components:
 
     ProductResponse:
       type: object
-      required: [id, organizationId, storeId, name, printifyBlueprintId, printifyPrintPosition, hasDesign, status, createdAt, updatedAt]
+      required: [id, organizationId, storeId, name, catalogSource, printifyPrintPosition, hasDesign, status, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -9399,14 +10168,24 @@ components:
         description:
           type: string
           nullable: true
+        catalogSource:
+          $ref: "#/components/schemas/CatalogSource"
+        manualVendorId:
+          type: string
+          format: uuid
+          nullable: true
+        manualVendorName:
+          type: string
+          nullable: true
         printifyBlueprintId:
           type: integer
           format: int64
+          nullable: true
         printifyPrintPosition:
           type: string
         hasDesign:
           type: boolean
-          description: True once a design has been pushed to Printify's image library (first variant creation) — not just "an image was assigned" in our own system.
+          description: True when LeagueLift has a current product design assignment. Printify activation additionally requires the design to have been uploaded to Printify through variant creation.
         status:
           $ref: "#/components/schemas/ProductStatus"
         createdAt:
@@ -9450,9 +10229,52 @@ components:
           format: int64
           minimum: 0
 
+    ManualProductVariantRequest:
+      type: object
+      required: [label, currency, costMinor, priceMinor]
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        sku:
+          type: string
+          maxLength: 120
+          nullable: true
+        size:
+          type: string
+          maxLength: 80
+          nullable: true
+        color:
+          type: string
+          maxLength: 80
+          nullable: true
+        currency:
+          type: string
+          pattern: ^[A-Za-z]{3}$
+          default: USD
+        costMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        priceMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        isActive:
+          type: boolean
+          default: true
+
+    UpdateProductVariantStatusRequest:
+      type: object
+      required: [isActive]
+      properties:
+        isActive:
+          type: boolean
+
     ProductVariantResponse:
       type: object
-      required: [id, productId, label, printifyPrintProviderId, printifyVariantId, currency, costMinor, priceMinor, isActive]
+      required: [id, productId, catalogSource, label, currency, costMinor, priceMinor, isActive]
       properties:
         id:
           type: string
@@ -9460,20 +10282,33 @@ components:
         productId:
           type: string
           format: uuid
+        catalogSource:
+          $ref: "#/components/schemas/CatalogSource"
         label:
           type: string
+        sku:
+          type: string
+          nullable: true
+        size:
+          type: string
+          nullable: true
+        color:
+          type: string
+          nullable: true
         printifyPrintProviderId:
           type: integer
           format: int64
+          nullable: true
         printifyVariantId:
           type: integer
           format: int64
+          nullable: true
         currency:
           type: string
         costMinor:
           type: integer
           format: int64
-          description: Printify's real cost for this variant/provider, in minor units — snapshotted from the create-variant call's response, never guessed.
+          description: Real provider-returned or manager-entered vendor cost, snapshotted onto order items at checkout.
         priceMinor:
           type: integer
           format: int64
@@ -9633,7 +10468,7 @@ components:
 
     OrderResponse:
       type: object
-      required: [id, storeId, status, currency, createdAt]
+      required: [id, storeId, status, paymentSource, currency, createdAt]
       description: Org-admin shape.
       properties:
         id:
@@ -9644,6 +10479,8 @@ components:
           format: uuid
         status:
           $ref: "#/components/schemas/OrderStatus"
+        paymentSource:
+          $ref: "#/components/schemas/PaymentSource"
         currency:
           type: string
         supporterName:
@@ -9681,21 +10518,238 @@ components:
         totalElements:
           type: integer
 
+    FulfillmentSource:
+      type: string
+      enum: [PRINTIFY, MANUAL]
+
     FulfillmentStatus:
       type: string
-      enum: [NOT_SUBMITTED, DRAFT_CREATED, FAILED]
+      enum: [NOT_SUBMITTED, DRAFT_CREATED, FAILED, READY, IN_PRODUCTION, SHIPPED, DELIVERED, NEEDS_ATTENTION, CANCELED]
+
+    UpdateFulfillmentRequest:
+      type: object
+      required: [status, note]
+      properties:
+        status:
+          $ref: "#/components/schemas/FulfillmentStatus"
+        manualVendorId:
+          type: string
+          format: uuid
+          nullable: true
+        vendorOrderReference:
+          type: string
+          maxLength: 200
+          nullable: true
+        carrier:
+          type: string
+          maxLength: 120
+          nullable: true
+        trackingNumber:
+          type: string
+          maxLength: 200
+          nullable: true
+        trackingUrl:
+          type: string
+          pattern: ^https://.*
+          maxLength: 1000
+          nullable: true
+        internalNotes:
+          type: string
+          maxLength: 4000
+          nullable: true
+        attentionReason:
+          type: string
+          maxLength: 1000
+          nullable: true
+        note:
+          type: string
+          minLength: 3
+          maxLength: 500
+          description: Append-only operational history note for a status change.
 
     FulfillmentResponse:
       type: object
-      required: [status]
+      required: [id, orderId, source, status, statusChangedAt, createdAt, updatedAt]
       properties:
+        id:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        source:
+          $ref: "#/components/schemas/FulfillmentSource"
         status:
           $ref: "#/components/schemas/FulfillmentStatus"
         printifyOrderId:
           type: string
           nullable: true
+        manualVendorId:
+          type: string
+          format: uuid
+          nullable: true
+        manualVendorName:
+          type: string
+          nullable: true
+        vendorOrderReference:
+          type: string
+          nullable: true
+        carrier:
+          type: string
+          nullable: true
+        trackingNumber:
+          type: string
+          nullable: true
+        trackingUrl:
+          type: string
+          nullable: true
+        internalNotes:
+          type: string
+          nullable: true
+        attentionReason:
+          type: string
+          nullable: true
         lastError:
           type: string
+          nullable: true
+        statusChangedAt:
+          type: string
+          format: date-time
+        shippedAt:
+          type: string
+          format: date-time
+          nullable: true
+        deliveredAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    FulfillmentHistoryResponse:
+      type: object
+      required: [id, newStatus, note, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        previousStatus:
+          allOf:
+            - $ref: "#/components/schemas/FulfillmentStatus"
+          nullable: true
+        newStatus:
+          $ref: "#/components/schemas/FulfillmentStatus"
+        note:
+          type: string
+        actorUserId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    FulfillmentReprintStatus:
+      type: string
+      enum: [REQUESTED, IN_PRODUCTION, SHIPPED, DELIVERED, CANCELED]
+
+    CreateFulfillmentReprintRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 1000
+        vendorOrderReference:
+          type: string
+          maxLength: 200
+          nullable: true
+        internalNotes:
+          type: string
+          maxLength: 4000
+          nullable: true
+
+    UpdateFulfillmentReprintRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/FulfillmentReprintStatus"
+        vendorOrderReference:
+          type: string
+          maxLength: 200
+          nullable: true
+        carrier:
+          type: string
+          maxLength: 120
+          nullable: true
+        trackingNumber:
+          type: string
+          maxLength: 200
+          nullable: true
+        trackingUrl:
+          type: string
+          pattern: ^https://.*
+          maxLength: 1000
+          nullable: true
+        internalNotes:
+          type: string
+          maxLength: 4000
+          nullable: true
+
+    FulfillmentReprintResponse:
+      type: object
+      required: [id, fulfillmentId, orderId, status, reason, requestedByUserId, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fulfillmentId:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/FulfillmentReprintStatus"
+        reason:
+          type: string
+        vendorOrderReference:
+          type: string
+          nullable: true
+        carrier:
+          type: string
+          nullable: true
+        trackingNumber:
+          type: string
+          nullable: true
+        trackingUrl:
+          type: string
+          nullable: true
+        internalNotes:
+          type: string
+          nullable: true
+        requestedByUserId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        shippedAt:
+          type: string
+          format: date-time
+          nullable: true
+        deliveredAt:
+          type: string
+          format: date-time
           nullable: true
 
     SponsorshipPackageStatus:
@@ -9961,7 +11015,7 @@ components:
         atomically refunds).
     SponsorshipResponse:
       type: object
-      required: [id, status, amountMinor, currency, sponsorId, sponsorName, reviewStatus, createdAt]
+      required: [id, status, paymentSource, amountMinor, currency, sponsorId, sponsorName, reviewStatus, createdAt]
       description: >
         Org-admin list shape — sponsorships that were confirmed at some point
         (CONFIRMED or REFUNDED). Used by
@@ -9973,6 +11027,8 @@ components:
           format: uuid
         status:
           $ref: "#/components/schemas/SponsorshipStatus"
+        paymentSource:
+          $ref: "#/components/schemas/PaymentSource"
         amountMinor:
           type: integer
           format: int64

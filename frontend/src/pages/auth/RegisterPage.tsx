@@ -70,12 +70,14 @@ export function RegisterPage() {
 						<form onSubmit={onAccountSubmit} noValidate className="mt-6 flex flex-col gap-5">
 							<div className="grid gap-5 sm:grid-cols-2">
 								<FormField
+									tone="dark"
 									label="First name"
 									required
 									error={accountForm.formState.errors.firstName?.message}
 									{...accountForm.register("firstName")}
 								/>
 								<FormField
+									tone="dark"
 									label="Last name"
 									required
 									error={accountForm.formState.errors.lastName?.message}
@@ -83,6 +85,7 @@ export function RegisterPage() {
 								/>
 							</div>
 							<FormField
+								tone="dark"
 								label="Email"
 								type="email"
 								required
@@ -91,12 +94,14 @@ export function RegisterPage() {
 							/>
 							<div className="grid gap-5 sm:grid-cols-2">
 								<PasswordField
+									tone="dark"
 									label="Password"
 									required
 									error={accountForm.formState.errors.password?.message}
 									{...accountForm.register("password")}
 								/>
 								<PasswordField
+									tone="dark"
 									label="Confirm password"
 									required
 									error={accountForm.formState.errors.confirmPassword?.message}
@@ -104,6 +109,7 @@ export function RegisterPage() {
 								/>
 							</div>
 							<CheckboxField
+								tone="dark"
 								label={
 									<>
 										I agree to the{" "}
@@ -121,6 +127,7 @@ export function RegisterPage() {
 								{...accountForm.register("agreeToTerms")}
 							/>
 							<CheckboxField
+								tone="dark"
 								label="I am at least 18 years old."
 								error={accountForm.formState.errors.confirmAdult?.message}
 								{...accountForm.register("confirmAdult")}

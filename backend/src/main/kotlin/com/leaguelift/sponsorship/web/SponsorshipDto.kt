@@ -115,6 +115,7 @@ fun Sponsorship.toStatusResponse() = SponsorshipStatusResponse(id, status.name, 
 data class SponsorshipResponse(
 	val id: UUID,
 	val status: String,
+	val paymentSource: String,
 	val amountMinor: Long,
 	val currency: String,
 	val sponsorId: UUID,
@@ -128,7 +129,7 @@ data class SponsorshipResponse(
 )
 
 fun SponsorshipWithSponsor.toResponse() = SponsorshipResponse(
-	sponsorship.id, sponsorship.status.name, sponsorship.amountMinor, sponsorship.currency,
+	sponsorship.id, sponsorship.status.name, sponsorship.paymentSource.name, sponsorship.amountMinor, sponsorship.currency,
 	sponsor.id, sponsor.name, sponsor.contactEmail, sponsorship.confirmedAt, sponsorship.refundedAt,
 	sponsorship.reviewStatus.name, sponsorship.reviewedAt, sponsorship.createdAt,
 )

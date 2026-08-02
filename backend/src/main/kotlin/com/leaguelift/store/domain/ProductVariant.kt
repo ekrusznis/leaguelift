@@ -7,11 +7,15 @@ data class ProductVariant(
 	val id: UUID,
 	val organizationId: UUID,
 	val productId: UUID,
+	val catalogSource: CatalogSource,
 	val label: String,
-	val printifyPrintProviderId: Long,
-	val printifyVariantId: Long,
+	val sku: String?,
+	val size: String?,
+	val color: String?,
+	val printifyPrintProviderId: Long?,
+	val printifyVariantId: Long?,
 	val currency: String,
-	/** Printify's real cost for this variant/provider, in minor units — snapshotted from PrintifyProductClient's response at creation time, never guessed. */
+	/** Provider or vendor cost in minor units, snapshotted onto each order item at checkout. */
 	val costMinor: Long,
 	val priceMinor: Long,
 	val isActive: Boolean,

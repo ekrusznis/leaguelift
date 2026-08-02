@@ -8,6 +8,7 @@ export type OrganizationSection =
 	| "fees"
 	| "fundraising"
 	| "stores"
+	| "financial-operations"
 	| "sponsorships"
 	| "events"
 	| "reports"

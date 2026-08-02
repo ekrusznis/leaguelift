@@ -1,6 +1,7 @@
 package com.leaguelift.order.persistence
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.leaguelift.finance.domain.PaymentSource
 import com.leaguelift.order.domain.Order
 import com.leaguelift.order.domain.OrderStatus
 import com.leaguelift.order.domain.ShippingAddress
@@ -13,7 +14,7 @@ import java.util.UUID
 private const val COLUMNS = """
     id, organization_id, store_id, status, currency, supporter_name, supporter_email,
     shipping_address, stripe_checkout_session_id, stripe_payment_intent_id, confirmed_at,
-    refunded_at, created_at
+    refunded_at, created_at, payment_source
 """
 
 @Repository
@@ -89,6 +90,48 @@ class OrderRepository(private val jdbcClient: JdbcClient, private val objectMapp
 			.param("id", id)
 			.update()
 
+	fun insertOfflinePending(
+		organizationId: UUID,
+		storeId: UUID,
+		currency: String,
+		supporterName: String?,
+		supporterEmail: String?,
+		shippingAddress: ShippingAddress?,
+	): Order {
+		val id = UUID.randomUUID()
+		val now = Instant.now()
+		jdbcClient.sql(
+			"""
+			insert into "order"
+				(id, organization_id, store_id, status, currency, supporter_name, supporter_email,
+				 shipping_address, payment_source, created_at)
+			values
+				(:id, :organizationId, :storeId, 'PENDING', :currency, :supporterName, :supporterEmail,
+				 cast(:shippingAddress as jsonb), 'OFFLINE', :now)
+			""".trimIndent(),
+		)
+			.param("id", id)
+			.param("organizationId", organizationId)
+			.param("storeId", storeId)
+			.param("currency", currency)
+			.param("supporterName", supporterName)
+			.param("supporterEmail", supporterEmail)
+			.param("shippingAddress", shippingAddress?.let { objectMapper.writeValueAsString(it) })
+			.param("now", Timestamp.from(now))
+			.update()
+		return findById(id, organizationId)!!
+	}
+
+	fun markOfflineConfirmed(id: UUID, confirmedAt: Instant): Int = jdbcClient.sql(
+		"""
+		update "order" set status = 'CONFIRMED', confirmed_at = :confirmedAt
+		where id = :id and status = 'PENDING' and payment_source = 'OFFLINE'
+		""".trimIndent(),
+	)
+		.param("confirmedAt", Timestamp.from(confirmedAt))
+		.param("id", id)
+		.update()
+
 	/** Only flips PENDING -> CONFIRMED. Returns rows affected (0 if already confirmed/canceled — the idempotency guard, same pattern as ContributionRepository.markConfirmed). */
 	fun markConfirmed(id: UUID, shippingAddress: ShippingAddress?, stripePaymentIntentId: String?): Int {
 		val now = Instant.now()
@@ -130,5 +173,6 @@ class OrderRepository(private val jdbcClient: JdbcClient, private val objectMapp
 			confirmedAt = rs.getTimestamp("confirmed_at")?.toInstant(),
 			refundedAt = rs.getTimestamp("refunded_at")?.toInstant(),
 			createdAt = rs.getTimestamp("created_at").toInstant(),
+			paymentSource = PaymentSource.valueOf(rs.getString("payment_source")),
 		)
 }
