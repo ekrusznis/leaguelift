@@ -37,12 +37,12 @@ Before the Phase 21 production go/no-go, LeagueLift must review every reachable 
 | Households, guardians, participants, profile corrections | Owner/Admin, Guardian, Athlete | Creation/import, linked access, correction request/review, profile photos | Guardian basics exists; detailed articles pending |
 | Manual onboarding and bulk actions | Owner/Admin | CSV format, preview errors, deduplication, execution, bulk invitations/assignments | Article pending |
 | Events, RSVP, templates, calendars, maps | Owner/Admin, Coach, Guardian, Athlete | Create/publish, template use, RSVP, reminders, ICS/directions, status recovery | Overview exists; detailed articles pending |
-| Fees, payments, documents, acknowledgements | Owner/Admin, Guardian | Templates, assignments, balances, offline/online payments, reminders, acknowledgements | Overview exists; detailed articles pending |
+| Fees, payments, documents, acknowledgements | Owner/Admin, Guardian | Templates, assignments, balances, payment plans/installments, offline/online payments, reminders, acknowledgements | **Payment-plan article published in V39**; remaining detailed articles pending |
 | Fundraising campaigns and contributions | Owner/Admin, Coach, Public | Campaign lifecycle, launch reminders, public contribution, refund boundary | Detailed articles pending |
 | Stores, manual vendors/products, orders, fulfillment, reprints | Owner/Admin, Public, Guardian/Athlete where allowed | Catalog setup, checkout, tracking, exception handling, reprints | Detailed articles pending |
 | Sponsorship packages, sponsor review, directory, renewals | Owner/Admin, Public | Package setup, purchase, approval/rejection, logo/directory, reminders | Detailed articles pending |
-| Offline financial records | Owner/Admin | Record, pending verification, verify, acknowledgement, ledger/payout boundary | **Published in V38** |
-| Reports, collections, payout summaries, exports | Owner/Admin, Finance/Viewer | Reading totals, export meaning, payout eligibility, discrepancy handling | Article pending |
+| Offline financial records and corrections | Owner/Admin | Record, pending verification, verify, acknowledgement, correction preview, refund/reversal, ledger/payout boundary | **Offline-record article published in V38 and correction article published in V39** |
+| Reports, collections, payout summaries, reconciliation, exports | Owner/Admin, Finance/Viewer | Reading totals, export meaning, payout eligibility, running reconciliation, discrepancy handling | **Reconciliation article published in V39**; remaining reporting articles pending |
 | Action Center, announcements, notification preferences | All authenticated roles | Task sources, read state, publishing, audiences, email/SMS preferences | Article pending |
 | Help Center and support cases | Public, all authenticated roles, Platform | Search, submit case, case statuses, no live chat/SLA | Starter UI copy exists; article pending |
 | Platform Admin console and support access | Platform | Directories, scoped support sessions, audit, queues, article/case administration | Starter article exists; detailed articles pending |
@@ -51,7 +51,7 @@ Before the Phase 21 production go/no-go, LeagueLift must review every reachable 
 
 ## Content-production sequence
 
-1. Generate articles with each remaining Phase 18 slice.
+1. Treat every Phase 19–22 implementation slice as documentation-bearing work and add or update the affected role-specific articles before the slice is considered complete.
 2. During Phase 19–20, document each integration only after its real contract and activation behavior are verified.
 3. Before Phase 21 go/no-go, run the complete route/persona audit and close all “pending” rows above.
 4. During Phase 22, update articles from pilot support cases and observed user confusion; do not add speculative content unsupported by real workflows.

@@ -15,6 +15,7 @@ import com.leaguelift.fee.domain.PaymentMethod
 import com.leaguelift.fee.persistence.FeeAdjustmentRepository
 import com.leaguelift.fee.persistence.FeePaymentRepository
 import com.leaguelift.fee.persistence.FeeRepository
+import com.leaguelift.fee.paymentplan.persistence.FeePaymentPlanRepository
 import com.leaguelift.household.persistence.HouseholdRepository
 import com.leaguelift.membership.application.MembershipService
 import com.leaguelift.membership.domain.MembershipRole
@@ -37,16 +38,22 @@ class FeeServiceTest {
     private val feeRepository = mockk<FeeRepository>()
     private val feePaymentRepository = mockk<FeePaymentRepository>()
     private val feeAdjustmentRepository = mockk<FeeAdjustmentRepository>()
+    private val feePaymentPlanRepository = mockk<FeePaymentPlanRepository>()
     private val householdRepository = mockk<HouseholdRepository>()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
-    private val service = FeeService(feeRepository, feePaymentRepository, feeAdjustmentRepository, householdRepository, membershipService, auditService)
+    private val service = FeeService(feeRepository, feePaymentRepository, feeAdjustmentRepository, feePaymentPlanRepository, householdRepository, membershipService, auditService)
 
     private val orgId = UUID.randomUUID()
     private val householdId = UUID.randomUUID()
     private val currentUser = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
 
     // --- Fee Template tests ---
+
+    init {
+        every { feePaymentPlanRepository.findActiveByAssignment(any(), any()) } returns null
+        every { feePaymentPlanRepository.findLatestByAssignment(any(), any()) } returns null
+    }
 
     @Test
     fun `listTemplates requires active membership`() {

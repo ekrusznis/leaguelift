@@ -1,16 +1,13 @@
-import { useState } from "react";
-import { Button } from "../../components/Button";
+import { Link } from "react-router-dom";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
-import { ApiError } from "../../lib/apiError";
 import { formatMoneyMinorUnits } from "../../lib/money";
-import { useOrgContributions, useRefundContribution } from "./api";
+import { appPaths } from "../../routes/appPaths";
+import { useOrgContributions } from "./api";
 
 export function ContributionList({ organizationId, campaignId }: { organizationId: string; campaignId: string }) {
 	const { data, isLoading, isError, refetch } = useOrgContributions(organizationId, campaignId);
-	const refundContribution = useRefundContribution(organizationId, campaignId);
-	const [refundError, setRefundError] = useState<string | null>(null);
 
 	if (isLoading) return <LoadingState label="Loading contributions…" />;
 	if (isError) return <ErrorState message="Could not load contributions." onRetry={() => refetch()} />;
@@ -18,22 +15,9 @@ export function ContributionList({ organizationId, campaignId }: { organizationI
 		return <EmptyState title="No contributions yet" description="Confirmed contributions will appear here once a supporter checks out." />;
 	}
 
-	async function handleRefund(contributionId: string) {
-		setRefundError(null);
-		try {
-			await refundContribution.mutateAsync(contributionId);
-		} catch (e) {
-			setRefundError(e instanceof ApiError ? e.message : "Could not refund this contribution. Please try again.");
-		}
-	}
 
 	return (
 		<div className="flex flex-col gap-2">
-			{refundError && (
-				<p role="alert" className="text-sm text-error-red">
-					{refundError}
-				</p>
-			)}
 			<ul className="flex flex-col gap-2" aria-label="Contributions">
 				{data.items.map((contribution) => (
 					<li key={contribution.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-3">
@@ -50,15 +34,9 @@ export function ContributionList({ organizationId, campaignId }: { organizationI
 							<p className="text-sm text-slate-gray">{formatMoneyMinorUnits(contribution.amountMinor, contribution.currency)}</p>
 						</div>
 						{contribution.status === "CONFIRMED" && contribution.paymentSource === "STRIPE" && (
-							<Button
-								type="button"
-								variant="danger"
-								className="shrink-0"
-								onClick={() => handleRefund(contribution.id)}
-								disabled={refundContribution.isPending}
-							>
-								{refundContribution.isPending ? "Refunding…" : "Refund"}
-							</Button>
+							<Link className="min-h-11 shrink-0 rounded-md border border-error-red px-4 py-2 text-sm font-medium text-error-red hover:bg-error-red/5" to={`${appPaths.organization(organizationId, "financial-operations")}?targetType=CONTRIBUTION&targetId=${contribution.id}`}>
+								Preview refund
+							</Link>
 						)}
 					</li>
 				))}

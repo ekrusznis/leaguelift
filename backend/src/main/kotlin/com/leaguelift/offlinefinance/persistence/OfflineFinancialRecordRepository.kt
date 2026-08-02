@@ -15,7 +15,7 @@ private const val COLUMNS = """
     verification_status, amount_minor, currency, payer_name, payer_email,
     payment_reference, received_at, internal_notes, idempotency_key,
     duplicate_fingerprint, send_acknowledgement, recorded_by_user_id,
-    verified_by_user_id, verified_at, created_at, updated_at
+    verified_by_user_id, verified_at, reversed_by_user_id, reversed_at, reversal_reason, created_at, updated_at
 """
 
 @Repository
@@ -170,6 +170,17 @@ class OfflineFinancialRecordRepository(private val jdbcClient: JdbcClient) {
 		.param("organizationId", organizationId)
 		.update()
 
+	fun markReversed(id: UUID, organizationId: UUID, userId: UUID, reason: String, reversedAt: Instant): Int = jdbcClient.sql(
+		"""
+		update offline_financial_record
+		set verification_status = 'REVERSED', reversed_by_user_id = :userId, reversed_at = :reversedAt,
+		    reversal_reason = :reason, updated_at = :reversedAt
+		where id = :id and organization_id = :organizationId and verification_status = 'VERIFIED'
+		""".trimIndent(),
+	)
+		.param("userId", userId).param("reversedAt", Timestamp.from(reversedAt)).param("reason", reason)
+		.param("id", id).param("organizationId", organizationId).update()
+
 	private fun mapRow(rs: java.sql.ResultSet, _rowNum: Int): OfflineFinancialRecord = OfflineFinancialRecord(
 		id = rs.getObject("id", UUID::class.java),
 		organizationId = rs.getObject("organization_id", UUID::class.java),
@@ -191,6 +202,9 @@ class OfflineFinancialRecordRepository(private val jdbcClient: JdbcClient) {
 		recordedByUserId = rs.getObject("recorded_by_user_id", UUID::class.java),
 		verifiedByUserId = rs.getObject("verified_by_user_id", UUID::class.java),
 		verifiedAt = rs.getTimestamp("verified_at")?.toInstant(),
+		reversedByUserId = rs.getObject("reversed_by_user_id", UUID::class.java),
+		reversedAt = rs.getTimestamp("reversed_at")?.toInstant(),
+		reversalReason = rs.getString("reversal_reason"),
 		createdAt = rs.getTimestamp("created_at").toInstant(),
 		updatedAt = rs.getTimestamp("updated_at").toInstant(),
 	)

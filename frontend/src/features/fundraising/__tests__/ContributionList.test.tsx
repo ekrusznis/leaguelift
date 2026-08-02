@@ -1,5 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../../test/testUtils";
 import { ContributionList } from "../ContributionList";
@@ -39,30 +38,20 @@ describe("ContributionList", () => {
 		expect(await screen.findByText(/no contributions yet/i)).toBeInTheDocument();
 	});
 
-	it("shows a Refund button for a confirmed contribution and calls the refund endpoint", async () => {
-		const fetchMock = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
-			if (init?.method === "POST" && url.includes("/refund")) {
-				return Promise.resolve(jsonResponse({ ...confirmedContribution, status: "REFUNDED" }));
-			}
-			return Promise.resolve(jsonResponse({ items: [confirmedContribution], page: 0, size: 20, totalElements: 1 }));
-		});
-		vi.stubGlobal("fetch", fetchMock);
-		const user = userEvent.setup();
+	it("links a confirmed Stripe contribution to the controlled refund preview", async () => {
+		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ items: [confirmedContribution], page: 0, size: 20, totalElements: 1 })));
 
 		renderWithProviders(<ContributionList organizationId={organizationId} campaignId={campaignId} />);
 		await screen.findByText("Jane Doe");
 
-		await user.click(screen.getByRole("button", { name: /refund/i }));
-
-		await waitFor(() =>
-			expect(fetchMock).toHaveBeenCalledWith(
-				expect.stringContaining(`/organizations/${organizationId}/campaigns/${campaignId}/contributions/${confirmedContribution.id}/refund`),
-				expect.objectContaining({ method: "POST" }),
-			),
+		const link = screen.getByRole("link", { name: /preview refund/i });
+		expect(link).toHaveAttribute(
+			"href",
+			`/app/organizations/${organizationId}/financial-operations?targetType=CONTRIBUTION&targetId=${confirmedContribution.id}`,
 		);
 	});
 
-	it("does not show a Refund button for an already-refunded contribution", async () => {
+	it("does not show a refund-preview link for an already-refunded contribution", async () => {
 		const refunded: Contribution = { ...confirmedContribution, status: "REFUNDED", refundedAt: new Date().toISOString() };
 		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ items: [refunded], page: 0, size: 20, totalElements: 1 })));
 
@@ -70,6 +59,6 @@ describe("ContributionList", () => {
 		await screen.findByText("Jane Doe");
 
 		expect(screen.getByText(/refunded/i)).toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: /refund/i })).not.toBeInTheDocument();
+		expect(screen.queryByRole("link", { name: /preview refund/i })).not.toBeInTheDocument();
 	});
 });

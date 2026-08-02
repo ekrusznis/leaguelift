@@ -1,5 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../../test/testUtils";
 import { OrderList } from "../OrderList";
@@ -39,31 +38,24 @@ describe("OrderList", () => {
 		expect(await screen.findByText(/no confirmed orders yet/i)).toBeInTheDocument();
 	});
 
-	it("shows a Refund button for a confirmed order and calls the refund endpoint", async () => {
-		const fetchMock = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
-			if (init?.method === "POST" && url.includes("/refund")) {
-				return Promise.resolve(jsonResponse({ ...confirmedOrder, status: "REFUNDED" }));
-			}
+	it("links a confirmed Stripe order to the controlled refund preview", async () => {
+		const fetchMock = vi.fn().mockImplementation((url: string) => {
 			if (url.includes("/fulfillment")) return Promise.resolve(jsonResponse(null));
 			return Promise.resolve(jsonResponse({ items: [confirmedOrder], page: 0, size: 20, totalElements: 1 }));
 		});
 		vi.stubGlobal("fetch", fetchMock);
-		const user = userEvent.setup();
 
 		renderWithProviders(<OrderList organizationId={organizationId} storeId={storeId} />);
 		await screen.findByText("Jane Doe");
 
-		await user.click(screen.getByRole("button", { name: /refund/i }));
-
-		await waitFor(() =>
-			expect(fetchMock).toHaveBeenCalledWith(
-				expect.stringContaining(`/organizations/${organizationId}/orders/${confirmedOrder.id}/refund`),
-				expect.objectContaining({ method: "POST" }),
-			),
+		const link = screen.getByRole("link", { name: /preview refund/i });
+		expect(link).toHaveAttribute(
+			"href",
+			`/app/organizations/${organizationId}/financial-operations?targetType=ORDER&targetId=${confirmedOrder.id}`,
 		);
 	});
 
-	it("does not show a Refund button for an already-refunded order", async () => {
+	it("does not show a refund-preview link for an already-refunded order", async () => {
 		const refundedOrder: Order = { ...confirmedOrder, status: "REFUNDED", refundedAt: new Date().toISOString() };
 		const fetchMock = vi.fn().mockImplementation((url: string) => {
 			if (url.includes("/fulfillment")) return Promise.resolve(jsonResponse(null));
@@ -75,6 +67,6 @@ describe("OrderList", () => {
 		await screen.findByText("Jane Doe");
 
 		expect(screen.getByText(/refunded/i)).toBeInTheDocument();
-		expect(screen.queryByRole("button", { name: /refund/i })).not.toBeInTheDocument();
+		expect(screen.queryByRole("link", { name: /preview refund/i })).not.toBeInTheDocument();
 	});
 });

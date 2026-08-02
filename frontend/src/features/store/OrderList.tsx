@@ -1,17 +1,16 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
-import { ApiError } from "../../lib/apiError";
-import { useOrderFulfillment, useOrders, useRefundOrder } from "./api";
+import { appPaths } from "../../routes/appPaths";
+import { useOrderFulfillment, useOrders } from "./api";
 import { FulfillmentOperationsPanel } from "./FulfillmentOperationsPanel";
 import type { FulfillmentStatus } from "./types";
 
 export function OrderList({ organizationId, storeId }: { organizationId: string; storeId: string }) {
 	const { data, isLoading, isError, refetch } = useOrders(organizationId, storeId);
-	const refundOrder = useRefundOrder(organizationId, storeId);
-	const [refundError, setRefundError] = useState<string | null>(null);
 	const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
 	if (isLoading) return <LoadingState label="Loading orders…" />;
@@ -20,18 +19,9 @@ export function OrderList({ organizationId, storeId }: { organizationId: string;
 		return <EmptyState title="No confirmed orders yet" description="Confirmed orders will appear here once a supporter checks out." />;
 	}
 
-	async function handleRefund(orderId: string) {
-		setRefundError(null);
-		try {
-			await refundOrder.mutateAsync(orderId);
-		} catch (cause) {
-			setRefundError(cause instanceof ApiError ? cause.message : "Could not refund this order. Please try again.");
-		}
-	}
 
 	return (
 		<div className="flex flex-col gap-2">
-			{refundError && <p role="alert" className="text-sm text-error-red">{refundError}</p>}
 			<ul className="flex flex-col gap-2" aria-label="Confirmed orders">
 				{data.items.map((order) => {
 					const isExpanded = expandedOrderId === order.id;
@@ -52,9 +42,9 @@ export function OrderList({ organizationId, storeId }: { organizationId: string;
 										{isExpanded ? "Close operations" : "Manage fulfillment"}
 									</Button>
 									{order.status === "CONFIRMED" && order.paymentSource === "STRIPE" && (
-										<Button type="button" variant="danger" onClick={() => handleRefund(order.id)} disabled={refundOrder.isPending}>
-											{refundOrder.isPending ? "Refunding…" : "Refund"}
-										</Button>
+										<Link className="min-h-11 rounded-md border border-error-red px-4 py-2 text-sm font-medium text-error-red hover:bg-error-red/5" to={`${appPaths.organization(organizationId, "financial-operations")}?targetType=ORDER&targetId=${order.id}`}>
+											Preview refund
+										</Link>
 									)}
 								</div>
 							</div>

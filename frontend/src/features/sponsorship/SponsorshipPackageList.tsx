@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
@@ -7,6 +8,7 @@ import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { formatMoneyMinorUnits } from "../../lib/money";
+import { appPaths } from "../../routes/appPaths";
 import { useConfirmMediaUpload, useRequestMediaUpload } from "../media/api";
 import { fileSchemaFor } from "../media/schema";
 import { uploadToSignedUrl } from "../media/uploadToSignedUrl";
@@ -17,7 +19,6 @@ import {
 	usePackageSponsorships,
 	usePendingReviewSponsorships,
 	usePublishSponsorshipPackage,
-	useRefundSponsorship,
 	useRejectSponsorship,
 	useShareLinkQrCode,
 	useSponsorshipInvoice,
@@ -287,7 +288,6 @@ function reviewStatusBadgeClass(reviewStatus: Sponsorship["reviewStatus"]): stri
 
 function SponsorshipManagementPanel({ organizationId, packageId }: { organizationId: string; packageId: string }) {
 	const { data, isLoading, isError, refetch } = usePackageSponsorships(organizationId, packageId);
-	const refundSponsorship = useRefundSponsorship(organizationId);
 	const [invoiceSponsorshipId, setInvoiceSponsorshipId] = useState<string | null>(null);
 	const [editingSponsorId, setEditingSponsorId] = useState<string | null>(null);
 
@@ -336,25 +336,11 @@ function SponsorshipManagementPanel({ organizationId, packageId }: { organizatio
 							{editingSponsorId === sponsorship.sponsorId ? "Hide contact details" : "Edit contact details"}
 						</Button>
 						{sponsorship.status === "CONFIRMED" && sponsorship.paymentSource === "STRIPE" && (
-							<Button
-								type="button"
-								variant="secondary"
-								disabled={refundSponsorship.isPending}
-								onClick={() => {
-									if (window.confirm(`Refund ${sponsorship.sponsorName}'s sponsorship? This charges back the original payment via Stripe.`)) {
-										refundSponsorship.mutate(sponsorship.id);
-									}
-								}}
-							>
-								Refund
-							</Button>
+							<Link className="min-h-11 rounded-md border border-slate-gray/30 bg-pure-white px-4 py-2 text-sm font-medium text-navy hover:bg-ice-white" to={`${appPaths.organization(organizationId, "financial-operations")}?targetType=SPONSORSHIP&targetId=${sponsorship.id}`}>
+								Preview refund
+							</Link>
 						)}
 					</div>
-					{refundSponsorship.isError && refundSponsorship.variables === sponsorship.id && (
-						<p role="alert" className="mt-1 text-sm text-error-red">
-							Could not issue the refund. Please try again.
-						</p>
-					)}
 					{invoiceSponsorshipId === sponsorship.id && (
 						<div className="mt-3 border-t border-slate-gray/20 pt-3">
 							<SponsorshipInvoicePanel organizationId={organizationId} sponsorshipId={sponsorship.id} />

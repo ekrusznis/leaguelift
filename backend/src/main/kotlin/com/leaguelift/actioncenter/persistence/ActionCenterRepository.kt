@@ -20,6 +20,10 @@ class ActionCenterRepository(private val jdbcClient: JdbcClient) {
         where fa.organization_id = :organizationId
           and fa.status in ('OPEN', 'PARTIALLY_PAID')
           and fa.due_date is not null and fa.due_date < current_date
+          and not exists (
+              select 1 from fee_payment_plan plan
+              where plan.fee_assignment_id = fa.id and plan.status = 'ACTIVE'
+          )
           and greatest(0, fa.original_amount_minor
                 - coalesce((select sum(fp.amount_minor) from fee_payment fp where fp.fee_assignment_id = fa.id and fp.voided_at is null), 0)
                 - coalesce((select sum(adj.amount_minor) from fee_adjustment adj where adj.fee_assignment_id = fa.id and adj.voided_at is null), 0)) > 0
@@ -36,6 +40,30 @@ class ActionCenterRepository(private val jdbcClient: JdbcClient) {
 
     fun countPendingOfflineFinancialRecords(organizationId: UUID): Long = jdbcClient.sql(
         "select count(*) from offline_financial_record where organization_id = :organizationId and verification_status = 'PENDING_VERIFICATION'",
+    ).param("organizationId", organizationId).query(Long::class.java).single()
+
+    fun countOverdueInstallments(organizationId: UUID): Long = jdbcClient.sql(
+        """
+        select count(*)
+        from fee_installment i
+        join fee_payment_plan plan on plan.id = i.payment_plan_id and plan.status = 'ACTIVE'
+        left join (
+            select a.installment_id, sum(a.amount_minor) paid_minor
+            from fee_payment_installment_allocation a
+            join fee_payment p on p.id = a.fee_payment_id and p.voided_at is null
+            group by a.installment_id
+        ) paid on paid.installment_id = i.id
+        where i.organization_id = :organizationId and i.due_date < current_date
+          and coalesce(paid.paid_minor, 0) < i.amount_minor
+        """.trimIndent(),
+    ).param("organizationId", organizationId).query(Long::class.java).single()
+
+    fun countLatestReconciliationIssues(organizationId: UUID): Long = jdbcClient.sql(
+        """
+        select coalesce((select issue_count from reconciliation_run
+                         where organization_id = :organizationId and status = 'COMPLETED'
+                         order by started_at desc limit 1), 0)
+        """.trimIndent(),
     ).param("organizationId", organizationId).query(Long::class.java).single()
 
     fun countReviewableEvents(organizationId: UUID, teamId: UUID? = null, tournamentId: UUID? = null): Long {

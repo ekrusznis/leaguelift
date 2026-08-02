@@ -56,6 +56,18 @@ class ActionCenterService(
                 "Verify offline financial records", "$pendingOfflineRecords externally received transaction${plural(pendingOfflineRecords)} still need verification.",
                 "/app/organizations/$organizationId/financial-operations", organizationId,
             )
+            val overdueInstallments = repository.countOverdueInstallments(organizationId)
+            if (overdueInstallments > 0) items += aggregate(
+                "org:$organizationId:overdue-installments", ActionCenterType.PAYMENT_PLAN_OVERDUE, ActionCenterPriority.HIGH,
+                "Follow up on overdue installments", "$overdueInstallments payment-plan installment${plural(overdueInstallments)} are overdue.",
+                "/app/organizations/$organizationId/fees", organizationId,
+            )
+            val reconciliationIssues = repository.countLatestReconciliationIssues(organizationId)
+            if (reconciliationIssues > 0) items += aggregate(
+                "org:$organizationId:reconciliation-review", ActionCenterType.RECONCILIATION_REVIEW, ActionCenterPriority.HIGH,
+                "Review reconciliation exceptions", "$reconciliationIssues issue${plural(reconciliationIssues)} were found in the latest reconciliation run.",
+                "/app/organizations/$organizationId/financial-operations", organizationId,
+            )
             val events = repository.countReviewableEvents(organizationId)
             if (events > 0) items += aggregate(
                 "org:$organizationId:event-review", ActionCenterType.EVENT_REVIEW, ActionCenterPriority.NORMAL,

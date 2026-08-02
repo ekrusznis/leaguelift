@@ -65,7 +65,7 @@ data class OfflineFinancialAcknowledgementPayload(
 	val currency: String,
 	val paymentMethod: String,
 	val paymentReference: String?,
-	val receivedAt: Instant,
+	val receivedAt: String,
 )
 
 @Service
@@ -438,7 +438,7 @@ class OfflineFinancialRecordService(
 						currency = record.currency,
 						paymentMethod = record.paymentMethod.name,
 						paymentReference = record.paymentReference,
-						receivedAt = record.receivedAt,
+						receivedAt = record.receivedAt.toString(),
 					),
 				),
 			)

@@ -78,7 +78,7 @@ info:
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
     Phase 17 now includes the Help Center/support foundation plus role-aware Action Center aggregation, one-way organization/team/tournament announcements, recipient-snapshotted in-app/email/SMS delivery, and campaign/event/fee/document reminders through one audited pipeline with idempotent resource creation (ADR-049/ADR-050). Phase 16 slices 3-6 extend the media pipeline to team/tournament branding and private adult/participant profile photos (ADR-045), add typed profile-correction requests (ADR-046), add manager-controlled reusable event templates that prefill ordinary manual draft events without recurrence or automatic publication (ADR-047), and complete the phase with preview-confirmed, idempotent season rollover limited to active roster links, explicit TEAM staff grants, and ready logo/cover assignments (ADR-048).
-  version: "0.25.8"
+  version: "0.25.9"
 servers:
   - url: /api/v1
 tags:
@@ -7603,6 +7603,152 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+
+  /organizations/{organizationId}/fee-assignments/{assignmentId}/payment-plan:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - { name: assignmentId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [fees]
+      summary: Get the latest payment plan for a fee assignment
+      operationId: getFeePaymentPlan
+      responses:
+        "200": { description: Payment plan, content: { application/json: { schema: { $ref: "#/components/schemas/FeePaymentPlanResponse" } } } }
+        "204": { description: No payment plan has been created }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [fees]
+      summary: Create a formal installment plan for the outstanding fee balance
+      operationId: createFeePaymentPlan
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateFeePaymentPlanRequest" } } }
+      responses:
+        "201": { description: Payment plan created, content: { application/json: { schema: { $ref: "#/components/schemas/FeePaymentPlanResponse" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [fees]
+      summary: Cancel an active payment plan without deleting payments
+      operationId: cancelFeePaymentPlan
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/CancelFeePaymentPlanRequest" } } }
+      responses:
+        "200": { description: Cancelled payment plan, content: { application/json: { schema: { $ref: "#/components/schemas/FeePaymentPlanResponse" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /organizations/{organizationId}/financial-corrections:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [financial-operations]
+      summary: List append-only refunds and offline reversals
+      operationId: listFinancialCorrections
+      parameters:
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Financial corrections, content: { application/json: { schema: { $ref: "#/components/schemas/FinancialCorrectionPageResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /organizations/{organizationId}/financial-corrections/preview:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [financial-operations]
+      summary: Preview a refund or verified-offline reversal
+      operationId: previewFinancialCorrection
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/PreviewFinancialCorrectionRequest" } } }
+      responses:
+        "200": { description: Exact correction preview and confirmation hash, content: { application/json: { schema: { $ref: "#/components/schemas/FinancialCorrectionPreviewResponse" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /organizations/{organizationId}/financial-corrections/execute:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [financial-operations]
+      summary: Execute a previously previewed correction
+      description: Online refunds call the real provider with idempotency. Offline reversals append opposite ledger rows. Source and ledger history are never deleted or rewritten.
+      operationId: executeFinancialCorrection
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ExecuteFinancialCorrectionRequest" } } }
+      responses:
+        "201": { description: Correction recorded, content: { application/json: { schema: { $ref: "#/components/schemas/FinancialCorrectionResponse" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { description: Payment provider unavailable, content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } } }
+
+  /organizations/{organizationId}/reconciliation-runs:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [financial-operations]
+      summary: List durable reconciliation-run history
+      operationId: listReconciliationRuns
+      parameters:
+        - { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Reconciliation runs, content: { application/json: { schema: { $ref: "#/components/schemas/ReconciliationRunPageResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [financial-operations]
+      summary: Run a deterministic reconciliation snapshot
+      operationId: runReconciliation
+      responses:
+        "201": { description: Completed reconciliation snapshot, content: { application/json: { schema: { $ref: "#/components/schemas/ReconciliationResultResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /organizations/{organizationId}/reconciliation-runs/latest:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [financial-operations]
+      summary: Get the latest reconciliation snapshot and issues
+      operationId: getLatestReconciliation
+      responses:
+        "200": { description: Latest reconciliation, content: { application/json: { schema: { $ref: "#/components/schemas/ReconciliationResultResponse" } } } }
+        "204": { description: No reconciliation has been run }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /organizations/{organizationId}/reconciliation-runs/{runId}:
+    parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      - { name: runId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [financial-operations]
+      summary: Get one durable reconciliation snapshot
+      operationId: getReconciliationRun
+      responses:
+        "200": { description: Reconciliation run and issues, content: { application/json: { schema: { $ref: "#/components/schemas/ReconciliationResultResponse" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -9935,7 +10081,7 @@ components:
 
     OfflineVerificationStatus:
       type: string
-      enum: [PENDING_VERIFICATION, VERIFIED]
+      enum: [PENDING_VERIFICATION, VERIFIED, REVERSED]
 
     OfflineCommonFields:
       type: object
@@ -13453,6 +13599,177 @@ components:
         idempotencyKey: { type: string, minLength: 8, maxLength: 100 }
         emailEnabled: { type: boolean, default: true }
         smsEnabled: { type: boolean, default: false }
+
+
+    FeePaymentPlanStatus:
+      type: string
+      enum: [ACTIVE, COMPLETED, CANCELLED]
+    FeeInstallmentStatus:
+      type: string
+      enum: [UPCOMING, DUE, OVERDUE, PARTIALLY_PAID, PAID, CANCELLED]
+    InstallmentRequest:
+      type: object
+      required: [amountMinor, dueDate]
+      properties:
+        amountMinor: { type: integer, format: int64, minimum: 1 }
+        dueDate: { type: string, format: date }
+    CreateFeePaymentPlanRequest:
+      type: object
+      required: [installments]
+      properties:
+        installments:
+          type: array
+          minItems: 2
+          maxItems: 24
+          items: { $ref: "#/components/schemas/InstallmentRequest" }
+        note: { type: string, maxLength: 1000, nullable: true }
+    CancelFeePaymentPlanRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500 }
+    FeeInstallmentResponse:
+      type: object
+      required: [id, sequenceNumber, amountMinor, paidMinor, remainingMinor, dueDate, status]
+      properties:
+        id: { type: string, format: uuid }
+        sequenceNumber: { type: integer }
+        amountMinor: { type: integer, format: int64 }
+        paidMinor: { type: integer, format: int64 }
+        remainingMinor: { type: integer, format: int64 }
+        dueDate: { type: string, format: date }
+        status: { $ref: "#/components/schemas/FeeInstallmentStatus" }
+    FeePaymentPlanResponse:
+      type: object
+      required: [id, organizationId, feeAssignmentId, householdId, status, totalMinor, paidMinor, remainingMinor, currency, createdAt, updatedAt, installments]
+      properties:
+        id: { type: string, format: uuid }
+        organizationId: { type: string, format: uuid }
+        feeAssignmentId: { type: string, format: uuid }
+        householdId: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/FeePaymentPlanStatus" }
+        totalMinor: { type: integer, format: int64 }
+        paidMinor: { type: integer, format: int64 }
+        remainingMinor: { type: integer, format: int64 }
+        currency: { type: string }
+        note: { type: string, nullable: true }
+        cancelReason: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        installments:
+          type: array
+          items: { $ref: "#/components/schemas/FeeInstallmentResponse" }
+
+    FinancialCorrectionTargetType:
+      type: string
+      enum: [CONTRIBUTION, SPONSORSHIP, ORDER, OFFLINE_FINANCIAL_RECORD]
+    FinancialCorrectionType:
+      type: string
+      enum: [REFUND, REVERSAL]
+    PreviewFinancialCorrectionRequest:
+      type: object
+      required: [targetType, targetId, reason]
+      properties:
+        targetType: { $ref: "#/components/schemas/FinancialCorrectionTargetType" }
+        targetId: { type: string, format: uuid }
+        amountMinor: { type: integer, format: int64, minimum: 1, nullable: true }
+        reason: { type: string, minLength: 3, maxLength: 1000 }
+    ExecuteFinancialCorrectionRequest:
+      allOf:
+        - $ref: "#/components/schemas/PreviewFinancialCorrectionRequest"
+        - type: object
+          required: [confirmationHash, idempotencyKey]
+          properties:
+            confirmationHash: { type: string, minLength: 64, maxLength: 64 }
+            idempotencyKey: { type: string, minLength: 8, maxLength: 120 }
+    FinancialCorrectionPreviewResponse:
+      type: object
+      required: [correctionType, targetType, targetId, targetLabel, paymentSource, originalAmountMinor, previouslyCorrectedMinor, requestedAmountMinor, remainingAfterMinor, currency, willFullyCorrect, warnings, confirmationHash]
+      properties:
+        correctionType: { $ref: "#/components/schemas/FinancialCorrectionType" }
+        targetType: { $ref: "#/components/schemas/FinancialCorrectionTargetType" }
+        targetId: { type: string, format: uuid }
+        targetLabel: { type: string }
+        paymentSource: { type: string }
+        originalAmountMinor: { type: integer, format: int64 }
+        previouslyCorrectedMinor: { type: integer, format: int64 }
+        requestedAmountMinor: { type: integer, format: int64 }
+        remainingAfterMinor: { type: integer, format: int64 }
+        currency: { type: string }
+        willFullyCorrect: { type: boolean }
+        warnings: { type: array, items: { type: string } }
+        confirmationHash: { type: string }
+    FinancialCorrectionResponse:
+      type: object
+      required: [id, organizationId, correctionType, targetType, targetId, amountMinor, currency, reason, createdByUserId, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        organizationId: { type: string, format: uuid }
+        correctionType: { $ref: "#/components/schemas/FinancialCorrectionType" }
+        targetType: { $ref: "#/components/schemas/FinancialCorrectionTargetType" }
+        targetId: { type: string, format: uuid }
+        amountMinor: { type: integer, format: int64 }
+        currency: { type: string }
+        reason: { type: string }
+        providerReference: { type: string, nullable: true }
+        createdByUserId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+    FinancialCorrectionPageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/FinancialCorrectionResponse" } }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+
+    ReconciliationRunStatus:
+      type: string
+      enum: [RUNNING, COMPLETED, FAILED]
+    ReconciliationSeverity:
+      type: string
+      enum: [HIGH, MEDIUM, LOW]
+    ReconciliationRunResponse:
+      type: object
+      required: [id, organizationId, status, issueCount, highCount, mediumCount, lowCount, startedByUserId, startedAt]
+      properties:
+        id: { type: string, format: uuid }
+        organizationId: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/ReconciliationRunStatus" }
+        issueCount: { type: integer }
+        highCount: { type: integer }
+        mediumCount: { type: integer }
+        lowCount: { type: integer }
+        startedByUserId: { type: string, format: uuid }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, nullable: true }
+    ReconciliationIssueResponse:
+      type: object
+      required: [id, issueType, severity, resourceType, title, detail, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        issueType: { type: string }
+        severity: { $ref: "#/components/schemas/ReconciliationSeverity" }
+        resourceType: { type: string }
+        resourceId: { type: string, format: uuid, nullable: true }
+        title: { type: string }
+        detail: { type: string }
+        actionPath: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+    ReconciliationResultResponse:
+      type: object
+      required: [run, issues]
+      properties:
+        run: { $ref: "#/components/schemas/ReconciliationRunResponse" }
+        issues: { type: array, items: { $ref: "#/components/schemas/ReconciliationIssueResponse" } }
+    ReconciliationRunPageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/ReconciliationRunResponse" } }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
 
 
 security:

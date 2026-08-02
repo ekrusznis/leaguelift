@@ -10,6 +10,8 @@ import { OrganizationLogo } from "../dashboard/components/OrganizationLogo";
 import { OrganizationDocumentsPanel } from "../features/documents/OrganizationDocumentsPanel";
 import { OnboardingPanel } from "../features/onboarding/OnboardingPanel";
 import { OfflineFinancialRecordsPanel } from "../features/offlineFinance/OfflineFinancialRecordsPanel";
+import { FinancialCorrectionsPanel } from "../features/financialCorrections/FinancialCorrectionsPanel";
+import { ReconciliationPanel } from "../features/reconciliation/ReconciliationPanel";
 import { OrganizationCorrectionReviewPanel } from "../features/profileCorrections/OrganizationCorrectionReviewPanel";
 import { EventListPanel } from "../features/events/EventListPanel";
 import { FeeTemplateList } from "../features/fees/FeeTemplateList";
@@ -223,7 +225,15 @@ function OrganizationSectionContent({
 		case "stores":
 			return <Section title="Stores & Orders"><StoreList organizationId={organization.id} /></Section>;
 		case "financial-operations":
-			return <Section title="Financial Operations" description="Record and verify money received outside LeagueLift without fabricating provider activity."><OfflineFinancialRecordsPanel organizationId={organization.id} /></Section>;
+			return (
+				<Section title="Financial Operations" description="Record offline money, preview append-only corrections, and run durable reconciliation checks.">
+					<div className="flex flex-col gap-8">
+						<OfflineFinancialRecordsPanel organizationId={organization.id} />
+						<FinancialCorrectionsPanel organizationId={organization.id} />
+						<ReconciliationPanel organizationId={organization.id} />
+					</div>
+				</Section>
+			);
 		case "sponsorships":
 			return <Section title="Sponsorship Packages"><SponsorshipPackageList organizationId={organization.id} organizationSlug={organization.slug} /></Section>;
 		case "reports":

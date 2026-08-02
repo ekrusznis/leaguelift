@@ -5,7 +5,7 @@ import java.util.UUID
 
 enum class OfflineFinancialRecordType { CONTRIBUTION, SPONSORSHIP, ORDER }
 enum class OfflinePaymentMethod { CASH, CHECK, ACH, EXTERNAL_CARD, VENMO, ZELLE, OTHER }
-enum class OfflineVerificationStatus { PENDING_VERIFICATION, VERIFIED }
+enum class OfflineVerificationStatus { PENDING_VERIFICATION, VERIFIED, REVERSED }
 
 data class OfflineFinancialRecord(
 	val id: UUID,
@@ -28,6 +28,9 @@ data class OfflineFinancialRecord(
 	val recordedByUserId: UUID,
 	val verifiedByUserId: UUID?,
 	val verifiedAt: Instant?,
+	val reversedByUserId: UUID? = null,
+	val reversedAt: Instant? = null,
+	val reversalReason: String? = null,
 	val createdAt: Instant,
 	val updatedAt: Instant,
 )

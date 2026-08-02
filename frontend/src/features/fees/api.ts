@@ -112,6 +112,7 @@ export function useRecordPayment(organizationId: string, householdId: string, as
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: assignmentsKey(organizationId, householdId) });
 			queryClient.invalidateQueries({ queryKey: paymentsKey(organizationId, assignmentId) });
+			queryClient.invalidateQueries({ queryKey: paymentPlanKey(organizationId, assignmentId) });
 		},
 	});
 }
@@ -127,6 +128,7 @@ export function useVoidPayment(organizationId: string, householdId: string, assi
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: assignmentsKey(organizationId, householdId) });
 			queryClient.invalidateQueries({ queryKey: paymentsKey(organizationId, assignmentId) });
+			queryClient.invalidateQueries({ queryKey: paymentPlanKey(organizationId, assignmentId) });
 		},
 	});
 }
@@ -167,6 +169,40 @@ export function useVoidAdjustment(organizationId: string, householdId: string, a
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: assignmentsKey(organizationId, householdId) });
 			queryClient.invalidateQueries({ queryKey: adjustmentsKey(organizationId, assignmentId) });
+		},
+	});
+}
+
+const paymentPlanKey = (orgId: string, assignmentId: string) => ["organizations", orgId, "fee-assignments", assignmentId, "payment-plan"] as const;
+
+export function useFeePaymentPlan(organizationId: string, assignmentId: string) {
+	return useQuery({
+		queryKey: paymentPlanKey(organizationId, assignmentId),
+		queryFn: () => apiFetch<import("./types").FeePaymentPlan | undefined>(`/organizations/${organizationId}/fee-assignments/${assignmentId}/payment-plan`),
+		enabled: !!organizationId && !!assignmentId,
+	});
+}
+
+export function useCreateFeePaymentPlan(organizationId: string, householdId: string, assignmentId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (input: import("./types").CreateFeePaymentPlanInput) =>
+			apiFetch<import("./types").FeePaymentPlan>(`/organizations/${organizationId}/fee-assignments/${assignmentId}/payment-plan`, { method: "POST", body: input }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: paymentPlanKey(organizationId, assignmentId) });
+			queryClient.invalidateQueries({ queryKey: assignmentsKey(organizationId, householdId) });
+		},
+	});
+}
+
+export function useCancelFeePaymentPlan(organizationId: string, householdId: string, assignmentId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (reason: string) =>
+			apiFetch<import("./types").FeePaymentPlan>(`/organizations/${organizationId}/fee-assignments/${assignmentId}/payment-plan`, { method: "DELETE", body: { reason } }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: paymentPlanKey(organizationId, assignmentId) });
+			queryClient.invalidateQueries({ queryKey: assignmentsKey(organizationId, householdId) });
 		},
 	});
 }

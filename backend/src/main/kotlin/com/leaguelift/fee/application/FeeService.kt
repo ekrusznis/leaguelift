@@ -19,6 +19,7 @@ import com.leaguelift.fee.domain.resolveStatusAfterBalanceChange
 import com.leaguelift.fee.persistence.FeeAdjustmentRepository
 import com.leaguelift.fee.persistence.FeePaymentRepository
 import com.leaguelift.fee.persistence.FeeRepository
+import com.leaguelift.fee.paymentplan.persistence.FeePaymentPlanRepository
 import com.leaguelift.household.persistence.HouseholdRepository
 import com.leaguelift.membership.application.MembershipService
 import org.springframework.stereotype.Service
@@ -31,6 +32,7 @@ class FeeService(
     private val feeRepository: FeeRepository,
     private val feePaymentRepository: FeePaymentRepository,
     private val feeAdjustmentRepository: FeeAdjustmentRepository,
+    private val feePaymentPlanRepository: FeePaymentPlanRepository,
     private val householdRepository: HouseholdRepository,
     private val membershipService: MembershipService,
     private val auditService: AuditService,
@@ -166,7 +168,14 @@ class FeeService(
     ): FeeAssignmentWithBalance {
         membershipService.requireManagerRole(organizationId, currentUser)
         val assignment = requireOpenAssignment(organizationId, assignmentId)
-        feePaymentRepository.insert(organizationId, assignmentId, assignment.householdId, amountMinor, assignment.currency, method, paidAt, note, currentUser.userId)
+        val currentPaid = feePaymentRepository.sumActiveByAssignment(assignment.id, organizationId)
+        val currentAdjusted = feeAdjustmentRepository.sumActiveByAssignment(assignment.id, organizationId)
+        val currentBalance = (assignment.originalAmountMinor - currentPaid - currentAdjusted).coerceAtLeast(0)
+        if (amountMinor <= 0 || amountMinor > currentBalance) {
+            throw ValidationException("Payment amount must be between 1 and the current outstanding balance of $currentBalance minor units.")
+        }
+        val payment = feePaymentRepository.insert(organizationId, assignmentId, assignment.householdId, amountMinor, assignment.currency, method, paidAt, note, currentUser.userId)
+        allocateToActivePlan(organizationId, assignmentId, payment.id, amountMinor)
         val result = recomputeStatus(organizationId, assignment)
         auditService.record(currentUser.userId, organizationId, "fee_assignment.payment_recorded", "fee_assignment", assignmentId)
         return result
@@ -182,6 +191,9 @@ class FeeService(
             ?: throw NotFoundException("FEE_PAYMENT_NOT_FOUND", "The payment could not be found.")
         if (payment.isVoided) throw ValidationException("This payment has already been voided.")
         feePaymentRepository.void(paymentId, organizationId, currentUser.userId, voidReason)
+        feePaymentPlanRepository.findLatestByAssignment(organizationId, assignmentId)?.let {
+            feePaymentPlanRepository.refreshStatus(organizationId, it.id)
+        }
         val result = recomputeStatus(organizationId, assignment)
         auditService.record(currentUser.userId, organizationId, "fee_assignment.payment_voided", "fee_assignment", assignmentId)
         return result
@@ -207,6 +219,9 @@ class FeeService(
     ): FeeAssignmentWithBalance {
         membershipService.requireManagerRole(organizationId, currentUser)
         val assignment = requireOpenAssignment(organizationId, assignmentId)
+        if (feePaymentPlanRepository.findActiveByAssignment(organizationId, assignmentId) != null) {
+            throw ValidationException("Cancel and recreate the active payment plan before applying an adjustment.")
+        }
         feeAdjustmentRepository.insert(organizationId, assignmentId, assignment.householdId, adjustmentType, amountMinor, assignment.currency, reason, currentUser.userId)
         val result = recomputeStatus(organizationId, assignment)
         auditService.record(currentUser.userId, organizationId, "fee_assignment.adjustment_applied", "fee_assignment", assignmentId)
@@ -222,6 +237,9 @@ class FeeService(
             ?.takeIf { it.feeAssignmentId == assignmentId }
             ?: throw NotFoundException("FEE_ADJUSTMENT_NOT_FOUND", "The adjustment could not be found.")
         if (adjustment.isVoided) throw ValidationException("This adjustment has already been voided.")
+        if (feePaymentPlanRepository.findActiveByAssignment(organizationId, assignmentId) != null) {
+            throw ValidationException("Cancel and recreate the active payment plan before voiding an adjustment.")
+        }
         feeAdjustmentRepository.void(adjustmentId, organizationId, currentUser.userId, voidReason)
         val result = recomputeStatus(organizationId, assignment)
         auditService.record(currentUser.userId, organizationId, "fee_assignment.adjustment_voided", "fee_assignment", assignmentId)
@@ -288,6 +306,23 @@ class FeeService(
         }
         val finalAssignment = feeRepository.findAssignmentById(assignment.id, organizationId)!!
         return FeeAssignmentWithBalance(finalAssignment, balance)
+    }
+
+    private fun allocateToActivePlan(organizationId: UUID, assignmentId: UUID, paymentId: UUID, amountMinor: Long) {
+        val plan = feePaymentPlanRepository.findActiveByAssignment(organizationId, assignmentId) ?: return
+        var remaining = amountMinor
+        for (installment in feePaymentPlanRepository.listInstallments(organizationId, plan.id)) {
+            if (remaining <= 0) break
+            val installmentRemaining = (installment.amountMinor - installment.paidMinor).coerceAtLeast(0)
+            if (installmentRemaining == 0L) continue
+            val allocated = minOf(remaining, installmentRemaining)
+            feePaymentPlanRepository.allocatePayment(organizationId, plan.id, installment.id, paymentId, allocated)
+            remaining -= allocated
+        }
+        if (remaining != 0L) {
+            throw ValidationException("The payment exceeds the remaining active payment-plan schedule.")
+        }
+        feePaymentPlanRepository.refreshStatus(organizationId, plan.id)
     }
 
     private fun buildCsv(rows: List<FeeAssignmentSummary>): String {

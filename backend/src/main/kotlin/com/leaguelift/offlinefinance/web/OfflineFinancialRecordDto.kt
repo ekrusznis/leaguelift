@@ -99,6 +99,9 @@ data class OfflineFinancialRecordResponse(
 	val recordedByUserId: UUID,
 	val verifiedByUserId: UUID?,
 	val verifiedAt: Instant?,
+	val reversedByUserId: UUID?,
+	val reversedAt: Instant?,
+	val reversalReason: String?,
 	val createdAt: Instant,
 	val updatedAt: Instant,
 )
@@ -122,6 +125,9 @@ fun OfflineFinancialRecord.toResponse() = OfflineFinancialRecordResponse(
 	recordedByUserId = recordedByUserId,
 	verifiedByUserId = verifiedByUserId,
 	verifiedAt = verifiedAt,
+	reversedByUserId = reversedByUserId,
+	reversedAt = reversedAt,
+	reversalReason = reversalReason,
 	createdAt = createdAt,
 	updatedAt = updatedAt,
 )

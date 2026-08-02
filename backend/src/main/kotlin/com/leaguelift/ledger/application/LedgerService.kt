@@ -373,5 +373,52 @@ class LedgerService(
 		)
 	}
 
+	@Transactional
+	fun recordCorrectionRefund(
+		organizationId: UUID,
+		correctionId: UUID,
+		grossAmountMinor: Long,
+		currency: String,
+		providerReference: String,
+	) {
+		ledgerEntryRepository.insert(
+			organizationId, LedgerEntryType.REFUND.name, LedgerEntryType.REFUND, LedgerDirection.DEBIT,
+			grossAmountMinor, currency, LedgerSourceType.CORRECTION, correctionId, providerReference,
+			"Controlled refund reversing part or all of the original gross amount",
+		)
+		val organizationPortion = grossAmountMinor - platformFeeProperties.feeMinorOf(grossAmountMinor)
+		ledgerEntryRepository.insert(
+			organizationId, LedgerEntryType.ORGANIZATION_EARNING.name, LedgerEntryType.ORGANIZATION_EARNING, LedgerDirection.DEBIT,
+			organizationPortion, currency, LedgerSourceType.CORRECTION, correctionId, providerReference,
+			"Controlled refund reversal of organization earning",
+		)
+	}
+
+	@Transactional
+	fun reverseOfflineSource(
+		organizationId: UUID,
+		originalSourceType: LedgerSourceType,
+		originalSourceId: UUID,
+		correctionId: UUID,
+		reason: String,
+	) {
+		val originals = ledgerEntryRepository.findBySource(organizationId, originalSourceType, originalSourceId)
+		if (originals.isEmpty()) throw IllegalStateException("Offline source has no ledger entries to reverse.")
+		for (entry in originals) {
+			ledgerEntryRepository.insert(
+				organizationId = organizationId,
+				accountCode = entry.accountCode,
+				entryType = LedgerEntryType.MANUAL_ADJUSTMENT,
+				direction = if (entry.direction == LedgerDirection.CREDIT) LedgerDirection.DEBIT else LedgerDirection.CREDIT,
+				amountMinor = entry.amountMinor,
+				currency = entry.currency,
+				sourceType = LedgerSourceType.CORRECTION,
+				sourceId = correctionId,
+				externalReference = entry.id.toString(),
+				description = "Offline reversal: $reason",
+			)
+		}
+	}
+
 	private fun holdingPeriodCutoff(): Instant = Instant.now().minus(Duration.ofDays(payoutProperties.holdingPeriodDays))
 }

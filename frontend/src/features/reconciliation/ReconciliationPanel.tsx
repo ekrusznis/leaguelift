@@ -1,0 +1,15 @@
+import { Link } from "react-router-dom";
+import { Button } from "../../components/Button";
+import { EmptyState } from "../../components/states/EmptyState";
+import { appPaths } from "../../routes/appPaths";
+import { useLatestReconciliation, useReconciliationRuns, useRunReconciliation } from "./api";
+
+export function ReconciliationPanel({ organizationId }: { organizationId: string }) {
+	const latest = useLatestReconciliation(organizationId); const runs = useReconciliationRuns(organizationId); const run = useRunReconciliation(organizationId);
+	return <section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5" aria-labelledby="reconciliation-heading">
+		<div className="flex flex-wrap items-start justify-between gap-3"><div><h3 id="reconciliation-heading" className="font-heading text-lg font-semibold text-navy">Reconciliation</h3><p className="mt-1 text-sm text-slate-gray">Compare provider references, source records, ledger entries, fulfillment, offline verification, and fee-plan balances.</p></div><div className="flex gap-2"><Link to={appPaths.helpArticle("running-financial-reconciliation")} className="min-h-11 rounded-md border border-slate-gray/30 px-4 py-2 text-sm font-medium text-navy">How it works</Link><Button type="button" onClick={() => run.mutate()} disabled={run.isPending}>{run.isPending ? "Running…" : "Run reconciliation"}</Button></div></div>
+		{run.isError && <p role="alert" className="mt-3 text-sm text-error-red">{run.error.message}</p>}
+		{latest.data ? <div className="mt-4"><p className="text-sm text-navy"><strong>{latest.data.run.issueCount} issues</strong> · {latest.data.run.highCount} high · {latest.data.run.mediumCount} medium · {latest.data.run.lowCount} low · {new Date(latest.data.run.startedAt).toLocaleString()}</p>{latest.data.issues.length ? <ul className="mt-3 grid gap-2">{latest.data.issues.map((issue) => <li key={issue.id} className="rounded-md border border-slate-gray/20 p-3 text-sm"><div className="flex flex-wrap justify-between gap-2"><strong className="text-navy">{issue.title}</strong><span className={issue.severity === "HIGH" ? "font-semibold text-error-red" : "text-slate-gray"}>{issue.severity}</span></div><p className="mt-1 text-slate-gray">{issue.detail}</p>{issue.actionPath && <Link to={issue.actionPath} className="mt-2 inline-flex text-info-blue hover:underline">Review record</Link>}</li>)}</ul> : <EmptyState title="No exceptions found" description="The latest run found no supported reconciliation issues." />}</div> : <EmptyState title="No reconciliation run yet" description="Run reconciliation to create a durable snapshot of current exceptions." />}
+		{runs.data?.items.length ? <p className="mt-4 text-xs text-slate-gray">{runs.data.totalElements} reconciliation run{runs.data.totalElements === 1 ? "" : "s"} retained.</p> : null}
+	</section>;
+}

@@ -233,6 +233,55 @@ class LedgerServiceTest {
 		assertEquals(9_500L, earningReversal.amountMinor) // 10,000 - 5% fee
 	}
 
+
+	@Test
+	fun `recordCorrectionRefund appends refund and organization earning debits under the correction source`() {
+		val correctionId = UUID.randomUUID()
+		val captured = mutableListOf<InsertCall>()
+		stubInsert(captured)
+
+		service.recordCorrectionRefund(orgId, correctionId, 4_000L, "usd", "re_partial_123")
+
+		assertEquals(2, captured.size)
+		assertTrue(captured.all { it.sourceType == LedgerSourceType.CORRECTION && it.sourceId == correctionId })
+		assertEquals(LedgerEntryType.REFUND to LedgerDirection.DEBIT, captured[0].entryType to captured[0].direction)
+		assertEquals(4_000L, captured[0].amountMinor)
+		assertEquals(LedgerEntryType.ORGANIZATION_EARNING to LedgerDirection.DEBIT, captured[1].entryType to captured[1].direction)
+		assertEquals(3_800L, captured[1].amountMinor)
+	}
+
+	@Test
+	fun `reverseOfflineSource appends opposite manual adjustments without changing original rows`() {
+		val sourceId = UUID.randomUUID()
+		val correctionId = UUID.randomUUID()
+		val originals = listOf(
+			earningEntry(LedgerDirection.CREDIT, 5_000L).copy(
+				entryType = LedgerEntryType.CONTRIBUTION,
+				accountCode = LedgerEntryType.CONTRIBUTION.name,
+				sourceType = LedgerSourceType.CONTRIBUTION,
+				sourceId = sourceId,
+			),
+			earningEntry(LedgerDirection.DEBIT, 5_000L).copy(
+				entryType = LedgerEntryType.OFFLINE_SETTLEMENT,
+				accountCode = LedgerEntryType.OFFLINE_SETTLEMENT.name,
+				sourceType = LedgerSourceType.CONTRIBUTION,
+				sourceId = sourceId,
+			),
+		)
+		every { ledgerEntryRepository.findBySource(orgId, LedgerSourceType.CONTRIBUTION, sourceId) } returns originals
+		val captured = mutableListOf<InsertCall>()
+		stubInsert(captured)
+
+		service.reverseOfflineSource(orgId, LedgerSourceType.CONTRIBUTION, sourceId, correctionId, "Duplicate check")
+
+		assertEquals(2, captured.size)
+		assertTrue(captured.all { it.entryType == LedgerEntryType.MANUAL_ADJUSTMENT })
+		assertTrue(captured.all { it.sourceType == LedgerSourceType.CORRECTION && it.sourceId == correctionId })
+		assertEquals(LedgerDirection.DEBIT, captured[0].direction)
+		assertEquals(LedgerDirection.CREDIT, captured[1].direction)
+		verify(exactly = 1) { ledgerEntryRepository.findBySource(orgId, LedgerSourceType.CONTRIBUTION, sourceId) }
+	}
+
 	private data class InsertCall(
 		val organizationId: UUID,
 		val accountCode: String,

@@ -39,6 +39,8 @@ class ActionCenterServiceTest {
         every { repository.countReviewableEvents(organizationId) } returns 1
         every { repository.countFulfillmentExceptions(organizationId) } returns 0
         every { repository.countPendingOfflineFinancialRecords(organizationId) } returns 0
+        every { repository.countOverdueInstallments(organizationId) } returns 0
+        every { repository.countLatestReconciliationIssues(organizationId) } returns 0
         every { repository.listGuardianFeeActions(user.userId, any()) } returns emptyList()
         every { repository.listGuardianDocumentActions(user.userId, any()) } returns emptyList()
         every { repository.listGuardianRsvpActions(user.userId, any()) } returns emptyList()
@@ -64,6 +66,8 @@ class ActionCenterServiceTest {
         every { repository.countOverdueFees(organizationId) } returns 0
         every { repository.countFulfillmentExceptions(organizationId) } returns 0
         every { repository.countPendingOfflineFinancialRecords(organizationId) } returns 2
+        every { repository.countOverdueInstallments(organizationId) } returns 0
+        every { repository.countLatestReconciliationIssues(organizationId) } returns 0
         every { repository.countReviewableEvents(organizationId) } returns 0
         every { repository.listGuardianFeeActions(user.userId, any()) } returns emptyList()
         every { repository.listGuardianDocumentActions(user.userId, any()) } returns emptyList()

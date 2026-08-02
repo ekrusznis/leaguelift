@@ -97,6 +97,17 @@ class LedgerEntryRepository(private val jdbcClient: JdbcClient) {
 			.query(::mapRow)
 			.list()
 
+	fun findBySource(organizationId: UUID, sourceType: LedgerSourceType, sourceId: UUID): List<LedgerEntry> =
+		jdbcClient.sql(
+			"""
+			select $COLUMNS from ledger_entry
+			where organization_id = :organizationId and source_type = :sourceType and source_id = :sourceId
+			order by created_at, id
+			""".trimIndent(),
+		)
+			.param("organizationId", organizationId).param("sourceType", sourceType.name).param("sourceId", sourceId)
+			.query(::mapRow).list()
+
 	/** Platform-wide sum for one entry type + direction (Platform Admin dashboard, Phase 7 completion) — no organization filter, unlike every other query here. */
 	fun sumAllByTypeAndDirection(entryType: LedgerEntryType, direction: LedgerDirection): Long =
 		jdbcClient.sql("select coalesce(sum(amount_minor), 0) from ledger_entry where entry_type = :entryType and direction = :direction")

@@ -42,6 +42,7 @@ import {
 	recordPaymentSchema,
 } from "../features/fees/schema";
 import { STATUS_COLORS, STATUS_LABELS } from "../features/fees/statusLabels";
+import { PaymentPlanPanel } from "../features/fees/PaymentPlanPanel";
 import type { FeeAssignment, FeeAssignmentStatus } from "../features/fees/types";
 import { useFeeTemplates } from "../features/fees/api";
 import { useTeams } from "../features/teams/api";
@@ -537,6 +538,15 @@ function FeeDetailPanel({ organizationId, householdId, fee, canManage }: { organ
 			{canManage && activeForm === "adjustment" && (
 				<ApplyAdjustmentForm organizationId={organizationId} householdId={householdId} assignmentId={fee.id} onDone={() => setActiveForm(null)} />
 			)}
+
+			<PaymentPlanPanel
+				organizationId={organizationId}
+				householdId={householdId}
+				assignmentId={fee.id}
+				balanceMinor={fee.balanceMinor}
+				currency={fee.currency}
+				canManage={canManage && !locked}
+			/>
 
 			{paymentsLoading && <p className="text-sm text-slate-gray">Loading payment history…</p>}
 			{payments && payments.length > 0 && (

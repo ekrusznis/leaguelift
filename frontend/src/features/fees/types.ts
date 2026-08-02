@@ -74,3 +74,38 @@ export interface FeeAdjustment {
 	voidReason: string | null;
 	createdAt: string;
 }
+
+export type FeePaymentPlanStatus = "ACTIVE" | "COMPLETED" | "CANCELLED";
+export type FeeInstallmentStatus = "UPCOMING" | "DUE" | "OVERDUE" | "PARTIALLY_PAID" | "PAID" | "CANCELLED";
+
+export interface FeeInstallment {
+	id: string;
+	sequenceNumber: number;
+	amountMinor: number;
+	paidMinor: number;
+	remainingMinor: number;
+	dueDate: string;
+	status: FeeInstallmentStatus;
+}
+
+export interface FeePaymentPlan {
+	id: string;
+	organizationId: string;
+	feeAssignmentId: string;
+	householdId: string;
+	status: FeePaymentPlanStatus;
+	totalMinor: number;
+	paidMinor: number;
+	remainingMinor: number;
+	currency: string;
+	note: string | null;
+	cancelReason: string | null;
+	createdAt: string;
+	updatedAt: string;
+	installments: FeeInstallment[];
+}
+
+export interface CreateFeePaymentPlanInput {
+	installments: Array<{ amountMinor: number; dueDate: string }>;
+	note: string | null;
+}

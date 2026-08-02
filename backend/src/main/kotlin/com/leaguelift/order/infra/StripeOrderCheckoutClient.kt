@@ -1,6 +1,7 @@
 package com.leaguelift.order.infra
 
 import com.stripe.StripeClient
+import com.stripe.net.RequestOptions
 import com.stripe.param.RefundCreateParams
 import com.stripe.param.checkout.SessionCreateParams
 import org.springframework.stereotype.Component
@@ -56,6 +57,16 @@ class StripeOrderCheckoutClient(private val stripeClient: StripeClient) {
 	}
 
 	/** `reverseTransfer = false` — see StripeCheckoutClient.createRefund's identical note on ADR-017's negative-balance handling. */
+	fun createRefund(paymentIntentId: String, amountMinor: Long, idempotencyKey: String): String {
+		val params = RefundCreateParams.builder()
+			.setPaymentIntent(paymentIntentId)
+			.setAmount(amountMinor)
+			.setReverseTransfer(false)
+			.build()
+		val options = RequestOptions.builder().setIdempotencyKey(idempotencyKey).build()
+		return stripeClient.refunds().create(params, options).id
+	}
+
 	fun createRefund(paymentIntentId: String): String {
 		val refund = stripeClient.refunds().create(
 			RefundCreateParams.builder()

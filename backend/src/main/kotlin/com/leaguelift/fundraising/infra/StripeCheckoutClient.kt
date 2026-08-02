@@ -1,6 +1,7 @@
 package com.leaguelift.fundraising.infra
 
 import com.stripe.StripeClient
+import com.stripe.net.RequestOptions
 import com.stripe.param.RefundCreateParams
 import com.stripe.param.checkout.SessionCreateParams
 import org.springframework.stereotype.Component
@@ -60,6 +61,16 @@ class StripeCheckoutClient(private val stripeClient: StripeClient) {
 	 * our own ledger, so Stripe must not also automatically claw the transferred
 	 * amount back from the connected account itself, which would double-count it.
 	 */
+	fun createRefund(paymentIntentId: String, amountMinor: Long, idempotencyKey: String): String {
+		val params = RefundCreateParams.builder()
+			.setPaymentIntent(paymentIntentId)
+			.setAmount(amountMinor)
+			.setReverseTransfer(false)
+			.build()
+		val options = RequestOptions.builder().setIdempotencyKey(idempotencyKey).build()
+		return stripeClient.refunds().create(params, options).id
+	}
+
 	fun createRefund(paymentIntentId: String): String {
 		val refund = stripeClient.refunds().create(
 			RefundCreateParams.builder()

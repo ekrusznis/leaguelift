@@ -8,6 +8,7 @@ import com.leaguelift.outbox.domain.OutboxEvent
 import org.springframework.stereotype.Component
 import java.math.BigDecimal
 import java.text.NumberFormat
+import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Currency
@@ -28,7 +29,7 @@ class OfflineFinancialAcknowledgementEmailHandler(
 		val amount = formatter.format(BigDecimal.valueOf(payload.amountMinor, 2))
 		val received = DateTimeFormatter.ofPattern("MMM d, uuuu", Locale.US)
 			.withZone(ZoneOffset.UTC)
-			.format(payload.receivedAt)
+			.format(Instant.parse(payload.receivedAt))
 		val referenceLine = payload.paymentReference?.let { "\nReference: $it" } ?: ""
 		emailProvider.send(
 			EmailMessage(

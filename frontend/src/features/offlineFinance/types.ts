@@ -1,6 +1,6 @@
 export type OfflineFinancialRecordType = "CONTRIBUTION" | "SPONSORSHIP" | "ORDER";
 export type OfflinePaymentMethod = "CASH" | "CHECK" | "ACH" | "EXTERNAL_CARD" | "VENMO" | "ZELLE" | "OTHER";
-export type OfflineVerificationStatus = "PENDING_VERIFICATION" | "VERIFIED";
+export type OfflineVerificationStatus = "PENDING_VERIFICATION" | "VERIFIED" | "REVERSED";
 
 export interface OfflineFinancialRecord {
 	id: string;
