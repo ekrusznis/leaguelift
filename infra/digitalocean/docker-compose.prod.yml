@@ -1,0 +1,112 @@
+# Production compose file for the single leaguelift droplet (ADR-008). Lives at
+# /opt/leaguelift/docker-compose.prod.yml on the droplet itself — deployed there by
+# .github/workflows/deploy.yml, not committed with real secrets. Postgres is
+# self-hosted here (not DO Managed Postgres) per the founder's cost/ops call; see
+# ADR-008 for the backup/PITR mitigation this requires.
+#
+# backend/frontend images are PULLED from DigitalOcean Container Registry, never built
+# on the droplet itself — CI builds and pushes them, this file only runs them.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-leaguelift}
+      POSTGRES_USER: ${POSTGRES_USER:-leaguelift}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    volumes:
+      - leaguelift-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-leaguelift}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No host port published — only reachable from other containers on this compose
+    # network. Nothing outside this droplet can reach Postgres directly.
+
+  backend:
+    image: ${REGISTRY}/leaguelift-backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-leaguelift}
+      POSTGRES_USER: ${POSTGRES_USER:-leaguelift}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+      SPACES_ENDPOINT: ${SPACES_ENDPOINT:?SPACES_ENDPOINT must be set in .env}
+      SPACES_ACCESS_KEY: ${SPACES_ACCESS_KEY:?SPACES_ACCESS_KEY must be set in .env}
+      SPACES_SECRET_KEY: ${SPACES_SECRET_KEY:?SPACES_SECRET_KEY must be set in .env}
+      SPACES_BUCKET: ${SPACES_BUCKET:?SPACES_BUCKET must be set in .env}
+      SPACES_REGION: ${SPACES_REGION:?SPACES_REGION must be set in .env}
+      # Test-mode keys are fine to start — see application-prod.yml, both fail closed
+      # (clear error, not a crash-loop) on any real charge/order attempt without them,
+      # but the process itself still won't boot with these totally unset.
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?STRIPE_SECRET_KEY must be set in .env (test-mode key is fine)}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?STRIPE_WEBHOOK_SECRET must be set in .env}
+      PRINTIFY_API_TOKEN: ${PRINTIFY_API_TOKEN:?PRINTIFY_API_TOKEN must be set in .env}
+      PRINTIFY_SHOP_ID: ${PRINTIFY_SHOP_ID:?PRINTIFY_SHOP_ID must be set in .env}
+      FRONTEND_BASE_URL: https://leaguelift.io
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-logging}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_ADDRESS: ${RESEND_FROM_ADDRESS:-}
+      SMS_PROVIDER: ${SMS_PROVIDER:-logging}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  frontend:
+    image: ${REGISTRY}/leaguelift-frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  caddy:
+    image: caddy:2.9-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+
+  # Nightly pg_dump -> DO Spaces. Self-hosted Postgres has no managed backup/PITR, so
+  # this is the mitigation ADR-008 calls out as a hard requirement, not a nice-to-have.
+  # A quarterly real restore-rehearsal (DESIGN-DOC.md section 18.3) is still a launch
+  # gate on top of this existing — this only proves backups are *taken*, not restorable.
+  backup:
+    build: ./backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-leaguelift}
+      POSTGRES_USER: ${POSTGRES_USER:-leaguelift}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      SPACES_ENDPOINT: ${SPACES_ENDPOINT:?SPACES_ENDPOINT must be set in .env}
+      SPACES_ACCESS_KEY: ${SPACES_ACCESS_KEY:?SPACES_ACCESS_KEY must be set in .env}
+      SPACES_SECRET_KEY: ${SPACES_SECRET_KEY:?SPACES_SECRET_KEY must be set in .env}
+      SPACES_BUCKET: ${SPACES_BUCKET:?SPACES_BUCKET must be set in .env}
+      SPACES_REGION: ${SPACES_REGION:?SPACES_REGION must be set in .env}
+      RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+
+volumes:
+  leaguelift-postgres-data:
+  caddy_data:
+  caddy_config:
