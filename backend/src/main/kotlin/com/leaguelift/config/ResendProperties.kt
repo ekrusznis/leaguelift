@@ -18,4 +18,5 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class ResendProperties(
 	val apiKey: String = "",
 	val fromAddress: String = "",
+	val webhookSecret: String = "",
 )

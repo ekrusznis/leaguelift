@@ -153,3 +153,35 @@ fun com.leaguelift.integration.core.application.PlatformIntegrationReadiness.toR
     summary = summary,
     checks = checks.map { PlatformIntegrationConfigurationCheckResponse(it.label, it.configured) },
 )
+
+data class ProviderContractCapabilityResponse(
+    val name: String,
+    val status: String,
+    val summary: String,
+)
+
+data class PlatformProviderContractResponse(
+    val provider: String,
+    val configurationStatus: String,
+    val credentialOwnership: String,
+    val credentialRotation: String,
+    val healthCheckMode: String,
+    val liveProbeEnabled: Boolean,
+    val webhookVerification: String,
+    val idempotency: String,
+    val productionStubBlocked: Boolean,
+    val capabilities: List<ProviderContractCapabilityResponse>,
+)
+
+fun com.leaguelift.integration.core.application.PlatformProviderContract.toResponse() = PlatformProviderContractResponse(
+    provider = provider.name,
+    configurationStatus = configurationStatus.name,
+    credentialOwnership = credentialOwnership,
+    credentialRotation = credentialRotation,
+    healthCheckMode = healthCheckMode,
+    liveProbeEnabled = liveProbeEnabled,
+    webhookVerification = webhookVerification,
+    idempotency = idempotency,
+    productionStubBlocked = productionStubBlocked,
+    capabilities = capabilities.map { ProviderContractCapabilityResponse(it.name, it.status.name, it.summary) },
+)

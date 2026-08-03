@@ -350,6 +350,20 @@ class IntegrationOAuthService(
         return IntegrationAccessToken(connection, decryptTokenSet(requireCredential(connection)).accessToken)
     }
 
+    fun accessTokenForOrganizationConnection(
+        organizationId: UUID,
+        connectionId: UUID,
+        currentUser: CurrentUser,
+    ): IntegrationAccessToken {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        val connection = connectionRepository.findByIdForOrganization(connectionId, organizationId)
+            ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
+        if (connection.status !in setOf(IntegrationConnectionStatus.CONNECTED, IntegrationConnectionStatus.DEGRADED)) {
+            throw ValidationException("This integration is not connected.")
+        }
+        return IntegrationAccessToken(connection, decryptTokenSet(requireCredential(connection)).accessToken)
+    }
+
     private fun checkHealth(connection: IntegrationConnection, actorUserId: UUID): IntegrationHealthCheck {
         val adapter = adapterRegistry.find(connection.provider)
             ?: throw ServiceUnavailableException("INTEGRATION_ADAPTER_NOT_CONFIGURED", "This integration provider is not configured.")

@@ -25,6 +25,8 @@ leaguelift:
   printify:
     api-token: ${PRINTIFY_API_TOKEN}
     shop-id: ${PRINTIFY_SHOP_ID}
+    webhook-secret: ${PRINTIFY_WEBHOOK_SECRET:}
+    webhook-enabled: ${PRINTIFY_WEBHOOK_ENABLED:false}
   # Not secrets — safe defaults, overridable without a redeploy (ADR-017, starting pilot values, not final pricing).
   platform:
     fee-basis-points: ${PLATFORM_FEE_BASIS_POINTS:500}
@@ -59,6 +61,7 @@ leaguelift:
     resend:
       api-key: ${RESEND_API_KEY:}
       from-address: ${RESEND_FROM_ADDRESS:}
+      webhook-secret: ${RESEND_WEBHOOK_SECRET:}
   # The deployed staging frontend origin — no default, startup fails if unset.
   frontend:
     base-url: ${FRONTEND_BASE_URL}

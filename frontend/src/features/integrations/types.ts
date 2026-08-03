@@ -170,3 +170,172 @@ export interface PlatformIntegrationReadiness {
 	summary: string;
 	checks: PlatformIntegrationConfigurationCheck[];
 }
+
+export interface QuickBooksConnectionSetting {
+	connectionId: string;
+	realmId: string | null;
+	companyName: string | null;
+	environment: "SANDBOX" | "PRODUCTION";
+	exportPolicy: "READ_ONLY" | "EXPORT_PREVIEW_ONLY";
+	accountingBasis: "ACCRUAL" | "CASH";
+	defaultCurrency: string | null;
+	lastCompanyReadAt: string | null;
+	lastAccountsReadAt: string | null;
+	updatedAt: string;
+}
+
+export type QuickBooksMappingType =
+	| "SALES_INCOME"
+	| "CONTRIBUTION_INCOME"
+	| "SPONSORSHIP_INCOME"
+	| "REFUNDS"
+	| "FEES_RECEIVABLE"
+	| "BANK_CLEARING"
+	| "PAYOUT_CLEARING";
+
+
+export interface QuickBooksAccount {
+	id: string;
+	name: string;
+	accountType: string;
+	active: boolean;
+}
+
+export interface QuickBooksExportCandidateCounts {
+	contributions: number;
+	sponsorships: number;
+	orders: number;
+	feePayments: number;
+	corrections: number;
+	total: number;
+}
+
+export interface QuickBooksExportPreview {
+	periodStart: string;
+	periodEnd: string;
+	counts: QuickBooksExportCandidateCounts;
+	missingMappings: QuickBooksMappingType[];
+	exportAllowed: false;
+	reason: string;
+}
+export interface QuickBooksAccountMapping {
+	id: string;
+	mappingType: QuickBooksMappingType;
+	externalAccountId: string;
+	externalAccountName: string;
+	externalAccountType: string | null;
+	updatedAt: string;
+}
+
+export interface QuickBooksExportBatch {
+	id: string;
+	status: "PREVIEWED" | "READY" | "BLOCKED" | "EXPORTED" | "PARTIAL" | "FAILED";
+	periodStart: string;
+	periodEnd: string;
+	candidateCount: number;
+	exportedCount: number;
+	failedCount: number;
+	createdAt: string;
+	completedAt: string | null;
+}
+
+export interface QuickBooksOverview {
+	catalog: IntegrationCatalogItem;
+	setting: QuickBooksConnectionSetting | null;
+	mappings: QuickBooksAccountMapping[];
+	recentBatches: QuickBooksExportBatch[];
+	providerWritesEnabled: boolean;
+	accountingReviewRequired: boolean;
+}
+
+export interface SportsDataImportRun {
+	id: string;
+	provider: "SPORTSENGINE" | "GAMECHANGER" | "MAXPREPS";
+	sourceMode: "OAUTH" | "API_TOKEN" | "FILE_IMPORT" | "ICS";
+	status: "PREVIEWED" | "READY" | "BLOCKED" | "IMPORTED" | "PARTIAL" | "FAILED";
+	commitAllowed: boolean;
+	discoveredCount: number;
+	validCount: number;
+	duplicateCount: number;
+	conflictCount: number;
+	errorCount: number;
+	previewHash: string;
+	requestedAt: string;
+	completedAt: string | null;
+}
+
+export interface SportsDataOverview {
+	providers: IntegrationCatalogItem[];
+	recentRuns: SportsDataImportRun[];
+	directProviderImportEnabled: boolean;
+	reviewedFileImportAvailable: boolean;
+}
+
+export interface SportsDataImportIssue {
+	id: string;
+	rowNumber: number | null;
+	entityType: string | null;
+	externalEntityId: string | null;
+	severity: "WARNING" | "ERROR";
+	code: string;
+	message: string;
+}
+
+export interface SportsDataExternalRecord {
+	entityType: string;
+	externalId: string;
+	externalParentId: string | null;
+	name: string | null;
+	payload: Record<string, string | null>;
+}
+
+export interface SportsDataPreview {
+	run: SportsDataImportRun;
+	issues: SportsDataImportIssue[];
+	records: SportsDataExternalRecord[];
+	directImportEnabled: false;
+	message: string;
+}
+
+export interface IntegrationSyncRun {
+	id: string;
+	connectionId: string | null;
+	provider: IntegrationProvider;
+	ownerType: "PLATFORM" | "ORGANIZATION" | "USER";
+	organizationId: string | null;
+	userId: string | null;
+	direction: "READ" | "WRITE" | "WEBHOOK" | "HEALTH";
+	trigger: "MANUAL" | "SCHEDULED" | "OUTBOX" | "WEBHOOK" | "STUB";
+	status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "PARTIAL" | "FAILED" | "CANCELLED";
+	discoveredCount: number;
+	createdCount: number;
+	updatedCount: number;
+	skippedCount: number;
+	failedCount: number;
+	rateLimitRemaining: number | null;
+	rateLimitResetsAt: string | null;
+	errorCode: string | null;
+	errorMessage: string | null;
+	requestedAt: string;
+	startedAt: string | null;
+	completedAt: string | null;
+}
+
+export interface ProviderContractCapability {
+	name: string;
+	status: "READY" | "SCAFFOLDED" | "NOT_CONFIGURED" | "NOT_APPLICABLE";
+	summary: string;
+}
+
+export interface PlatformProviderContract {
+	provider: IntegrationProvider;
+	configurationStatus: "CONFIGURED" | "PARTIAL" | "NOT_CONFIGURED" | "BUILT_IN";
+	credentialOwnership: string;
+	credentialRotation: string;
+	healthCheckMode: string;
+	liveProbeEnabled: boolean;
+	webhookVerification: string;
+	idempotency: string;
+	productionStubBlocked: boolean;
+	capabilities: ProviderContractCapability[];
+}

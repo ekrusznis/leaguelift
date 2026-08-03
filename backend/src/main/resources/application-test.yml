@@ -24,6 +24,8 @@ leaguelift:
   printify:
     api-token: "test-printify-token-not-real"
     shop-id: "test-shop-id-not-real"
+    webhook-secret: "test-printify-webhook-secret-not-real"
+    webhook-enabled: false
   platform:
     fee-basis-points: 500
   payout:

@@ -7,6 +7,9 @@ import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { useTeams } from "../teams/api";
 import { CsvImportSection } from "./CsvImportSection";
+import { IntegrationSyncHistory } from "./IntegrationSyncHistory";
+import { QuickBooksScaffoldPanel } from "./QuickBooksScaffoldPanel";
+import { SportsDataScaffoldPanel } from "./SportsDataScaffoldPanel";
 import {
 	useCheckOrganizationIntegrationHealth,
 	useConnectIcsFeed,
@@ -231,6 +234,9 @@ export function IntegrationsPanel({ organizationId }: { organizationId: string }
 				</p>
 			</div>
 			<ProviderReadinessSection organizationId={organizationId} />
+			<QuickBooksScaffoldPanel organizationId={organizationId} />
+			<SportsDataScaffoldPanel organizationId={organizationId} />
+			<IntegrationSyncHistory organizationId={organizationId} />
 			<IcsFeedSection organizationId={organizationId} />
 			<CsvImportSection organizationId={organizationId} />
 		</div>

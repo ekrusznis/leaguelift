@@ -89,7 +89,7 @@ info:
     credential references, hashed single-use state, PKCE, deterministic local stubs,
     and production fail-closed guards (ADR-054). No provider-specific production client
     or credential activation is claimed in this slice.
-  version: "0.26.1"
+  version: "0.26.2"
 servers:
 - url: /api/v1
 tags:
@@ -8127,6 +8127,213 @@ paths:
                 items:
                   $ref: '#/components/schemas/PlatformIntegrationReadinessResponse'
 
+  /organizations/{organizationId}/integrations/quickbooks:
+    get:
+      summary: Get QuickBooks Online scaffold readiness
+      parameters:
+      - $ref: '#/components/parameters/OrganizationIdParam'
+      responses:
+        '200':
+          description: QuickBooks readiness and mapping overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuickBooksOverviewResponse'
+  /organizations/{organizationId}/integrations/quickbooks/connections/{connectionId}/company/refresh:
+    post:
+      summary: Read the authorized QuickBooks company through the configured adapter
+      parameters:
+      - $ref: '#/components/parameters/OrganizationIdParam'
+      - name: connectionId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Company setting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuickBooksConnectionSettingResponse'
+  /organizations/{organizationId}/integrations/quickbooks/connections/{connectionId}/accounts:
+    get:
+      summary: List active QuickBooks accounts through the configured adapter
+      parameters:
+      - $ref: '#/components/parameters/OrganizationIdParam'
+      - name: connectionId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/QuickBooksAccountResponse'}
+  /organizations/{organizationId}/integrations/quickbooks/connections/{connectionId}/mappings:
+    put:
+      summary: Save a reviewed QuickBooks chart-of-accounts mapping
+      parameters:
+      - $ref: '#/components/parameters/OrganizationIdParam'
+      - name: connectionId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateQuickBooksMappingRequest'}
+      responses:
+        '200':
+          description: Mapping
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/QuickBooksAccountMappingResponse'}
+  /organizations/{organizationId}/integrations/quickbooks/connections/{connectionId}/exports/preview:
+    post:
+      summary: Preview an idempotent QuickBooks export without sending provider writes
+      parameters:
+      - $ref: '#/components/parameters/OrganizationIdParam'
+      - name: connectionId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/QuickBooksExportPreviewRequest'}
+      responses:
+        '200':
+          description: Export preview
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/QuickBooksExportPreviewResponse'}
+  /organizations/{organizationId}/integrations/sports-data:
+    get:
+      summary: Get SportsEngine, GameChanger, and MaxPreps scaffold readiness
+      parameters:
+      - $ref: '#/components/parameters/OrganizationIdParam'
+      responses:
+        '200':
+          description: Sports-data readiness
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SportsDataOverviewResponse'}
+  /organizations/{organizationId}/integrations/sports-data/connections/{connectionId}/preview:
+    post:
+      summary: Build a review-only preview from a configured SportsEngine adapter
+      parameters:
+      - $ref: '#/components/parameters/OrganizationIdParam'
+      - name: connectionId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Mapping preview
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SportsDataPreviewResponse'}
+  /organizations/{organizationId}/integrations/sports-data/file-preview:
+    post:
+      summary: Validate a partner-pending sports-data file payload without importing
+      parameters:
+      - $ref: '#/components/parameters/OrganizationIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SportsDataFilePreviewRequest'}
+      responses:
+        '200':
+          description: Mapping preview
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SportsDataPreviewResponse'}
+  /organizations/{organizationId}/integrations/sports-data/previews/{runId}/issues:
+    get:
+      summary: List issues from a sports-data preview
+      parameters:
+      - $ref: '#/components/parameters/OrganizationIdParam'
+      - name: runId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Preview issues
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/SportsDataImportIssueResponse'}
+  /organizations/{organizationId}/integration-sync-runs:
+    get:
+      summary: List organization integration sync history
+      parameters:
+      - $ref: '#/components/parameters/OrganizationIdParam'
+      responses:
+        '200':
+          description: Sync runs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/IntegrationSyncRunResponse'}
+  /me/integration-sync-runs:
+    get:
+      summary: List personal integration sync history
+      responses:
+        '200':
+          description: Sync runs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/IntegrationSyncRunResponse'}
+  /platform/integrations/sync-runs:
+    get:
+      summary: List platform-wide integration sync history
+      responses:
+        '200':
+          description: Sync runs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/IntegrationSyncRunResponse'}
+  /integration-sync-runs/{runId}/issues:
+    get:
+      summary: List authorized issues for an integration sync run
+      parameters:
+      - name: runId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Sync issues
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/IntegrationSyncIssueResponse'}
+  /platform/integrations/provider-contracts:
+    get:
+      summary: List sanitized platform-provider contract hardening readiness
+      responses:
+        '200':
+          description: Provider contract readiness
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/PlatformProviderContractResponse'}
+
 components:
   securitySchemes:
     bearerAuth:
@@ -14423,6 +14630,209 @@ components:
           items:
             $ref: '#/components/schemas/PlatformIntegrationConfigurationCheckResponse'
 
+    QuickBooksConnectionSettingResponse:
+      type: object
+      properties:
+        connectionId: {type: string, format: uuid}
+        realmId: {type: string, nullable: true}
+        companyName: {type: string, nullable: true}
+        environment: {type: string, enum: [SANDBOX, PRODUCTION]}
+        exportPolicy: {type: string, enum: [READ_ONLY, EXPORT_PREVIEW_ONLY]}
+        accountingBasis: {type: string, enum: [ACCRUAL, CASH]}
+        defaultCurrency: {type: string, nullable: true}
+        lastCompanyReadAt: {type: string, format: date-time, nullable: true}
+        lastAccountsReadAt: {type: string, format: date-time, nullable: true}
+        updatedAt: {type: string, format: date-time}
+    QuickBooksAccountResponse:
+      type: object
+      properties:
+        id: {type: string}
+        name: {type: string}
+        accountType: {type: string}
+        active: {type: boolean}
+    QuickBooksAccountMappingResponse:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        mappingType: {type: string}
+        externalAccountId: {type: string}
+        externalAccountName: {type: string}
+        externalAccountType: {type: string, nullable: true}
+        updatedAt: {type: string, format: date-time}
+    QuickBooksExportBatchResponse:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        status: {type: string}
+        periodStart: {type: string, format: date}
+        periodEnd: {type: string, format: date}
+        candidateCount: {type: integer}
+        exportedCount: {type: integer}
+        failedCount: {type: integer}
+        createdAt: {type: string, format: date-time}
+        completedAt: {type: string, format: date-time, nullable: true}
+    QuickBooksOverviewResponse:
+      type: object
+      properties:
+        catalog: {$ref: '#/components/schemas/IntegrationCatalogResponse'}
+        setting: {$ref: '#/components/schemas/QuickBooksConnectionSettingResponse'}
+        mappings:
+          type: array
+          items: {$ref: '#/components/schemas/QuickBooksAccountMappingResponse'}
+        recentBatches:
+          type: array
+          items: {$ref: '#/components/schemas/QuickBooksExportBatchResponse'}
+        providerWritesEnabled: {type: boolean}
+        accountingReviewRequired: {type: boolean}
+    UpdateQuickBooksMappingRequest:
+      type: object
+      required: [mappingType, accountId]
+      properties:
+        mappingType: {type: string}
+        accountId: {type: string}
+    QuickBooksExportPreviewRequest:
+      type: object
+      required: [periodStart, periodEnd, idempotencyKey]
+      properties:
+        periodStart: {type: string, format: date}
+        periodEnd: {type: string, format: date}
+        idempotencyKey: {type: string}
+    QuickBooksExportPreviewResponse:
+      type: object
+      properties:
+        periodStart: {type: string, format: date}
+        periodEnd: {type: string, format: date}
+        counts: {type: object, additionalProperties: true}
+        missingMappings:
+          type: array
+          items: {type: string}
+        exportAllowed: {type: boolean}
+        reason: {type: string}
+    SportsDataExternalRecordRequest:
+      type: object
+      required: [entityType, externalId]
+      properties:
+        entityType: {type: string}
+        externalId: {type: string}
+        externalParentId: {type: string, nullable: true}
+        name: {type: string, nullable: true}
+        payload: {type: object, additionalProperties: {type: string, nullable: true}}
+    SportsDataFilePreviewRequest:
+      type: object
+      required: [provider, records]
+      properties:
+        provider: {type: string, enum: [GAMECHANGER, MAXPREPS]}
+        records:
+          type: array
+          items: {$ref: '#/components/schemas/SportsDataExternalRecordRequest'}
+    SportsDataImportRunResponse:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        provider: {type: string}
+        sourceMode: {type: string}
+        status: {type: string}
+        commitAllowed: {type: boolean}
+        discoveredCount: {type: integer}
+        validCount: {type: integer}
+        duplicateCount: {type: integer}
+        conflictCount: {type: integer}
+        errorCount: {type: integer}
+        previewHash: {type: string}
+        requestedAt: {type: string, format: date-time}
+        completedAt: {type: string, format: date-time, nullable: true}
+    SportsDataImportIssueResponse:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        rowNumber: {type: integer, nullable: true}
+        entityType: {type: string, nullable: true}
+        externalEntityId: {type: string, nullable: true}
+        severity: {type: string}
+        code: {type: string}
+        message: {type: string}
+    SportsDataPreviewResponse:
+      type: object
+      properties:
+        run: {$ref: '#/components/schemas/SportsDataImportRunResponse'}
+        issues:
+          type: array
+          items: {$ref: '#/components/schemas/SportsDataImportIssueResponse'}
+        records:
+          type: array
+          items: {type: object, additionalProperties: true}
+        directImportEnabled: {type: boolean}
+        message: {type: string}
+    SportsDataOverviewResponse:
+      type: object
+      properties:
+        providers:
+          type: array
+          items: {$ref: '#/components/schemas/IntegrationCatalogResponse'}
+        recentRuns:
+          type: array
+          items: {$ref: '#/components/schemas/SportsDataImportRunResponse'}
+        directProviderImportEnabled: {type: boolean}
+        reviewedFileImportAvailable: {type: boolean}
+    IntegrationSyncRunResponse:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        connectionId: {type: string, format: uuid, nullable: true}
+        provider: {type: string}
+        ownerType: {type: string}
+        organizationId: {type: string, format: uuid, nullable: true}
+        userId: {type: string, format: uuid, nullable: true}
+        direction: {type: string}
+        trigger: {type: string}
+        status: {type: string}
+        discoveredCount: {type: integer}
+        createdCount: {type: integer}
+        updatedCount: {type: integer}
+        skippedCount: {type: integer}
+        failedCount: {type: integer}
+        rateLimitRemaining: {type: integer, nullable: true}
+        rateLimitResetsAt: {type: string, format: date-time, nullable: true}
+        errorCode: {type: string, nullable: true}
+        errorMessage: {type: string, nullable: true}
+        requestedAt: {type: string, format: date-time}
+        startedAt: {type: string, format: date-time, nullable: true}
+        completedAt: {type: string, format: date-time, nullable: true}
+    IntegrationSyncIssueResponse:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        syncRunId: {type: string, format: uuid}
+        severity: {type: string}
+        code: {type: string}
+        message: {type: string}
+        externalEntityType: {type: string, nullable: true}
+        externalEntityId: {type: string, nullable: true}
+        internalEntityType: {type: string, nullable: true}
+        internalEntityId: {type: string, format: uuid, nullable: true}
+        retryable: {type: boolean}
+        createdAt: {type: string, format: date-time}
+    ProviderContractCapabilityResponse:
+      type: object
+      properties:
+        name: {type: string}
+        status: {type: string}
+        summary: {type: string}
+    PlatformProviderContractResponse:
+      type: object
+      properties:
+        provider: {type: string}
+        configurationStatus: {type: string}
+        credentialOwnership: {type: string}
+        credentialRotation: {type: string}
+        healthCheckMode: {type: string}
+        liveProbeEnabled: {type: boolean}
+        webhookVerification: {type: string}
+        idempotency: {type: string}
+        productionStubBlocked: {type: boolean}
+        capabilities:
+          type: array
+          items: {$ref: '#/components/schemas/ProviderContractCapabilityResponse'}
 
 security:
 - bearerAuth: []

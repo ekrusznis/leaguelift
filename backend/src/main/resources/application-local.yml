@@ -41,6 +41,8 @@ leaguelift:
   printify:
     api-token: ${PRINTIFY_API_TOKEN:}
     shop-id: ${PRINTIFY_SHOP_ID:}
+    webhook-secret: ${PRINTIFY_WEBHOOK_SECRET:}
+    webhook-enabled: ${PRINTIFY_WEBHOOK_ENABLED:false}
   # Phase 5 slice 1 (ADR-017) — starting pilot values, not final pricing. Both configurable without a redeploy.
   platform:
     fee-basis-points: ${PLATFORM_FEE_BASIS_POINTS:500}
@@ -71,6 +73,7 @@ leaguelift:
     resend:
       api-key: ${RESEND_API_KEY:}
       from-address: ${RESEND_FROM_ADDRESS:}
+      webhook-secret: ${RESEND_WEBHOOK_SECRET:}
   # Used to build a complete, clickable URL in outbound emails (e.g. the invitation
   # accept link) — see FrontendProperties. Defaults to the local Vite dev server.
   frontend:

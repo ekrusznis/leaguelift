@@ -214,3 +214,107 @@ export function useDisconnectOrganizationIntegration(organizationId: string) {
 		},
 	});
 }
+
+export function useQuickBooksOverview(organizationId: string) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "integrations", "quickbooks"],
+		queryFn: () => apiFetch<import("./types").QuickBooksOverview>(`/organizations/${organizationId}/integrations/quickbooks`),
+		enabled: !!organizationId,
+	});
+}
+
+export function useSportsDataOverview(organizationId: string) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "integrations", "sports-data"],
+		queryFn: () => apiFetch<import("./types").SportsDataOverview>(`/organizations/${organizationId}/integrations/sports-data`),
+		enabled: !!organizationId,
+	});
+}
+
+export function useOrganizationIntegrationSyncRuns(organizationId: string) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "integration-sync-runs"],
+		queryFn: () => apiFetch<import("./types").IntegrationSyncRun[]>(`/organizations/${organizationId}/integration-sync-runs`),
+		enabled: !!organizationId,
+	});
+}
+
+export function usePlatformProviderContracts() {
+	return useQuery({
+		queryKey: ["platform", "integration-provider-contracts"],
+		queryFn: () => apiFetch<import("./types").PlatformProviderContract[]>("/platform/integrations/provider-contracts"),
+	});
+}
+
+export function usePlatformIntegrationSyncRuns() {
+	return useQuery({
+		queryKey: ["platform", "integration-sync-runs"],
+		queryFn: () => apiFetch<import("./types").IntegrationSyncRun[]>("/platform/integrations/sync-runs"),
+	});
+}
+
+const quickBooksKey = (organizationId: string) => ["organizations", organizationId, "integrations", "quickbooks"] as const;
+
+export function useRefreshQuickBooksCompany(organizationId: string, connectionId: string | null) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: () => {
+			if (!connectionId) throw new Error("QuickBooks is not connected.");
+			return apiFetch<import("./types").QuickBooksConnectionSetting>(`/organizations/${organizationId}/integrations/quickbooks/connections/${connectionId}/company/refresh`, { method: "POST" });
+		},
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: quickBooksKey(organizationId) }),
+	});
+}
+
+export function useQuickBooksAccounts(organizationId: string, connectionId: string | null, enabled: boolean) {
+	return useQuery({
+		queryKey: [...quickBooksKey(organizationId), connectionId, "accounts"],
+		queryFn: () => {
+			if (!connectionId) throw new Error("QuickBooks is not connected.");
+			return apiFetch<import("./types").QuickBooksAccount[]>(`/organizations/${organizationId}/integrations/quickbooks/connections/${connectionId}/accounts`);
+		},
+		enabled: enabled && !!connectionId,
+	});
+}
+
+export function useSaveQuickBooksMapping(organizationId: string, connectionId: string | null) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (input: { mappingType: import("./types").QuickBooksMappingType; accountId: string }) => {
+			if (!connectionId) throw new Error("QuickBooks is not connected.");
+			return apiFetch<import("./types").QuickBooksAccountMapping>(`/organizations/${organizationId}/integrations/quickbooks/connections/${connectionId}/mappings`, {
+				method: "PUT",
+				body: input,
+			});
+		},
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: quickBooksKey(organizationId) }),
+	});
+}
+
+export function usePreviewQuickBooksExport(organizationId: string, connectionId: string | null) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (input: { periodStart: string; periodEnd: string; idempotencyKey: string }) => {
+			if (!connectionId) throw new Error("QuickBooks is not connected.");
+			return apiFetch<import("./types").QuickBooksExportPreview>(`/organizations/${organizationId}/integrations/quickbooks/connections/${connectionId}/exports/preview`, {
+				method: "POST",
+				body: input,
+			});
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: quickBooksKey(organizationId) });
+			queryClient.invalidateQueries({ queryKey: ["organizations", organizationId, "integration-sync-runs"] });
+		},
+	});
+}
+
+export function usePreviewConnectedSportsData(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (connectionId: string) => apiFetch<import("./types").SportsDataPreview>(`/organizations/${organizationId}/integrations/sports-data/connections/${connectionId}/preview`, { method: "POST" }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["organizations", organizationId, "integrations", "sports-data"] });
+			queryClient.invalidateQueries({ queryKey: ["organizations", organizationId, "integration-sync-runs"] });
+		},
+	});
+}
