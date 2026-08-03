@@ -60,7 +60,7 @@ dependencies {
 	// local/test — ADR-012). Pure Java, no Spring/Kotlin coupling; url-connection-client
 	// is the lightest sync HTTP client, sufficient since the backend's own S3 traffic is
 	// low-volume (presign + head/get during upload confirmation, no byte-proxying).
-	implementation(platform("software.amazon.awssdk:bom:2.29.52"))
+	implementation(platform("software.amazon.awssdk:bom:2.50.1"))
 	implementation("software.amazon.awssdk:s3")
 	implementation("software.amazon.awssdk:url-connection-client")
 
