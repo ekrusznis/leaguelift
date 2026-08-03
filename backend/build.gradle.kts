@@ -66,7 +66,7 @@ dependencies {
 
 	// Stripe Connect Express onboarding scaffolding only (ADR-005) — no live charge
 	// routing yet, gated behind Phase 5 per DESIGN-DOC.md section 16.
-	implementation("com.stripe:stripe-java:29.0.0")
+	implementation("com.stripe:stripe-java:33.2.0")
 
 	// QR code generation for the sponsorship share-link feature (Phase 6 remainder,
 	// ADR-019) — DESIGN-DOC.md section 8.3 listed `qr_code_reference` as design-target
