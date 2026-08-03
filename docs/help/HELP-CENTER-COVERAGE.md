@@ -46,7 +46,8 @@ Before the Phase 21 production go/no-go, LeagueLift must review every reachable 
 | Action Center, announcements, notification preferences | All authenticated roles | Task sources, read state, publishing, audiences, email/SMS preferences | Article pending |
 | Help Center and support cases | Public, all authenticated roles, Platform | Search, submit case, case statuses, no live chat/SLA | Starter UI copy exists; article pending |
 | Platform Admin console and support access | Platform | Directories, scoped support sessions, audit, queues, article/case administration | Starter article exists; detailed articles pending |
-| Integrations and provider activation | Owner/Admin, Platform | Connection states, imports, provider-specific limits and recovery | **Connection-status article published in V40**; provider-specific setup/recovery articles remain required with each later slice |
+| Personal and organization integrations | All authenticated roles, Owner/Admin | Personal vs. organization ownership, connection states, ICS fallback, provider-specific limits, reauthorization/disconnect | **Connection-status article published in V40; Google Calendar and platform-managed-provider articles published in V41**; QuickBooks and sports-provider articles remain required |
+| Platform provider readiness | Platform | Sanitized configuration checks, difference between readiness and live health, failure recovery | **Platform-managed-provider article published in V41**; detailed operational provider articles remain pending |
 | Privacy, security, accessibility, legal pages | Public, all roles | Youth-data boundaries, security expectations, accessibility/support paths | Privacy starter exists; legal review remains a launch gate |
 
 ## Content-production sequence

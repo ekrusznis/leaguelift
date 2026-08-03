@@ -14,6 +14,7 @@ import com.leaguelift.integration.core.persistence.IntegrationProviderRepository
 import com.leaguelift.membership.application.MembershipService
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -33,6 +34,7 @@ class IntegrationCatalogServiceTest {
             adapterRegistry,
         )
         assertEquals(IntegrationReadiness.NOT_CONFIGURED, service.readiness(quickBooksDefinition()))
+        verify(exactly = 0) { adapterRegistry.find(any()) }
     }
 
     @Test

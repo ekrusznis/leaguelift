@@ -8,6 +8,7 @@ import { RequireCapability } from "../authorization/RequireCapability";
 import { ActionCenterPage } from "../features/actionCenter/ActionCenterPage";
 import { AnnouncementsPage } from "../features/communications/AnnouncementsPage";
 import { CollectionsPage } from "../features/collections/CollectionsPage";
+import { PersonalIntegrationsPage } from "../features/integrations/PersonalIntegrationsPage";
 import { EventDetailPage } from "../features/events/EventDetailPage";
 import { EventsPage } from "../features/events/EventsPage";
 import { PlatformAdminConsoleLayout } from "../features/platformAdmin/PlatformAdminConsoleLayout";
@@ -106,6 +107,7 @@ export function AppRoutes() {
 				<Route element={<AppShell />}>
 					<Route path="action-center" element={<ActionCenterPage />} />
 					<Route path="announcements" element={<AnnouncementsPage />} />
+					<Route path="integrations" element={<PersonalIntegrationsPage />} />
 					<Route path="help" element={<HelpCenterPage authenticated />} />
 					<Route path="help/support" element={<SupportRequestPage authenticated />} />
 					<Route path="help/:slug" element={<HelpArticlePage authenticated />} />

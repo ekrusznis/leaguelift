@@ -14,6 +14,7 @@ export type OrganizationSection =
 	| "reports"
 	| "documents"
 	| "members"
+	| "integrations"
 	| "settings";
 
 export type HouseholdSection = "profile" | "participants" | "fees" | "events" | "documents" | "corrections";
@@ -39,6 +40,7 @@ export const appPaths = {
 		`/app/organizations/${organizationId}/events/${eventId}${search && search.size > 0 ? `?${search.toString()}` : ""}`,
 	actionCenter: () => "/app/action-center",
 	announcements: () => "/app/announcements",
+	personalIntegrations: () => "/app/integrations",
 	help: () => "/app/help",
 	helpArticle: (slug: string) => `/app/help/${slug}`,
 	helpSupport: () => "/app/help/support",

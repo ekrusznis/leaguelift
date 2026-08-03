@@ -2,6 +2,7 @@ package com.leaguelift.integration.core.web
 
 import com.leaguelift.common.error.ValidationException
 import com.leaguelift.common.web.CurrentUser
+import com.leaguelift.config.FrontendProperties
 import com.leaguelift.integration.core.application.IntegrationCatalogService
 import com.leaguelift.integration.core.application.IntegrationOAuthService
 import com.leaguelift.integration.core.domain.IntegrationProvider
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.servlet.view.RedirectView
+import org.springframework.web.util.UriComponentsBuilder
 import java.util.UUID
 
 @RestController
@@ -22,6 +25,7 @@ import java.util.UUID
 class IntegrationController(
     private val catalogService: IntegrationCatalogService,
     private val oauthService: IntegrationOAuthService,
+    private val frontendProperties: FrontendProperties,
 ) {
     @GetMapping("/organizations/{organizationId}/integrations/catalog")
     fun organizationCatalog(
@@ -75,16 +79,32 @@ class IntegrationController(
         @RequestParam(required = false) code: String?,
         @RequestParam(required = false) state: String?,
         @RequestParam(required = false) error: String?,
-    ): AuthorizationCallbackResponse {
-        if (!error.isNullOrBlank()) {
-            throw ValidationException("The provider did not authorize the connection. Start the connection again if needed.")
+    ): RedirectView {
+        val resolvedProvider = provider(provider)
+        var organizationId: UUID? = null
+        val status = try {
+            if (!error.isNullOrBlank()) {
+                organizationId = oauthService.failAuthorization(resolvedProvider, state, error)?.organizationId
+                "denied"
+            } else {
+                organizationId = oauthService.completeAuthorization(
+                    resolvedProvider,
+                    state ?: throw ValidationException("The provider callback is missing authorization state."),
+                    code ?: throw ValidationException("The provider callback is missing an authorization code."),
+                ).organizationId
+                "connected"
+            }
+        } catch (_: Exception) {
+            "error"
         }
-        val connection = oauthService.completeAuthorization(
-            provider(provider),
-            state ?: throw ValidationException("The provider callback is missing authorization state."),
-            code ?: throw ValidationException("The provider callback is missing an authorization code."),
-        )
-        return AuthorizationCallbackResponse(connection.toResponse())
+        val returnPath = organizationId?.let { "/app/organizations/$it/integrations" } ?: "/app/integrations"
+        val target = UriComponentsBuilder.fromUriString(frontendProperties.baseUrl)
+            .path(returnPath)
+            .queryParam("integration", status)
+            .queryParam("provider", resolvedProvider.configKey)
+            .build(true)
+            .toUriString()
+        return RedirectView(target)
     }
 
     @PostMapping("/organizations/{organizationId}/integration-connections/{connectionId}/refresh")
@@ -119,6 +139,35 @@ class IntegrationController(
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): IntegrationConnectionResponse =
         oauthService.disconnectOrganizationConnection(organizationId, connectionId, currentUser).toResponse()
+
+    @PostMapping("/me/integration-connections/{connectionId}/refresh")
+    fun refreshPersonal(
+        @PathVariable connectionId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): IntegrationConnectionResponse =
+        oauthService.refreshUserConnection(connectionId, currentUser).toResponse()
+
+    @PostMapping("/me/integration-connections/{connectionId}/revoke")
+    fun revokePersonal(
+        @PathVariable connectionId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): IntegrationConnectionResponse =
+        oauthService.revokeUserConnection(connectionId, currentUser).toResponse()
+
+    @PostMapping("/me/integration-connections/{connectionId}/health-check")
+    fun healthCheckPersonal(
+        @PathVariable connectionId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): IntegrationHealthResponse =
+        oauthService.checkUserHealth(connectionId, currentUser).toResponse()
+
+    @DeleteMapping("/me/integration-connections/{connectionId}")
+    @ResponseStatus(HttpStatus.OK)
+    fun disconnectPersonal(
+        @PathVariable connectionId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): IntegrationConnectionResponse =
+        oauthService.disconnectUserConnection(connectionId, currentUser).toResponse()
 
     private fun provider(value: String): IntegrationProvider =
         IntegrationProvider.entries.firstOrNull {

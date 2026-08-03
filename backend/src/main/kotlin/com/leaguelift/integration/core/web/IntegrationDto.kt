@@ -128,3 +128,28 @@ fun IntegrationHealthCheck.toResponse() = IntegrationHealthResponse(
     errorMessage = errorMessage,
     checkedAt = checkedAt,
 )
+
+data class PlatformIntegrationConfigurationCheckResponse(
+    val label: String,
+    val configured: Boolean,
+)
+
+data class PlatformIntegrationReadinessResponse(
+    val provider: String,
+    val displayName: String,
+    val category: String,
+    val status: String,
+    val mode: String,
+    val summary: String,
+    val checks: List<PlatformIntegrationConfigurationCheckResponse>,
+)
+
+fun com.leaguelift.integration.core.application.PlatformIntegrationReadiness.toResponse() = PlatformIntegrationReadinessResponse(
+    provider = provider.name,
+    displayName = displayName,
+    category = category,
+    status = status.name,
+    mode = mode,
+    summary = summary,
+    checks = checks.map { PlatformIntegrationConfigurationCheckResponse(it.label, it.configured) },
+)

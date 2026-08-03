@@ -53,6 +53,7 @@ const SECTION_LABELS: Array<{ id: OrganizationSection; label: string }> = [
 	{ id: "reports", label: "Reports" },
 	{ id: "documents", label: "Documents" },
 	{ id: "members", label: "Members" },
+	{ id: "integrations", label: "Integrations" },
 	{ id: "settings", label: "Settings" },
 ];
 
@@ -104,6 +105,7 @@ export function OrganizationDetailPage() {
 		if (id === "events") return canReadEvents || canManageEvents;
 		if (id === "fees" || id === "reports") return canViewReports || canManageOrganization;
 		if (id === "members") return canManageMembers;
+		if (id === "integrations") return canManageOrganization;
 		if (id === "settings") return canManageOrganization || canManagePayouts;
 		if (["households", "fundraising", "stores", "financial-operations", "sponsorships", "documents"].includes(id)) return canManageOrganization;
 		return false;
@@ -242,6 +244,8 @@ function OrganizationSectionContent({
 			return <Section title="Documents"><OrganizationDocumentsPanel organizationId={organization.id} /></Section>;
 		case "members":
 			return <Section title="Members & Invitations"><InvitationsPanel organizationId={organization.id} /></Section>;
+		case "integrations":
+			return <Section title="Integrations" description="Connect organization-owned accounting and sports-data providers, or use reviewed CSV and ICS workflows."><IntegrationsPanel organizationId={organization.id} /></Section>;
 		case "settings":
 			return (
 				<div className="flex flex-col gap-8">
@@ -250,7 +254,6 @@ function OrganizationSectionContent({
 							<Section title="Branding"><OrganizationBrandingPanel organizationId={organization.id} organizationName={organization.name} /></Section>
 							<Section title="Organization Profile"><OrganizationProfileForm organization={organization} /></Section>
 							<Section title="Public Pages"><PublicPagesPanel organizationId={organization.id} organizationName={organization.name} /></Section>
-							<Section title="Integrations"><IntegrationsPanel organizationId={organization.id} /></Section>
 						</>
 					)}
 					{canManagePayouts && (

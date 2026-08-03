@@ -24,12 +24,14 @@ describe("dashboard navigation registry", () => {
 		expect(items.find((item) => item.id === "owner.reports")?.to).toBe("/app/organizations/org-1/reports");
 		expect(items.find((item) => item.id === "owner.action-center")?.to).toBe("/app/action-center");
 		expect(items.find((item) => item.id === "owner.announcements")?.to).toBe("/app/announcements");
+		expect(items.find((item) => item.id === "owner.integrations")?.to).toBe("/app/integrations");
+		expect(items.find((item) => item.id === "owner.organization-integrations")?.to).toBe("/app/organizations/org-1/integrations");
 	});
 
 	it("keeps a finance or viewer context focused on read-only financial areas", () => {
 		const items = navItemsFor("ORGANIZATION", new Set([Capabilities.ORG_REPORT_VIEW]), { organizationId: "org-1" });
 
-		expect(items.map((item) => item.id)).toEqual(["owner.overview", "owner.action-center", "owner.announcements", "owner.fees", "owner.reports"]);
+		expect(items.map((item) => item.id)).toEqual(["owner.overview", "owner.action-center", "owner.announcements", "owner.integrations", "owner.fees", "owner.reports"]);
 	});
 
 	it("does not advertise unimplemented parent credit or order destinations", () => {
@@ -91,6 +93,7 @@ describe("dashboard navigation registry", () => {
 			"platform.overview",
 			"platform.action-center",
 			"platform.announcements",
+			"platform.integrations",
 			"platform.organizations",
 			"platform.users",
 			"platform.operations",
@@ -98,6 +101,7 @@ describe("dashboard navigation registry", () => {
 			"platform.audit",
 			"platform.support-sessions",
 		]);
+		expect(items.find((item) => item.id === "platform.integrations")?.to).toBe("/app/integrations");
 		expect(items.find((item) => item.id === "platform.organizations")?.to).toBe("/app/platform/organizations");
 		expect(items.find((item) => item.id === "platform.users")?.to).toBe("/app/platform/users");
 		expect(items.find((item) => item.id === "platform.operations")?.to).toBe("/app/platform/operations");

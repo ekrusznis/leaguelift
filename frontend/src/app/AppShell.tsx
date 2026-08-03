@@ -31,6 +31,7 @@ export function AppShell() {
 		...(isPlatformAdmin && supportAccess.data
 			? [{ to: `/app/platform/organizations/${supportAccess.data.organizationId}`, label: "Organization Console" }]
 			: []),
+		{ to: "/app/integrations", label: "My Integrations" },
 		{ to: "/app/help", label: "Help" },
 	];
 

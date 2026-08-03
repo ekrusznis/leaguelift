@@ -323,3 +323,6 @@ Additional, unreserved decisions:
 - ADR-050: Phase 17 Action Center, announcements, and reminder delivery (2026-08-01)
 - ADR-051: Phase 18 slices 1-2 manual catalog/vendor records and controlled fulfillment, tracking, exception, and reprint operations (2026-08-01)
 - ADR-052: Phase 18 slice 3 explicit offline contribution, sponsorship, and manual-order records with pending verification, idempotency/duplicate protection, balanced non-payout ledger settlement, Action Center review work, acknowledgement delivery, and the cross-phase Help Center coverage standard (2026-08-01)
+- ADR-053: Phase 18 payment plans, controlled financial corrections, and durable reconciliation (2026-08-01)
+- ADR-054: Phase 19 generalized provider catalog, encrypted owner-scoped connection/OAuth foundation, deterministic stubs, and fail-closed runtime guards (2026-08-01)
+- ADR-055: Phase 19 personal/organization/platform integration placement and disabled Google Calendar scaffold with ICS fallback (2026-08-02)

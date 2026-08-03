@@ -1,6 +1,8 @@
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { usePlatformOutboxHealth, usePlatformWebhookHealth } from "../../dashboard/api";
+import { usePlatformIntegrationReadiness } from "../integrations/api";
+import type { PlatformIntegrationReadiness } from "../integrations/types";
 import { useDeadLetterOutboxEvents, useFailedOutboxEvents, useReprocessOutboxEvent } from "./api";
 import type { OutboxEvent } from "./types";
 
@@ -9,11 +11,12 @@ export function PlatformOperationsPage() {
 	const outbox = usePlatformOutboxHealth();
 	const failed = useFailedOutboxEvents();
 	const deadLetter = useDeadLetterOutboxEvents();
+	const providers = usePlatformIntegrationReadiness();
 	const reprocess = useReprocessOutboxEvent();
 
-	if (webhook.isLoading || outbox.isLoading || failed.isLoading || deadLetter.isLoading) return <LoadingState label="Loading platform operations…" />;
-	if (webhook.isError || outbox.isError || failed.isError || deadLetter.isError || !webhook.data || !outbox.data || !failed.data || !deadLetter.data) {
-		return <ErrorState message="Could not load integration operations." onRetry={() => { void webhook.refetch(); void outbox.refetch(); void failed.refetch(); void deadLetter.refetch(); }} />;
+	if (webhook.isLoading || outbox.isLoading || failed.isLoading || deadLetter.isLoading || providers.isLoading) return <LoadingState label="Loading platform operations…" />;
+	if (webhook.isError || outbox.isError || failed.isError || deadLetter.isError || providers.isError || !webhook.data || !outbox.data || !failed.data || !deadLetter.data || !providers.data) {
+		return <ErrorState message="Could not load integration operations." onRetry={() => { void webhook.refetch(); void outbox.refetch(); void failed.refetch(); void deadLetter.refetch(); void providers.refetch(); }} />;
 	}
 
 	const events = [...deadLetter.data, ...failed.data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -27,6 +30,12 @@ export function PlatformOperationsPage() {
 				<Metric label="Outbox pending" value={outbox.data.pending + outbox.data.processing} />
 				<Metric label="Failed / dead-letter" value={outbox.data.failed + outbox.data.deadLetter} tone={outbox.data.failed + outbox.data.deadLetter > 0 ? "error" : "normal"} />
 			</div>
+			<section className="rounded-xl border border-slate-200 bg-white p-5">
+				<div><h2 className="font-heading text-lg font-semibold text-navy-900">Platform provider readiness</h2><p className="mt-1 text-sm text-slate-500">Sanitized configuration checks only. A configured result is not a live-provider health claim; credentialed probes and contract verification remain Phase 20.</p></div>
+				<div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+					{providers.data.map((provider) => <ProviderReadinessCard key={provider.provider} provider={provider} />)}
+				</div>
+			</section>
 			<section className="rounded-xl border border-slate-200 bg-white">
 				<div className="border-b border-slate-200 px-5 py-4"><h2 className="font-heading text-lg font-semibold text-navy-900">Outbox exception queue</h2><p className="mt-1 text-sm text-slate-500">Retry resets an event to pending. Payloads cannot be edited from the console.</p></div>
 				{events.length === 0 ? (
@@ -60,5 +69,16 @@ function OutboxRow({ event, pending, onReprocess }: { event: OutboxEvent; pendin
 			<td className="max-w-md px-4 py-3 text-slate-600"><p className="line-clamp-3">{event.lastError ?? "No error message recorded"}</p></td>
 			<td className="px-4 py-3 text-right"><button type="button" disabled={pending} onClick={onReprocess} className="rounded-md border border-slate-300 px-3 py-2 font-medium text-navy-900 hover:border-green-500 disabled:opacity-50">{pending ? "Retrying…" : "Reprocess"}</button></td>
 		</tr>
+	);
+}
+
+function ProviderReadinessCard({ provider }: { provider: PlatformIntegrationReadiness }) {
+	const tone = provider.status === "CONFIGURED" || provider.status === "BUILT_IN" ? "bg-green-100 text-green-800" : provider.status === "PARTIAL" ? "bg-amber-100 text-amber-900" : "bg-slate-100 text-slate-600";
+	return (
+		<article className="rounded-lg border border-slate-200 p-4">
+			<div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold text-navy-900">{provider.displayName}</h3><p className="mt-0.5 text-xs text-slate-500">{provider.mode}</p></div><span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${tone}`}>{provider.status.replaceAll("_", " ")}</span></div>
+			<p className="mt-3 text-sm text-slate-600">{provider.summary}</p>
+			<ul className="mt-3 flex flex-col gap-1 text-xs text-slate-500">{provider.checks.map((check) => <li key={check.label} className="flex items-center justify-between gap-2"><span>{check.label}</span><span className={check.configured ? "font-medium text-green-700" : "text-slate-400"}>{check.configured ? "Configured" : "Missing"}</span></li>)}</ul>
+		</article>
 	);
 }

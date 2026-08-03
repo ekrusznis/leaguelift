@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Button } from "../../components/Button";
@@ -7,10 +8,14 @@ import { LoadingState } from "../../components/states/LoadingState";
 import { useTeams } from "../teams/api";
 import { CsvImportSection } from "./CsvImportSection";
 import {
+	useCheckOrganizationIntegrationHealth,
 	useConnectIcsFeed,
 	useDisconnectEventSource,
+	useDisconnectOrganizationIntegration,
 	useEventSourceConnections,
 	useOrganizationIntegrationCatalog,
+	useRefreshOrganizationIntegration,
+	useStartOrganizationIntegrationAuthorization,
 } from "./api";
 import { connectIcsFeedSchema, type ConnectIcsFeedFormValues } from "./schema";
 import type { IntegrationCatalogItem, IntegrationConnectionStatus, IntegrationReadiness } from "./types";
@@ -59,9 +64,22 @@ function statusClasses(value: string) {
 	return "bg-slate-gray/10 text-slate-gray";
 }
 
-function ProviderReadinessCard({ item }: { item: IntegrationCatalogItem }) {
+function ProviderReadinessCard({ organizationId, item }: { organizationId: string; item: IntegrationCatalogItem }) {
+	const startAuthorization = useStartOrganizationIntegrationAuthorization(organizationId);
+	const refresh = useRefreshOrganizationIntegration(organizationId);
+	const health = useCheckOrganizationIntegrationHealth(organizationId);
+	const disconnect = useDisconnectOrganizationIntegration(organizationId);
 	const statusValue = item.connection?.status ?? item.readiness;
 	const label = item.connection ? connectionLabel(item.connection.status) : readinessLabel(item.readiness);
+	const canConnect = item.authMode === "OAUTH2" && item.readiness === "AVAILABLE" && item.connection?.status !== "CONNECTED";
+	const connected = item.connection?.status === "CONNECTED" || item.connection?.status === "DEGRADED";
+	const busy = startAuthorization.isPending || refresh.isPending || health.isPending || disconnect.isPending;
+
+	async function connect() {
+		const result = await startAuthorization.mutateAsync(item.provider);
+		window.location.assign(result.authorizationUrl);
+	}
+
 	return (
 		<li className="rounded-lg border border-slate-gray/20 bg-pure-white p-4">
 			<div className="flex flex-wrap items-start justify-between gap-3">
@@ -72,12 +90,21 @@ function ProviderReadinessCard({ item }: { item: IntegrationCatalogItem }) {
 					</div>
 					<p className="mt-1 text-sm text-slate-gray">{item.description}</p>
 					<p className="mt-2 text-xs text-slate-gray">{item.activationRequirement}</p>
-					{item.connection?.lastErrorMessage && (
-						<p role="status" className="mt-2 text-xs text-error-red">{item.connection.lastErrorMessage}</p>
-					)}
+					{item.connection?.externalAccountName && <p className="mt-2 text-xs font-medium text-navy">Account: {item.connection.externalAccountName}</p>}
+					{item.connection?.lastErrorMessage && <p role="status" className="mt-2 text-xs text-error-red">{item.connection.lastErrorMessage}</p>}
 				</div>
 				<span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusClasses(statusValue)}`}>{label}</span>
 			</div>
+			{(canConnect || connected) && (
+				<div className="mt-3 flex flex-wrap gap-2">
+					{canConnect && <Button type="button" onClick={() => void connect()} disabled={busy}>{item.connection?.status === "DEGRADED" ? "Reauthorize" : "Connect"}</Button>}
+					{connected && item.connection && <>
+						<Button type="button" variant="secondary" onClick={() => health.mutate(item.connection!.id)} disabled={busy}>Check connection</Button>
+						<Button type="button" variant="secondary" onClick={() => refresh.mutate(item.connection!.id)} disabled={busy}>Refresh authorization</Button>
+						<Button type="button" variant="secondary" onClick={() => disconnect.mutate(item.connection!.id)} disabled={busy}>Disconnect</Button>
+					</>}
+				</div>
+			)}
 		</li>
 	);
 }
@@ -94,7 +121,7 @@ function ProviderReadinessSection({ organizationId }: { organizationId: string }
 				These providers are scaffolded but remain disabled until LeagueLift verifies official access, credentials, scopes, and contracts.
 			</p>
 			<ul className="mt-3 flex flex-col gap-2" aria-label="Organization integration readiness">
-				{items.map((item) => <ProviderReadinessCard key={item.provider} item={item} />)}
+				{items.map((item) => <ProviderReadinessCard key={item.provider} organizationId={organizationId} item={item} />)}
 			</ul>
 		</div>
 	);
@@ -187,8 +214,16 @@ function IcsFeedSection({ organizationId }: { organizationId: string }) {
 }
 
 export function IntegrationsPanel({ organizationId }: { organizationId: string }) {
+	const [searchParams, setSearchParams] = useSearchParams();
+	const callbackStatus = searchParams.get("integration");
 	return (
 		<div className="flex flex-col gap-6">
+			{callbackStatus && (
+				<div role="status" className="flex items-center justify-between gap-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-navy">
+					<span>{callbackStatus === "connected" ? "The organization provider authorization completed." : "The provider returned to LeagueLift. Review the connection status below."}</span>
+					<button type="button" className="font-medium text-azure-blue hover:underline" onClick={() => { searchParams.delete("integration"); searchParams.delete("provider"); setSearchParams(searchParams, { replace: true }); }}>Dismiss</button>
+				</div>
+			)}
 			<div className="rounded-lg border border-slate-gray/20 bg-ice-white p-4">
 				<h3 className="font-heading text-base font-semibold text-navy">LeagueLift-managed providers</h3>
 				<p className="mt-1 text-sm text-slate-gray">

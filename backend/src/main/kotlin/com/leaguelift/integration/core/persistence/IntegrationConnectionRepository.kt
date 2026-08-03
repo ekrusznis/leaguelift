@@ -50,6 +50,14 @@ class IntegrationConnectionRepository(
             .optional()
             .orElse(null)
 
+    fun findByIdForUser(id: UUID, userId: UUID): IntegrationConnection? =
+        jdbcClient.sql("select $COLUMNS from integration_connection where id = :id and user_id = :userId")
+            .param("id", id)
+            .param("userId", userId)
+            .query(::mapRow)
+            .optional()
+            .orElse(null)
+
     fun findActiveForOrganization(organizationId: UUID, provider: IntegrationProvider): IntegrationConnection? =
         jdbcClient.sql(
             """

@@ -59,13 +59,17 @@ class IntegrationCatalogService(
         definition.adapterMode == IntegrationAdapterMode.FILE_IMPORT -> IntegrationReadiness.AVAILABLE
         else -> {
             val runtime = properties.provider(definition.provider)
-            val adapterReady = adapterRegistry.find(definition.provider) != null
-            val oauthConfigured = properties.stubMode || (
-                runtime.clientId.isNotBlank() && runtime.clientSecret.isNotBlank() &&
-                    runtime.authorizationUri.isNotBlank() && runtime.tokenUri.isNotBlank()
-                )
-            if (runtime.enabled && adapterReady && oauthConfigured) IntegrationReadiness.AVAILABLE
-            else IntegrationReadiness.NOT_CONFIGURED
+            if (!runtime.enabled) {
+                IntegrationReadiness.NOT_CONFIGURED
+            } else {
+                val adapterReady = adapterRegistry.find(definition.provider) != null
+                val oauthConfigured = properties.stubMode || (
+                    runtime.clientId.isNotBlank() && runtime.clientSecret.isNotBlank() &&
+                        runtime.authorizationUri.isNotBlank() && runtime.tokenUri.isNotBlank()
+                    )
+                if (adapterReady && oauthConfigured) IntegrationReadiness.AVAILABLE
+                else IntegrationReadiness.NOT_CONFIGURED
+            }
         }
     }
 

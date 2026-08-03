@@ -94,3 +94,79 @@ export interface IntegrationCatalogItem {
 	stub: boolean;
 	connection: IntegrationConnectionSummary | null;
 }
+
+export interface AuthorizationStartResponse {
+	provider: IntegrationProvider;
+	connectionId: string;
+	authorizationUrl: string;
+	expiresAt: string;
+}
+
+export interface IntegrationHealthResponse {
+	id: string;
+	connectionId: string;
+	status: "HEALTHY" | "DEGRADED" | "FAILED";
+	latencyMs: number | null;
+	errorCode: string | null;
+	errorMessage: string | null;
+	checkedAt: string;
+}
+
+export interface GoogleCalendarSetting {
+	connectionId: string;
+	selectedCalendarId: string | null;
+	selectedCalendarName: string | null;
+	selectedCalendarTimezone: string | null;
+	syncDirection: "LEAGUELIFT_TO_GOOGLE";
+	automaticSyncEnabled: false;
+	lastCalendarListedAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface GoogleCalendarOverview {
+	catalog: IntegrationCatalogItem;
+	setting: GoogleCalendarSetting | null;
+	mappingCount: number;
+	icsFallbackAvailable: boolean;
+	automaticSyncAvailable: boolean;
+}
+
+export interface GoogleCalendarDescriptor {
+	id: string;
+	name: string;
+	timezone: string | null;
+	primary: boolean;
+	writable: boolean;
+}
+
+export interface GoogleCalendarEventMapping {
+	id: string;
+	connectionId: string;
+	eventId: string;
+	externalCalendarId: string;
+	externalEventId: string;
+	externalEtag: string | null;
+	syncStatus: "PENDING" | "SYNCED" | "FAILED" | "DELETED";
+	lastExportHash: string | null;
+	lastSyncedAt: string | null;
+	lastErrorCode: string | null;
+	lastErrorMessage: string | null;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface PlatformIntegrationConfigurationCheck {
+	label: string;
+	configured: boolean;
+}
+
+export interface PlatformIntegrationReadiness {
+	provider: IntegrationProvider;
+	displayName: string;
+	category: string;
+	status: "CONFIGURED" | "PARTIAL" | "NOT_CONFIGURED" | "BUILT_IN";
+	mode: string;
+	summary: string;
+	checks: PlatformIntegrationConfigurationCheck[];
+}
