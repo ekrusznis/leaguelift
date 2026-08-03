@@ -72,8 +72,8 @@ dependencies {
 	// ADR-019) — DESIGN-DOC.md section 8.3 listed `qr_code_reference` as design-target
 	// only; ZXing is the first real QR implementation in this codebase. `javase` brings
 	// MatrixToImageWriter (bit matrix -> BufferedImage); no other ZXing modules needed.
-	implementation("com.google.zxing:core:3.5.3")
-	implementation("com.google.zxing:javase:3.5.3")
+	implementation("com.google.zxing:core:3.5.4")
+	implementation("com.google.zxing:javase:3.5.4")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.security:spring-security-test")
