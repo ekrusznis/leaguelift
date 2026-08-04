@@ -1,7 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { AnnouncementBar } from "../../marketing/components/AnnouncementBar";
 import { AudienceCard } from "../../marketing/components/AudienceCard";
-import { AvailabilityStatusBadge } from "../../marketing/components/Badges";
 import { FaqAccordion } from "../../marketing/components/FaqAccordion";
 import { FeatureCard } from "../../marketing/components/FeatureCard";
 import { HomeHeader } from "../../marketing/components/HomeHeader";
@@ -300,9 +299,7 @@ type PricingTier = {
  * Three-tier pricing (added alongside the ADR-057 rebrand, replacing the earlier
  * Starter/Enterprise 2-tier layout). Starter and Growth carry real anchor prices;
  * Pro stays "Contact Us" rather than a fabricated enterprise number, consistent
- * with how the rest of the site avoids invented figures. Features still marked
- * "(planned)" match the same availability badges shown in the Solutions section
- * above — nothing here claims a planned feature ships today.
+ * with how the rest of the site avoids invented figures.
  */
 const PRICING_TIERS: PricingTier[] = [
 	{
@@ -334,9 +331,9 @@ const PRICING_TIERS: PricingTier[] = [
 		features: [
 			"Up to 20 teams",
 			"Everything in Starter",
-			"Fundraising campaigns (planned)",
-			"Team apparel stores (planned)",
-			"Family credits (planned)",
+			"Fundraising campaigns",
+			"Team apparel stores",
+			"Family credits",
 			"Priority support",
 			"Advanced reporting",
 		],
@@ -351,7 +348,7 @@ const PRICING_TIERS: PricingTier[] = [
 		features: [
 			"Unlimited teams",
 			"Everything in Growth",
-			"Sponsorship management (planned)",
+			"Sponsorship management",
 			"Custom onboarding",
 			"Dedicated support",
 			"Custom reporting",
@@ -511,10 +508,7 @@ export function HomePage() {
 									className="flex flex-col justify-between rounded-[22px] border border-white/[0.12] bg-navy-900 p-7 shadow-[0_22px_60px_rgba(0,0,0,0.22)]"
 								>
 									<div>
-										<div className="flex flex-wrap items-start justify-between gap-3">
-											<h3 className="font-heading text-xl font-bold text-white">{solution.heading}</h3>
-											<AvailabilityStatusBadge status={solution.availability} />
-										</div>
+										<h3 className="font-heading text-xl font-bold text-white">{solution.heading}</h3>
 										<p className="mt-3 text-sm leading-relaxed text-slate-300">{solution.shortDescription}</p>
 									</div>
 									<TextButton to={`/solutions/${solution.slug}`} icon="arrow" className="mt-6 self-start text-orange-400 hover:text-orange-300">
@@ -588,7 +582,7 @@ export function HomePage() {
 
 				<section id={HOMEPAGE_SECTION_IDS.pricing} className={`bg-ice-50 py-20 sm:py-28 ${SCROLL_MT}`}>
 					<PageContainer className="flex flex-col gap-12">
-						<SectionHeading heading="Simple pricing. Real transparency." copy="Rally26 combines organization subscriptions with clearly disclosed transaction fees and optional implementation services. Features marked “planned” are on the roadmap, not live yet." />
+						<SectionHeading heading="Simple pricing. Real transparency." copy="Rally26 combines organization subscriptions with clearly disclosed transaction fees and optional implementation services." />
 
 						<div className="grid gap-8 pt-3 lg:grid-cols-3 lg:items-start">
 							{PRICING_TIERS.map((tier) => (

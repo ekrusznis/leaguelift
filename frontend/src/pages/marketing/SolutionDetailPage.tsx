@@ -1,6 +1,5 @@
 import { Navigate, useParams } from "react-router-dom";
 import { AudienceCard } from "../../marketing/components/AudienceCard";
-import { AvailabilityStatusBadge } from "../../marketing/components/Badges";
 import { FaqAccordion } from "../../marketing/components/FaqAccordion";
 import { PageContainer } from "../../marketing/components/PageContainer";
 import { SectionHeading } from "../../marketing/components/SectionHeading";
@@ -24,8 +23,7 @@ export function SolutionDetailPage() {
 			<section className="bg-navy-950 py-20 sm:py-28">
 				<PageContainer className={solution.hero.image ? "grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]" : "max-w-3xl"}>
 					<div>
-						<AvailabilityStatusBadge status={solution.availability} />
-						<h1 className="mt-4 text-balance font-heading text-3xl font-extrabold text-white sm:text-4xl">
+						<h1 className="text-balance font-heading text-3xl font-extrabold text-white sm:text-4xl">
 							{solution.hero.headline}
 						</h1>
 						<p className="mt-4 text-lg leading-relaxed text-slate-300">{solution.hero.copy}</p>

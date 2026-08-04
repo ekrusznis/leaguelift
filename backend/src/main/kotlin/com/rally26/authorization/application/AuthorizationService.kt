@@ -269,7 +269,8 @@ class AuthorizationService(
 
 	fun hasHouseholdCapability(organizationId: UUID, householdId: UUID, currentUser: CurrentUser, capability: String): Boolean {
 		if (currentUser.platformAdministrator) return true
-		if (membershipRepository.findActiveMembership(organizationId, currentUser.userId) != null) return true
+		val membership = membershipRepository.findActiveMembership(organizationId, currentUser.userId)
+		if (membership != null && capability in CapabilityRegistry.householdCapabilitiesForOrgRole(membership.role)) return true
 		val relationship = guardianRelationshipRepository.findActiveForHousehold(currentUser.userId, householdId) ?: return false
 		return capability in CapabilityRegistry.householdCapabilities() && relationship.organizationId == organizationId
 	}

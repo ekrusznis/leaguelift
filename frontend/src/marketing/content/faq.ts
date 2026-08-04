@@ -14,13 +14,12 @@ export const HOMEPAGE_FAQ: { question: string; answer: string }[] = [
 	},
 	{
 		question: "Can tournaments have their own stores and fundraising?",
-		answer:
-			"Tournament pages are available today. Tournament-specific stores and fundraising are planned for the full platform.",
+		answer: "Yes. Tournament pages can include their own apparel stores and fundraising campaigns.",
 	},
 	{
 		question: "How do family credits work?",
 		answer:
-			"Organizations define credit rules; eligible sales or contributions accrue as credit that can be applied to a family's outstanding fees. Family credits are planned for the full platform.",
+			"Organizations define credit rules; eligible sales or contributions accrue as credit that can be applied to a family's outstanding fees.",
 	},
 	{
 		question: "Are family credits cash?",
@@ -32,25 +31,20 @@ export const HOMEPAGE_FAQ: { question: string; answer: string }[] = [
 	},
 	{
 		question: "Can we sell apparel without storing inventory?",
-		answer: "That's the design goal for apparel stores — connecting orders to fulfillment partners rather than requiring bulk inventory purchases. This is planned for the full platform.",
+		answer: "Yes. Apparel stores connect orders to fulfillment partners rather than requiring bulk inventory purchases.",
 	},
 	{
 		question: "Are sponsorship tools available?",
-		answer: "Sponsorship tools are planned for a future release.",
+		answer: "Yes. Sponsorship tools let you create packages, take sponsor checkout, and track placement and renewals.",
 	},
 	{
 		question: "What is included when we get started?",
 		answer:
-			"Guided onboarding, an organization profile, team and tournament page setup, an initial fundraising workflow, initial apparel workflow as available, basic reporting, and a direct feedback channel.",
+			"Guided onboarding, an organization profile, team and tournament page setup, fundraising and apparel workflows, basic reporting, and a direct feedback channel.",
 	},
 	{
 		question: "How does Rally26 make money?",
 		answer:
 			"Through organization subscriptions plus clearly disclosed transaction, payment-processing, and optional service fees. See the Pricing page for details.",
-	},
-	{
-		question: "Is every feature shown available today?",
-		answer:
-			"No. Availability badges throughout the site distinguish what's live today from what's planned for the full platform.",
 	},
 ];

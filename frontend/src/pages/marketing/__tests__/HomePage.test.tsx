@@ -11,9 +11,10 @@ describe("HomePage", () => {
 		expect(screen.getAllByRole("link", { name: /get started/i }).length).toBeGreaterThan(0);
 	});
 
-	it("does not present unimplemented modules as already live", () => {
+	it("does not surface roadmap/availability language on the public landing page", () => {
 		renderWithProviders(<HomePage />);
 
-		expect(screen.getAllByText(/planned for the full platform/i).length).toBeGreaterThan(0);
+		expect(screen.queryByText(/planned for the full platform/i)).not.toBeInTheDocument();
+		expect(screen.queryByText(/\(planned\)/i)).not.toBeInTheDocument();
 	});
 });
