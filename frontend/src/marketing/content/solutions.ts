@@ -1,4 +1,5 @@
 import { heroImages } from "../heroImages";
+import { solutionHeroImages } from "../solutionHeroImages";
 
 export type SolutionContent = {
 	slug: string;
@@ -6,6 +7,8 @@ export type SolutionContent = {
 	heading: string;
 	shortDescription: string;
 	hero: { headline: string; copy: string; image?: string };
+	/** Full-bleed background layer behind the hero section (see solutionHeroImages.ts) — distinct from hero.image's foreground card. */
+	heroBackground?: string;
 	problem: string;
 	approach: string;
 	capabilities: string[];
@@ -26,6 +29,7 @@ export const SOLUTIONS: SolutionContent[] = [
 			headline: "A public home for every team and tournament.",
 			copy: "Publish a branded page for each team or tournament — with dates, divisions, and participating teams — plus a public slug and QR code your families and supporters can share.",
 		},
+		heroBackground: solutionHeroImages.teamAndTournamentPages,
 		problem:
 			"Teams rely on scattered group chats and printed flyers to reach parents and supporters, and tournament organizers usually cobble together a PDF, a spreadsheet, and a social post to describe a single event — with no single public page to point people to.",
 		approach:
@@ -82,6 +86,7 @@ export const SOLUTIONS: SolutionContent[] = [
 			headline: "Campaigns built for youth sports programs.",
 			copy: "Launch organization- or team-specific campaigns with goals, sharing links, QR codes, and attribution.",
 		},
+		heroBackground: solutionHeroImages.fundraising,
 		problem:
 			"Ad-hoc fundraising through spreadsheets and personal payment apps makes it hard to see what's working or credit the right team.",
 		approach:
@@ -170,6 +175,7 @@ export const SOLUTIONS: SolutionContent[] = [
 			headline: "Clear fees, without the spreadsheet.",
 			copy: "Assign fee templates to households and participants, track due dates, and see outstanding balances in one place.",
 		},
+		heroBackground: solutionHeroImages.duesAndFees,
 		problem:
 			"Dues and fees are usually tracked in spreadsheets or email threads, making it hard for families or administrators to know what's actually owed.",
 		approach:
@@ -214,6 +220,7 @@ export const SOLUTIONS: SolutionContent[] = [
 			headline: "Turn eligible sales into fee credits.",
 			copy: "Apply organization-approved credit from eligible sales or contributions directly to a family's outstanding fees.",
 		},
+		heroBackground: solutionHeroImages.familyCredits,
 		problem:
 			"Families who sell or fundraise on behalf of a team rarely see that effort reflected in what they owe.",
 		approach:
@@ -258,6 +265,7 @@ export const SOLUTIONS: SolutionContent[] = [
 			headline: "Sponsor packages built for local businesses.",
 			copy: "Create sponsorship packages, take sponsor checkout, and track placement and renewals in one place.",
 		},
+		heroBackground: solutionHeroImages.sponsorships,
 		problem:
 			"Local sponsor relationships are often tracked in someone's inbox, with no clear record of what was promised or fulfilled.",
 		approach: "Sponsorships build on the organization and team page model already in place.",

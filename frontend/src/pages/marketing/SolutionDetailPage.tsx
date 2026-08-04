@@ -20,7 +20,18 @@ export function SolutionDetailPage() {
 		<>
 			<Seo title={solution.heading} description={solution.shortDescription} />
 
-			<section className="bg-navy-950 py-20 sm:py-28">
+			<section
+				className="relative overflow-hidden bg-navy-950 py-20 sm:py-28"
+				style={
+					solution.heroBackground
+						? {
+								backgroundImage: `linear-gradient(90deg, rgba(6,19,33,0.95) 0%, rgba(6,19,33,0.8) 45%, rgba(6,19,33,0.35) 100%), url(${solution.heroBackground})`,
+								backgroundSize: "cover",
+								backgroundPosition: "center",
+							}
+						: undefined
+				}
+			>
 				<PageContainer className={solution.hero.image ? "grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]" : "max-w-3xl"}>
 					<div>
 						<h1 className="text-balance font-heading text-3xl font-extrabold text-white sm:text-4xl">
