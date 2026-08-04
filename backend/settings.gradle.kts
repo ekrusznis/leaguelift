@@ -4,7 +4,7 @@
 // "Cannot find a Java installation ... Toolchain download repositories have not
 // been configured."
 plugins {
-	id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+	id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
 rootProject.name = "rally26-backend"
