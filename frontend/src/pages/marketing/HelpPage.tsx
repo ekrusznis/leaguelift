@@ -44,8 +44,8 @@ const HELP_CATEGORIES: { category: string; items: { question: string; answer: st
 		category: "Fundraising",
 		items: [
 			{
-				question: "Is fundraising available yet?",
-				answer: "Fundraising is planned for a future release. See the Fundraising solution page for the intended design.",
+				question: "How do supporters contribute to a campaign?",
+				answer: "Share the campaign link or QR code from a team or tournament page — supporters can contribute without creating an account.",
 			},
 		],
 	},
@@ -54,7 +54,7 @@ const HELP_CATEGORIES: { category: string; items: { question: string; answer: st
 		items: [
 			{
 				question: "Do we need to hold inventory to sell apparel?",
-				answer: "No — apparel stores are designed around per-order fulfillment. This feature is planned for a future release.",
+				answer: "No — apparel stores are built around per-order fulfillment rather than bulk inventory purchases.",
 			},
 		],
 	},

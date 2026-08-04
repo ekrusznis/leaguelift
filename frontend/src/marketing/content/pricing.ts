@@ -12,7 +12,7 @@ export const PRICING_FAQ: { question: string; answer: string }[] = [
 	{ question: "Can we cancel?", answer: "Cancellation terms are disclosed in your subscription agreement." },
 	{
 		question: "Are all features included?",
-		answer: "No — the Starter plan includes onboarding, page setup, an initial fundraising workflow, initial apparel workflow as available, and basic reporting. See Solutions for what's planned versus available today.",
+		answer: "The Starter plan includes onboarding, page setup, fundraising, apparel stores, and basic reporting. See Solutions for the full feature breakdown by plan.",
 	},
 	{
 		question: "Does pricing change by athlete count?",

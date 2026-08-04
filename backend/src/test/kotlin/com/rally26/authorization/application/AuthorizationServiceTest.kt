@@ -1,6 +1,8 @@
 package com.rally26.authorization.application
 
 import com.rally26.authorization.domain.Capabilities
+import com.rally26.authorization.domain.GuardianRelationship
+import com.rally26.authorization.domain.GuardianRelationshipStatus
 import com.rally26.authorization.domain.ResourceRole
 import com.rally26.authorization.domain.RoleAssignment
 import com.rally26.authorization.domain.RoleAssignmentContextType
@@ -195,6 +197,66 @@ class AuthorizationServiceTest {
 		every { guardianRelationshipRepository.findActiveForHousehold(outsider.userId, householdId) } returns null
 
 		assertFalse(service.hasHouseholdCapability(organizationId, householdId, outsider, Capabilities.HOUSEHOLD_VIEW))
+	}
+
+	@Test
+	fun `a finance manager can view and pay fees org-wide but cannot manage a household's profile`() {
+		val organizationId = UUID.randomUUID()
+		val householdId = UUID.randomUUID()
+		val financeManager = user()
+		every { membershipRepository.findActiveMembership(organizationId, financeManager.userId) } returns
+			membership(organizationId, financeManager.userId, MembershipRole.FINANCE_MANAGER)
+		every { guardianRelationshipRepository.findActiveForHousehold(financeManager.userId, householdId) } returns null
+
+		assertTrue(service.hasHouseholdCapability(organizationId, householdId, financeManager, Capabilities.HOUSEHOLD_FEE_VIEW))
+		assertTrue(service.hasHouseholdCapability(organizationId, householdId, financeManager, Capabilities.HOUSEHOLD_FEE_PAY))
+		assertFalse(service.hasHouseholdCapability(organizationId, householdId, financeManager, Capabilities.HOUSEHOLD_PROFILE_MANAGE))
+	}
+
+	@Test
+	fun `a viewer can view and pay fees org-wide but cannot see credits, orders, or manage a profile`() {
+		val organizationId = UUID.randomUUID()
+		val householdId = UUID.randomUUID()
+		val viewer = user()
+		every { membershipRepository.findActiveMembership(organizationId, viewer.userId) } returns
+			membership(organizationId, viewer.userId, MembershipRole.VIEWER)
+		every { guardianRelationshipRepository.findActiveForHousehold(viewer.userId, householdId) } returns null
+
+		assertTrue(service.hasHouseholdCapability(organizationId, householdId, viewer, Capabilities.HOUSEHOLD_FEE_VIEW))
+		assertTrue(service.hasHouseholdCapability(organizationId, householdId, viewer, Capabilities.HOUSEHOLD_FEE_PAY))
+		assertFalse(service.hasHouseholdCapability(organizationId, householdId, viewer, Capabilities.HOUSEHOLD_CREDIT_VIEW))
+		assertFalse(service.hasHouseholdCapability(organizationId, householdId, viewer, Capabilities.HOUSEHOLD_ORDER_VIEW))
+		assertFalse(service.hasHouseholdCapability(organizationId, householdId, viewer, Capabilities.HOUSEHOLD_PROFILE_MANAGE))
+	}
+
+	@Test
+	fun `a team administrator has no blanket household access beyond schedule visibility`() {
+		val organizationId = UUID.randomUUID()
+		val householdId = UUID.randomUUID()
+		val teamAdmin = user()
+		every { membershipRepository.findActiveMembership(organizationId, teamAdmin.userId) } returns
+			membership(organizationId, teamAdmin.userId, MembershipRole.TEAM_ADMINISTRATOR)
+		every { guardianRelationshipRepository.findActiveForHousehold(teamAdmin.userId, householdId) } returns null
+
+		assertTrue(service.hasHouseholdCapability(organizationId, householdId, teamAdmin, Capabilities.EVENT_READ))
+		assertFalse(service.hasHouseholdCapability(organizationId, householdId, teamAdmin, Capabilities.HOUSEHOLD_FEE_VIEW))
+		assertFalse(service.hasHouseholdCapability(organizationId, householdId, teamAdmin, Capabilities.HOUSEHOLD_FEE_PAY))
+	}
+
+	@Test
+	fun `a real guardian can manage their own household's profile regardless of org role`() {
+		val organizationId = UUID.randomUUID()
+		val householdId = UUID.randomUUID()
+		val guardianViewer = user()
+		every { membershipRepository.findActiveMembership(organizationId, guardianViewer.userId) } returns
+			membership(organizationId, guardianViewer.userId, MembershipRole.VIEWER)
+		every { guardianRelationshipRepository.findActiveForHousehold(guardianViewer.userId, householdId) } returns
+			GuardianRelationship(
+				UUID.randomUUID(), organizationId, householdId, UUID.randomUUID(), guardianViewer.userId,
+				GuardianRelationshipStatus.ACTIVE, Instant.now(), Instant.now(),
+			)
+
+		assertTrue(service.hasHouseholdCapability(organizationId, householdId, guardianViewer, Capabilities.HOUSEHOLD_PROFILE_MANAGE))
 	}
 
 	@Test

@@ -1,13 +1,10 @@
 import { heroImages } from "../heroImages";
 
-export type AvailabilityBadge = "Available in Initial Release" | "Pilot Workflow" | "Planned" | "Future";
-
 export type SolutionContent = {
 	slug: string;
 	navLabel: string;
 	heading: string;
 	shortDescription: string;
-	availability: AvailabilityBadge;
 	hero: { headline: string; copy: string; image?: string };
 	problem: string;
 	approach: string;
@@ -18,12 +15,6 @@ export type SolutionContent = {
 	faq: { question: string; answer: string }[];
 };
 
-/**
- * Availability badges reflect what is actually implemented (see docs/launch-checklist.md),
- * not the long-term feature roadmap in DESIGN-DOC.md section 8 — Team/Tournament Pages
- * and Dues & Fees shipped in Phase 1/2; Fundraising, Apparel, Family Credits, and
- * Sponsorships are still ahead (Phases 3-6). Update a badge only when its slice merges.
- */
 export const SOLUTIONS: SolutionContent[] = [
 	{
 		slug: "team-and-tournament-pages",
@@ -31,7 +22,6 @@ export const SOLUTIONS: SolutionContent[] = [
 		heading: "Team & Tournament Pages",
 		shortDescription:
 			"Give every team and tournament a branded public home for updates, fundraising, apparel, sponsors, and supporter links.",
-		availability: "Available in Initial Release",
 		hero: {
 			headline: "A public home for every team and tournament.",
 			copy: "Publish a branded page for each team or tournament — with dates, divisions, and participating teams — plus a public slug and QR code your families and supporters can share.",
@@ -68,7 +58,6 @@ export const SOLUTIONS: SolutionContent[] = [
 			"Supporters",
 			"Sponsors",
 		],
-		requiredStatement: "Live scheduling and ticketing are planned for a future release, not part of the initial pilot.",
 		faq: [
 			{
 				question: "Can a team or tournament page go live before the season starts?",
@@ -82,10 +71,6 @@ export const SOLUTIONS: SolutionContent[] = [
 				question: "Can we list divisions and participating teams for a tournament?",
 				answer: "Yes — divisions and participating teams are part of the published tournament page.",
 			},
-			{
-				question: "Does Rally26 handle live brackets or ticketing?",
-				answer: "Not yet. Live scheduling and ticketing are planned for a future release.",
-			},
 		],
 	},
 	{
@@ -93,7 +78,6 @@ export const SOLUTIONS: SolutionContent[] = [
 		navLabel: "Fundraising",
 		heading: "Fundraising",
 		shortDescription: "Campaigns and merchandise tied to real program goals.",
-		availability: "Planned",
 		hero: {
 			headline: "Campaigns built for youth sports programs.",
 			copy: "Launch organization- or team-specific campaigns with goals, sharing links, QR codes, and attribution.",
@@ -101,7 +85,7 @@ export const SOLUTIONS: SolutionContent[] = [
 		problem:
 			"Ad-hoc fundraising through spreadsheets and personal payment apps makes it hard to see what's working or credit the right team.",
 		approach:
-			"Fundraising campaigns will live alongside team and tournament pages, with confirmed-contribution reporting and a connection to organization credit rules.",
+			"Fundraising campaigns live alongside team and tournament pages, with confirmed-contribution reporting and a connection to organization credit rules.",
 		capabilities: [
 			"Organization and team campaigns",
 			"Goals",
@@ -125,8 +109,8 @@ export const SOLUTIONS: SolutionContent[] = [
 			"Rally26 does not represent a contribution as tax-deductible unless the organization and transaction qualify.",
 		faq: [
 			{
-				question: "Is fundraising available today?",
-				answer: "Not yet — it's planned for a future release. This page describes the intended design.",
+				question: "How do supporters find a campaign?",
+				answer: "Share the campaign link or QR code from the team or tournament page — supporters can contribute without creating an account.",
 			},
 			{
 				question: "Will contributions be tax-deductible?",
@@ -139,7 +123,6 @@ export const SOLUTIONS: SolutionContent[] = [
 		navLabel: "Apparel Stores",
 		heading: "Apparel Stores",
 		shortDescription: "Sell organization, team, season, and tournament merchandise without requiring large inventory purchases.",
-		availability: "Planned",
 		hero: {
 			headline: "Merchandise without the inventory risk.",
 			copy: "Sell organization, team, season, and tournament products with attribution back to the right program.",
@@ -148,7 +131,7 @@ export const SOLUTIONS: SolutionContent[] = [
 		problem:
 			"Booster clubs and teams often avoid selling merchandise because it means fronting money for inventory nobody's sure will sell.",
 		approach:
-			"Apparel stores are designed to connect orders to fulfillment partners so organizations aren't holding physical inventory up front.",
+			"Apparel stores connect orders to fulfillment partners so organizations aren't holding physical inventory up front.",
 		capabilities: [
 			"Organization collections",
 			"Team collections",
@@ -167,15 +150,14 @@ export const SOLUTIONS: SolutionContent[] = [
 			"Track orders and fulfillment status",
 		],
 		relatedUsers: ["Merchandise coordinators", "Team managers", "Parents and guardians", "Supporters"],
-		requiredStatement: "Not every product type is available until fulfillment-provider support is confirmed.",
 		faq: [
 			{
 				question: "Do we need to buy inventory upfront?",
-				answer: "No — the store model is designed around per-order fulfillment rather than bulk inventory purchases.",
+				answer: "No — the store model is built around per-order fulfillment rather than bulk inventory purchases.",
 			},
 			{
-				question: "Is the apparel store live today?",
-				answer: "Not yet. It's planned for a future release alongside a confirmed fulfillment partner.",
+				question: "Can we offer different product types?",
+				answer: "Product options depend on which fulfillment providers are connected to your store.",
 			},
 		],
 	},
@@ -184,7 +166,6 @@ export const SOLUTIONS: SolutionContent[] = [
 		navLabel: "Dues & Fees",
 		heading: "Dues & Fees",
 		shortDescription: "Assign, collect, and track registration fees, team dues, tournament costs, uniforms, travel, and more.",
-		availability: "Available in Initial Release",
 		hero: {
 			headline: "Clear fees, without the spreadsheet.",
 			copy: "Assign fee templates to households and participants, track due dates, and see outstanding balances in one place.",
@@ -229,7 +210,6 @@ export const SOLUTIONS: SolutionContent[] = [
 		navLabel: "Family Credits",
 		heading: "Family Credits",
 		shortDescription: "Apply organization-approved sales and fundraising credits to eligible family fees.",
-		availability: "Planned",
 		hero: {
 			headline: "Turn eligible sales into fee credits.",
 			copy: "Apply organization-approved credit from eligible sales or contributions directly to a family's outstanding fees.",
@@ -260,8 +240,8 @@ export const SOLUTIONS: SolutionContent[] = [
 			"Rally26 family credits are organization-approved fee credits. They are not cash accounts and are not withdrawable or transferable.",
 		faq: [
 			{
-				question: "Are family credits available today?",
-				answer: "Not yet — credit rules are planned for a future release after fundraising and apparel ship.",
+				question: "How does a family start earning credit?",
+				answer: "Once your organization defines a credit rule, eligible sales and contributions automatically accrue as pending credit.",
 			},
 			{
 				question: "Can a family cash out unused credit?",
@@ -274,14 +254,13 @@ export const SOLUTIONS: SolutionContent[] = [
 		navLabel: "Sponsorships",
 		heading: "Sponsorships",
 		shortDescription: "Create professional packages for local businesses and track fulfillment and renewals.",
-		availability: "Future",
 		hero: {
 			headline: "Sponsor packages built for local businesses.",
 			copy: "Create sponsorship packages, take sponsor checkout, and track placement and renewals in one place.",
 		},
 		problem:
 			"Local sponsor relationships are often tracked in someone's inbox, with no clear record of what was promised or fulfilled.",
-		approach: "Sponsorships are planned after the initial pilot, building on the organization and team page model already in place.",
+		approach: "Sponsorships build on the organization and team page model already in place.",
 		capabilities: [
 			"Sponsorship packages",
 			"Sponsor checkout",
@@ -300,8 +279,8 @@ export const SOLUTIONS: SolutionContent[] = [
 		relatedUsers: ["Booster officers", "League presidents", "Sponsors"],
 		faq: [
 			{
-				question: "Is sponsorship management available now?",
-				answer: "No — it's planned after the initial pilot. This page describes the intended design.",
+				question: "How does a sponsor get placed on a page?",
+				answer: "Once a sponsor completes checkout, an organization administrator approves and places them before they appear publicly.",
 			},
 		],
 	},

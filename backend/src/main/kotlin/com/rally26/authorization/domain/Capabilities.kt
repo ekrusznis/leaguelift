@@ -173,11 +173,41 @@ object CapabilityRegistry {
 		else -> emptySet()
 	}
 
+	/** The full household capability set — what a real guardian holds for their own household, and what OWNER/ADMINISTRATOR hold org-wide. */
 	fun householdCapabilities(): Set<String> = setOf(
 		Capabilities.HOUSEHOLD_VIEW, Capabilities.HOUSEHOLD_FEE_VIEW, Capabilities.HOUSEHOLD_FEE_PAY,
 		Capabilities.HOUSEHOLD_CREDIT_VIEW, Capabilities.HOUSEHOLD_ORDER_VIEW, Capabilities.HOUSEHOLD_PROFILE_MANAGE,
 		Capabilities.EVENT_READ, Capabilities.EVENT_RSVP_GUARDIAN,
 	)
+
+	/**
+	 * What an org staff member (no guardian relationship required) holds for ANY
+	 * household in the organization — narrower than [householdCapabilities] for every
+	 * role except OWNER/ADMINISTRATOR. Security-review finding (2026-08): this used to
+	 * be "any active org member gets every household capability", which let a VIEWER
+	 * trigger fee payments and edit a family's profile, and let TEAM_ADMINISTRATOR/
+	 * TOURNAMENT_ADMINISTRATOR — roles that are supposed to be resource-scoped per
+	 * ADR-020, see [organizationCapabilities]'s doc comment — reach every household in
+	 * the org. EVENT_READ stays broad for every role (schedule visibility is low-risk
+	 * and [com.rally26.event.application.EventService] already documents relying on
+	 * that breadth); HOUSEHOLD_PROFILE_MANAGE is never granted blanket — editing a
+	 * family's profile requires either OWNER/ADMINISTRATOR or an actual guardian
+	 * relationship (the AuthorizationService.hasHouseholdCapability fallback).
+	 */
+	fun householdCapabilitiesForOrgRole(role: MembershipRole): Set<String> {
+		val financialView = setOf(
+			Capabilities.HOUSEHOLD_VIEW, Capabilities.HOUSEHOLD_FEE_VIEW, Capabilities.HOUSEHOLD_FEE_PAY,
+			Capabilities.HOUSEHOLD_CREDIT_VIEW, Capabilities.HOUSEHOLD_ORDER_VIEW,
+		)
+		return when (role) {
+			MembershipRole.OWNER, MembershipRole.ADMINISTRATOR -> householdCapabilities()
+			MembershipRole.FINANCE_MANAGER -> financialView + Capabilities.EVENT_READ
+			MembershipRole.VIEWER -> setOf(
+				Capabilities.HOUSEHOLD_VIEW, Capabilities.HOUSEHOLD_FEE_VIEW, Capabilities.HOUSEHOLD_FEE_PAY, Capabilities.EVENT_READ,
+			)
+			MembershipRole.TEAM_ADMINISTRATOR, MembershipRole.TOURNAMENT_ADMINISTRATOR -> setOf(Capabilities.EVENT_READ)
+		}
+	}
 
 	/** Deliberately excludes anything fee/payment/report-related — see the class doc. */
 	fun athleteSelfCapabilities(): Set<String> = setOf(
