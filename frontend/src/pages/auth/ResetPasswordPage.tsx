@@ -69,6 +69,7 @@ export function ResetPasswordPage() {
 				) : (
 					<form onSubmit={onSubmit} noValidate className="mt-6 flex flex-col gap-5">
 						<PasswordField
+							tone="dark"
 							label="New password"
 							autoComplete="new-password"
 							required
@@ -76,6 +77,7 @@ export function ResetPasswordPage() {
 							{...register("password")}
 						/>
 						<PasswordField
+							tone="dark"
 							label="Confirm new password"
 							autoComplete="new-password"
 							required

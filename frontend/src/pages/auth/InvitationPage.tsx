@@ -7,15 +7,14 @@ import { Seo } from "../../marketing/components/Seo";
 import { PrimaryButton, SecondaryDarkButton } from "../../marketing/components/buttons";
 
 /**
- * There is no public "preview an invitation by token" endpoint — only
- * `POST /invitations/{token}/accept`, which requires an authenticated caller whose
- * email matches the invite (docs/openapi.yaml). Real authentication now exists
- * (traditional email/password — ADR-014), but wiring this page to actually call
- * that endpoint — checking sign-in state, calling the API, handling the 403
- * email-mismatch case for real instead of via a `state` query param — is a separate
- * follow-up. This still shows the section 26 states illustratively and
- * "Accept Invitation" still hands off straight to the dashboard rather than calling
- * the endpoint.
+ * Calls the real `POST /invitations/{token}/accept` endpoint (docs/openapi.yaml), which
+ * requires an authenticated caller whose email matches the invite. There is still no
+ * public "preview an invitation by token" endpoint, so an unauthenticated visitor can't
+ * be shown *who* invited them or *which* organization/role before they sign in — only
+ * that an invitation exists. For that case this page offers both auth paths (an invited
+ * person may or may not already have a Rally26 account) and carries a `next` redirect
+ * back to this same URL so accepting resumes automatically once they're authenticated.
+ * The 403 email-mismatch case is surfaced via `messageForInvitationError`.
  */
 export function InvitationPage() {
 	const navigate = useNavigate();
@@ -52,27 +51,43 @@ export function InvitationPage() {
 		);
 	}
 
+	// So Sign In / Register can send the person straight back here afterward instead of
+	// dropping them on the generic dashboard — accepting the invitation is the point.
+	const returnTo = `/auth/invitation?token=${token}`;
+
 	return (
 		<div className="flex flex-col items-center gap-4 rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 text-center shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
 			<Seo title="Accept Invitation" description="Accept your invitation to join a Rally26 organization." noIndex />
 			<h1 className="font-heading text-2xl font-extrabold text-white">You&rsquo;ve been invited to Rally26</h1>
-			<p className="max-w-sm text-sm text-slate-300">
-				Sign in or create an account with the email address this invitation was sent to, then accept to join
-				the organization.
-			</p>
-			{submitError && <InlineAlert tone="error" title={submitError} />}
-			<div className="mt-2 flex flex-wrap justify-center gap-3">
-				<PrimaryButton onClick={onAccept} loading={submitting}>
-					Accept Invitation
-				</PrimaryButton>
-				{status === "authenticated" ? (
-					<SecondaryDarkButton to="/app">Go to app</SecondaryDarkButton>
-				) : (
-					<SecondaryDarkButton to={`/auth/sign-in?next=${encodeURIComponent(`/auth/invitation?token=${token}`)}`}>
-						Sign In First
-					</SecondaryDarkButton>
-				)}
-			</div>
+
+			{status === "authenticated" ? (
+				<>
+					<p className="max-w-sm text-sm text-slate-300">
+						Accept to join the organization with the account you&rsquo;re signed in as.
+					</p>
+					{submitError && <InlineAlert tone="error" title={submitError} />}
+					<div className="mt-2 flex flex-wrap justify-center gap-3">
+						<PrimaryButton onClick={onAccept} loading={submitting}>
+							Accept Invitation
+						</PrimaryButton>
+						<SecondaryDarkButton to="/app">Go to app</SecondaryDarkButton>
+					</div>
+				</>
+			) : (
+				<>
+					<p className="max-w-sm text-sm text-slate-300">
+						Sign in if you already have a Rally26 account, or create one — either way, use the email
+						address this invitation was sent to so it can be linked automatically.
+					</p>
+					{submitError && <InlineAlert tone="error" title={submitError} />}
+					<div className="mt-2 flex flex-wrap justify-center gap-3">
+						<PrimaryButton to={`/auth/sign-in?next=${encodeURIComponent(returnTo)}`}>Sign In</PrimaryButton>
+						<SecondaryDarkButton to={`/auth/register?next=${encodeURIComponent(returnTo)}`}>
+							Create Account
+						</SecondaryDarkButton>
+					</div>
+				</>
+			)}
 		</div>
 	);
 }

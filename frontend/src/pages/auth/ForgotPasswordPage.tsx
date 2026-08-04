@@ -47,6 +47,7 @@ export function ForgotPasswordPage() {
 				) : (
 					<form onSubmit={onSubmit} noValidate className="mt-6 flex flex-col gap-5">
 						<FormField
+							tone="dark"
 							label="Email address"
 							type="email"
 							autoComplete="email"
