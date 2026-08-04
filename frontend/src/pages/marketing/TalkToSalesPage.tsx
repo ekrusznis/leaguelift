@@ -103,7 +103,7 @@ export function TalkToSalesPage() {
 		return (
 			<section className="bg-ice-50 py-24">
 				<PageContainer className="mx-auto flex max-w-xl flex-col items-center gap-4 text-center">
-					<Seo title="Request Received" description="Your LeagueLift request has been received." noIndex />
+					<Seo title="Request Received" description="Your Rally26 request has been received." noIndex />
 					<span className="flex size-14 items-center justify-center rounded-full bg-green-500/15 text-green-600">
 						<svg className="size-7" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 							<path d="m5 12.5 4.5 4.5L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -271,7 +271,7 @@ export function TalkToSalesPage() {
 						</fieldset>
 
 						<fieldset className="flex flex-col gap-5">
-							<legend className="font-heading text-lg font-bold text-navy-900">How did you hear about LeagueLift?</legend>
+							<legend className="font-heading text-lg font-bold text-navy-900">How did you hear about Rally26?</legend>
 							<FormField label="How did you hear about us?" hint="Optional" {...register("howHeard")} />
 						</fieldset>
 

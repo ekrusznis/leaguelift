@@ -42,7 +42,7 @@ export function InvitationPage() {
 	if (!token) {
 		return (
 			<div className="flex flex-col items-center gap-4 rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 text-center shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
-				<Seo title="Invitation Expired" description="This LeagueLift invitation has expired." noIndex />
+				<Seo title="Invitation Expired" description="This Rally26 invitation has expired." noIndex />
 				<h1 className="font-heading text-2xl font-extrabold text-white">This invitation has expired</h1>
 				<p className="max-w-sm text-sm text-slate-300">
 					Ask the organization administrator who invited you to send a new invitation.
@@ -54,8 +54,8 @@ export function InvitationPage() {
 
 	return (
 		<div className="flex flex-col items-center gap-4 rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 text-center shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
-			<Seo title="Accept Invitation" description="Accept your invitation to join a LeagueLift organization." noIndex />
-			<h1 className="font-heading text-2xl font-extrabold text-white">You&rsquo;ve been invited to LeagueLift</h1>
+			<Seo title="Accept Invitation" description="Accept your invitation to join a Rally26 organization." noIndex />
+			<h1 className="font-heading text-2xl font-extrabold text-white">You&rsquo;ve been invited to Rally26</h1>
 			<p className="max-w-sm text-sm text-slate-300">
 				Sign in or create an account with the email address this invitation was sent to, then accept to join
 				the organization.

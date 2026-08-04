@@ -22,7 +22,7 @@ export function PlatformSupportSessionsPage() {
 			<div className="flex flex-wrap items-end justify-between gap-4">
 				<div>
 					<h1 className="font-heading text-2xl font-bold text-navy-900">Support Sessions</h1>
-					<p className="mt-1 text-slate-500">Review reasoned, organization-scoped access by LeagueLift employees.</p>
+					<p className="mt-1 text-slate-500">Review reasoned, organization-scoped access by Rally26 employees.</p>
 				</div>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy-900">
 					Status

@@ -35,7 +35,7 @@ mirroring `SponsorshipRenewalScanner`/`Handler` exactly, including its
 mark-reminded-in-the-scanner correction.** `fee_assignment` gains
 `payment_reminder_sent_at` (V20). `FeeRepository.findNeedingPaymentReminder`
 finds `OPEN`/`PARTIALLY_PAID` assignments with a real positive balance, a
-`due_date` within `leaguelift.fee.payment-reminder.days-before` (default 3),
+`due_date` within `rally26.fee.payment-reminder.days-before` (default 3),
 not yet reminded, whose household hasn't opted out (decision 5). The scanner
 enqueues a `fee.payment_reminder_due` outbox event per candidate and marks it
 reminded immediately (not in the handler) for the same reason ADR-022

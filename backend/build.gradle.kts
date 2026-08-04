@@ -13,7 +13,7 @@ plugins {
 	kotlin("plugin.spring") version "2.3.21"
 }
 
-group = "com.leaguelift"
+group = "com.rally26"
 version = "0.1.0"
 
 java {

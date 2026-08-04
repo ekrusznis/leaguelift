@@ -117,7 +117,7 @@ export interface GoogleCalendarSetting {
 	selectedCalendarId: string | null;
 	selectedCalendarName: string | null;
 	selectedCalendarTimezone: string | null;
-	syncDirection: "LEAGUELIFT_TO_GOOGLE";
+	syncDirection: "RALLY26_TO_GOOGLE";
 	automaticSyncEnabled: false;
 	lastCalendarListedAt: string | null;
 	createdAt: string;

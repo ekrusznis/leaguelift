@@ -2,7 +2,7 @@ spring:
   flyway:
     clean-disabled: false
 
-leaguelift:
+rally26:
   jwt:
     secret: "test-only-jwt-signing-secret-do-not-use-in-prod-either!!"
   # Dummy values so the context loads for tests that never touch S3. The one test that
@@ -12,7 +12,7 @@ leaguelift:
     endpoint: "http://localhost:9000"
     access-key: "test"
     secret-key: "test-secret-key-not-real"
-    bucket: "leaguelift-test"
+    bucket: "rally26-test"
     region: "us-east-1"
   # Dummy value so the context loads — no test calls the real Stripe API (PayoutAccountService
   # is only exercised with a mocked StripeConnectClient, same pattern as SpacesClient).

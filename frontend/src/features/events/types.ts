@@ -3,7 +3,7 @@ export type EventStatus = "DRAFT" | "TENTATIVE" | "SCHEDULED" | "DELAYED" | "POS
 export type EventVisibility = "TEAM" | "ORGANIZATION" | "PUBLIC";
 export type RsvpResponse = "ATTENDING" | "NOT_ATTENDING" | "MAYBE";
 
-export interface LeagueLiftEvent {
+export interface Rally26Event {
 	id: string;
 	organizationId: string;
 	teamId: string | null;

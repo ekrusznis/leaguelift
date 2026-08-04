@@ -121,7 +121,7 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 
 			<div className="mt-5 rounded-lg border border-slate-200 p-4">
 				<h4 className="font-medium text-navy-900">Export-readiness preview</h4>
-				<p className="mt-1 text-sm text-slate-500">Counts LeagueLift source records and reports missing mappings. It never sends data to QuickBooks.</p>
+				<p className="mt-1 text-sm text-slate-500">Counts Rally26 source records and reports missing mappings. It never sends data to QuickBooks.</p>
 				<div className="mt-3 flex flex-wrap items-end gap-3">
 					<div><label htmlFor="quickbooks-period-start" className="block text-sm font-medium text-navy-900">Period start</label><input id="quickbooks-period-start" type="date" value={periodStart} onChange={(event) => setPeriodStart(event.target.value)} className="mt-1 min-h-11 rounded-md border border-slate-300 px-3 py-2" /></div>
 					<div><label htmlFor="quickbooks-period-end" className="block text-sm font-medium text-navy-900">Period end</label><input id="quickbooks-period-end" type="date" value={periodEnd} onChange={(event) => setPeriodEnd(event.target.value)} className="mt-1 min-h-11 rounded-md border border-slate-300 px-3 py-2" /></div>

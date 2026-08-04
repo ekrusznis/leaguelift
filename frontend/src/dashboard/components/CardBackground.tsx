@@ -8,7 +8,7 @@ type CardBackgroundProps = {
 };
 
 /**
- * Background photo + gradient overlay wrapper (docs/LEAGUELIFT_MEDIA_ASSET_DESIGN.md
+ * Background photo + gradient overlay wrapper (docs/RALLY26_MEDIA_ASSET_DESIGN.md
  * section 14.4). The image is decorative (empty alt, section 16.2) — the overlay
  * exists purely to keep foreground text readable per the sales-site's imagery rules.
  */

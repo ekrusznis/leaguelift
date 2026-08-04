@@ -6,12 +6,12 @@
 
 ## Context
 
-LeagueLift already has several provider-specific integrations and event-source workflows, but it did not have one safe connection lifecycle for future organization- and user-owned OAuth/API-token providers. The next providers have different ownership and visibility rules:
+Rally26 already has several provider-specific integrations and event-source workflows, but it did not have one safe connection lifecycle for future organization- and user-owned OAuth/API-token providers. The next providers have different ownership and visibility rules:
 
 - Google Calendar is a user-owned optional connection for authenticated roles.
 - QuickBooks Online and SportsEngine are organization-owned and manager-controlled.
 - GameChanger and MaxPreps remain file/import or partner-pending; no undocumented client may be invented.
-- Stripe, Printify, Resend, Twilio, DigitalOcean Spaces, and Google Maps are platform-operated and must never ask an organization for LeagueLift credentials.
+- Stripe, Printify, Resend, Twilio, DigitalOcean Spaces, and Google Maps are platform-operated and must never ask an organization for Rally26 credentials.
 
 Phase 19 must prepare code without claiming credentials, vendor approval, or a working production connection.
 

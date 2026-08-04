@@ -32,7 +32,7 @@ function statusLabel(readiness: IntegrationReadiness, connectionStatus?: Integra
 		AVAILABLE: "Available",
 		NOT_CONFIGURED: "Not configured",
 		PARTNER_PENDING: "Partner access required",
-		PLATFORM_MANAGED: "Managed by LeagueLift",
+		PLATFORM_MANAGED: "Managed by Rally26",
 		UNSUPPORTED: "Unsupported",
 	}[readiness];
 }
@@ -86,7 +86,7 @@ export function PersonalIntegrationsPage() {
 
 			{callbackStatus && (
 				<div role="status" className="flex items-center justify-between gap-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-navy">
-					<span>{callbackStatus === "connected" ? "The provider authorization completed." : "The provider returned to LeagueLift. Review the connection status below."}</span>
+					<span>{callbackStatus === "connected" ? "The provider authorization completed." : "The provider returned to Rally26. Review the connection status below."}</span>
 					<button type="button" className="font-medium text-azure-blue hover:underline" onClick={() => { searchParams.delete("integration"); searchParams.delete("provider"); setSearchParams(searchParams, { replace: true }); }}>Dismiss</button>
 				</div>
 			)}
@@ -111,7 +111,7 @@ export function PersonalIntegrationsPage() {
 							<Button type="button" onClick={() => void connect()} disabled={!canStart || busy}>{startAuthorization.isPending ? "Starting…" : connection?.status === "DEGRADED" ? "Reauthorize" : "Connect Google Calendar"}</Button>
 							{connection && connection.status !== "DISCONNECTED" && <Button type="button" variant="secondary" onClick={() => disconnect.mutate(connection.id)} disabled={busy}>Disconnect locally</Button>}
 						</div>
-						{catalog.readiness !== "AVAILABLE" && <p className="mt-2 text-xs text-slate-gray">LeagueLift does not request Google credentials until the verified provider application is enabled.</p>}
+						{catalog.readiness !== "AVAILABLE" && <p className="mt-2 text-xs text-slate-gray">Rally26 does not request Google credentials until the verified provider application is enabled.</p>}
 					</div>
 				)}
 
@@ -152,7 +152,7 @@ export function PersonalIntegrationsPage() {
 
 			<section className="rounded-xl border border-slate-gray/20 bg-ice-white p-5">
 				<h2 className="font-heading text-lg font-semibold text-navy">ICS always remains available</h2>
-				<p className="mt-1 text-sm text-slate-gray">Event pages and authorized schedules can still download standards-based ICS files without connecting a Google account. Google synchronization is optional and will begin as LeagueLift-to-Google only.</p>
+				<p className="mt-1 text-sm text-slate-gray">Event pages and authorized schedules can still download standards-based ICS files without connecting a Google account. Google synchronization is optional and will begin as Rally26-to-Google only.</p>
 				<Link to="/app/help/connecting-google-calendar" className="mt-3 inline-block text-sm font-medium text-azure-blue hover:underline">Read the Google Calendar guide →</Link>
 			</section>
 		</div>

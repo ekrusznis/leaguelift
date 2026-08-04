@@ -59,7 +59,7 @@ export function ContactPage() {
 
 	return (
 		<>
-			<Seo title="Contact" description="Get in touch with LeagueLift for sales, pilot, partnership, or support questions." />
+			<Seo title="Contact" description="Get in touch with Rally26 for sales, pilot, partnership, or support questions." />
 
 			<section className="bg-navy-950 py-16 sm:py-20">
 				<PageContainer className="max-w-2xl">

@@ -20,7 +20,7 @@ import {
 	usePublishEvent,
 	useSubmitRsvp,
 } from "./api";
-import type { LeagueLiftEvent, RsvpResponse } from "./types";
+import type { Rally26Event, RsvpResponse } from "./types";
 import { ReminderButton } from "../communications/ReminderButton";
 
 function formatDateTime(value: string | null, timezone: string) {
@@ -179,7 +179,7 @@ function RsvpParticipantControls({
 	onRespond,
 }: {
 	organizationId: string;
-	event: LeagueLiftEvent;
+	event: Rally26Event;
 	participant: Pick<Participant, "id" | "firstName" | "lastName">;
 	isSelf: boolean;
 	isSubmitting: boolean;
@@ -220,7 +220,7 @@ function RsvpCount({ label, value }: { label: string; value: number }) {
 	return <div className="rounded-lg bg-ice-white p-3 text-center"><p className="font-heading text-xl font-bold text-navy">{value}</p><p className="text-xs text-slate-gray">{label}</p></div>;
 }
 
-function EventManagementActions({ organizationId, event, publish, cancel, postpone, detach }: { organizationId: string; event: LeagueLiftEvent; publish: () => void; cancel: () => void; postpone: () => void; detach: () => void }) {
+function EventManagementActions({ organizationId, event, publish, cancel, postpone, detach }: { organizationId: string; event: Rally26Event; publish: () => void; cancel: () => void; postpone: () => void; detach: () => void }) {
 	return (
 		<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5">
 			<h2 className="font-heading text-lg font-semibold text-navy">Event actions</h2>

@@ -26,7 +26,7 @@ describe("IntegrationsPanel", () => {
 
 		renderWithProviders(<IntegrationsPanel organizationId="org-1" />);
 
-		expect(screen.getByText("LeagueLift-managed providers")).toBeInTheDocument();
+		expect(screen.getByText("Rally26-managed providers")).toBeInTheDocument();
 		await waitFor(() => expect(screen.getByText("QuickBooks Online")).toBeInTheDocument());
 		expect(screen.getByText("Not configured")).toBeInTheDocument();
 		expect(screen.getByText("Partner access required")).toBeInTheDocument();

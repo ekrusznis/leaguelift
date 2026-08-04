@@ -3,7 +3,7 @@ import { INVITABLE_ROLES, ORGANIZATION_TYPES } from "./types";
 
 /**
  * Mirrors the backend's CreateOrganizationRequest validation
- * (backend/src/main/kotlin/com/leaguelift/organization/web/OrganizationDto.kt) and
+ * (backend/src/main/kotlin/com/rally26/organization/web/OrganizationDto.kt) and
  * docs/openapi.yaml. Client-side validation is for UX only — the backend remains
  * authoritative (DESIGN-DOC.md section 17.2).
  */

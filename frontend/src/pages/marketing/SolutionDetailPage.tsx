@@ -50,7 +50,7 @@ export function SolutionDetailPage() {
 						<p className="mt-3 text-slate-700 leading-relaxed">{solution.problem}</p>
 					</div>
 					<div>
-						<h2 className="font-heading text-xl font-bold text-navy-900">The LeagueLift approach</h2>
+						<h2 className="font-heading text-xl font-bold text-navy-900">The Rally26 approach</h2>
 						<p className="mt-3 text-slate-700 leading-relaxed">{solution.approach}</p>
 					</div>
 				</PageContainer>

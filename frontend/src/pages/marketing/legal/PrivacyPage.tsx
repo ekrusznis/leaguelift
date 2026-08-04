@@ -3,18 +3,18 @@ import { LegalPageLayout } from "./LegalPageLayout";
 
 export function PrivacyPage() {
 	return (
-		<LegalPageLayout title="Privacy Policy" description="How LeagueLift collects, uses, and protects information.">
+		<LegalPageLayout title="Privacy Policy" description="How Rally26 collects, uses, and protects information.">
 			<p>
-				This policy describes how LeagueLift handles information for youth sports organizations, the adults
-				who administer and support them, and the households connected to them. It applies to the LeagueLift
-				public site and the authenticated LeagueLift application.
+				This policy describes how Rally26 handles information for youth sports organizations, the adults
+				who administer and support them, and the households connected to them. It applies to the Rally26
+				public site and the authenticated Rally26 application.
 			</p>
 
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900">Who this policy covers</h2>
 				<p className="mt-2">
-					LeagueLift accounts are created and controlled by adults. This includes organization owners and
-					administrators, coaches and team staff, and parents or guardians managing a household. LeagueLift
+					Rally26 accounts are created and controlled by adults. This includes organization owners and
+					administrators, coaches and team staff, and parents or guardians managing a household. Rally26
 					does not create login accounts for children.
 				</p>
 			</section>
@@ -42,7 +42,7 @@ export function PrivacyPage() {
 					</li>
 					<li>
 						<strong>Fee and financial records</strong> — fee descriptions, amounts, and due dates assigned
-						to a household. LeagueLift does not store payment card numbers; once live payment processing
+						to a household. Rally26 does not store payment card numbers; once live payment processing
 						is enabled, card data will be handled directly by a third-party payment processor.
 					</li>
 					<li>
@@ -59,8 +59,8 @@ export function PrivacyPage() {
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900">Children&rsquo;s information</h2>
 				<p className="mt-2">
-					LeagueLift does not knowingly collect information directly from children, and children do not have
-					their own LeagueLift login. Any participant (athlete) record is entered and controlled by the
+					Rally26 does not knowingly collect information directly from children, and children do not have
+					their own Rally26 login. Any participant (athlete) record is entered and controlled by the
 					adult managing the household, and is visible only to that household and to organization staff who
 					need it to run a team, tournament, or fee assignment. We do not collect medical, educational,
 					behavioral, background-check, or precise-location information about participants.
@@ -87,7 +87,7 @@ export function PrivacyPage() {
 				<ul className="mt-3 flex list-disc flex-col gap-2 pl-5">
 					<li>Within an organization, scoped to the staff roles that need it to do their job;</li>
 					<li>With service providers who host, secure, or operate the platform on our behalf (e.g. cloud hosting, and — once configured — an identity provider and a payment processor), under obligations to protect it;</li>
-					<li>When required by law, or to protect the rights, safety, or property of LeagueLift, our users, or others.</li>
+					<li>When required by law, or to protect the rights, safety, or property of Rally26, our users, or others.</li>
 				</ul>
 			</section>
 

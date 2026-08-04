@@ -22,7 +22,7 @@ export function PlatformOrganizationsPage() {
 		<div className="flex flex-col gap-6">
 			<div>
 				<h1 className="font-heading text-2xl font-bold text-navy-900">Organizations</h1>
-				<p className="mt-1 text-slate-500">Search every LeagueLift customer, inspect its health, then open a reasoned support session.</p>
+				<p className="mt-1 text-slate-500">Search every Rally26 customer, inspect its health, then open a reasoned support session.</p>
 			</div>
 
 			<form

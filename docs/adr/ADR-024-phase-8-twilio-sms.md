@@ -39,12 +39,12 @@ same partial-update/coalesce pattern as every other household field).
 exactly, with the same logging-default/real-provider split.**
 `notification/SmsProvider.kt` defines the interface;
 `notification/LoggingSmsProvider.kt` is the default
-(`@ConditionalOnProperty(prefix = "leaguelift.sms", name = ["provider"],
+(`@ConditionalOnProperty(prefix = "rally26.sms", name = ["provider"],
 havingValue = "logging", matchIfMissing = true)`, logging only the
 destination number, never the body);
 `notification/infra/TwilioSmsProvider.kt` is the real send path
 (`@ConditionalOnProperty(..., havingValue = "twilio")`), active only when
-`leaguelift.sms.provider = twilio`.
+`rally26.sms.provider = twilio`.
 
 **3. Twilio's plain REST API, not the official Twilio Java SDK.** Mirrors
 `ResendConfig`/`PrintifyConfig`'s no-SDK precedent —
@@ -61,7 +61,7 @@ even have one).
 
 **4. `TwilioProperties` keeps blank Kotlin defaults in every profile
 (including staging/prod), same rationale as `ResendProperties`.** Since
-`"logging"` is `leaguelift.sms.provider`'s legitimate default everywhere,
+`"logging"` is `rally26.sms.provider`'s legitimate default everywhere,
 requiring `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_FROM_NUMBER` to be
 set for startup to succeed would be requiring credentials nobody's using
 yet. A blank account SID/token still produces a working client; Twilio's own
@@ -111,7 +111,7 @@ column with no new infrastructure.
   would), which is the same level of operational visibility email already
   has post-slice-1 — not a new gap SMS introduces.
 - Twilio's own per-message cost is not tracked or rate-limited anywhere in
-  this codebase. Acceptable while `leaguelift.sms.provider` stays `"logging"`
+  this codebase. Acceptable while `rally26.sms.provider` stays `"logging"`
   everywhere (no real messages can be sent); revisit before ever flipping a
   real environment to `"twilio"`.
 - Fundraising SMS/email reminders and campaign-launch emails both remain

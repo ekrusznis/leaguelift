@@ -1,9 +1,13 @@
 import { PageContainer } from "../marketing/components/PageContainer";
 import { Seo } from "../marketing/components/Seo";
 import { PrimaryButton, SecondaryLightButton, TextButton } from "../marketing/components/buttons";
+import { HOMEPAGE_SECTION_IDS } from "../marketing/content/nav";
+import { useScrollToHash } from "../marketing/useScrollToHash";
 
 /** Route fallback (section 31) — restrained sports language, no repeated puns. */
 export function NotFoundPage() {
+	const scrollToHash = useScrollToHash();
+
 	return (
 		<div className="flex min-h-[60vh] items-center justify-center bg-ice-50">
 			<Seo title="Page Not Found" description="The page you're looking for is not available." noIndex />
@@ -12,7 +16,7 @@ export function NotFoundPage() {
 				<p className="max-w-md text-slate-700">The page may have moved, been unpublished, or no longer be available.</p>
 				<div className="mt-2 flex flex-wrap items-center justify-center gap-4">
 					<PrimaryButton to="/">Return Home</PrimaryButton>
-					<SecondaryLightButton to="/solutions">Explore Solutions</SecondaryLightButton>
+					<SecondaryLightButton onClick={() => scrollToHash(HOMEPAGE_SECTION_IDS.solutions)}>Explore Solutions</SecondaryLightButton>
 				</div>
 				<TextButton to="/contact" className="text-slate-600">
 					Contact Support

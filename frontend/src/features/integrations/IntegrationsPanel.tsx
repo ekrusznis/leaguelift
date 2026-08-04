@@ -34,7 +34,7 @@ function readinessLabel(readiness: IntegrationReadiness) {
 		case "PARTNER_PENDING":
 			return "Partner access required";
 		case "PLATFORM_MANAGED":
-			return "Managed by LeagueLift";
+			return "Managed by Rally26";
 		case "UNSUPPORTED":
 			return "Unsupported";
 	}
@@ -121,7 +121,7 @@ function ProviderReadinessSection({ organizationId }: { organizationId: string }
 		<div>
 			<h3 className="font-heading text-base font-semibold text-navy">Organization Connections</h3>
 			<p className="text-sm text-slate-gray">
-				These providers are scaffolded but remain disabled until LeagueLift verifies official access, credentials, scopes, and contracts.
+				These providers are scaffolded but remain disabled until Rally26 verifies official access, credentials, scopes, and contracts.
 			</p>
 			<ul className="mt-3 flex flex-col gap-2" aria-label="Organization integration readiness">
 				{items.map((item) => <ProviderReadinessCard key={item.provider} organizationId={organizationId} item={item} />)}
@@ -223,14 +223,14 @@ export function IntegrationsPanel({ organizationId }: { organizationId: string }
 		<div className="flex flex-col gap-6">
 			{callbackStatus && (
 				<div role="status" className="flex items-center justify-between gap-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-navy">
-					<span>{callbackStatus === "connected" ? "The organization provider authorization completed." : "The provider returned to LeagueLift. Review the connection status below."}</span>
+					<span>{callbackStatus === "connected" ? "The organization provider authorization completed." : "The provider returned to Rally26. Review the connection status below."}</span>
 					<button type="button" className="font-medium text-azure-blue hover:underline" onClick={() => { searchParams.delete("integration"); searchParams.delete("provider"); setSearchParams(searchParams, { replace: true }); }}>Dismiss</button>
 				</div>
 			)}
 			<div className="rounded-lg border border-slate-gray/20 bg-ice-white p-4">
-				<h3 className="font-heading text-base font-semibold text-navy">LeagueLift-managed providers</h3>
+				<h3 className="font-heading text-base font-semibold text-navy">Rally26-managed providers</h3>
 				<p className="mt-1 text-sm text-slate-gray">
-					Payments, fulfillment, email, SMS, and file storage are configured by LeagueLift. Your organization will never be asked for LeagueLift&apos;s Stripe, Printify, Resend, Twilio, or storage credentials.
+					Payments, fulfillment, email, SMS, and file storage are configured by Rally26. Your organization will never be asked for Rally26&apos;s Stripe, Printify, Resend, Twilio, or storage credentials.
 				</p>
 			</div>
 			<ProviderReadinessSection organizationId={organizationId} />

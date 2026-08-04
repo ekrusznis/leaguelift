@@ -1,12 +1,13 @@
 # Cloudflare
 
-Target use per DESIGN-DOC.md section 11.6: DNS and edge protections (rate limiting,
-bot mitigation on public endpoints) for `www.leaguelift.com`, `app.leaguelift.com`, and
-`api.leaguelift.com`.
+**Deferred — not part of the current prod deployment.** Per ADR-008
+(`docs/adr/ADR-008-digitalocean-deployment.md`), DNS for `rally26.com` (the actual
+registered domain — this file previously and incorrectly targeted `rally26.com`)
+is handled directly by DigitalOcean DNS instead, to minimize the number of
+accounts/tools needed for the first prod deploy. See `infra/digitalocean/README.md`.
 
-## Status
-
-Not yet configured. This is a Phase 0 placeholder — no DNS records, page rules, or
-WAF configuration exist yet. Configure this alongside DigitalOcean provisioning
-(`infra/digitalocean/README.md`) once staging/production domains are ready to point
-somewhere.
+This remains a clean later addition — putting Cloudflare in front of DO DNS for
+edge-level rate limiting/bot mitigation/WAF on the public checkout and webhook
+endpoints doesn't require undoing anything in ADR-008, just adding a proxy layer in
+front of the existing droplet. Worth revisiting before scaling past a small pilot,
+since nothing today protects those public endpoints at the edge.

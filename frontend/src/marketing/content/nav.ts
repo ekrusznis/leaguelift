@@ -1,5 +1,5 @@
 /**
- * Primary navigation structure (LEAGUELIFT_SALES_SITE_DESIGN.md section 8.1).
+ * Primary navigation structure (RALLY26_SALES_SITE_DESIGN.md section 8.1).
  *
  * Two kinds of destination:
  * - `to`: a real route.
@@ -15,12 +15,23 @@ export type NavGroup = {
 	items: NavLeaf[];
 };
 
+/**
+ * 2026-08-03 (ADR-057 rebrand + single-page site): HomePage absorbed the former
+ * standalone /how-it-works, /solutions, /pricing, and /about pages as scroll
+ * sections — see pages/marketing/HomePage.tsx. Every in-page anchor below points
+ * at a real section id defined there. This is also, as of the same date, the only
+ * nav model in the codebase — the former /landing-preview experiment (its own
+ * content/landingPreviewNav.ts) was folded in here once the founder confirmed the
+ * single-page layout, and both the preview route and its nav file were deleted.
+ */
 export const HOMEPAGE_SECTION_IDS = {
 	hero: "hero",
-	benefits: "benefits",
-	features: "features",
+	solutions: "solutions",
+	platform: "platform",
 	howItWorks: "how-it-works",
+	audiences: "audiences",
 	pricing: "pricing-preview",
+	about: "about",
 	faq: "faq",
 } as const;
 
@@ -29,15 +40,14 @@ export const PRIMARY_NAV: NavGroup[] = [
 		label: "Product",
 		items: [
 			{ label: "Overview", hash: HOMEPAGE_SECTION_IDS.hero },
-			{ label: "How It Works", to: "/how-it-works" },
-			{ label: "Features", hash: HOMEPAGE_SECTION_IDS.features },
+			{ label: "How It Works", hash: HOMEPAGE_SECTION_IDS.howItWorks },
+			{ label: "One Platform", hash: HOMEPAGE_SECTION_IDS.platform },
 		],
 	},
 	{
 		label: "Solutions",
 		items: [
-			{ label: "Team Pages", to: "/solutions/team-pages" },
-			{ label: "Tournament Pages", to: "/solutions/tournament-pages" },
+			{ label: "Team & Tournament Pages", to: "/solutions/team-and-tournament-pages" },
 			{ label: "Fundraising", to: "/solutions/fundraising" },
 			{ label: "Apparel Stores", to: "/solutions/apparel" },
 			{ label: "Dues & Fees", to: "/solutions/dues-and-fees" },
@@ -56,7 +66,17 @@ export const PRIMARY_NAV: NavGroup[] = [
 	},
 ];
 
-export const SIMPLE_NAV_LINKS: { label: string; to: string }[] = [
-	{ label: "Pricing", to: "/pricing" },
-	{ label: "About", to: "/about" },
+export const SIMPLE_NAV_LINKS: NavLeaf[] = [
+	{ label: "Pricing", hash: HOMEPAGE_SECTION_IDS.pricing },
+	{ label: "About", hash: HOMEPAGE_SECTION_IDS.about },
+];
+
+/** Flat single-row nav for the homepage's own header (HomeHeader) — every item is a same-page anchor, unlike SiteHeader's dropdown IA used on inner pages. */
+export const HOME_NAV_LINKS: { label: string; hash: (typeof HOMEPAGE_SECTION_IDS)[keyof typeof HOMEPAGE_SECTION_IDS] }[] = [
+	{ label: "Overview", hash: HOMEPAGE_SECTION_IDS.hero },
+	{ label: "Solutions", hash: HOMEPAGE_SECTION_IDS.solutions },
+	{ label: "Platform", hash: HOMEPAGE_SECTION_IDS.platform },
+	{ label: "How It Works", hash: HOMEPAGE_SECTION_IDS.howItWorks },
+	{ label: "Pricing", hash: HOMEPAGE_SECTION_IDS.pricing },
+	{ label: "FAQ", hash: HOMEPAGE_SECTION_IDS.faq },
 ];

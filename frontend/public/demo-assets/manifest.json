@@ -1,6 +1,6 @@
 {
 	"version": 1,
-	"note": "Generated demo-only assets (docs/LEAGUELIFT_MEDIA_ASSET_DESIGN.md sections 18-20). Fictional people, teams, and organizations — never represented as real LeagueLift customers.",
+	"note": "Generated demo-only assets (docs/RALLY26_MEDIA_ASSET_DESIGN.md sections 18-20). Fictional people, teams, and organizations — never represented as real Rally26 customers.",
 	"assets": [
 		{ "key": "athlete.01", "type": "PARTICIPANT_AVATAR", "path": "/demo-assets/avatars/athletes/athlete-avatar-01.webp", "altText": "" },
 		{ "key": "athlete.02", "type": "PARTICIPANT_AVATAR", "path": "/demo-assets/avatars/athletes/athlete-avatar-02.webp", "altText": "" },

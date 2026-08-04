@@ -6,7 +6,7 @@ unedited below as the historical record of the original decision.
 
 ## Context
 
-LeagueLift needs authentication for platform administrators, organization
+Rally26 needs authentication for platform administrators, organization
 administrators, and adult parent/guardian accounts, with strong security guarantees
 (MFA for admins, no child accounts, no password-storage liability) and minimal
 in-house security engineering, matching the one-founder operating constraint.

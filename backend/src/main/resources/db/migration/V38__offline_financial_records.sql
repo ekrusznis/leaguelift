@@ -2,7 +2,7 @@
 -- and merchandise orders. These records explicitly identify OFFLINE payment
 -- sources and never fabricate Stripe/provider identifiers. Verification creates
 -- append-only ledger entries, but no payout-eligible ORGANIZATION_EARNING row:
--- LeagueLift did not receive or hold these funds.
+-- Rally26 did not receive or hold these funds.
 
 alter table contribution add column payment_source text not null default 'STRIPE';
 alter table contribution add constraint contribution_payment_source_check
@@ -33,7 +33,7 @@ alter table "order" add constraint order_payment_source_fields_check check (
 
 alter table ledger_entry drop constraint ledger_entry_type_check;
 alter table ledger_entry add constraint ledger_entry_type_check check (entry_type in (
-    'CONTRIBUTION', 'GROSS_SALE', 'PRODUCTION_COST', 'LEAGUELIFT_PLATFORM_FEE',
+    'CONTRIBUTION', 'GROSS_SALE', 'PRODUCTION_COST', 'RALLY26_PLATFORM_FEE',
     'ORGANIZATION_EARNING', 'TRANSFER', 'REFUND', 'OFFLINE_SETTLEMENT'
 ));
 
@@ -95,6 +95,6 @@ insert into support_article
 values
     ('10000000-0000-4000-8000-000000000011', 'recording-and-verifying-offline-payments',
      'Recording and verifying offline payments',
-     'How owners and administrators record cash, checks, external transfers, sponsorships, and manual orders without claiming LeagueLift processed the money.',
-     E'## What an offline record means\n\nUse **Financial Operations** only after your organization receives money outside LeagueLift, such as cash, a check, ACH, Venmo, Zelle, or an external card terminal. LeagueLift records the transaction; it does not create a Stripe charge or move the funds.\n\n## Record the transaction\n\n1. Open the organization and choose **Financial Operations**.\n2. Select Contribution, Sponsorship, or Store order.\n3. Choose the related campaign, package, or active manual-product store.\n4. Enter the payer, amount or items, payment method, received date, reference, and internal notes.\n5. Leave **Verify now** off when another owner or administrator should check the receipt or deposit.\n\n## Verify a pending record\n\nCompare the record with the real receipt, check, deposit, or external processor. Select **Verify** only when the amount and source are confirmed. Verification updates the related contribution, sponsorship, or order and appends balanced offline-settlement ledger entries. It does not create payout-eligible LeagueLift earnings because LeagueLift never held those funds.\n\n## Corrections\n\nDo not edit or delete confirmed financial history. Controlled void and reversal workflows are a later Phase 18 capability. Until then, contact LeagueLift support before attempting to correct a verified offline record.',
+     'How owners and administrators record cash, checks, external transfers, sponsorships, and manual orders without claiming Rally26 processed the money.',
+     E'## What an offline record means\n\nUse **Financial Operations** only after your organization receives money outside Rally26, such as cash, a check, ACH, Venmo, Zelle, or an external card terminal. Rally26 records the transaction; it does not create a Stripe charge or move the funds.\n\n## Record the transaction\n\n1. Open the organization and choose **Financial Operations**.\n2. Select Contribution, Sponsorship, or Store order.\n3. Choose the related campaign, package, or active manual-product store.\n4. Enter the payer, amount or items, payment method, received date, reference, and internal notes.\n5. Leave **Verify now** off when another owner or administrator should check the receipt or deposit.\n\n## Verify a pending record\n\nCompare the record with the real receipt, check, deposit, or external processor. Select **Verify** only when the amount and source are confirmed. Verification updates the related contribution, sponsorship, or order and appends balanced offline-settlement ledger entries. It does not create payout-eligible Rally26 earnings because Rally26 never held those funds.\n\n## Corrections\n\nDo not edit or delete confirmed financial history. Controlled void and reversal workflows are a later Phase 18 capability. Until then, contact Rally26 support before attempting to correct a verified offline record.',
      'Fees and Payments', 'OWNER_ADMIN', 'PUBLISHED', 45, now());

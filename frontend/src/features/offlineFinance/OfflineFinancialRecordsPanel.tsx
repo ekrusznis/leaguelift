@@ -169,8 +169,8 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 	return (
 		<div className="flex flex-col gap-6">
 			<section className="rounded-xl border border-amber-300 bg-amber-50 p-4" aria-label="Offline payment boundary">
-				<h3 className="font-heading font-semibold text-navy">Recorded in LeagueLift—not processed by LeagueLift</h3>
-				<p className="mt-1 text-sm text-slate-gray">Use this workspace only after money was received through cash, check, bank transfer, an external terminal, or another outside method. Verification records balanced ledger activity but never creates Stripe IDs or payout-eligible LeagueLift earnings.</p>
+				<h3 className="font-heading font-semibold text-navy">Recorded in Rally26—not processed by Rally26</h3>
+				<p className="mt-1 text-sm text-slate-gray">Use this workspace only after money was received through cash, check, bank transfer, an external terminal, or another outside method. Verification records balanced ledger activity but never creates Stripe IDs or payout-eligible Rally26 earnings.</p>
 				<Link className="mt-2 inline-flex text-sm font-medium text-info-blue underline-offset-2 hover:underline" to={appPaths.helpArticle("recording-and-verifying-offline-payments")}>Read the offline-payment how-to</Link>
 			</section>
 
@@ -254,7 +254,7 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 				</div>
 				{records.isLoading && <LoadingState label="Loading offline financial records…" />}
 				{records.isError && <ErrorState message="Could not load offline financial records." onRetry={() => records.refetch()} />}
-				{records.data?.items.length === 0 && <EmptyState title="No offline financial records" description="Transactions recorded outside LeagueLift will appear here." />}
+				{records.data?.items.length === 0 && <EmptyState title="No offline financial records" description="Transactions recorded outside Rally26 will appear here." />}
 				{records.data && records.data.items.length > 0 && (
 					<div className="mt-4 overflow-x-auto">
 						<table className="min-w-full border-separate border-spacing-0 text-left text-sm">

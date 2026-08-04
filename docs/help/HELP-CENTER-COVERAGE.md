@@ -1,4 +1,4 @@
-# LeagueLift Help Center coverage standard and inventory
+# Rally26 Help Center coverage standard and inventory
 
 **Status:** Active cross-phase requirement
 **Established:** 2026-08-01
@@ -17,7 +17,7 @@ Articles must be audience-scoped (`PUBLIC`, `OWNER_ADMIN`, `COACH`, `GUARDIAN`, 
 
 ## Pre-pilot completeness gate
 
-Before the Phase 21 production go/no-go, LeagueLift must review every reachable route and major action for every persona. The review must verify:
+Before the Phase 21 production go/no-go, Rally26 must review every reachable route and major action for every persona. The review must verify:
 
 - a user can find the relevant article from `/help` or `/app/help`;
 - setup, normal use, failure recovery, and permission limitations are explained;

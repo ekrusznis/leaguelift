@@ -1,8 +1,8 @@
-# LeagueLift
+# Rally26
 
 **More revenue. Lower fees. Stronger programs.**
 
-LeagueLift is a revenue, fundraising, commerce, and fee-management platform for youth
+Rally26 is a revenue, fundraising, commerce, and fee-management platform for youth
 sports organizations. It is the revenue and payment layer that sits beside (not
 replaces) scheduling, chat, registration, and league-management products.
 

@@ -21,7 +21,7 @@ after finishing Stripe's hosted flow, and the backend fetches current status
 from Stripe on that request. Applying the same pattern to a public supporter's
 contribution has a real correctness gap: a supporter who completes payment and
 closes the tab before the browser redirects back would leave Stripe holding
-confirmed money that LeagueLift never records — there is no admin "refresh"
+confirmed money that Rally26 never records — there is no admin "refresh"
 action a supporter would ever click.
 
 ## Decision
@@ -50,7 +50,7 @@ scoped narrowly:
 - The `webhook_event` table now exists for real, so Phase 5 does not need to
   design it from scratch — it can add Connect-account event types to the same
   table rather than inventing a second mechanism.
-- LeagueLift now has one small piece of genuinely asynchronous, provider-
+- Rally26 now has one small piece of genuinely asynchronous, provider-
   initiated request handling in production code ahead of the outbox-consumer
   worker (section 17) — reviewers should not assume "no webhook consumption
   exists yet" is still true; it is true only for Connect-account events.

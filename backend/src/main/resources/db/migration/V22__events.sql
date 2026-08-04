@@ -12,7 +12,7 @@
 -- start_at/end_at/arrival_at/meeting_at are all nullable: a freshly created
 -- tournament child event may intentionally have TBD time until assigned later.
 --
--- opponent_team_id (another LeagueLift team in the same org) and opponent_name
+-- opponent_team_id (another Rally26 team in the same org) and opponent_name
 -- (free text) are both nullable and mutually exclusive in practice, never both
 -- meaningfully set — enforced at the application layer, not a DB constraint, since
 -- "neither set" is also valid (a practice/meeting has no opponent at all).

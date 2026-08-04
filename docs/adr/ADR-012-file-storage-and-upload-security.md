@@ -25,7 +25,7 @@ unbuilt), so this slice's validation is synchronous.
 1. **S3-compatible object storage behind one seam.** MinIO for local dev/test (via
    `compose.yaml`), DigitalOcean Spaces for staging/prod — same S3 API, so
    `media/infra/SpacesClient.kt` (backed by AWS SDK v2, itself wrapping `S3Client`/
-   `S3Presigner`) never changes between environments, only `leaguelift.spaces.*`
+   `S3Presigner`) never changes between environments, only `rally26.spaces.*`
    endpoint/credentials config does. Path-style access is used everywhere since both
    providers support it identically.
 2. **Signed-URL upload pattern.** The browser requests a presigned PUT URL and uploads
@@ -65,7 +65,7 @@ unbuilt), so this slice's validation is synchronous.
   exercise the full upload pipeline end-to-end (verified manually against the real local
   stack: request → PUT → confirm → assign → signed GET returned the byte-identical file).
 - Moving to real DigitalOcean Spaces in staging/prod is a configuration change only
-  (`leaguelift.spaces.*` env vars), not a code change.
+  (`rally26.spaces.*` env vars), not a code change.
 - Every public-facing image read costs one backend round trip to mint a fresh signed
   URL — acceptable now, but should be revisited (via variant generation + a public CDN
   prefix for published variants) before public page traffic makes that meaningfully

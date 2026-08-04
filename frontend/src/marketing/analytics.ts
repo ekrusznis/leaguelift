@@ -1,5 +1,5 @@
 /**
- * Privacy-safe event tracking (LEAGUELIFT_SALES_SITE_DESIGN.md section 36). No
+ * Privacy-safe event tracking (RALLY26_SALES_SITE_DESIGN.md section 36). No
  * analytics provider is wired up yet, so this only logs in development — swap the
  * implementation here when one is chosen, without touching call sites.
  */

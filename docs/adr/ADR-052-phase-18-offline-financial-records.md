@@ -6,7 +6,7 @@
 
 ## Context
 
-Pilot organizations receive some money outside LeagueLift: cash, checks, ACH, external card terminals, Venmo, Zelle, and other direct methods. The existing contribution, sponsorship, and order models assumed Stripe confirmation. Reusing fake checkout sessions or payment-intent identifiers would corrupt provider reconciliation. Treating outside funds as LeagueLift payout earnings would be equally incorrect because LeagueLift never received or held the money.
+Pilot organizations receive some money outside Rally26: cash, checks, ACH, external card terminals, Venmo, Zelle, and other direct methods. The existing contribution, sponsorship, and order models assumed Stripe confirmation. Reusing fake checkout sessions or payment-intent identifiers would corrupt provider reconciliation. Treating outside funds as Rally26 payout earnings would be equally incorrect because Rally26 never received or held the money.
 
 The workflow also needs a review boundary. A manager may enter a transaction from a paper receipt before a second person confirms the deposit. A record must therefore be durable while pending, but must not inflate confirmed campaign, sponsorship, store, or ledger totals until verification.
 
@@ -24,7 +24,7 @@ The workflow also needs a review boundary. A manager may enter a transaction fro
 - Verification locks the offline record and confirms only the linked pending `OFFLINE` source record.
 - A confirmed offline contribution or sponsorship appends the ordinary gross credit plus an equal `OFFLINE_SETTLEMENT` debit.
 - A confirmed offline order appends gross sale, snapshotted production cost, and an equal offline-settlement debit for the received gross.
-- No `ORGANIZATION_EARNING` entry is created for outside money, so it cannot be included in a LeagueLift payout transfer.
+- No `ORGANIZATION_EARNING` entry is created for outside money, so it cannot be included in a Rally26 payout transfer.
 - An offline order may contain only active manual products from one active store and one manual vendor. Verification creates `READY` manual fulfillment if one does not already exist; no Printify call occurs.
 - Original records and ledger entries are never edited to correct history. Void/reversal/refund extensions remain Phase 18.5.
 
@@ -33,7 +33,7 @@ The workflow also needs a review boundary. A manager may enter a transaction fro
 - Listing, creation, and verification require the existing organization manager boundary (`OWNER` or `ADMINISTRATOR`).
 - Create and verify actions are audited.
 - Pending records appear as a high-priority organization-manager Action Center item deep-linking to Financial Operations.
-- When requested and a payer email is present, verification writes an outbox event for an acknowledgement explaining that the payment was recorded in LeagueLift but processed outside LeagueLift. Email failure does not undo the financial record.
+- When requested and a payer email is present, verification writes an outbox event for an acknowledgement explaining that the payment was recorded in Rally26 but processed outside Rally26. Email failure does not undo the financial record.
 
 ### Help Center maintenance
 
@@ -45,6 +45,6 @@ The workflow also needs a review boundary. A manager may enter a transaction fro
 
 - Pilot staff can reconcile real outside receipts without inventing Stripe or Printify activity.
 - Pending entries are visible and reviewable but do not affect confirmed totals.
-- Verified outside money is represented in the ledger without entering LeagueLift’s payout liability.
+- Verified outside money is represented in the ledger without entering Rally26’s payout liability.
 - The initial workflow intentionally has no edit/delete or financial correction button. Controlled voids and reversals must append linked correction records in a later slice.
 - This slice does not implement payment plans/installments or a consolidated reconciliation dashboard; those remain Phase 18.4 and 18.6.

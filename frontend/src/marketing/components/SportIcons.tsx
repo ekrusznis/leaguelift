@@ -1,7 +1,7 @@
 type IconProps = { className?: string };
 
 /**
- * Sport-neutral line icons (LEAGUELIFT_SALES_SITE_DESIGN.md section 4.3 forbids
+ * Sport-neutral line icons (RALLY26_SALES_SITE_DESIGN.md section 4.3 forbids
  * single-sport logo marks, and no licensed athlete photography is available yet —
  * these stand in for the reference image's photo collage without fabricating
  * imagery we don't have rights to).
@@ -81,7 +81,7 @@ export function SportIconRow({ tone = "dark" }: { tone?: "dark" | "light" }) {
 	const iconColor = tone === "dark" ? "text-green-400" : "text-green-600";
 
 	return (
-		<ul className="flex flex-wrap items-center justify-center gap-6 sm:justify-start" aria-label="Sports LeagueLift supports">
+		<ul className="flex flex-wrap items-center justify-center gap-6 sm:justify-start" aria-label="Sports Rally26 supports">
 			{SPORT_ICONS.map(({ label, Icon }) => (
 				<li key={label} className={`flex flex-col items-center gap-2 text-xs font-semibold ${textColor}`}>
 					<Icon className={`size-7 ${iconColor}`} />

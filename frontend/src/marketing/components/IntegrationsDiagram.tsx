@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import logoMarkLight from "../../assets/leaguelift-mark-light.svg";
+import logoMarkLight from "../../assets/rally26-mark-light.svg";
 
 type ToolCategory = { label: string; icon: ReactNode };
 
@@ -77,8 +77,8 @@ function InwardArrow({ direction }: { direction: "down" | "up" | "left" | "right
 }
 
 /**
- * "Your existing tools feed into LeagueLift" diagram (How It Works section).
- * Deliberately uses generic categories, not real vendor logos/names — LeagueLift
+ * "Your existing tools feed into Rally26" diagram (How It Works section).
+ * Deliberately uses generic categories, not real vendor logos/names — Rally26
  * has no confirmed integration with any specific product, and implying one with
  * a real trademark would be misleading. Swap in real logos only once actual
  * integrations exist and the org has the rights to display them.

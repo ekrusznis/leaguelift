@@ -24,13 +24,13 @@ export function PlatformAdminConsoleLayout() {
 		<DashboardShell
 			contextIcon={<ShieldIcon className="size-4" />}
 			contextIconTone="bg-navy-900"
-			contextName="LeagueLift Platform"
+			contextName="Rally26 Platform"
 			contextRole="Platform Admin"
 			navItems={navItems}
 			showSearch
 			searchScope={{ kind: "platform" }}
 			userName={user?.displayName ?? "Account"}
-			userRole="LeagueLift employee"
+			userRole="Rally26 employee"
 			promo={{
 				heading: supportAccess.data ? "Support access active" : "Platform operations",
 				copy: supportAccess.data

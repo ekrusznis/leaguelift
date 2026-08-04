@@ -38,19 +38,14 @@ import { ResendVerificationPage } from "../pages/auth/ResendVerificationPage";
 import { ResetPasswordPage } from "../pages/auth/ResetPasswordPage";
 import { SignInPage } from "../pages/auth/SignInPage";
 import { VerifyEmailPage } from "../pages/auth/VerifyEmailPage";
-import { AboutPage } from "../pages/marketing/AboutPage";
 import { BookDemoPage } from "../pages/marketing/BookDemoPage";
 import { ContactPage } from "../pages/marketing/ContactPage";
 import { HomePage } from "../pages/marketing/HomePage";
-import { HowItWorksPage } from "../pages/marketing/HowItWorksPage";
-import { LandingPreviewPage } from "../pages/marketing/LandingPreviewPage";
-import { PricingPage } from "../pages/marketing/PricingPage";
 import { PublicCampaignView } from "../pages/marketing/PublicCampaignView";
 import { PublicSponsorshipView } from "../pages/marketing/PublicSponsorshipView";
 import { PublicStoreView } from "../pages/marketing/PublicStoreView";
 import { SecurityPage } from "../pages/marketing/SecurityPage";
 import { SolutionDetailPage } from "../pages/marketing/SolutionDetailPage";
-import { SolutionsOverviewPage } from "../pages/marketing/SolutionsOverviewPage";
 import { TalkToSalesPage } from "../pages/marketing/TalkToSalesPage";
 import { AccessibilityPage } from "../pages/marketing/legal/AccessibilityPage";
 import { PrivacyPage } from "../pages/marketing/legal/PrivacyPage";
@@ -64,16 +59,14 @@ function platformGuard(capability: string, child: ReactNode) {
 export function AppRoutes() {
 	return (
 		<Routes>
+			{/* Self-contained single-page homepage (ADR-057) — own header/footer via HomeHeader, not MarketingLayout's dropdown-IA SiteHeader. */}
+			<Route path="/" element={<HomePage />} />
+
 			<Route element={<MarketingLayout />}>
-				<Route index element={<HomePage />} />
-				<Route path="how-it-works" element={<HowItWorksPage />} />
-				<Route path="solutions" element={<SolutionsOverviewPage />} />
 				<Route path="solutions/:slug" element={<SolutionDetailPage />} />
-				<Route path="pricing" element={<PricingPage />} />
 				<Route path="talk-to-sales" element={<TalkToSalesPage />} />
 				<Route path="founding-pilot" element={<Navigate to="/talk-to-sales" replace />} />
 				<Route path="book-demo" element={<BookDemoPage />} />
-				<Route path="about" element={<AboutPage />} />
 				<Route path="contact" element={<ContactPage />} />
 				<Route path="security" element={<SecurityPage />} />
 				<Route path="help" element={<HelpCenterPage />} />
@@ -99,7 +92,6 @@ export function AppRoutes() {
 				<Route path="auth/error" element={<AuthErrorPage />} />
 			</Route>
 
-			<Route path="landing-preview" element={<LandingPreviewPage />} />
 			<Route path="p/:slug" element={<PublicPageView />} />
 
 			<Route path="app" element={<ProtectedRoute />}>

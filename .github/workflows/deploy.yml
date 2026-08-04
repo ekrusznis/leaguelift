@@ -1,39 +1,141 @@
 name: deploy
 
-# Manual-approval deploy pipeline (DESIGN-DOC.md section 25.2). This is a Phase 0
-# placeholder: it defines the intended stages but the actual DigitalOcean deployment
-# steps are filled in with ADR-008 (DigitalOcean deployment), once accepted, and once
-# staging infrastructure exists (see infra/digitalocean/README.md).
+# Auto-deploys to prod on every push to main (i.e. every merged PR, once branch
+# protection is on — see docs/adr/ADR-008, which supersedes this file's earlier
+# App-Platform-oriented placeholder). Also runnable by hand for a same-code redeploy
+# (e.g. after rotating a secret) without needing an empty commit.
+#
+# This workflow — not the local dev sandbox this repo was originally built in — is
+# where DigitalOcean API calls actually happen: that sandbox's network is allowlisted
+# and cannot reach api.digitalocean.com directly, but GitHub-hosted runners have
+# unrestricted internet, so all doctl/SSH/registry calls live here instead.
+
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      environment:
-        description: "Target environment"
-        required: true
-        default: "staging"
-        type: choice
-        options:
-          - staging
-          - production
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+env:
+  REGISTRY: registry.digitalocean.com/rally26
 
 jobs:
-  build-images:
+  build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build backend image
-        run: docker build -t leaguelift-backend:${{ github.sha }} backend
-      - name: Build frontend image
-        run: docker build -t leaguelift-frontend:${{ github.sha }} frontend
-      # Push to registry step intentionally omitted until infra/digitalocean is wired up.
+
+      - name: Compute image tag
+        id: tag
+        run: echo "tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DO_API_SECRET }}
+
+      - name: Log in to DO Container Registry
+        run: doctl registry login --expiry-seconds 600
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build + push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/rally26-backend:${{ steps.tag.outputs.tag }}
+            ${{ env.REGISTRY }}/rally26-backend:latest
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/rally26-backend:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/rally26-backend:buildcache,mode=max
+
+      - name: Build + push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: true
+          build-args: |
+            VITE_API_BASE_URL=https://api.rally26.com/api/v1
+          tags: |
+            ${{ env.REGISTRY }}/rally26-frontend:${{ steps.tag.outputs.tag }}
+            ${{ env.REGISTRY }}/rally26-frontend:latest
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/rally26-frontend:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/rally26-frontend:buildcache,mode=max
 
   deploy:
     runs-on: ubuntu-latest
-    needs: build-images
-    environment: ${{ inputs.environment }}
+    needs: build-and-push
+    environment: production # GitHub Environment — add a required-reviewer rule here for a manual approval click before prod actually deploys, if you want one.
     steps:
-      - name: Placeholder
-        run: |
-          echo "Deployment target: ${{ inputs.environment }}"
-          echo "Wire up DigitalOcean App Platform deploy steps here once ADR-008 is accepted."
-          echo "Production deploys require the 'production' GitHub Environment's manual approval gate."
+      - uses: actions/checkout@v4
+
+      - name: Copy compose files to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.DO_DROPLET_HOST }}
+          username: ${{ vars.DO_DROPLET_USER || 'rally26' }}
+          key: ${{ secrets.DO_DROPLET_SSH_KEY }}
+          source: "infra/digitalocean/docker-compose.prod.yml,infra/digitalocean/Caddyfile,infra/digitalocean/backup/Dockerfile,infra/digitalocean/backup/backup.sh"
+          target: "/opt/rally26/"
+          strip_components: 2
+
+      - name: Write .env and deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ vars.DO_DROPLET_HOST }}
+          username: ${{ vars.DO_DROPLET_USER || 'rally26' }}
+          key: ${{ secrets.DO_DROPLET_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/rally26
+            cat > .env <<EOF
+            REGISTRY=${{ env.REGISTRY }}
+            IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}
+            POSTGRES_DB=rally26
+            POSTGRES_USER=rally26
+            POSTGRES_PASSWORD=${{ secrets.PROD_POSTGRES_PASSWORD }}
+            JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}
+            SPACES_ENDPOINT=${{ vars.DO_SPACES_ENDPOINT }}
+            SPACES_ACCESS_KEY=${{ secrets.DO_SPACES_ACCESS_KEY_ID }}
+            SPACES_SECRET_KEY=${{ secrets.DO_SPACES_SECRET_KEY }}
+            SPACES_BUCKET=${{ vars.DO_SPACES_BUCKET || 'll-allbuckets-1785762425006' }}
+            SPACES_REGION=${{ vars.DO_SPACES_REGION }}
+            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+            STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}
+            PRINTIFY_API_TOKEN=${{ secrets.PRINTIFY_API_TOKEN }}
+            PRINTIFY_SHOP_ID=${{ secrets.PRINTIFY_SHOP_ID }}
+            EOF
+            chmod 600 .env
+            # DO Container Registry accepts the API token as both username and
+            # password for docker login — no doctl install needed on the droplet
+            # itself, unlike the runner step above which already has it via the
+            # digitalocean/action-doctl action.
+            echo "${{ secrets.DO_API_SECRET }}" | docker login registry.digitalocean.com -u "${{ secrets.DO_API_SECRET }}" --password-stdin
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f
+
+      - name: Health check
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ vars.DO_DROPLET_HOST }}
+          username: ${{ vars.DO_DROPLET_USER || 'rally26' }}
+          key: ${{ secrets.DO_DROPLET_SSH_KEY }}
+          script: |
+            for i in $(seq 1 20); do
+              if curl -sf http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
+                echo "Backend healthy."
+                exit 0
+              fi
+              echo "Waiting for backend to become healthy ($i/20)..."
+              sleep 5
+            done
+            echo "Backend did not become healthy in time." >&2
+            docker compose -f /opt/rally26/docker-compose.prod.yml logs --tail=200 backend
+            exit 1

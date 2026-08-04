@@ -32,7 +32,7 @@ export function ForgotPasswordPage() {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<Seo title="Forgot Password" description="Reset your LeagueLift password." noIndex />
+			<Seo title="Forgot Password" description="Reset your Rally26 password." noIndex />
 
 			<div className="rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
 				<h1 className="font-heading text-2xl font-extrabold text-white">Forgot your password?</h1>

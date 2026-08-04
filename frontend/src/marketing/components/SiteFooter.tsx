@@ -38,7 +38,7 @@ export function SiteFooter() {
 			<div className="border-t border-white/10">
 				<PageContainer className="flex flex-col items-center gap-4 py-6 text-sm text-slate-500 sm:flex-row sm:justify-between">
 					<p>
-						© {year} LeagueLift
+						© {year} Rally26
 					</p>
 					<div className="flex flex-col items-center gap-3 sm:items-end">
 						<nav aria-label="Legal" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
@@ -47,7 +47,7 @@ export function SiteFooter() {
 							))}
 						</nav>
 						{SOCIAL_LINKS.length > 0 && (
-							<nav aria-label="LeagueLift social profiles" className="flex flex-wrap gap-4 text-xs">
+							<nav aria-label="Rally26 social profiles" className="flex flex-wrap gap-4 text-xs">
 								{SOCIAL_LINKS.map((link) => <a key={link.label} href={link.href} target="_blank" rel="noreferrer" className="hover:text-white">{link.label}</a>)}
 							</nav>
 						)}

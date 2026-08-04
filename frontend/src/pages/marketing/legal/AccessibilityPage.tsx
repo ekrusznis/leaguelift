@@ -3,9 +3,9 @@ import { LegalPageLayout } from "./LegalPageLayout";
 
 export function AccessibilityPage() {
 	return (
-		<LegalPageLayout title="Accessibility" description="LeagueLift's accessibility commitment and target standard.">
+		<LegalPageLayout title="Accessibility" description="Rally26's accessibility commitment and target standard.">
 			<p>
-				LeagueLift is built for adults and organizations of all abilities, and for the families and
+				Rally26 is built for adults and organizations of all abilities, and for the families and
 				supporters who use our public pages. We target the Web Content Accessibility Guidelines (WCAG) 2.2
 				Level AA across the public site and the authenticated application.
 			</p>
@@ -33,7 +33,7 @@ export function AccessibilityPage() {
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900">Feedback</h2>
 				<p className="mt-2">
-					If you encounter an accessibility barrier using LeagueLift, contact us through the{" "}
+					If you encounter an accessibility barrier using Rally26, contact us through the{" "}
 					<Link to="/contact" className="text-green-600 hover:underline">
 						Contact page
 					</Link>{" "}

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="620" height="160" viewBox="0 0 620 160"
+     role="img" aria-labelledby="title desc">
+  <title id="title">Rally26 dark logo</title>
+  <desc id="desc">Rally26 "R" mark with an orange forward chevron, plus the Rally26 wordmark, navy ink.</desc>
+
+  <!-- Transparent background by design. -->
+
+  <!-- R mark, scaled/positioned to sit left of the wordmark -->
+  <g transform="translate(10 5) scale(0.75)" aria-hidden="true">
+    <path d="M100 40 L150 40 L185 90 L150 140 L100 140 L128 90 Z" fill="#F2600C"/>
+    <text x="8" y="148" font-family="Manrope, 'Segoe UI', Arial, sans-serif"
+          font-weight="800" font-size="168" letter-spacing="-4" fill="#0B1F33">R</text>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="185" y="112" font-family="Manrope, 'Segoe UI', Arial, sans-serif"
+        font-weight="800" font-size="96" letter-spacing="-2">
+    <tspan fill="#0B1F33">Rally</tspan><tspan fill="#F2600C">26</tspan>
+  </text>
+</svg>

@@ -1,7 +1,7 @@
 import type { HTMLAttributes } from "react";
 
 /**
- * Content-width wrapper (LEAGUELIFT_SALES_SITE_DESIGN.md section 6.2):
+ * Content-width wrapper (RALLY26_SALES_SITE_DESIGN.md section 6.2):
  * `width: min(100% - 40px, 1360px)`, centered.
  */
 export function PageContainer({ className = "", ...props }: HTMLAttributes<HTMLDivElement>) {

@@ -25,7 +25,7 @@ is written.
 **Platform fee: 5% flat, stored as configuration, not hardcoded.** This is a
 starting pilot value, not a final price — DESIGN-DOC.md §1 already requires
 pricing to be "configurable, never hard-coded," and this ADR treats the fee
-percentage the same way. Every `LEAGUELIFT_PLATFORM_FEE` ledger entry
+percentage the same way. Every `RALLY26_PLATFORM_FEE` ledger entry
 references the rate that was actually applied at the time (immutable,
 consistent with §8.6's ledger rules), so changing the configured rate later
 never rewrites history.
@@ -45,14 +45,14 @@ exists, not a re-litigation of this decision.
 
 **Refund policy: org-admin-initiated, within a 14-day window from payment.**
 An org admin can request a refund for a contribution or order up to 14 days
-after `confirmed_at`; LeagueLift (as merchant of record, per ADR-005) executes
+after `confirmed_at`; Rally26 (as merchant of record, per ADR-005) executes
 it via Stripe. This matches how the app already treats org admins as trusted
 operators for fee payments/adjustments (`fee_payment`/`fee_adjustment`,
 Phase 2 remainder) — no separate platform-admin approval step for this phase.
 
 **Negative balance: deducted from the org's next payout.** If a refund is
 issued after the corresponding transfer already went out, the shortfall is
-not immediately clawed back or absorbed by LeagueLift — it's recorded as a
+not immediately clawed back or absorbed by Rally26 — it's recorded as a
 negative balance against that organization and automatically deducted from
 their next eligible transfer. This is standard Stripe Connect marketplace
 practice and requires the ledger to support a running negative balance per
@@ -61,7 +61,7 @@ organization, not just per-transaction entries.
 ## Consequences
 
 - The ledger (`ledger_entry`, §8.6) becomes buildable now: `PAYMENT_PROCESSING_FEE`,
-  `LEAGUELIFT_PLATFORM_FEE` (5%, configurable), `ORGANIZATION_EARNING`,
+  `RALLY26_PLATFORM_FEE` (5%, configurable), `ORGANIZATION_EARNING`,
   `TRANSFER`, `REFUND`, and `MANUAL_ADJUSTMENT` entry types all have a concrete
   computation rule now.
 - `organization_payout_account` (or a sibling table) needs a running balance
@@ -95,10 +95,10 @@ organization, not just per-transaction entries.
   already planned to land first. Manual-trigger-after-eligibility gets the
   safety property (holding period) without pulling that infrastructure
   forward.
-- **LeagueLift absorbing negative balances**: rejected — the founder chose
-  standard marketplace clawback (deduct from next payout) over LeagueLift
+- **Rally26 absorbing negative balances**: rejected — the founder chose
+  standard marketplace clawback (deduct from next payout) over Rally26
   bearing the risk of every late refund.
 - **Platform-admin-mediated refunds only**: rejected — org admins are already
-  trusted with manual fee payments/adjustments; requiring LeagueLift staff
+  trusted with manual fee payments/adjustments; requiring Rally26 staff
   approval for every refund would add operational overhead without a clear
   safety benefit at pilot scale.

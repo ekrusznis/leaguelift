@@ -200,7 +200,7 @@ function CsvOnboardingImport({ organizationId }: { organizationId: string }) {
 					.join(","),
 			),
 		];
-		downloadText("leaguelift-onboarding-errors.csv", lines.join("\r\n"));
+		downloadText("rally26-onboarding-errors.csv", lines.join("\r\n"));
 	}
 
 	return (
@@ -213,7 +213,7 @@ function CsvOnboardingImport({ organizationId }: { organizationId: string }) {
 						Stable external IDs make repeat imports update or match instead of duplicate.
 					</p>
 				</div>
-				<Button type="button" variant="secondary" onClick={() => downloadText("leaguelift-onboarding-template.csv", CSV_TEMPLATE)}>
+				<Button type="button" variant="secondary" onClick={() => downloadText("rally26-onboarding-template.csv", CSV_TEMPLATE)}>
 					Download template
 				</Button>
 			</div>

@@ -26,14 +26,14 @@ function attachSupportAccessHeader(path: string, headers: Record<string, string>
 	const organizationMatch = ORGANIZATION_PATH.exec(path);
 	if (organizationMatch) {
 		if (organizationMatch[1]?.toLowerCase() === supportAccess.organizationId.toLowerCase()) {
-			headers["X-LeagueLift-Support-Access"] = supportAccess.id;
+			headers["X-Rally26-Support-Access"] = supportAccess.id;
 		}
 		return;
 	}
 	if (!RESOURCE_SCOPED_PATH.test(path)) return;
-	const queryOrganizationId = new URL(path, "https://leaguelift.invalid").searchParams.get("organizationId");
+	const queryOrganizationId = new URL(path, "https://rally26.invalid").searchParams.get("organizationId");
 	if (queryOrganizationId?.toLowerCase() === supportAccess.organizationId.toLowerCase()) {
-		headers["X-LeagueLift-Support-Access"] = supportAccess.id;
+		headers["X-Rally26-Support-Access"] = supportAccess.id;
 	}
 }
 

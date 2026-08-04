@@ -85,7 +85,7 @@ same reasoning ADR-032 applied to CSV row-level failures. A connection's
 `last_sync_status`/`last_sync_error` reflects the *overall* attempt (`FAILED` if
 any event failed, with a count), surfaced on the Integrations page.
 
-**8. The poller is a plain `@Scheduled` job** (`leaguelift.ics-feed.sync.cron`,
+**8. The poller is a plain `@Scheduled` job** (`rally26.ics-feed.sync.cron`,
 default every 30 minutes) **scanning every ACTIVE connection across all
 organizations in one pass** — mirroring `FeePaymentReminderScanner`'s exact
 shape, not the outbox worker's claim/dispatch pattern, since there's no
@@ -101,7 +101,7 @@ per-event queue here, just "re-sync everything on an interval."
   only if real usage shows recurring feeds are common.
 - An ICS feed's own `STATUS` can only ever move a *new* event's initial status;
   updates never downgrade/upgrade an existing event's status automatically — see
-  decision 6. A source that cancels an event won't auto-cancel the LeagueLift
+  decision 6. A source that cancels an event won't auto-cancel the Rally26
   copy; this is an intentional, documented limitation, not an oversight, pending
   real usage evidence on whether that matters.
 - The whole sync runs in-process on whatever instance the scheduled trigger

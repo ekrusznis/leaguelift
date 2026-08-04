@@ -7,7 +7,7 @@
 
 Phase 19 must leave provider activation as credential, official-contract, and verification work rather than a redesign. Google Calendar and the generalized connection/OAuth foundation already existed after ADR-054/055. The remaining scope was QuickBooks Online, SportsEngine, GameChanger/MaxPreps partner-pending workflows, platform-provider hardening, and durable sync/issue visibility.
 
-LeagueLift does not currently possess an Intuit application, a verified current SportsEngine API product, or official direct GameChanger/MaxPreps access. Stripe, Printify, Resend, Twilio, and DigitalOcean Spaces are platform-operated and must never appear as organization-owned credential forms.
+Rally26 does not currently possess an Intuit application, a verified current SportsEngine API product, or official direct GameChanger/MaxPreps access. Stripe, Printify, Resend, Twilio, and DigitalOcean Spaces are platform-operated and must never appear as organization-owned credential forms.
 
 ## Decision
 

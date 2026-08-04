@@ -1,6 +1,6 @@
 spring:
   application:
-    name: leaguelift-api
+    name: rally26-api
   flyway:
     locations: classpath:db/migration
     baseline-on-migrate: false
@@ -29,6 +29,6 @@ management:
     readinessstate:
       enabled: true
 
-leaguelift:
+rally26:
   request-id:
     header-name: X-Request-Id

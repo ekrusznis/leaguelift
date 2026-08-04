@@ -1,4 +1,4 @@
--- Phase 14: LeagueLift employee Platform Admin support console.
+-- Phase 14: Rally26 employee Platform Admin support console.
 --
 -- The platform role is intentionally distinct from organization ADMINISTRATOR.
 -- Rename the persisted role to match the public/application context name exactly:
@@ -48,7 +48,7 @@ alter table role_assignment add constraint role_assignment_context_role_check ch
     or (context_type = 'PARTICIPANT' and role = 'ATHLETE_SELF')
 );
 
--- A support-access session is not impersonation. The LeagueLift employee remains the
+-- A support-access session is not impersonation. The Rally26 employee remains the
 -- authenticated actor, supplies a reason, and receives time-bounded access to one
 -- organization workspace. Every start/end/expiry event is auditable, and organization
 -- API requests made by a Platform Admin must carry this session id.

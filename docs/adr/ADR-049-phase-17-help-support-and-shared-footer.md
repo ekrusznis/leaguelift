@@ -7,7 +7,7 @@
 
 Phase 17 was originally sequenced as Action Center, announcements, reminder expansion, Help Center, then support cases. The founder requested that the Help Center/support experience be built first and that every user-facing surface gain a consistent footer with legal, support, brand, copyright, and real configured social links.
 
-LeagueLift already has an outbox worker and `EmailProvider`, but production LeagueLift-domain email remains a Phase 20 activation task. The first support release must therefore make the database record authoritative and email a retryable consequence, not the persistence boundary.
+Rally26 already has an outbox worker and `EmailProvider`, but production Rally26-domain email remains a Phase 20 activation task. The first support release must therefore make the database record authoritative and email a retryable consequence, not the persistence boundary.
 
 ## Decision
 
@@ -33,4 +33,4 @@ LeagueLift already has an outbox worker and `EmailProvider`, but production Leag
 - Public and authenticated content share one catalog while preserving audience restrictions.
 - Legal/footer links are consistently reachable across personas and page classes.
 - Action Center, announcements, and reminder expansion remain unbuilt Phase 17 work.
-- Production delivery from `support@leaguelift.io` remains blocked on Phase 20 DNS/provider/mailbox activation.
+- Production delivery from `support@rally26.com` remains blocked on Phase 20 DNS/provider/mailbox activation.

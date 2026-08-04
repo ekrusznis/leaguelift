@@ -1,7 +1,7 @@
 -- Phase 6 slice 1: sponsorships proof-of-concept (ADR-018, DESIGN-DOC.md section
 -- 14.1). Org admins publish fixed-price sponsorship packages; a public visitor
 -- purchases one via test-mode Stripe Checkout (same charge model as contributions/
--- orders — LeagueLift is merchant of record, ADR-005), confirmed through the
+-- orders — Rally26 is merchant of record, ADR-005), confirmed through the
 -- existing POST /webhooks/stripe receiver. Reuses the ledger's existing
 -- CONTRIBUTION-shaped accounting (LedgerService.recordConfirmedSponsorship) rather
 -- than a new entry type — see ADR-018 for why.
@@ -88,7 +88,7 @@ alter table media_assignment add constraint media_assignment_usage_slot_check
 
 -- Widen the ledger's source_type so sponsorship-sourced entries can be traced back
 -- to a sponsorship. No new entry_type — a confirmed sponsorship reuses the existing
--- CONTRIBUTION/LEAGUELIFT_PLATFORM_FEE/ORGANIZATION_EARNING entry types.
+-- CONTRIBUTION/RALLY26_PLATFORM_FEE/ORGANIZATION_EARNING entry types.
 alter table ledger_entry drop constraint ledger_entry_source_type_check;
 alter table ledger_entry add constraint ledger_entry_source_type_check
     check (source_type in ('CONTRIBUTION', 'ORDER', 'TRANSFER', 'REFUND', 'SPONSORSHIP'));

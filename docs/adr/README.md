@@ -327,3 +327,4 @@ Additional, unreserved decisions:
 - ADR-054: Phase 19 generalized provider catalog, encrypted owner-scoped connection/OAuth foundation, deterministic stubs, and fail-closed runtime guards (2026-08-01)
 - ADR-055: Phase 19 personal/organization/platform integration placement and disabled Google Calendar scaffold with ICS fallback (2026-08-02)
 - ADR-056: Phase 19 QuickBooks/sports-data provider scaffolds, durable sync/issue history, platform-provider contract hardening, and disabled-by-default completion (2026-08-02)
+- ADR-057: Product renamed from LeagueLift to Rally26 (leaguelift.io -> rally26.com), full codebase/package/domain sweep (2026-08-03)

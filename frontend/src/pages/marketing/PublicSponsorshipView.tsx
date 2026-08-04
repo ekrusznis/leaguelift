@@ -218,7 +218,7 @@ export function PublicSponsorshipView() {
 
 	return (
 		<>
-			<Seo title="Sponsorship opportunities" description="Support this organization as a sponsor on LeagueLift." />
+			<Seo title="Sponsorship opportunities" description="Support this organization as a sponsor on Rally26." />
 
 			<section className="bg-navy-950 py-20 sm:py-28">
 				<PageContainer className="max-w-2xl">
@@ -249,7 +249,7 @@ export function PublicSponsorshipView() {
 					{slug && <SponsorDirectory organizationSlug={slug} />}
 
 					<SecondaryLightButton to="/" className="mt-8">
-						Learn more about LeagueLift
+						Learn more about Rally26
 					</SecondaryLightButton>
 				</PageContainer>
 			</section>

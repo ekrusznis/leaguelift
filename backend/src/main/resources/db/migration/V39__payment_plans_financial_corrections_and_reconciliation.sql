@@ -80,7 +80,7 @@ alter table offline_financial_record add constraint offline_financial_verified_f
 
 alter table ledger_entry drop constraint ledger_entry_type_check;
 alter table ledger_entry add constraint ledger_entry_type_check check (entry_type in (
-    'CONTRIBUTION', 'GROSS_SALE', 'PRODUCTION_COST', 'LEAGUELIFT_PLATFORM_FEE',
+    'CONTRIBUTION', 'GROSS_SALE', 'PRODUCTION_COST', 'RALLY26_PLATFORM_FEE',
     'ORGANIZATION_EARNING', 'TRANSFER', 'REFUND', 'OFFLINE_SETTLEMENT', 'MANUAL_ADJUSTMENT'
 ));
 alter table ledger_entry drop constraint ledger_entry_source_type_check;
@@ -146,7 +146,7 @@ create index reconciliation_issue_run_idx on reconciliation_issue (reconciliatio
 update support_article
 set body_markdown = replace(
     body_markdown,
-    'Controlled void and reversal workflows are a later Phase 18 capability. Until then, contact LeagueLift support before attempting to correct a verified offline record.',
+    'Controlled void and reversal workflows are a later Phase 18 capability. Until then, contact Rally26 support before attempting to correct a verified offline record.',
     'Use **Financial Operations → Controlled refunds & reversals** to preview and reverse a verified offline record. The original record remains visible and opposite ledger entries are appended.'
 ), updated_at = now()
 where slug = 'recording-and-verifying-offline-payments';
@@ -162,10 +162,10 @@ values
     ('10000000-0000-4000-8000-000000000013', 'previewing-refunds-and-financial-reversals',
      'Previewing refunds and financial reversals',
      'How managers preview and confirm a refund or reverse an incorrectly verified offline record without deleting history.',
-     E'## Always preview first\n\nOpen **Financial Operations** and choose **Corrections**. Select the record type and enter its record ID. LeagueLift shows the maximum correctable amount, prior corrections, and the exact action before execution.\n\n## Online refunds\n\nStripe refunds can be partial or full within the configured refund window. A full refund changes the source record to Refunded. A partial refund leaves it confirmed and records the refunded amount as a separate correction.\n\n## Offline reversals\n\nA verified offline record can only be fully reversed. LeagueLift keeps the original record, marks it Reversed, and appends opposite ledger entries. Never edit or delete the original financial history.',
+     E'## Always preview first\n\nOpen **Financial Operations** and choose **Corrections**. Select the record type and enter its record ID. Rally26 shows the maximum correctable amount, prior corrections, and the exact action before execution.\n\n## Online refunds\n\nStripe refunds can be partial or full within the configured refund window. A full refund changes the source record to Refunded. A partial refund leaves it confirmed and records the refunded amount as a separate correction.\n\n## Offline reversals\n\nA verified offline record can only be fully reversed. Rally26 keeps the original record, marks it Reversed, and appends opposite ledger entries. Never edit or delete the original financial history.',
      'Fees and Payments', 'OWNER_ADMIN', 'PUBLISHED', 47, now()),
     ('10000000-0000-4000-8000-000000000014', 'running-financial-reconciliation',
      'Running financial reconciliation',
      'How owners and administrators scan for missing provider references, ledger gaps, fulfillment exceptions, overdue installments, and pending offline verification.',
-     E'## Run a reconciliation\n\nOpen **Financial Operations** and choose **Reconciliation**. Run a new scan after imports, corrections, refunds, or fulfillment updates. Each run is preserved as a timestamped snapshot.\n\n## Review issues\n\nHigh-priority issues indicate a financial or fulfillment record that needs prompt review. Medium and low issues cover pending verification, overdue installments, or mismatches that may be expected but still require confirmation. Use each issue link to open the affected workflow.\n\n## Do not repair data directly\n\nUse LeagueLift correction, verification, fulfillment, and payment-plan controls. Do not update financial tables or ledger rows manually.',
+     E'## Run a reconciliation\n\nOpen **Financial Operations** and choose **Reconciliation**. Run a new scan after imports, corrections, refunds, or fulfillment updates. Each run is preserved as a timestamped snapshot.\n\n## Review issues\n\nHigh-priority issues indicate a financial or fulfillment record that needs prompt review. Medium and low issues cover pending verification, overdue installments, or mismatches that may be expected but still require confirmation. Use each issue link to open the affected workflow.\n\n## Do not repair data directly\n\nUse Rally26 correction, verification, fulfillment, and payment-plan controls. Do not update financial tables or ledger rows manually.',
      'Troubleshooting', 'OWNER_ADMIN', 'PUBLISHED', 48, now());

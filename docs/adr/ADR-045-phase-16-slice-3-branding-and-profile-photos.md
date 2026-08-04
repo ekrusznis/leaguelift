@@ -5,7 +5,7 @@ Accepted
 
 ## Context
 
-LeagueLift already has a signed-upload media pipeline for organization branding, product designs, sponsor logos, and documents. Phase 16 requires team/tournament branding plus adult and participant profile photos. Building a second upload or storage system would duplicate validation, object ownership, retirement, visibility, and audit behavior. At the same time, the original media endpoints are organization-manager-only and cannot safely authorize team-scoped staff, guardians, or controlled athlete-self accounts.
+Rally26 already has a signed-upload media pipeline for organization branding, product designs, sponsor logos, and documents. Phase 16 requires team/tournament branding plus adult and participant profile photos. Building a second upload or storage system would duplicate validation, object ownership, retirement, visibility, and audit behavior. At the same time, the original media endpoints are organization-manager-only and cannot safely authorize team-scoped staff, guardians, or controlled athlete-self accounts.
 
 ## Decision
 

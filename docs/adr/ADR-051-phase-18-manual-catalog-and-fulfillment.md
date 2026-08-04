@@ -6,7 +6,7 @@
 
 ## Context
 
-The Phase 4 commerce proof assumed every product and fulfillment originated in Printify. That is too narrow for pilot organizations that already work with local printers, fulfill merchandise themselves, or need LeagueLift staff to resolve an order exception manually. Fabricating Printify identifiers for those records would make provider health, reconciliation, and later migration unreliable. Editing an original paid order or ledger entry to represent an operational correction would also violate LeagueLift's append-only financial boundary.
+The Phase 4 commerce proof assumed every product and fulfillment originated in Printify. That is too narrow for pilot organizations that already work with local printers, fulfill merchandise themselves, or need Rally26 staff to resolve an order exception manually. Fabricating Printify identifiers for those records would make provider health, reconciliation, and later migration unreliable. Editing an original paid order or ledger entry to represent an operational correction would also violate Rally26's append-only financial boundary.
 
 ## Decision
 

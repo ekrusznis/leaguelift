@@ -39,7 +39,7 @@ import { appPaths } from "../../routes/appPaths";
 import { formatMoneyMinorUnits } from "../../lib/money";
 
 /**
- * LeagueLift employee overview. The visual hierarchy intentionally follows the
+ * Rally26 employee overview. The visual hierarchy intentionally follows the
  * approved Platform Admin preview while every number shown is backed by a real
  * platform endpoint. Trend lines and support-ticket counts are omitted until
  * historical metrics and a support-case model exist.
@@ -71,14 +71,14 @@ export function PlatformAdminDashboard() {
 		<DashboardShell
 			contextIcon={<ShieldIcon className="size-4" />}
 			contextIconTone="bg-green-500/15 text-green-400"
-			contextName="LeagueLift Platform"
+			contextName="Rally26 Platform"
 			contextRole="Platform Admin"
 			navItems={navItems}
 			showSearch
 			showHelp
 			searchScope={{ kind: "platform" }}
 			userName={user?.displayName ?? "Account"}
-			userRole="LeagueLift employee"
+			userRole="Rally26 employee"
 			promo={{
 				heading: supportAccess.data ? "Support access active" : "Platform operations",
 				copy: supportAccess.data
