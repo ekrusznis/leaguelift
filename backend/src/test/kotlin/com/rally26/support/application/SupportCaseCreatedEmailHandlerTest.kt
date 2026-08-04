@@ -3,7 +3,8 @@ package com.rally26.support.application
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.rally26.config.SupportProperties
 import com.rally26.notification.EmailMessage
-import com.rally26.notification.EmailProvider
+import com.rally26.notification.MustacheTemplateRenderer
+import com.rally26.notification.infra.SmtpEmailProvider
 import com.rally26.outbox.domain.OutboxEvent
 import com.rally26.outbox.domain.OutboxEventStatus
 import com.rally26.support.domain.SupportCase
@@ -21,14 +22,19 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class SupportCaseCreatedEmailHandlerTest {
 	private val repository = mockk<SupportCaseRepository>()
-	private val emailProvider = mockk<EmailProvider>()
+	private val smtpEmailProvider = mockk<SmtpEmailProvider>()
+	// Real instance, not mocked — exercises the actual mail-templates/support-case-created.mustache
+	// classpath resource, so a typo'd/missing template file fails this test, not just production.
+	private val templateRenderer = MustacheTemplateRenderer()
 	private val objectMapper = jacksonObjectMapper()
 	private val handler = SupportCaseCreatedEmailHandler(
 		repository,
-		emailProvider,
+		smtpEmailProvider,
+		templateRenderer,
 		SupportProperties("support@rally26.com"),
 		objectMapper,
 	)
@@ -38,15 +44,17 @@ class SupportCaseCreatedEmailHandlerTest {
 		val supportCase = supportCase()
 		val message = slot<EmailMessage>()
 		every { repository.findById(supportCase.id) } returns supportCase
-		every { emailProvider.send(capture(message)) } just runs
+		every { smtpEmailProvider.send(capture(message)) } just runs
 
 		handler.handle(event(supportCase.id))
 
-		verify(exactly = 1) { emailProvider.send(any()) }
+		verify(exactly = 1) { smtpEmailProvider.send(any()) }
 		assertEquals("adult@example.com", message.captured.to)
 		assertEquals(listOf("support@rally26.com"), message.captured.cc)
 		assertEquals("support@rally26.com", message.captured.replyTo)
 		assertEquals("support-case-${supportCase.id}", message.captured.idempotencyKey)
+		assertTrue(message.captured.body.contains(supportCase.description))
+		assertTrue(message.captured.body.contains(supportCase.requesterName))
 	}
 
 	@Test
@@ -56,7 +64,7 @@ class SupportCaseCreatedEmailHandlerTest {
 
 		handler.handle(event(caseId))
 
-		verify(exactly = 0) { emailProvider.send(any()) }
+		verify(exactly = 0) { smtpEmailProvider.send(any()) }
 	}
 
 	private fun event(caseId: UUID): OutboxEvent {

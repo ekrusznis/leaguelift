@@ -75,6 +75,20 @@ dependencies {
 	implementation("com.google.zxing:core:3.5.3")
 	implementation("com.google.zxing:javase:3.5.3")
 
+	// Google Workspace SMTP for support-case correspondence (ADR-059) — deliberately
+	// separate from the Resend-backed EmailProvider (ADR-022), which stays reserved for
+	// branded automated lifecycle emails (verify/reset/invite/welcome, support-case
+	// status-change notices). Brings JavaMailSender/SimpleMailMessage; SmtpEmailProvider
+	// builds its own JavaMailSenderImpl from SmtpMailProperties rather than relying on
+	// Spring Boot's spring.mail.* autoconfiguration, so an unconfigured environment
+	// never gets a half-wired bean.
+	implementation("org.springframework.boot:spring-boot-starter-mail")
+
+	// Mustache templating for the plain-text SMTP support-case-created email (ADR-059)
+	// — intentionally not the Resend templates used elsewhere, since these are simple,
+	// unbranded, human-correspondence-style messages, not marketing/product HTML.
+	implementation("com.github.spullara.mustache.java:compiler:0.9.14")
+
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.security:spring-security-test")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")

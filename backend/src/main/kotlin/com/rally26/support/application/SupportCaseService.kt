@@ -99,6 +99,18 @@ class SupportCaseService(
         val closedAt = if (status in setOf(SupportCaseStatus.RESOLVED, SupportCaseStatus.CLOSED)) existing.closedAt ?: Instant.now(clock) else null
         repository.updatePlatform(caseId, status, priority, assignedPlatformUserId, normalizedResolution, closedAt)
         val updated = repository.findById(caseId)!!
+        // Only a real status transition is worth notifying the requester about — priority
+        // or assignment-only edits are internal triage details, not something a customer
+        // should get an email for. Unlike support.case.created (SMTP, ADR-059), this goes
+        // through the primary EmailProvider/Resend since it's an automated status notice,
+        // not the requester's own correspondence — see SupportCaseStatusChangedEmailHandler.
+        if (existing.status != updated.status) {
+            outboxRepository.insert(
+                aggregateType = "SUPPORT_CASE", aggregateId = updated.id, organizationId = updated.organizationId,
+                eventType = "support.case.status_changed",
+                payloadJson = objectMapper.writeValueAsString(mapOf("caseId" to updated.id.toString())),
+            )
+        }
         auditService.record(
             currentUser.userId, updated.organizationId, "support_case.updated", "SUPPORT_CASE", updated.id,
             objectMapper.writeValueAsString(mapOf("priorStatus" to existing.status.name, "status" to updated.status.name, "priority" to updated.priority.name)),

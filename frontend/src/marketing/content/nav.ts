@@ -33,6 +33,8 @@ export const HOMEPAGE_SECTION_IDS = {
 	pricing: "pricing-preview",
 	about: "about",
 	faq: "faq",
+	/** Contact Us section, added just above the footer (ADR-059) — replaces the old standalone /contact mock page and the removed /book-demo page. */
+	contactUs: "contact-us",
 } as const;
 
 export const PRIMARY_NAV: NavGroup[] = [
@@ -61,7 +63,7 @@ export const PRIMARY_NAV: NavGroup[] = [
 			{ label: "Talk to Sales", to: "/talk-to-sales" },
 			{ label: "Help Center", to: "/help" },
 			{ label: "Security", to: "/security" },
-			{ label: "Contact", to: "/contact" },
+			{ label: "Contact", hash: HOMEPAGE_SECTION_IDS.contactUs },
 		],
 	},
 ];
@@ -79,4 +81,5 @@ export const HOME_NAV_LINKS: { label: string; hash: (typeof HOMEPAGE_SECTION_IDS
 	{ label: "How It Works", hash: HOMEPAGE_SECTION_IDS.howItWorks },
 	{ label: "Pricing", hash: HOMEPAGE_SECTION_IDS.pricing },
 	{ label: "FAQ", hash: HOMEPAGE_SECTION_IDS.faq },
+	{ label: "Contact", hash: HOMEPAGE_SECTION_IDS.contactUs },
 ];
