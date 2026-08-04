@@ -483,11 +483,15 @@ function PendingReviewQueue({ organizationId }: { organizationId: string }) {
 
 /** A shareable QR code + plain URL for the org's public sponsorship page (Phase 6 remainder, ADR-019) — for an org admin to hand to a prospective sponsor or print in event materials. No click-through tracking. */
 function ShareLinkPanel({ organizationId, organizationSlug }: { organizationId: string; organizationSlug?: string }) {
+	// The hook must run on every render regardless of organizationSlug (Rules of
+	// Hooks) — its own `enabled` flag is what actually gates the fetch, so the
+	// early return below stays purely a render-output decision.
+	const url = organizationSlug ? `${window.location.origin}/sponsors/${organizationSlug}` : "";
+	const { data, isLoading, isError } = useShareLinkQrCode(organizationId, url, Boolean(organizationSlug));
+
 	if (!organizationSlug) {
 		return <p className="text-sm text-slate-gray">A share link isn&rsquo;t available until this organization has a public slug.</p>;
 	}
-	const url = `${window.location.origin}/sponsors/${organizationSlug}`;
-	const { data, isLoading, isError } = useShareLinkQrCode(organizationId, url, true);
 
 	return (
 		<div className="flex flex-wrap items-center gap-4">
