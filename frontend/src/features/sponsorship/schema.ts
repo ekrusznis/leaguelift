@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * Mirrors the backend's CreateSponsorshipPackageRequest
- * (backend/src/main/kotlin/com/leaguelift/sponsorship/web/SponsorshipDto.kt). Client-side
+ * (backend/src/main/kotlin/com/rally26/sponsorship/web/SponsorshipDto.kt). Client-side
  * validation is for UX only — the backend remains authoritative. Applies the RHF/Zod
  * three-generic pattern from the start (see DESIGN-DOC.md's known-bugs note on
  * `z.coerce.number()`/React-Hook-Form) — no `as Resolver` cast needed here.

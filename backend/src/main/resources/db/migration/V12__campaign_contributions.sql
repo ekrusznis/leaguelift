@@ -4,7 +4,7 @@
 -- (checkout.session.completed), not the "sync refresh on browser return" pattern
 -- the payout module uses for Connect onboarding — a supporter who pays and closes
 -- the tab before redirecting back would otherwise leave Stripe holding confirmed
--- money LeagueLift never records.
+-- money Rally26 never records.
 --
 -- Explicitly NOT part of this migration: credit_rule/credit_event/credit_application
 -- (DESIGN-DOC.md section 19.3 open questions #6/#16/#17 — exact credit percentages,

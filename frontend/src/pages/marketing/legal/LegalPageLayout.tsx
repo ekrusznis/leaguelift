@@ -18,7 +18,7 @@ export function LegalPageLayout({ title, description, children }: { title: strin
 					<div className="mt-6">
 						<InlineAlert tone="warning" title="This is a working draft, not a published policy.">
 							It has not been reviewed or approved by legal counsel. Do not rely on this page as
-							LeagueLift&rsquo;s or your organization&rsquo;s actual {title.toLowerCase()} until it has
+							Rally26&rsquo;s or your organization&rsquo;s actual {title.toLowerCase()} until it has
 							been reviewed and formally approved.
 						</InlineAlert>
 					</div>

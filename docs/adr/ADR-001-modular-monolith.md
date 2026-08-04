@@ -5,14 +5,14 @@ Accepted
 
 ## Context
 
-LeagueLift's initial objective is a sellable pilot supportable by one founder/engineer.
+Rally26's initial objective is a sellable pilot supportable by one founder/engineer.
 The long-term product spans many domains (organizations, teams, tournaments, public
 pages, households, fees, fundraising, credits, commerce, payments, sponsorships), but
 none of them yet have independent scaling, deployment, or team-ownership needs.
 
 ## Decision
 
-Build LeagueLift as a single Kotlin/Spring Boot backend deployment ("modular monolith")
+Build Rally26 as a single Kotlin/Spring Boot backend deployment ("modular monolith")
 with clearly separated domain modules (`identity`, `organization`, `membership`,
 `publicpage`, `team`, `tournament`, `household`, `participant`, `fees`, `fundraising`,
 `credits`, `catalog`, `store`, `order`, `payment`, `fulfillment`, `ledger`,

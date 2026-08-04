@@ -6,7 +6,7 @@
 --
 -- Fields mirror Stripe's own account object (stripe_account_id, details_submitted,
 -- charges_enabled, payouts_enabled) rather than inventing a separate status enum —
--- consistent with section 16's "Stripe is the source of truth, LeagueLift keeps
+-- consistent with section 16's "Stripe is the source of truth, Rally26 keeps
 -- synchronized records" principle.
 
 create table organization_payout_account (

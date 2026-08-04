@@ -7,7 +7,7 @@
 
 ADR-049 delivered the Help Center, durable support intake, Platform Admin support tooling, and the shared footer prerequisite first. The remaining Phase 17 scope requires a role-aware Action Center, organization/team/tournament announcements, and campaign/event/payment/document reminders delivered through the existing in-app/audit/outbox/email/SMS architecture.
 
-LeagueLift already has authoritative domain tables for the work items users need to address, an Activity Feed backed by `audit_event`, an outbox worker, `EmailProvider`, `SmsProvider`, and household email/SMS preferences. It does not have a tournament-to-participating-team relationship table, a general dismissal/snooze model, a chat model, or production LeagueLift-domain delivery credentials.
+Rally26 already has authoritative domain tables for the work items users need to address, an Activity Feed backed by `audit_event`, an outbox worker, `EmailProvider`, `SmsProvider`, and household email/SMS preferences. It does not have a tournament-to-participating-team relationship table, a general dismissal/snooze model, a chat model, or production Rally26-domain delivery credentials.
 
 ## Decision
 
@@ -22,7 +22,7 @@ LeagueLift already has authoritative domain tables for the work items users need
 9. **Keep Activity Feed semantics through audit.** Create, update, publish, archive, and reminder actions are audited. The dedicated inbox is the recipient-facing in-app message surface; the existing audit-backed Activity Feed remains the operational activity record rather than being replaced.
 10. **Use the same pipeline for explicit reminders.** Authorized staff may send campaign-launch, upcoming-event, outstanding-fee, and household-document reminders. Each requires a caller-supplied idempotency key and creates a typed announcement. Ordinary imports, edits, and scanner runs do not silently mass-message families.
 11. **Do not fabricate tournament family delivery.** Because no `tournament_team`/participating-team relationship exists, tournament announcements currently resolve staff only. Guardian/athlete audience choices are not presented for tournament scope until a real relationship model exists.
-12. **Keep production activation separate.** Local/logging and configured provider adapters can exercise the workflow, but LeagueLift-owned sender identities, DNS, provider credentials, bounce/complaint verification, and production delivery remain Phase 20.
+12. **Keep production activation separate.** Local/logging and configured provider adapters can exercise the workflow, but Rally26-owned sender identities, DNS, provider credentials, bounce/complaint verification, and production delivery remain Phase 20.
 
 ## Consequences
 

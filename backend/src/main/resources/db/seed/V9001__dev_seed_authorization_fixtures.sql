@@ -87,7 +87,7 @@ values (
 insert into app_user (id, email, display_name, status, password_hash)
 values (
     '00000000-0000-0000-0000-000000000015',
-    'platform.admin@leaguelift.example',
+    'platform.admin@rally26.example',
     'Priya Shah',
     'ACTIVE',
     '$2b$10$BC19Z63oXHKHirkZ18mYne4CETqhLd8m3yCb.pn7ob5GL7T91vhGu'

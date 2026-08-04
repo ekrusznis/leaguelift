@@ -47,7 +47,7 @@ export function SupportRequestPage({ authenticated = false }: { authenticated?: 
 			<Link to={base} className="text-sm font-semibold text-info-blue hover:underline">← Back to Help Center</Link>
 			<div className="mt-6 grid gap-7 lg:grid-cols-[1fr_0.75fr]">
 				<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-					<h1 className="font-heading text-3xl font-extrabold text-navy-900">Contact LeagueLift Support</h1>
+					<h1 className="font-heading text-3xl font-extrabold text-navy-900">Contact Rally26 Support</h1>
 					<p className="mt-3 text-slate-600">Submitting creates a durable support case before email is attempted. This is ticket/email support, not live chat, and no response-time promise is implied.</p>
 					{authenticated && <p className="mt-4 rounded-lg bg-ice-50 p-3 text-sm text-slate-700">Submitting as <strong>{user?.displayName}</strong> ({user?.email}).</p>}
 					<form onSubmit={submit} className="mt-6 flex flex-col gap-4">

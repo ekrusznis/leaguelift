@@ -1,6 +1,6 @@
 import type { PlatformSupportAccess } from "./types";
 
-const STORAGE_KEY = "leaguelift.platformSupportAccess";
+const STORAGE_KEY = "rally26.platformSupportAccess";
 
 export function readStoredSupportAccess(): PlatformSupportAccess | null {
 	if (typeof window === "undefined") return null;
@@ -22,11 +22,11 @@ export function readStoredSupportAccess(): PlatformSupportAccess | null {
 export function storeSupportAccess(access: PlatformSupportAccess) {
 	if (typeof window === "undefined") return;
 	window.localStorage.setItem(STORAGE_KEY, JSON.stringify(access));
-	window.dispatchEvent(new CustomEvent("leaguelift:support-access-changed"));
+	window.dispatchEvent(new CustomEvent("rally26:support-access-changed"));
 }
 
 export function clearStoredSupportAccess() {
 	if (typeof window === "undefined") return;
 	window.localStorage.removeItem(STORAGE_KEY);
-	window.dispatchEvent(new CustomEvent("leaguelift:support-access-changed"));
+	window.dispatchEvent(new CustomEvent("rally26:support-access-changed"));
 }

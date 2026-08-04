@@ -4,7 +4,7 @@
 
 ## Context
 
-LeagueLift already supports manual organization, team, and tournament events, but staff must repeatedly re-enter the same practice duration, arrival expectations, venue, field/court, meeting point, directions, visibility, and time zone. Phase 16 calls for reusable event templates to reduce that administrative burden. The product boundary remains explicit: LeagueLift is not adding automated schedule generation, availability optimization, or a recurring-event engine.
+Rally26 already supports manual organization, team, and tournament events, but staff must repeatedly re-enter the same practice duration, arrival expectations, venue, field/court, meeting point, directions, visibility, and time zone. Phase 16 calls for reusable event templates to reduce that administrative burden. The product boundary remains explicit: Rally26 is not adding automated schedule generation, availability optimization, or a recurring-event engine.
 
 ## Decision
 

@@ -61,7 +61,7 @@ export function BookDemoPage() {
 
 	return (
 		<>
-			<Seo title="Book a Demo" description="Request a LeagueLift demo for your organization." />
+			<Seo title="Book a Demo" description="Request a Rally26 demo for your organization." />
 
 			<section className="bg-navy-950 py-16 sm:py-20">
 				<PageContainer className="max-w-2xl">

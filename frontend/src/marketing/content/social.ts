@@ -4,7 +4,7 @@ export type SocialLink = { label: string; href: string };
 
 /**
  * Social profiles are intentionally configuration-driven. Blank values remain
- * hidden so LeagueLift never publishes guessed or placeholder accounts.
+ * hidden so Rally26 never publishes guessed or placeholder accounts.
  */
 export const SOCIAL_LINKS: SocialLink[] = [
 	{ label: "LinkedIn", href: env.socialLinkedInUrl },

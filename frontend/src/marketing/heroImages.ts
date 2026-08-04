@@ -1,6 +1,6 @@
 /**
  * Typed paths into /public/demo-assets/hero — real generated photography for the
- * public marketing site (docs/LEAGUELIFT_MEDIA_ASSET_DESIGN.md's demo-asset
+ * public marketing site (docs/RALLY26_MEDIA_ASSET_DESIGN.md's demo-asset
  * pattern, section 2.2: local static files for now, swappable for a real
  * CDN-backed media API later without touching call sites). These replace the
  * abstract line-icon/SVG placeholders used when no photography was available.
@@ -19,4 +19,6 @@ export const heroImages = {
 	apparelCollection: `${BASE}/hero-apparel-collection-1200.webp`,
 	/** Decorative gold/green accent texture for guided-onboarding moments. */
 	goldAccent: `${BASE}/hero-gold-accent-900.webp`,
+	/** Wide navy-to-orange stadium athlete silhouette artwork for the closing CTA banner. */
+	stadiumCta: `${BASE}/hero-stadium-cta-2000.png`,
 } as const;

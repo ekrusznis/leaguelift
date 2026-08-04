@@ -8,15 +8,16 @@ Accepted
 `DESIGN-DOC.md` section 11.6 and `infra/digitalocean/README.md`'s original placeholder
 targeted DigitalOcean App Platform (managed container hosting) with DO Managed
 PostgreSQL, and `infra/cloudflare/README.md` targeted Cloudflare for DNS/edge
-protection in front of `leaguelift.com`. Neither had been provisioned; this ADR was
+protection in front of `rally26.com`. Neither had been provisioned; this ADR was
 never accepted until now, when Phase 21 (DESIGN-DOC.md section 14, staging/prod
 launch) actually started.
 
 By the time this decision was made, the founder had already provisioned a single
-Ubuntu 24.04 droplet (`45.55.68.239`) directly, rather than an App Platform app, and
-had registered `leaguelift.io` — not `.com`, resolving that pre-existing doc
-inconsistency in favor of `.io` (also the domain `application-prod.yml`'s
-`support.inbox-email` default already assumed). A second (staging) droplet is
+Ubuntu 24.04 droplet (`45.55.68.239`) directly, rather than an App Platform app.
+The product and domain were also renamed from LeagueLift (`leaguelift.io`) to
+Rally26 (`rally26.com`) around the same time — this ADR, and every file this
+rename touched, reflects the new name throughout; see the rename's own ADR for
+the "why" behind the name change itself. A second (staging) droplet is
 explicitly deferred — prod-only for now.
 
 Two further decisions were made explicitly, not defaulted to the original plan:
@@ -53,7 +54,7 @@ machine.
   `caddy` (reverse proxy + automatic Let's Encrypt TLS), `backup` (nightly `pg_dump` to
   Spaces). No App Platform, no Kubernetes.
 - **Registry:** DigitalOcean Container Registry
-  (`registry.digitalocean.com/leaguelift`). CI builds and pushes both images; the
+  (`registry.digitalocean.com/rally26`). CI builds and pushes both images; the
   droplet only ever pulls, never builds.
 - **Database:** self-hosted Postgres 16 in a named Docker volume, no host port
   published. Mitigation for the lack of managed backups: `infra/digitalocean/backup/`
@@ -63,7 +64,7 @@ machine.
   quarterly restore-rehearsal launch gate, which remains open.
 - **Object storage:** reuse the existing Spaces bucket, unchanged from the design
   doc's plan.
-- **DNS:** DigitalOcean DNS for `leaguelift.io` — `@`, `www`, and `api` A records all
+- **DNS:** DigitalOcean DNS for `rally26.com` — `@`, `www`, and `api` A records all
   pointed at the single droplet's IP, managed by `infra-bootstrap.yml`. Requires the
   domain registrar's nameservers to be pointed at DO's (`ns1/ns2/ns3.digitalocean.com`)
   — a one-time manual step at the registrar, outside any tool this codebase controls.

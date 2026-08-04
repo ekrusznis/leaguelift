@@ -6,7 +6,7 @@ import { SecondaryLightButton } from "../../marketing/components/buttons";
 const SECTIONS = [
 	{
 		heading: "Adult-controlled accounts",
-		copy: "LeagueLift does not create child login accounts. Adults manage households and participant records on behalf of their families.",
+		copy: "Rally26 does not create child login accounts. Adults manage households and participant records on behalf of their families.",
 	},
 	{
 		heading: "Role-based authorization",
@@ -14,11 +14,11 @@ const SECTIONS = [
 	},
 	{
 		heading: "Managed authentication",
-		copy: "Sign-in is designed to run through a managed identity provider rather than LeagueLift storing passwords directly.",
+		copy: "Sign-in is designed to run through a managed identity provider rather than Rally26 storing passwords directly.",
 	},
 	{
 		heading: "Encryption in transit",
-		copy: "LeagueLift is designed to serve all production traffic over HTTPS.",
+		copy: "Rally26 is designed to serve all production traffic over HTTPS.",
 	},
 	{
 		heading: "Protected secrets",
@@ -26,7 +26,7 @@ const SECTIONS = [
 	},
 	{
 		heading: "Provider-based payment handling",
-		copy: "When live payments launch, card data will be handled by a PCI-compliant payment processor — LeagueLift is not designed to store raw card numbers.",
+		copy: "When live payments launch, card data will be handled by a PCI-compliant payment processor — Rally26 is not designed to store raw card numbers.",
 	},
 	{
 		heading: "Audit events",
@@ -45,7 +45,7 @@ const SECTIONS = [
 export function SecurityPage() {
 	return (
 		<>
-			<Seo title="Security" description="How LeagueLift approaches authentication, authorization, and data protection." />
+			<Seo title="Security" description="How Rally26 approaches authentication, authorization, and data protection." />
 
 			<section className="bg-navy-950 py-16 sm:py-20">
 				<PageContainer className="max-w-2xl">

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, apiFetchBlob } from "../../lib/apiClient";
-import type { CreateEventInput, DirectionsResponse, EventRsvps, EventTemplate, LeagueLiftEvent, RsvpResponse, SaveEventTemplateInput } from "./types";
+import type { CreateEventInput, DirectionsResponse, EventRsvps, EventTemplate, Rally26Event, RsvpResponse, SaveEventTemplateInput } from "./types";
 
 export type EventScope =
 	| { type: "organization"; organizationId: string }
@@ -45,14 +45,14 @@ export function eventScopeKey(scope: EventScope) {
 export function useEvents(scope: EventScope) {
 	return useQuery({
 		queryKey: eventScopeKey(scope),
-		queryFn: () => apiFetch<LeagueLiftEvent[]>(listPath(scope)),
+		queryFn: () => apiFetch<Rally26Event[]>(listPath(scope)),
 	});
 }
 
 export function useEvent(organizationId: string, eventId: string) {
 	return useQuery({
 		queryKey: ["organizations", organizationId, "events", eventId],
-		queryFn: () => apiFetch<LeagueLiftEvent>(`/organizations/${organizationId}/events/${eventId}`),
+		queryFn: () => apiFetch<Rally26Event>(`/organizations/${organizationId}/events/${eventId}`),
 		enabled: !!organizationId && !!eventId,
 	});
 }
@@ -60,7 +60,7 @@ export function useEvent(organizationId: string, eventId: string) {
 export function useCreateEvent(scope: EventScope) {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (input: CreateEventInput) => apiFetch<LeagueLiftEvent>(createPath(scope), { method: "POST", body: input }),
+		mutationFn: (input: CreateEventInput) => apiFetch<Rally26Event>(createPath(scope), { method: "POST", body: input }),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: eventScopeKey(scope) }),
 	});
 }
@@ -68,7 +68,7 @@ export function useCreateEvent(scope: EventScope) {
 function useEventAction(organizationId: string, eventId: string, action: "publish" | "cancel" | "postpone" | "detach-from-source") {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: () => apiFetch<LeagueLiftEvent>(`/organizations/${organizationId}/events/${eventId}/${action}`, { method: "POST" }),
+		mutationFn: () => apiFetch<Rally26Event>(`/organizations/${organizationId}/events/${eventId}/${action}`, { method: "POST" }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["events"] });
 			queryClient.invalidateQueries({ queryKey: ["organizations", organizationId, "events", eventId] });

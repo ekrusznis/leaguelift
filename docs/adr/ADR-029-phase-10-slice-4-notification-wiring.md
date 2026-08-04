@@ -99,7 +99,7 @@ instances (`EventNotificationHandlerConfig`), rather than nine near-identical
 + SMS every resolved recipient the same `changeSummary` string — so the difference
 between them is entirely in the `eventType` string and the wording the writer embeds in
 the payload, not in handling logic.
-[`OutboxWorker`](../../backend/src/main/kotlin/com/leaguelift/outbox/application/OutboxWorker.kt)
+[`OutboxWorker`](../../backend/src/main/kotlin/com/rally26/outbox/application/OutboxWorker.kt)
 only needs `List<OutboxEventHandler>` with distinct `eventType` values to build its
 dispatch map — it doesn't care whether those come from nine `@Component` classes or one
 class instantiated nine times via `@Bean` factory methods, so this is a pure

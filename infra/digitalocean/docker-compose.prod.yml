@@ -1,5 +1,5 @@
-# Production compose file for the single leaguelift droplet (ADR-008). Lives at
-# /opt/leaguelift/docker-compose.prod.yml on the droplet itself — deployed there by
+# Production compose file for the single rally26 droplet (ADR-008). Lives at
+# /opt/rally26/docker-compose.prod.yml on the droplet itself — deployed there by
 # .github/workflows/deploy.yml, not committed with real secrets. Postgres is
 # self-hosted here (not DO Managed Postgres) per the founder's cost/ops call; see
 # ADR-008 for the backup/PITR mitigation this requires.
@@ -12,13 +12,13 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-leaguelift}
-      POSTGRES_USER: ${POSTGRES_USER:-leaguelift}
+      POSTGRES_DB: ${POSTGRES_DB:-rally26}
+      POSTGRES_USER: ${POSTGRES_USER:-rally26}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
     volumes:
-      - leaguelift-postgres-data:/var/lib/postgresql/data
+      - rally26-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-leaguelift}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rally26}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -26,15 +26,15 @@ services:
     # network. Nothing outside this droplet can reach Postgres directly.
 
   backend:
-    image: ${REGISTRY}/leaguelift-backend:${IMAGE_TAG:-latest}
+    image: ${REGISTRY}/rally26-backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-leaguelift}
-      POSTGRES_USER: ${POSTGRES_USER:-leaguelift}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-rally26}
+      POSTGRES_USER: ${POSTGRES_USER:-rally26}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
       SPACES_ENDPOINT: ${SPACES_ENDPOINT:?SPACES_ENDPOINT must be set in .env}
@@ -49,7 +49,7 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?STRIPE_WEBHOOK_SECRET must be set in .env}
       PRINTIFY_API_TOKEN: ${PRINTIFY_API_TOKEN:?PRINTIFY_API_TOKEN must be set in .env}
       PRINTIFY_SHOP_ID: ${PRINTIFY_SHOP_ID:?PRINTIFY_SHOP_ID must be set in .env}
-      FRONTEND_BASE_URL: https://leaguelift.io
+      FRONTEND_BASE_URL: https://rally26.com
       EMAIL_PROVIDER: ${EMAIL_PROVIDER:-logging}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM_ADDRESS: ${RESEND_FROM_ADDRESS:-}
@@ -65,7 +65,7 @@ services:
       start_period: 60s
 
   frontend:
-    image: ${REGISTRY}/leaguelift-frontend:${IMAGE_TAG:-latest}
+    image: ${REGISTRY}/rally26-frontend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       - backend
@@ -96,8 +96,8 @@ services:
         condition: service_healthy
     environment:
       POSTGRES_HOST: postgres
-      POSTGRES_DB: ${POSTGRES_DB:-leaguelift}
-      POSTGRES_USER: ${POSTGRES_USER:-leaguelift}
+      POSTGRES_DB: ${POSTGRES_DB:-rally26}
+      POSTGRES_USER: ${POSTGRES_USER:-rally26}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
       SPACES_ENDPOINT: ${SPACES_ENDPOINT:?SPACES_ENDPOINT must be set in .env}
       SPACES_ACCESS_KEY: ${SPACES_ACCESS_KEY:?SPACES_ACCESS_KEY must be set in .env}
@@ -107,6 +107,6 @@ services:
       RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
 
 volumes:
-  leaguelift-postgres-data:
+  rally26-postgres-data:
   caddy_data:
   caddy_config:

@@ -1,5 +1,5 @@
 /**
- * Typed paths into /public/demo-assets (see docs/LEAGUELIFT_MEDIA_ASSET_DESIGN.md
+ * Typed paths into /public/demo-assets (see docs/RALLY26_MEDIA_ASSET_DESIGN.md
  * sections 18-21 for the source sheets, crop plan, and per-dashboard mapping).
  * These are demo-only, fictional assets — never represented as real customers.
  * Served as static public files for now; a real MediaReferenceResponse from the

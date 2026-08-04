@@ -1,12 +1,12 @@
 export const HOMEPAGE_FAQ: { question: string; answer: string }[] = [
 	{
-		question: "Does LeagueLift replace our current sports software?",
+		question: "Does Rally26 replace our current sports software?",
 		answer:
-			"No. LeagueLift is not initially a registration, scheduling, or roster-management system. It works alongside the tools your organization already uses and adds the revenue layer around them.",
+			"No. Rally26 is not initially a registration, scheduling, or roster-management system. It works alongside the tools your organization already uses and adds the revenue layer around them.",
 	},
 	{
-		question: "Which sports does LeagueLift support?",
-		answer: "LeagueLift is sport-neutral and designed for any youth sports organization, league, club, team, or tournament.",
+		question: "Which sports does Rally26 support?",
+		answer: "Rally26 is sport-neutral and designed for any youth sports organization, league, club, team, or tournament.",
 	},
 	{
 		question: "Can we create pages for individual teams?",
@@ -28,7 +28,7 @@ export const HOMEPAGE_FAQ: { question: string; answer: string }[] = [
 	},
 	{
 		question: "Do children need accounts?",
-		answer: "No. LeagueLift does not create child login accounts. Adults manage households and participant records.",
+		answer: "No. Rally26 does not create child login accounts. Adults manage households and participant records.",
 	},
 	{
 		question: "Can we sell apparel without storing inventory?",
@@ -44,7 +44,7 @@ export const HOMEPAGE_FAQ: { question: string; answer: string }[] = [
 			"Guided onboarding, an organization profile, team and tournament page setup, an initial fundraising workflow, initial apparel workflow as available, basic reporting, and a direct feedback channel.",
 	},
 	{
-		question: "How does LeagueLift make money?",
+		question: "How does Rally26 make money?",
 		answer:
 			"Through organization subscriptions plus clearly disclosed transaction, payment-processing, and optional service fees. See the Pricing page for details.",
 	},

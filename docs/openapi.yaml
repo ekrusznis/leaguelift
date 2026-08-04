@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: LeagueLift API
+  title: Rally26 API
   description: >
-    LeagueLift revenue, fundraising, commerce, and fee-management API for youth sports
+    Rally26 revenue, fundraising, commerce, and fee-management API for youth sports
     organizations. This document covers Phase 0 (foundation), Phase 1 (organization
     onboarding, teams, tournaments, and public pages), Phase 2 (households,
     participants, fee templates, and fee assignments), Phase 3 slice 11
@@ -68,7 +68,7 @@ info:
     event's source-owned fields (opponent/start-end time/venue/status)
     can no longer be overwritten through the ordinary update endpoint;
     detaching first converts the event back to MANUAL (ADR-034).
-    Phase 14 adds the LeagueLift employee Platform Admin console: platform-wide
+    Phase 14 adds the Rally26 employee Platform Admin console: platform-wide
     organization and user directories, organization summaries, and reasoned,
     time-bounded support-access sessions. A Platform Admin remains the authenticated
     actor and is never silently converted into an organization member or customer.
@@ -3443,7 +3443,7 @@ paths:
       summary: Stripe inbound webhook receiver
       description: >
         Not authenticated with a JWT — authenticity comes from the Stripe-Signature
-        header instead, verified server-side against leaguelift.stripe.webhook-secret.
+        header instead, verified server-side against rally26.stripe.webhook-secret.
         Only checkout.session.completed is consumed this slice, for campaign
         contributions, store orders, and sponsorship purchases (disambiguated by
         the session's own metadata); other event types are recorded as IGNORED.
@@ -3628,7 +3628,7 @@ paths:
     get:
       tags: [offline-finance]
       summary: List organization-recorded offline financial transactions
-      description: Manager-only. These records describe money received outside LeagueLift and never fabricate payment-provider identifiers.
+      description: Manager-only. These records describe money received outside Rally26 and never fabricate payment-provider identifiers.
       operationId: listOfflineFinancialRecords
       parameters:
       - {name: verificationStatus, in: query, required: false, schema: {$ref: "#/components/schemas/OfflineVerificationStatus"}}
@@ -7381,7 +7381,7 @@ paths:
   /platform/admin/organizations:
     get:
       tags: [platform-admin]
-      summary: Search all LeagueLift organizations
+      summary: Search all Rally26 organizations
       description: Requires the separately granted PLATFORM_ADMIN role; organization ADMINISTRATOR membership is not sufficient.
       operationId: listPlatformAdminOrganizations
       parameters:
@@ -7420,7 +7420,7 @@ paths:
   /platform/admin/users:
     get:
       tags: [platform-admin]
-      summary: Search all LeagueLift users and memberships
+      summary: Search all Rally26 users and memberships
       operationId: listPlatformAdminUsers
       parameters:
       - name: query
@@ -7443,7 +7443,7 @@ paths:
     get:
       tags: [platform-admin]
       summary: List platform support-access sessions
-      description: Returns reasoned support sessions across LeagueLift employees and organizations. Requires PLATFORM_SUPPORT_ACCESS.
+      description: Returns reasoned support sessions across Rally26 employees and organizations. Requires PLATFORM_SUPPORT_ACCESS.
       operationId: listPlatformSupportAccess
       parameters:
       - name: status
@@ -7939,7 +7939,7 @@ paths:
     delete:
       tags: [integrations]
       summary: Disconnect an integration locally
-      description: Stops LeagueLift use and revokes the stored local credential reference. This does not claim the provider accepted remote
+      description: Stops Rally26 use and revokes the stored local credential reference. This does not claim the provider accepted remote
         revocation.
       operationId: disconnectOrganizationIntegration
       parameters:
@@ -8349,7 +8349,7 @@ components:
         type: string
         format: uuid
     PlatformSupportAccessHeader:
-      name: X-LeagueLift-Support-Access
+      name: X-Rally26-Support-Access
       in: header
       required: true
       description: Active, organization-scoped Platform Admin support-access session id. Required only when a PLATFORM_ADMIN calls an
@@ -9251,7 +9251,7 @@ components:
         token:
           type: string
           description: Raw invitation token, returned only once at creation time. Use it to build the accept link (e.g.
-            app.leaguelift.com/invitations/{token}).
+            app.rally26.com/invitations/{token}).
     InvitationPage:
       type: object
       required: [items, page, size, totalElements]
@@ -10374,13 +10374,13 @@ components:
     PaymentSource:
       type: string
       enum: [STRIPE, OFFLINE]
-      description: Whether LeagueLift processed the payment through Stripe or only recorded money received outside LeagueLift.
+      description: Whether Rally26 processed the payment through Stripe or only recorded money received outside Rally26.
     CreateContributionCheckoutRequest:
       type: object
       required: [amountMinor, successUrl, cancelUrl]
       description: >
         Public, unauthenticated — a supporter contributing to a campaign is never a
-        LeagueLift user. Confirmation happens only via the Stripe webhook
+        Rally26 user. Confirmation happens only via the Stripe webhook
         (POST /webhooks/stripe), not this call's response.
       properties:
         amountMinor:
@@ -10925,7 +10925,7 @@ components:
           type: string
         hasDesign:
           type: boolean
-          description: True when LeagueLift has a current product design assignment. Printify activation additionally requires the design to
+          description: True when Rally26 has a current product design assignment. Printify activation additionally requires the design to
             have been uploaded to Printify through variant creation.
         status:
           $ref: "#/components/schemas/ProductStatus"
@@ -11183,7 +11183,7 @@ components:
 
     ShippingAddressResponse:
       type: object
-      description: Collected by Stripe Checkout's own shipping_address_collection, not a form LeagueLift built.
+      description: Collected by Stripe Checkout's own shipping_address_collection, not a form Rally26 built.
       properties:
         name:
           type: string
@@ -11690,7 +11690,7 @@ components:
       required: [sponsorName, successUrl, cancelUrl]
       description: >
         Public, unauthenticated — a sponsor purchasing a package is never a
-        LeagueLift user. Confirmation happens only via the Stripe webhook
+        Rally26 user. Confirmation happens only via the Stripe webhook
         (POST /webhooks/stripe), not this call's response. No logo upload here —
         see AssignSponsorLogoRequest; an org admin assigns the sponsor's logo
         after the sponsorship confirms (ADR-018).
@@ -14498,7 +14498,7 @@ components:
         syncDirection:
           type: string
           enum:
-          - LEAGUELIFT_TO_GOOGLE
+          - RALLY26_TO_GOOGLE
         automaticSyncEnabled:
           type: boolean
         lastCalendarListedAt:

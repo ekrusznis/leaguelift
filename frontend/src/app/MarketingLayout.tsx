@@ -2,7 +2,7 @@ import { Outlet } from "react-router-dom";
 import { SiteFooter } from "../marketing/components/SiteFooter";
 import { SiteHeader } from "../marketing/components/SiteHeader";
 
-/** Shared shell for every public marketing page (LEAGUELIFT_SALES_SITE_DESIGN.md section 32). */
+/** Shared shell for every public marketing page (RALLY26_SALES_SITE_DESIGN.md section 32). */
 export function MarketingLayout() {
 	return (
 		<div className="flex min-h-screen flex-col bg-ice-50">

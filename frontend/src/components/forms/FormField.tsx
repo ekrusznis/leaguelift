@@ -9,7 +9,7 @@ type FormFieldProps = InputHTMLAttributes<HTMLInputElement> & {
 
 /**
  * Text/email/tel/number input with label above, helper text below, and an error
- * linked via aria-describedby (LEAGUELIFT_SALES_SITE_DESIGN.md section 11.1/11.3).
+ * linked via aria-describedby (RALLY26_SALES_SITE_DESIGN.md section 11.1/11.3).
  * Forwards a ref so it composes with `register()` from react-hook-form.
  */
 export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(function FormField(

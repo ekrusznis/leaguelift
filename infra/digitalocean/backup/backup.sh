@@ -6,8 +6,8 @@
 set -euo pipefail
 
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-DUMP_FILE="/tmp/leaguelift-${TIMESTAMP}.sql.gz"
-S3_KEY="backups/leaguelift-${TIMESTAMP}.sql.gz"
+DUMP_FILE="/tmp/rally26-${TIMESTAMP}.sql.gz"
+S3_KEY="backups/rally26-${TIMESTAMP}.sql.gz"
 
 echo "[backup] $(date -u) — dumping ${POSTGRES_DB} from ${POSTGRES_HOST}"
 PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump \
@@ -30,9 +30,9 @@ AWS_SECRET_ACCESS_KEY="${SPACES_SECRET_KEY}" \
 aws s3 ls "s3://${SPACES_BUCKET}/backups/" \
   --endpoint-url "${SPACES_ENDPOINT}" --region "${SPACES_REGION}" \
   | awk '{print $4}' \
-  | grep -E '^leaguelift-[0-9]{8}T' \
+  | grep -E '^rally26-[0-9]{8}T' \
   | while read -r key; do
-      file_date="${key#leaguelift-}"
+      file_date="${key#rally26-}"
       file_date="${file_date%%T*}"
       if [ -n "${file_date}" ] && [ "${file_date}" -lt "${CUTOFF}" ]; then
         echo "[backup] deleting expired backup ${key}"

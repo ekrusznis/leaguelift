@@ -14,7 +14,7 @@ export function SectionHeading({ eyebrow, heading, copy, align = "center", tone 
 	return (
 		<div className={`max-w-2xl ${alignClass}`}>
 			{eyebrow && (
-				<p className={`font-heading text-xs font-semibold uppercase tracking-wide ${tone === "dark" ? "text-green-400" : "text-green-600"}`}>
+				<p className={`font-heading text-xs font-semibold uppercase tracking-wide ${tone === "dark" ? "text-orange-400" : "text-orange-600"}`}>
 					{eyebrow}
 				</p>
 			)}

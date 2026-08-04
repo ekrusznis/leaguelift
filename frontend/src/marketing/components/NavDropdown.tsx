@@ -38,7 +38,7 @@ export function NavDropdown({ group }: { group: NavGroup }) {
 				aria-expanded={open}
 				aria-haspopup="true"
 				onClick={() => setOpen((value) => !value)}
-				className="flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white/90 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-400"
+				className="flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white/90 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400"
 			>
 				{group.label}
 				<svg className={`size-3.5 transition-transform duration-150 ${open ? "rotate-180" : ""}`} viewBox="0 0 16 16" fill="none" aria-hidden="true">

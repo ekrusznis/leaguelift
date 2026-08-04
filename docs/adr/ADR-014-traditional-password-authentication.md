@@ -22,7 +22,7 @@ database instead.
   (`identity/web/AuthController.kt`) are the only public, unauthenticated endpoints
   besides `/api/v1/public/**`.
 - On success, the backend issues a self-issued JWT (HS256, `JwtConfig.kt` /
-  `TokenService.kt`) signed with a shared secret (`leaguelift.jwt.secret`, from
+  `TokenService.kt`) signed with a shared secret (`rally26.jwt.secret`, from
   `JWT_SECRET` in staging/prod — no default, so a missing secret fails startup
   rather than signing with a guessable key).
 - Spring Security's OAuth2 resource-server support still validates every subsequent

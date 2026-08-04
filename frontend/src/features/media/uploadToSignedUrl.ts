@@ -11,8 +11,8 @@ export class MediaUploadError extends Error {
 /**
  * PUTs a file directly to a presigned object-storage URL — deliberately bypasses
  * apiFetch (DESIGN-DOC.md section 11.3: the browser uploads directly to storage, the
- * LeagueLift API never proxies file bytes). No Authorization header, no JSON body,
- * and storage error responses are XML, not the LeagueLift ErrorResponse shape, so this
+ * Rally26 API never proxies file bytes). No Authorization header, no JSON body,
+ * and storage error responses are XML, not the Rally26 ErrorResponse shape, so this
  * throws a small local error type instead of reusing ApiError.
  */
 export async function uploadToSignedUrl(url: string, file: File, requiredHeaders: Record<string, string>): Promise<void> {

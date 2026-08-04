@@ -40,7 +40,7 @@ describe("Platform Admin support access transport", () => {
 
 		await apiFetch(`/organizations/${organizationId}/teams`);
 
-		expect(lastRequestHeaders().get("X-LeagueLift-Support-Access")).toBe(accessId);
+		expect(lastRequestHeaders().get("X-Rally26-Support-Access")).toBe(accessId);
 	});
 
 	it("does not attach the session to another organization", async () => {
@@ -48,7 +48,7 @@ describe("Platform Admin support access transport", () => {
 
 		await apiFetch(`/organizations/${otherOrganizationId}/teams`);
 
-		expect(lastRequestHeaders().get("X-LeagueLift-Support-Access")).toBeNull();
+		expect(lastRequestHeaders().get("X-Rally26-Support-Access")).toBeNull();
 	});
 
 	it("attaches the session to a resource-first route with the matching organization query", async () => {
@@ -56,7 +56,7 @@ describe("Platform Admin support access transport", () => {
 
 		await apiFetch(`/teams/44444444-4444-4444-8444-444444444444/events?organizationId=${organizationId}`);
 
-		expect(lastRequestHeaders().get("X-LeagueLift-Support-Access")).toBe(accessId);
+		expect(lastRequestHeaders().get("X-Rally26-Support-Access")).toBe(accessId);
 	});
 
 	it("does not send the session to platform endpoints", async () => {
@@ -64,7 +64,7 @@ describe("Platform Admin support access transport", () => {
 
 		await apiFetch("/platform/admin/organizations");
 
-		expect(lastRequestHeaders().get("X-LeagueLift-Support-Access")).toBeNull();
+		expect(lastRequestHeaders().get("X-Rally26-Support-Access")).toBeNull();
 	});
 });
 

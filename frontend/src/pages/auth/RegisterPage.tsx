@@ -59,7 +59,7 @@ export function RegisterPage() {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<Seo title="Create Owner Account" description="Create your LeagueLift organization owner account." noIndex />
+			<Seo title="Create Owner Account" description="Create your Rally26 organization owner account." noIndex />
 			<AuthTabs active="register" />
 
 			<div className="rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">

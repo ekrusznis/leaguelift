@@ -72,10 +72,10 @@ remains unconsumed (`outbox_event` rows are written but nothing processes
 them — Phase 8). Building the reminder feature on infrastructure that
 doesn't exist would block a real Phase 6 need on an unrelated future phase.
 `SponsorshipRenewalReminderService.sendDueReminders` runs on a configurable
-cron (`leaguelift.sponsorship.renewal-reminder.cron`, default daily at
+cron (`rally26.sponsorship.renewal-reminder.cron`, default daily at
 08:00) and finds confirmed+approved sponsorships whose package
 `placement_end_date` falls within a configurable window
-(`leaguelift.sponsorship.renewal-reminder.days-before`, default 14 —
+(`rally26.sponsorship.renewal-reminder.days-before`, default 14 —
 `SponsorshipRenewalReminderProperties`) that haven't already been reminded
 (`sponsorship.renewal_reminder_sent_at`, V17, guards against re-sending on
 every cron tick). No `EmailProvider` implementation existed anywhere in this
@@ -186,7 +186,7 @@ explicit about staying bounded here.
 - **Platform-admin-mediated approval instead of org-admin**: rejected —
   consistent with ADR-017's refund-authorization precedent (org admins are
   already trusted operators for financial actions on their own organization;
-  requiring LeagueLift staff involvement would add operational overhead this
+  requiring Rally26 staff involvement would add operational overhead this
   proof-of-concept doesn't need).
 - **Leaving reject() as charged-but-hidden with a manual follow-up refund
   step**: rejected — the founder was explicit that this was not acceptable;

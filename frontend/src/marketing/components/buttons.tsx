@@ -69,7 +69,7 @@ function renderContent(children: ReactNode, loading: boolean | undefined, icon: 
 }
 
 function buildClassName(base: string, className: string | undefined) {
-	return `group inline-flex min-h-11 min-w-11 items-center justify-center rounded-[10px] px-6 py-3 text-sm font-semibold transition-all duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:-translate-y-px focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400 disabled:pointer-events-none disabled:opacity-45 ${base} ${className ?? ""}`;
+	return `group inline-flex min-h-11 min-w-11 items-center justify-center rounded-[10px] px-6 py-3 text-sm font-semibold transition-all duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] hover:-translate-y-px focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-orange-400 disabled:pointer-events-none disabled:opacity-45 ${base} ${className ?? ""}`;
 }
 
 function renderAs(props: ButtonLikeProps, className: string) {
@@ -106,11 +106,14 @@ function renderAs(props: ButtonLikeProps, className: string) {
 	);
 }
 
-/** Primary green CTA (section 10.1): Get Started, Sign In, Create Account, Continue. */
+/**
+ * Primary CTA (section 10.1): Get Started, Sign In, Create Account, Continue.
+ * Rebranded orange (ADR-057) — was green under the LeagueLift palette.
+ */
 export function PrimaryButton(props: ButtonLikeProps) {
 	return renderAs(
 		props,
-		buildClassName("bg-green-500 text-white shadow-[0_12px_34px_rgba(32,178,107,0.28)] hover:bg-green-400 active:bg-green-600", props.className),
+		buildClassName("bg-orange-500 text-white shadow-[0_12px_34px_rgba(242,96,12,0.30)] hover:bg-orange-400 active:bg-orange-600", props.className),
 	);
 }
 
@@ -119,7 +122,7 @@ export function SecondaryDarkButton(props: ButtonLikeProps) {
 	return renderAs(
 		props,
 		buildClassName(
-			"border border-white/25 bg-transparent text-white hover:border-green-400/70",
+			"border border-white/25 bg-transparent text-white hover:border-orange-400/70",
 			props.className,
 		),
 	);
@@ -130,7 +133,7 @@ export function SecondaryLightButton(props: ButtonLikeProps) {
 	return renderAs(
 		props,
 		buildClassName(
-			"border border-navy-900 bg-white text-navy-900 hover:border-green-500 hover:text-green-600",
+			"border border-navy-900 bg-white text-navy-900 hover:border-orange-500 hover:text-orange-600",
 			props.className,
 		),
 	);

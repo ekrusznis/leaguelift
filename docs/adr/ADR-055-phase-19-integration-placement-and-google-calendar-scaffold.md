@@ -12,7 +12,7 @@ The ownership boundary differs by provider:
 
 - Google Calendar belongs to one authenticated user and must not be authorized once by an organization owner for every household or staff member.
 - QuickBooks and sports-data providers belong to an organization and are managed by owners or administrators.
-- Stripe, Printify, Resend, Twilio, DigitalOcean Spaces, and keyless Google Maps are LeagueLift-operated infrastructure. Customer users must never see or enter the platform credentials.
+- Stripe, Printify, Resend, Twilio, DigitalOcean Spaces, and keyless Google Maps are Rally26-operated infrastructure. Customer users must never see or enter the platform credentials.
 
 The existing standards-based ICS export is already real and must remain available even when Google OAuth is unavailable.
 
@@ -26,9 +26,9 @@ The Platform Admin panel reports sanitized configuration checks only. It never r
 
 ### Google Calendar ownership and settings
 
-Model Google Calendar as a `USER`-owned OAuth connection. Add one optional selected writable destination calendar per connection and a durable mapping from `(connection_id, LeagueLift event_id)` to Google calendar/event identity, ETag, export hash, sync state, and redacted error.
+Model Google Calendar as a `USER`-owned OAuth connection. Add one optional selected writable destination calendar per connection and a durable mapping from `(connection_id, Rally26 event_id)` to Google calendar/event identity, ETag, export hash, sync state, and redacted error.
 
-The first modeled direction is `LEAGUELIFT_TO_GOOGLE`. Automatic synchronization remains disabled. This slice supplies mapping and provider-client seams but no scheduler and no claim that events are being written in a non-stub environment.
+The first modeled direction is `RALLY26_TO_GOOGLE`. Automatic synchronization remains disabled. This slice supplies mapping and provider-client seams but no scheduler and no claim that events are being written in a non-stub environment.
 
 ### Provider-specific client seam
 
@@ -44,7 +44,7 @@ Local disconnect and provider-confirmed revocation remain distinct operations; t
 
 ### ICS fallback and documentation
 
-Keep ICS download/Add to Calendar behavior available independently of Google readiness. Publish Help Center articles explaining Google Calendar availability and why organizations never enter LeagueLift platform credentials.
+Keep ICS download/Add to Calendar behavior available independently of Google readiness. Publish Help Center articles explaining Google Calendar availability and why organizations never enter Rally26 platform credentials.
 
 ### Included catalog-readiness hotfix
 

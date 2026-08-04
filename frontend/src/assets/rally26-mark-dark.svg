@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="200" height="180" viewBox="0 0 200 180"
+     role="img" aria-labelledby="title desc">
+  <title id="title">Rally26 logo mark dark</title>
+  <desc id="desc">Rally26 "R" mark with an orange forward chevron, navy ink, transparent background.</desc>
+
+  <!-- Transparent background by design -->
+
+  <!-- Forward-motion chevron, integrated behind the R's right stroke -->
+  <path d="M100 40 L150 40 L185 90 L150 140 L100 140 L128 90 Z" fill="#F2600C"/>
+
+  <!-- R glyph -->
+  <text x="8" y="148" font-family="Manrope, 'Segoe UI', Arial, sans-serif"
+        font-weight="800" font-size="168" letter-spacing="-4" fill="#0B1F33">R</text>
+</svg>

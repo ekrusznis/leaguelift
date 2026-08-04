@@ -5,7 +5,7 @@
 
 ## Context
 
-LeagueLift's current sports structure has a `team.season` text field but no separate season aggregate. Phase 16's final slice requires rollover, archive, and selective-copy controls without inventing a broader league-registration or scheduling model. The operation is high-risk because a naive “clone team” could silently duplicate financial history, RSVP responses, credentials, guardian relationships, or consent assumptions.
+Rally26's current sports structure has a `team.season` text field but no separate season aggregate. Phase 16's final slice requires rollover, archive, and selective-copy controls without inventing a broader league-registration or scheduling model. The operation is high-risk because a naive “clone team” could silently duplicate financial history, RSVP responses, credentials, guardian relationships, or consent assumptions.
 
 ## Decision
 

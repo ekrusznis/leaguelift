@@ -6,7 +6,7 @@ Accepted
 ## Context
 
 DESIGN-DOC.md section 17 splits every external connector into two categories:
-**platform-operated** (LeagueLift holds the one shared credential — Stripe, Printify,
+**platform-operated** (Rally26 holds the one shared credential — Stripe, Printify,
 Spaces, Resend, Twilio, Google Maps/Calendar's stub-level keys — all already built,
 no per-org UI) and **org-connected** (an individual organization connects its own
 account — MaxPreps, GameChanger, SportsEngine, feeding the `EventProvider` seam

@@ -8,7 +8,7 @@ import { appPaths } from "../../routes/appPaths";
 import { EventTemplatePanel } from "./EventTemplatePanel";
 import { deriveTemplateTimes } from "./eventTemplateTiming";
 import { downloadEventCalendar, useCreateEvent, useEvents, useEventTemplates, type EventScope } from "./api";
-import type { CreateEventInput, EventTemplate, EventType, EventVisibility, LeagueLiftEvent } from "./types";
+import type { CreateEventInput, EventTemplate, EventType, EventVisibility, Rally26Event } from "./types";
 
 function formatDateTime(value: string | null, timezone: string) {
 	if (!value) return "To be determined";
@@ -19,7 +19,7 @@ function formatDateTime(value: string | null, timezone: string) {
 	}).format(new Date(value));
 }
 
-function statusClasses(status: LeagueLiftEvent["status"]) {
+function statusClasses(status: Rally26Event["status"]) {
 	switch (status) {
 		case "CANCELLED":
 			return "bg-error-50 text-error-700";
@@ -73,7 +73,7 @@ export function EventListPanel({
 		[eventsQuery.data],
 	);
 
-	async function downloadCalendar(event: LeagueLiftEvent) {
+	async function downloadCalendar(event: Rally26Event) {
 		setDownloadError(null);
 		try {
 			const file = await downloadEventCalendar(event.organizationId, event.id);

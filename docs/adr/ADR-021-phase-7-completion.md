@@ -115,7 +115,7 @@ placeholder.
 Orders is confirmed/pending/refunded counts from `"order"`, no organization
 filter. Payments sums `ledger_entry` platform-wide by type/direction (gross
 processed = `GROSS_SALE` + `CONTRIBUTION` credits; platform fees =
-`LEAGUELIFT_PLATFORM_FEE` debits; refunded = `REFUND` debits). Payouts counts
+`RALLY26_PLATFORM_FEE` debits; refunded = `REFUND` debits). Payouts counts
 organizations with `organization_payout_account.payouts_enabled = true` and sums
 `TRANSFER` debits. Audit is **not** a new endpoint — it reuses `GET /me/activity`
 from decision 5, which is already platform-wide for a platform administrator.
@@ -146,7 +146,7 @@ flagged.
 adds a second team and household to the existing Riverside organization, fee
 assignments in every status (OPEN/PARTIALLY_PAID/PAID) with known-correct roll-up
 totals, a published campaign with a confirmed contribution and matching
-`ledger_entry` rows (CONTRIBUTION credit / LEAGUELIFT_PLATFORM_FEE debit /
+`ledger_entry` rows (CONTRIBUTION credit / RALLY26_PLATFORM_FEE debit /
 ORGANIZATION_EARNING credit, at the real 5% default rate), and a second
 organization entirely (Lakeside Sports Alliance) so platform-wide aggregates sum
 across more than one organization and org-scoped search can be verified not to
@@ -189,7 +189,7 @@ directly) is the intended current state, not a gap this pass left behind. No new
 ADR content was needed for this beyond noting the reversal here.
 
 **12. New roadmap item: a platform-admin data-management console (Phase 13).**
-The founder requested, separately, a console for LeagueLift staff to view **and
+The founder requested, separately, a console for Rally26 staff to view **and
 edit** data for any user/organization/team/household platform-wide — broader
 than decision 7's read-only aggregates, and explicitly placed after Phase 12
 (Production Readiness Review / testing-QA), not before. Added to §14.1 as Phase

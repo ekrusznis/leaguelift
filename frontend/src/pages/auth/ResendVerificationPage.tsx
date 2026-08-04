@@ -33,7 +33,7 @@ export function ResendVerificationPage() {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<Seo title="Resend Verification Email" description="Request a new LeagueLift account verification email." noIndex />
+			<Seo title="Resend Verification Email" description="Request a new Rally26 account verification email." noIndex />
 			<div className="rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
 				<h1 className="font-heading text-2xl font-extrabold text-white">Resend verification email</h1>
 				<p className="mt-1 text-sm text-slate-300">Enter your owner account email and we&rsquo;ll send a fresh verification link.</p>

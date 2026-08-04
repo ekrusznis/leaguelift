@@ -8,7 +8,7 @@ const HELP_CATEGORIES: { category: string; items: { question: string; answer: st
 		category: "Getting Started",
 		items: [
 			{
-				question: "How do I get started with LeagueLift?",
+				question: "How do I get started with Rally26?",
 				answer: "Create an account, and we'll guide you through organization setup — or talk to our team for a hands-on, guided setup.",
 			},
 		],
@@ -17,8 +17,8 @@ const HELP_CATEGORIES: { category: string; items: { question: string; answer: st
 		category: "Accounts",
 		items: [
 			{
-				question: "Who can create a LeagueLift account?",
-				answer: "Adult administrators, team managers, and parents or guardians. LeagueLift does not create child login accounts.",
+				question: "Who can create a Rally26 account?",
+				answer: "Adult administrators, team managers, and parents or guardians. Rally26 does not create child login accounts.",
 			},
 		],
 	},
@@ -80,7 +80,7 @@ const HELP_CATEGORIES: { category: string; items: { question: string; answer: st
 		category: "Billing",
 		items: [
 			{
-				question: "How is LeagueLift priced?",
+				question: "How is Rally26 priced?",
 				answer: "Organization subscriptions plus clearly disclosed transaction fees. See the Pricing page for details.",
 			},
 		],
@@ -89,7 +89,7 @@ const HELP_CATEGORIES: { category: string; items: { question: string; answer: st
 		category: "Privacy",
 		items: [
 			{
-				question: "What data does LeagueLift collect about participants?",
+				question: "What data does Rally26 collect about participants?",
 				answer: "Lightweight participant records managed by adults — no child accounts or logins. See the Privacy Policy for details.",
 			},
 		],
@@ -99,7 +99,7 @@ const HELP_CATEGORIES: { category: string; items: { question: string; answer: st
 export function HelpPage() {
 	return (
 		<>
-			<Seo title="Help Center" description="Frequently asked questions about using LeagueLift." />
+			<Seo title="Help Center" description="Frequently asked questions about using Rally26." />
 
 			<section className="bg-navy-950 py-16 sm:py-20">
 				<PageContainer className="max-w-2xl">

@@ -35,7 +35,7 @@ export function ActionCenterPage() {
 				<p className="text-sm font-semibold uppercase tracking-wide text-victory-green">Your work queue</p>
 				<h1 className="mt-1 font-heading text-3xl font-bold text-navy">Action Center</h1>
 				<p className="mt-2 max-w-3xl text-slate-gray">
-					LeagueLift gathers the items that need your attention from the roles and organizations you can access. The source record remains the system of truth.
+					Rally26 gathers the items that need your attention from the roles and organizations you can access. The source record remains the system of truth.
 				</p>
 			</header>
 
@@ -56,7 +56,7 @@ export function ActionCenterPage() {
 					</div>
 
 					{actionCenter.data.items.length === 0 ? (
-						<EmptyState title="You are caught up" description="No current LeagueLift records require action from your account." />
+						<EmptyState title="You are caught up" description="No current Rally26 records require action from your account." />
 					) : (
 						<ul className="flex flex-col gap-3" aria-label="Action center items">
 							{actionCenter.data.items.map((item) => {

@@ -1,8 +1,8 @@
 # Cloudflare
 
 **Deferred — not part of the current prod deployment.** Per ADR-008
-(`docs/adr/ADR-008-digitalocean-deployment.md`), DNS for `leaguelift.io` (the actual
-registered domain — this file previously and incorrectly targeted `leaguelift.com`)
+(`docs/adr/ADR-008-digitalocean-deployment.md`), DNS for `rally26.com` (the actual
+registered domain — this file previously and incorrectly targeted `rally26.com`)
 is handled directly by DigitalOcean DNS instead, to minimize the number of
 accounts/tools needed for the first prod deploy. See `infra/digitalocean/README.md`.
 

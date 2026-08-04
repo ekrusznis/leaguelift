@@ -3,7 +3,7 @@ spring:
     url: ${DATABASE_URL}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
-leaguelift:
+rally26:
   jwt:
     # No default — startup fails if this isn't set, rather than silently signing
     # tokens with a guessable key. Generate with e.g. `openssl rand -base64 48`.
@@ -121,7 +121,7 @@ leaguelift:
 
   # Phase 17 support-case routing. The mailbox is public configuration; real delivery activation is Phase 20.
   support:
-    inbox-email: ${LEAGUELIFT_SUPPORT_INBOX_EMAIL:support@leaguelift.io}
+    inbox-email: ${RALLY26_SUPPORT_INBOX_EMAIL:support@rally26.com}
 
 management:
   endpoint:

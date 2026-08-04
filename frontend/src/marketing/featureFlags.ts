@@ -1,6 +1,6 @@
 /**
  * Feature flags for incomplete or not-yet-configured sales-site capabilities
- * (LEAGUELIFT_SALES_SITE_DESIGN.md section 39.5). Flip a flag only once the
+ * (RALLY26_SALES_SITE_DESIGN.md section 39.5). Flip a flag only once the
  * underlying capability is real — an incomplete feature must never be visible in
  * production.
  */

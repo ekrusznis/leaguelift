@@ -1,13 +1,22 @@
 /*
- * LeagueLift design tokens (DESIGN-DOC.md section 4.2/4.3).
+ * Rally26 design tokens (DESIGN-DOC.md section 4.2/4.3).
  * Tailwind v4 reads @theme to generate matching utility classes (e.g. bg-navy,
  * text-victory-green), so these values are usable both as CSS variables and as
  * Tailwind utilities.
+ *
+ * 2026-08-03 rebrand (ADR-057, LeagueLift -> Rally26): the brand accent moved from
+ * gold to orange, matching the new logo. Rather than rename `championship-gold` /
+ * `gold-500` / `gold-400` (and touch every one of their call sites across the app),
+ * these token NAMES were kept and their VALUES changed to orange — every existing
+ * `bg-championship-gold`/`text-gold-500`/etc. usage picks up the new brand color
+ * automatically. New code should prefer the explicit `--color-orange-*` aliases
+ * below; the `gold-*` names are kept only for backward compatibility with existing
+ * call sites and may be renamed outright in a future pass.
  */
 @theme {
   --color-navy: #0B1F33;
   --color-victory-green: #20B26B;
-  --color-championship-gold: #F4B740;
+  --color-championship-gold: #F2600C;
   --color-ice-white: #F7F9FC;
   --color-slate-gray: #526275;
   --color-pure-white: #FFFFFF;
@@ -15,7 +24,7 @@
   --color-info-blue: #2F6FED;
 
   /*
-   * Full scale from LEAGUELIFT_SALES_SITE_DESIGN.md section 5.1. The names above
+   * Full scale from RALLY26_SALES_SITE_DESIGN.md section 5.1. The names above
    * predate the sales-site spec and stay put (existing app screens use them); the
    * scale below is what the marketing site and auth pages are built with. Several
    * steps are intentionally identical values to the names above (e.g. navy-900 ==
@@ -30,8 +39,15 @@
   --color-green-500: #20B26B;
   --color-green-400: #3CCF83;
 
-  --color-gold-500: #F4B740;
-  --color-gold-400: #FFC95C;
+  /* Rebranded gold -> orange (ADR-057); kept the `gold` name, see file header. */
+  --color-gold-500: #F2600C;
+  --color-gold-400: #FF7A33;
+
+  /* Explicit brand-orange aliases — use these in new code. */
+  --color-orange-600: #D9500A;
+  --color-orange-500: #F2600C;
+  --color-orange-400: #FF7A33;
+  --color-orange-300: #FFA366;
 
   --color-ice-50: #F7F9FC;
   --color-white: #FFFFFF;

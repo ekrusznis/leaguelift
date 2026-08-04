@@ -7,7 +7,7 @@ Accepted
 
 Section 14.1A has stated since before Phase 10 began: *"source-owned core fields
 normally include official opponent, start time, venue, and official status.
-LeagueLift overlay fields include arrival time, meeting point, uniform
+Rally26 overlay fields include arrival time, meeting point, uniform
 instructions, parent-facing notes, publication, and RSVP settings. Editing a
 source-owned field must be explicit: temporary local override, detach from
 source, or update in the source system. Never silently fight the provider on

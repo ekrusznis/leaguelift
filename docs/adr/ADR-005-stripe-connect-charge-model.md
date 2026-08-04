@@ -14,17 +14,17 @@ recording, collections, CSV export), specifically so it stops blocking those lat
 phases — not to build live charge routing now.
 
 Money needs to eventually reach an organization's bank account (a payout) while
-LeagueLift takes a platform fee, and — per DESIGN-DOC.md §16/§14.3 — LeagueLift needs
+Rally26 takes a platform fee, and — per DESIGN-DOC.md §16/§14.3 — Rally26 needs
 to fund Printify production costs before an org's apparel-sale share is finalized, and
 hold family credits "pending" before they become "available." That timing requirement
 is the deciding factor between Stripe Connect's three charge models.
 
 ## Decision
 
-**Separate charges and transfers.** LeagueLift charges the customer directly (funds
-land in LeagueLift's own Stripe balance first), then explicitly creates a `Transfer`
+**Separate charges and transfers.** Rally26 charges the customer directly (funds
+land in Rally26's own Stripe balance first), then explicitly creates a `Transfer`
 to the connected organization's account once its share is known — after production
-costs are deducted, after a credit's availability delay has passed, etc. LeagueLift is
+costs are deducted, after a credit's availability delay has passed, etc. Rally26 is
 the merchant of record and bears refund/dispute liability by default (resolves
 §19.3's former item 3 — organizations are not the merchant of record).
 
@@ -35,7 +35,7 @@ Rejected alternatives:
   charge itself.
 - **Direct charges** — the charge is created on the org's own connected account; the
   org becomes primarily liable for disputes, and Stripe's statement descriptor shows
-  the org's name, not LeagueLift's. Rejected: contradicts the one-consistent-checkout-
+  the org's name, not Rally26's. Rejected: contradicts the one-consistent-checkout-
   experience goal and pushes dispute liability onto volunteer-run organizations that
   are in no position to handle it.
 
@@ -50,7 +50,7 @@ controlled live transaction+refund).
 
 Payout-account fields mirror Stripe's own account object (`stripe_account_id`,
 `details_submitted`, `charges_enabled`, `payouts_enabled`) rather than a separate
-status enum — Stripe stays the source of truth, LeagueLift keeps a synchronized
+status enum — Stripe stays the source of truth, Rally26 keeps a synchronized
 record (DESIGN-DOC.md §16).
 
 ## Consequences
@@ -60,7 +60,7 @@ record (DESIGN-DOC.md §16).
 - Every future live charge needs an explicit, separate `Transfer` call at the point
   an org's share is actually known — more application code than destination charges
   would have needed, in exchange for correct timing control.
-- LeagueLift bears refund/dispute liability as merchant of record; this needs to be
+- Rally26 bears refund/dispute liability as merchant of record; this needs to be
   priced into the platform fee and covered in the pilot's legal/terms review before
   Live Payments Launch.
 - §19.3's open questions list shrinks by two items (Stripe Connect charge model;

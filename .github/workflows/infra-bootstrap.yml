@@ -1,7 +1,7 @@
 name: infra-bootstrap
 
 # One-time (idempotent, safe to re-run) DigitalOcean resource provisioning: container
-# registry + DNS zone/records for leaguelift.io pointed at the existing prod droplet.
+# registry + DNS zone/records for rally26.com pointed at the existing prod droplet.
 # Run by hand from the Actions tab — this is infrastructure setup, not something that
 # should fire on every push. See docs/adr/ADR-008.
 #
@@ -31,15 +31,15 @@ jobs:
           if doctl registry get >/dev/null 2>&1; then
             echo "Registry already exists, skipping."
           else
-            doctl registry create leaguelift --subscription-tier basic --region nyc3
+            doctl registry create rally26 --subscription-tier basic --region nyc3
           fi
 
-      - name: Create leaguelift.io DNS zone (no-op if it already exists)
+      - name: Create rally26.com DNS zone (no-op if it already exists)
         run: |
-          if doctl compute domain get leaguelift.io >/dev/null 2>&1; then
+          if doctl compute domain get rally26.com >/dev/null 2>&1; then
             echo "Domain already exists in DO DNS, skipping create."
           else
-            doctl compute domain create leaguelift.io --ip-address "${{ inputs.droplet_ip }}"
+            doctl compute domain create rally26.com --ip-address "${{ inputs.droplet_ip }}"
           fi
 
       - name: Upsert A records (apex, www, api)
@@ -50,14 +50,14 @@ jobs:
           upsert_a_record() {
             local name="$1"
             local existing_id
-            existing_id=$(doctl compute domain records list leaguelift.io \
+            existing_id=$(doctl compute domain records list rally26.com \
               --format ID,Type,Name --no-header | awk -v n="$name" '$2=="A" && $3==n {print $1}')
             if [ -n "$existing_id" ]; then
               echo "Updating existing A record for '$name' -> $IP"
-              doctl compute domain records update leaguelift.io --record-id "$existing_id" --record-data "$IP"
+              doctl compute domain records update rally26.com --record-id "$existing_id" --record-data "$IP"
             else
               echo "Creating A record for '$name' -> $IP"
-              doctl compute domain records create leaguelift.io --record-type A --record-name "$name" --record-data "$IP" --record-ttl 3600
+              doctl compute domain records create rally26.com --record-type A --record-name "$name" --record-data "$IP" --record-ttl 3600
             fi
           }
 
@@ -74,11 +74,11 @@ jobs:
             echo "Could not find a droplet with IP ${{ inputs.droplet_ip }} on this account/team — skipping firewall step." >&2
             exit 0
           fi
-          if doctl compute firewall list --format Name --no-header | grep -qx "leaguelift-prod"; then
-            echo "Firewall 'leaguelift-prod' already exists, skipping create."
+          if doctl compute firewall list --format Name --no-header | grep -qx "rally26-prod"; then
+            echo "Firewall 'rally26-prod' already exists, skipping create."
           else
             doctl compute firewall create \
-              --name leaguelift-prod \
+              --name rally26-prod \
               --droplet-ids "$DROPLET_ID" \
               --inbound-rules "protocol:tcp,ports:22,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:80,address:0.0.0.0/0,address:::/0 protocol:tcp,ports:443,address:0.0.0.0/0,address:::/0" \
               --outbound-rules "protocol:tcp,ports:all,address:0.0.0.0/0,address:::/0 protocol:udp,ports:all,address:0.0.0.0/0,address:::/0"
@@ -86,8 +86,8 @@ jobs:
 
       - name: Summary
         run: |
-          echo "Registry: registry.digitalocean.com/leaguelift"
-          echo "DNS: leaguelift.io, www.leaguelift.io, api.leaguelift.io -> ${{ inputs.droplet_ip }}"
+          echo "Registry: registry.digitalocean.com/rally26"
+          echo "DNS: rally26.com, www.rally26.com, api.rally26.com -> ${{ inputs.droplet_ip }}"
           echo "DNS propagation can take up to a few hours. Caddy (on the droplet) will not"
           echo "successfully issue TLS certificates until these records resolve publicly —"
-          echo "check with: dig +short leaguelift.io / dig +short api.leaguelift.io"
+          echo "check with: dig +short rally26.com / dig +short api.rally26.com"

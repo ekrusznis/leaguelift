@@ -1,11 +1,11 @@
 -- Phase 5 slice 1: ledger, real payout transfers, and refunds (ADR-017).
 -- Makes DESIGN-DOC.md section 8.6's ledger model real for the first time, and
 -- closes the second half of ADR-005's "separate charges and transfers" model
--- — money now actually moves from LeagueLift's Stripe balance to an org's
+-- — money now actually moves from Rally26's Stripe balance to an org's
 -- connected account, and a bad transaction can be reversed.
 --
 -- Deliberately NOT part of this migration: PAYMENT_PROCESSING_FEE tracking
--- (Stripe deducts its own fee from LeagueLift's balance regardless of whether
+-- (Stripe deducts its own fee from Rally26's balance regardless of whether
 -- our ledger records it — a reporting gap, not a functional one this slice),
 -- and the full section 8.6 entry-type list (SALES_TAX, SHIPPING_COLLECTED,
 -- FULFILLMENT_SHIPPING_COST, TEAM_ALLOCATION, HOUSEHOLD_CREDIT, CHARGEBACK,
@@ -33,7 +33,7 @@ create table ledger_entry (
     effective_at                timestamptz not null default now(),
     created_at                  timestamptz not null default now(),
     constraint ledger_entry_type_check check (entry_type in (
-        'CONTRIBUTION', 'GROSS_SALE', 'PRODUCTION_COST', 'LEAGUELIFT_PLATFORM_FEE',
+        'CONTRIBUTION', 'GROSS_SALE', 'PRODUCTION_COST', 'RALLY26_PLATFORM_FEE',
         'ORGANIZATION_EARNING', 'TRANSFER', 'REFUND'
     )),
     constraint ledger_entry_direction_check check (direction in ('CREDIT', 'DEBIT')),

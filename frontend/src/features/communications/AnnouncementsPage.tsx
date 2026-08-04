@@ -114,7 +114,7 @@ export function AnnouncementsPage() {
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<div>
 						<h2 id="announcement-inbox-heading" className="font-heading text-xl font-semibold text-navy">Your inbox</h2>
-						<p className="mt-1 text-sm text-slate-gray">Published messages addressed to your activated LeagueLift account.</p>
+						<p className="mt-1 text-sm text-slate-gray">Published messages addressed to your activated Rally26 account.</p>
 					</div>
 					{inbox.data && <span className="text-sm text-slate-gray">{inbox.data.totalElements} message{inbox.data.totalElements === 1 ? "" : "s"}</span>}
 				</div>
@@ -169,7 +169,7 @@ export function AnnouncementsPage() {
 							{scopes.map((scope) => <option key={`${scope.scopeType}:${scope.scopeId}`} value={`${scope.scopeType}:${scope.scopeId}`}>{scope.label} · {scope.scopeType.toLowerCase()}</option>)}
 						</select>
 						{selectedScope?.scopeType === "TOURNAMENT" && (
-							<p className="mt-2 text-xs text-slate-gray">Tournament-wide guardian and athlete delivery is unavailable until LeagueLift has a participating-team relationship model. Tournament announcements currently resolve staff recipients only.</p>
+							<p className="mt-2 text-xs text-slate-gray">Tournament-wide guardian and athlete delivery is unavailable until Rally26 has a participating-team relationship model. Tournament announcements currently resolve staff recipients only.</p>
 						)}
 					</div>
 

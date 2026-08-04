@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time (idempotent) setup for the leaguelift prod droplet — Ubuntu 24.04 LTS.
+# One-time (idempotent) setup for the rally26 prod droplet — Ubuntu 24.04 LTS.
 # DESIGN-DOC.md section 21 / ADR-008: single droplet, self-hosted Postgres, Caddy for
 # TLS termination, deployed by GitHub Actions over SSH (.github/workflows/deploy.yml).
 #
@@ -7,7 +7,7 @@
 # Launch Droplet Console — no local SSH client needed) or over SSH if you already have
 # access:
 #
-#   curl -fsSL https://raw.githubusercontent.com/ekrusznis/leaguelift/main/infra/digitalocean/bootstrap-droplet.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/ekrusznis/rally26/main/infra/digitalocean/bootstrap-droplet.sh | bash
 #
 # or copy the file over and run `bash bootstrap-droplet.sh`.
 #
@@ -15,8 +15,8 @@
 
 set -euo pipefail
 
-DEPLOY_USER="leaguelift"
-APP_DIR="/opt/leaguelift"
+DEPLOY_USER="rally26"
+APP_DIR="/opt/rally26"
 
 echo "==> Updating apt and installing base packages"
 apt-get update -y
@@ -71,6 +71,6 @@ echo "==> Done."
 echo "Next steps:"
 echo "  1. Copy docker-compose.prod.yml, Caddyfile, and .env (from .env.prod.example,"
 echo "     real secret values filled in) into ${APP_DIR} as the ${DEPLOY_USER} user."
-echo "  2. Point leaguelift.io and api.leaguelift.io A records at this droplet's IP."
+echo "  2. Point rally26.com and api.rally26.com A records at this droplet's IP."
 echo "  3. Trigger the 'deploy' GitHub Actions workflow (or push to main once branch"
 echo "     protection + the workflow are both live)."

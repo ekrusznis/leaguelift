@@ -37,13 +37,13 @@ export function MobileNavigation({ open, onClose }: MobileNavigationProps) {
 	return (
 		<div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-navy-950 text-white lg:hidden" role="dialog" aria-modal="true" aria-label="Site navigation">
 			<div className="flex items-center justify-between px-5 py-4">
-				<span className="font-heading text-lg font-extrabold">LeagueLift</span>
+				<span className="font-heading text-lg font-extrabold">Rally26</span>
 				<button
 					ref={closeButtonRef}
 					type="button"
 					onClick={onClose}
 					aria-label="Close menu"
-					className="rounded-full p-2 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-400"
+					className="rounded-full p-2 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400"
 				>
 					<svg className="size-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 						<path d="m6 6 12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -89,16 +89,30 @@ export function MobileNavigation({ open, onClose }: MobileNavigationProps) {
 				))}
 
 				<div className="border-t border-white/10 pt-4">
-					{SIMPLE_NAV_LINKS.map((link) => (
-						<Link
-							key={link.to}
-							to={link.to}
-							onClick={onClose}
-							className="block py-2.5 text-base font-medium text-slate-200 hover:text-white"
-						>
-							{link.label}
-						</Link>
-					))}
+					{SIMPLE_NAV_LINKS.map((link) =>
+						"hash" in link ? (
+							<button
+								key={link.label}
+								type="button"
+								onClick={() => {
+									onClose();
+									scrollToHash(link.hash);
+								}}
+								className="block w-full py-2.5 text-left text-base font-medium text-slate-200 hover:text-white"
+							>
+								{link.label}
+							</button>
+						) : (
+							<Link
+								key={link.to}
+								to={link.to}
+								onClick={onClose}
+								className="block py-2.5 text-base font-medium text-slate-200 hover:text-white"
+							>
+								{link.label}
+							</Link>
+						),
+					)}
 				</div>
 			</nav>
 

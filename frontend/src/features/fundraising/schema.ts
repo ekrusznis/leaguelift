@@ -16,7 +16,7 @@ export const CAMPAIGN_TYPES = [
 
 /**
  * Mirrors the backend's CreateCampaignRequest validation
- * (backend/src/main/kotlin/com/leaguelift/fundraising/web/CampaignDto.kt) and
+ * (backend/src/main/kotlin/com/rally26/fundraising/web/CampaignDto.kt) and
  * docs/openapi.yaml. Client-side validation is for UX only — the backend remains
  * authoritative (DESIGN-DOC.md section 17.2).
  */
@@ -45,7 +45,7 @@ export type CreateCampaignFormValues = z.infer<typeof createCampaignSchema>;
 
 /**
  * Mirrors the backend's CreateContributionCheckoutRequest and
- * ContributionLimits (backend/src/main/kotlin/com/leaguelift/fundraising/domain/Contribution.kt) —
+ * ContributionLimits (backend/src/main/kotlin/com/rally26/fundraising/domain/Contribution.kt) —
  * min $1.00 / max $50,000.00, mirrored here for immediate UX feedback; the backend
  * remains authoritative.
  */

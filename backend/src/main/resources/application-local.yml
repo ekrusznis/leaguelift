@@ -1,11 +1,11 @@
 spring:
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/leaguelift}
-    username: ${POSTGRES_USER:leaguelift}
-    password: ${POSTGRES_PASSWORD:leaguelift_local_password}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5433/rally26}
+    username: ${POSTGRES_USER:rally26}
+    password: ${POSTGRES_PASSWORD:rally26_local_password}
   flyway:
     # db/seed holds dev-only fixture data (four test users, one per dashboard role —
-    # see docs/LEAGUELIFT_DASHBOARD_DESIGN.md) and must never apply to staging/prod,
+    # see docs/RALLY26_DASHBOARD_DESIGN.md) and must never apply to staging/prod,
     # so it's only added to the locations list here, not in the base application.yml.
     locations: classpath:db/migration,classpath:db/seed
     # Required because db/seed's V9000+ fixture migrations sit "ahead of" the real
@@ -16,7 +16,7 @@ spring:
 # POST /api/v1/auth/register or /login (see docs/security.md), or use one of the
 # seeded dashboard-role accounts (db/seed/V9000__dev_seed_dashboard_role_users.sql,
 # password "DevPassword123!" for all four).
-leaguelift:
+rally26:
   # Dev-only fixed secret — never used outside the local profile. Must be at least
   # 32 bytes for HS256 (see JwtProperties.secretKey).
   jwt:
@@ -25,9 +25,9 @@ leaguelift:
   # compose.yaml's minio/minio-init services.
   spaces:
     endpoint: ${SPACES_ENDPOINT:http://localhost:9000}
-    access-key: ${SPACES_ACCESS_KEY:leaguelift}
-    secret-key: ${SPACES_SECRET_KEY:leaguelift_local_password}
-    bucket: ${SPACES_BUCKET:leaguelift-local}
+    access-key: ${SPACES_ACCESS_KEY:rally26}
+    secret-key: ${SPACES_SECRET_KEY:rally26_local_password}
+    bucket: ${SPACES_BUCKET:rally26-local}
     region: ${SPACES_REGION:us-east-1}
   # Stripe Connect Express onboarding only (ADR-005) — no live charge routing. Blank by
   # default since no real Stripe account exists yet; onboarding calls fail with a clear
@@ -133,7 +133,7 @@ leaguelift:
 
   # Phase 17 support-case routing. The mailbox is public configuration; real delivery activation is Phase 20.
   support:
-    inbox-email: ${LEAGUELIFT_SUPPORT_INBOX_EMAIL:support@leaguelift.io}
+    inbox-email: ${RALLY26_SUPPORT_INBOX_EMAIL:support@rally26.com}
 
 management:
   endpoint:
@@ -142,5 +142,5 @@ management:
 
 logging:
   level:
-    com.leaguelift: DEBUG
+    com.rally26: DEBUG
 

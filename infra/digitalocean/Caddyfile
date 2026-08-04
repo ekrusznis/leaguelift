@@ -1,14 +1,14 @@
-# Reverse proxy + automatic TLS (Let's Encrypt, auto-renewed) for the leaguelift prod
+# Reverse proxy + automatic TLS (Let's Encrypt, auto-renewed) for the rally26 prod
 # droplet. Caddy handles the ACME challenge itself over ports 80/443 — no separate
-# certbot setup needed. Requires leaguelift.io and api.leaguelift.io A records already
+# certbot setup needed. Requires rally26.com and api.rally26.com A records already
 # pointing at this droplet's IP before Caddy can issue certificates.
 
-leaguelift.io, www.leaguelift.io {
+rally26.com, www.rally26.com {
 	reverse_proxy frontend:80
 	encode gzip
 }
 
-api.leaguelift.io {
+api.rally26.com {
 	reverse_proxy backend:8080
 	encode gzip
 }

@@ -43,12 +43,12 @@ using a plain `RestClient` against `https://api.resend.com/emails`, following
 the `PrintifyConfig` pattern (no official Kotlin/Java Resend SDK is assumed;
 a plain authenticated REST client mirrors how Printify is already wrapped,
 rather than pulling in an unofficial SDK dependency for one endpoint). A new
-`ResendProperties` (`leaguelift.email.resend`, `api-key` + `from-address`)
+`ResendProperties` (`rally26.email.resend`, `api-key` + `from-address`)
 departs from `PrintifyProperties`/`StripeProperties`'s "no default in
 staging/prod" convention on purpose: both fields keep a blank Kotlin default
 in **every** profile, because unlike Stripe/Printify (always active, no
 on/off switch), Resend is only consulted when a new
-`leaguelift.email.provider` property equals `"resend"` — `"logging"` (the
+`rally26.email.provider` property equals `"resend"` — `"logging"` (the
 default everywhere) is a fully legitimate mode where these values are simply
 unused, so there's no single env var whose absence should fail startup. The
 safety net for a real deployment that flips the switch without a real key is
@@ -57,13 +57,13 @@ working client, and a resulting 401 is translated into a clean
 `ServiceUnavailableException` at call time, not a build/startup failure.
 `LoggingEmailProvider` (`@ConditionalOnProperty(..., havingValue = "logging",
 matchIfMissing = true)`) remains active in every environment without
-`leaguelift.email.provider = resend` — which is every environment today,
+`rally26.email.provider = resend` — which is every environment today,
 since no real Resend credentials are configured anywhere yet, same posture
 as Stripe/Printify.
 
 **2. The outbox worker is a single scheduled poller with row-level claiming,
 not a message-broker consumer.** A new `outbox/application/OutboxWorker.kt`
-runs on a configurable fixed delay (`leaguelift.outbox.worker.poll-interval-ms`,
+runs on a configurable fixed delay (`rally26.outbox.worker.poll-interval-ms`,
 default 5000), claiming a batch of due `PENDING`/`FAILED` rows (`available_at
 <= now()`) via a single `with ... for update skip locked` CTE update
 (Postgres row-level locking — safe for a single-instance deployment today and
@@ -82,9 +82,9 @@ than silently dropped or auto-marked `PROCESSED` — an unhandled event type is
 a bug to notice, not a no-op. On handler success the row moves to
 `PROCESSED` with `processed_at` set; on failure, `last_error` records the
 exception message and, if `attempt_count` is still below
-`leaguelift.outbox.worker.max-attempts` (default 5), the row moves to
+`rally26.outbox.worker.max-attempts` (default 5), the row moves to
 `FAILED` with `available_at` pushed forward by an exponential backoff
-(`leaguelift.outbox.worker.backoff-base-seconds`, default 30, doubled per
+(`rally26.outbox.worker.backoff-base-seconds`, default 30, doubled per
 attempt, capped at `backoff-cap-seconds`, default 3600) — otherwise it moves
 to `DEAD_LETTER` instead of retrying further. Using `FAILED` (rather than
 just resetting to `PENDING`) for the backoff-wait state is deliberate: it's
@@ -165,7 +165,7 @@ is added to both `Capabilities.kt` and the mirrored frontend
   rows if the admin API is widened to allow that status too — not built in
   this slice, `DEAD_LETTER`/`FAILED` only.
 - `LoggingEmailProvider` stays the active bean everywhere
-  `leaguelift.email.provider` isn't explicitly set to `resend` (which is
+  `rally26.email.provider` isn't explicitly set to `resend` (which is
   everywhere today) — the only observable behavior locally/in staging is
   still a log line until both the provider is flipped and a real
   `RESEND_API_KEY`/`RESEND_FROM_ADDRESS` are supplied. This is the same "real

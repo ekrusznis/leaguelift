@@ -1,6 +1,6 @@
-# Contributing to LeagueLift
+# Contributing to Rally26
 
-LeagueLift is developed against `DESIGN-DOC.md`, which is the authoritative product and
+Rally26 is developed against `DESIGN-DOC.md`, which is the authoritative product and
 engineering specification. Read it before making non-trivial changes.
 
 ## Ground rules

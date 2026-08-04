@@ -17,10 +17,10 @@ export function HelpCenterPage({ authenticated = false }: { authenticated?: bool
 
 	return (
 		<>
-			<Seo title="Help Center" description="Search LeagueLift help articles and contact ticket-based support." />
+			<Seo title="Help Center" description="Search Rally26 help articles and contact ticket-based support." />
 			<section className={authenticated ? "rounded-2xl bg-navy-950 px-5 py-10 sm:px-8" : "bg-navy-950 py-16 sm:py-20"}>
 				<PageContainer className="max-w-4xl">
-					<p className="text-sm font-semibold uppercase tracking-[0.18em] text-green-400">LeagueLift Support</p>
+					<p className="text-sm font-semibold uppercase tracking-[0.18em] text-green-400">Rally26 Support</p>
 					<h1 className="mt-3 font-heading text-3xl font-extrabold text-white sm:text-4xl">How can we help?</h1>
 					<p className="mt-3 max-w-2xl text-slate-300">Search walkthroughs and FAQs, or open a support case. Support is ticket and email based—not live chat.</p>
 					<div className="mt-7 flex flex-col gap-3 sm:flex-row">

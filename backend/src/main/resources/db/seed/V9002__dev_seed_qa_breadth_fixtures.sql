@@ -16,7 +16,7 @@
 --       outstandingMinor = 20000 (see the two per-assignment comments below for the
 --       per-row math this rolls up from).
 --   - A published fundraising campaign + one confirmed contribution with matching
---     ledger entries (CONTRIBUTION/LEAGUELIFT_PLATFORM_FEE/ORGANIZATION_EARNING),
+--     ledger entries (CONTRIBUTION/RALLY26_PLATFORM_FEE/ORGANIZATION_EARNING),
 --     so both the campaign's raisedMinor query and the ledger-based Financial
 --     Overview/Reports Snapshot/Payout Summary numbers (Phase 7 completion demo-data
 --     audit) have real, checkable data instead of just zero.
@@ -222,7 +222,7 @@ values (
     now()
 );
 
-insert into contribution (id, organization_id, campaign_id, amount_minor, currency, supporter_name, is_anonymous, supporter_email, status, confirmed_at)
+insert into contribution (id, organization_id, campaign_id, amount_minor, currency, supporter_name, is_anonymous, supporter_email, status, stripe_checkout_session_id, confirmed_at)
 values (
     '00000000-0000-0000-0000-000000000051',
     '00000000-0000-0000-0000-000000000001',
@@ -233,6 +233,7 @@ values (
     false,
     'grandma.johnson@example.com',
     'CONFIRMED',
+    'cs_test_dev_seed_051',
     now()
 );
 
@@ -255,8 +256,8 @@ insert into ledger_entry (id, organization_id, account_code, entry_type, directi
 values (
     '00000000-0000-0000-0000-000000000053',
     '00000000-0000-0000-0000-000000000001',
-    'LEAGUELIFT_PLATFORM_FEE',
-    'LEAGUELIFT_PLATFORM_FEE',
+    'RALLY26_PLATFORM_FEE',
+    'RALLY26_PLATFORM_FEE',
     'DEBIT',
     1250,
     'USD',

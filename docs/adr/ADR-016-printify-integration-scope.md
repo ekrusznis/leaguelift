@@ -83,7 +83,7 @@ entity needed for a proof-of-checkout slice.
 **Confirmation follows the contribution slice's webhook pattern, not the
 payout module's sync-refresh pattern**, for the same reason established in
 ADR-015: a supporter who pays and closes the tab shouldn't leave Stripe holding
-confirmed money LeagueLift never records. `OrderService.confirmFromWebhook` is
+confirmed money Rally26 never records. `OrderService.confirmFromWebhook` is
 dispatched from the same `POST /webhooks/stripe` receiver as contributions,
 disambiguated by the Stripe Checkout Session's own metadata (`orderId` present
 or not).

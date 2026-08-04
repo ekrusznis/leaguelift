@@ -41,12 +41,12 @@ export function SignInPage() {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<Seo title="Sign In" description="Sign in to your LeagueLift account." noIndex />
+			<Seo title="Sign In" description="Sign in to your Rally26 account." noIndex />
 			<AuthTabs active="sign-in" />
 
 			<div className="rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
 				<h1 className="font-heading text-2xl font-extrabold text-white">Welcome back</h1>
-				<p className="mt-1 text-sm text-slate-300">Sign in to access your LeagueLift account.</p>
+				<p className="mt-1 text-sm text-slate-300">Sign in to access your Rally26 account.</p>
 
 				<form onSubmit={onSubmit} noValidate className="mt-6 flex flex-col gap-5">
 					<FormField

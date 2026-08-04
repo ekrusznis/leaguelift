@@ -43,4 +43,4 @@ jobs:
         # tracked as follow-up, not blocking Phase 0.
 
       - name: Build container image
-        run: docker build -t leaguelift-backend:ci .
+        run: docker build -t rally26-backend:ci .

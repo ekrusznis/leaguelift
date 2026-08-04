@@ -2,19 +2,18 @@ export const FOOTER_COLUMNS: { heading: string; links: { label: string; to: stri
 	{
 		heading: "Product",
 		links: [
-			{ label: "Features", to: "/#features" },
-			{ label: "How It Works", to: "/how-it-works" },
-			{ label: "Pricing", to: "/pricing" },
+			{ label: "Platform", to: "/#platform" },
+			{ label: "How It Works", to: "/#how-it-works" },
+			{ label: "Pricing", to: "/#pricing-preview" },
 			{ label: "Talk to Sales", to: "/talk-to-sales" },
 		],
 	},
 	{
 		heading: "Solutions",
 		links: [
-			{ label: "Leagues", to: "/solutions" },
-			{ label: "Clubs", to: "/solutions" },
-			{ label: "Teams", to: "/solutions/team-pages" },
-			{ label: "Tournaments", to: "/solutions/tournament-pages" },
+			{ label: "Leagues", to: "/#solutions" },
+			{ label: "Clubs", to: "/#solutions" },
+			{ label: "Team & Tournament Pages", to: "/solutions/team-and-tournament-pages" },
 		],
 	},
 	{
@@ -28,7 +27,7 @@ export const FOOTER_COLUMNS: { heading: string; links: { label: string; to: stri
 	{
 		heading: "Company",
 		links: [
-			{ label: "About", to: "/about" },
+			{ label: "About", to: "/#about" },
 			{ label: "Privacy", to: "/privacy" },
 			{ label: "Terms", to: "/terms" },
 			{ label: "Accessibility", to: "/accessibility" },

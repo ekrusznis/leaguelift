@@ -19,7 +19,7 @@ always manager-role-authenticated.
 ## Decision
 
 **Sponsorship checkout reuses the existing separate-charges-and-transfers
-model (ADR-005/ADR-017) — no separate payment account.** LeagueLift charges
+model (ADR-005/ADR-017) — no separate payment account.** Rally26 charges
 the sponsor directly via test-mode Stripe Checkout Session (same as
 contributions/orders), and payout to the organization happens through the
 existing manual-trigger `PayoutAccountService.triggerTransfer` once the
@@ -96,7 +96,7 @@ refund logic for those.
   need to revisit this and introduce a dedicated entry type — not assumed
   here.
 - A public visitor completing a sponsorship purchase never uploads a file to
-  LeagueLift directly. If a later slice wants true self-service logo upload
+  Rally26 directly. If a later slice wants true self-service logo upload
   at checkout, it requires designing a public-upload security model from
   scratch (this ADR explicitly does not sketch one) — not a small addition to
   the existing manager-role-only media pipeline.

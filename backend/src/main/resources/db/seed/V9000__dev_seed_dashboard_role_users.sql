@@ -1,5 +1,5 @@
 -- Dev-only fixture data for exercising the four dashboard roles described in
--- docs/LEAGUELIFT_DASHBOARD_DESIGN.md (athlete, parent/guardian, coach, owner)
+-- docs/RALLY26_DASHBOARD_DESIGN.md (athlete, parent/guardian, coach, owner)
 -- once real authentication is wired up. This file lives in db/seed/, a Flyway
 -- location added to spring.flyway.locations ONLY in application-local.yml — it
 -- never runs against staging or prod (see ADR-003; a versioned migration under
@@ -148,7 +148,7 @@ values (
 
 -- Athlete test account — a "controlled test account" per dashboard design doc
 -- section 5.2, not a standard product account. Real under-13 athletes do not
--- get independent LeagueLift accounts; this exists solely so the athlete
+-- get independent Rally26 accounts; this exists solely so the athlete
 -- dashboard can be exercised end-to-end once auth is wired up. Correlated to
 -- the participant row above by name only.
 insert into app_user (id, email, display_name, status, password_hash)

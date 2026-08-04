@@ -37,7 +37,7 @@ export function ResetPasswordPage() {
 	if (!token) {
 		return (
 			<div className="flex flex-col gap-6">
-				<Seo title="Reset Password" description="Reset your LeagueLift password." noIndex />
+				<Seo title="Reset Password" description="Reset your Rally26 password." noIndex />
 				<div className="rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 text-center shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
 					<h1 className="font-heading text-2xl font-extrabold text-white">Invalid reset link</h1>
 					<p className="mt-2 text-sm text-slate-300">Open the full reset link from your email, or request a new one.</p>
@@ -51,11 +51,11 @@ export function ResetPasswordPage() {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<Seo title="Reset Password" description="Reset your LeagueLift password." noIndex />
+			<Seo title="Reset Password" description="Reset your Rally26 password." noIndex />
 
 			<div className="rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
 				<h1 className="font-heading text-2xl font-extrabold text-white">Reset your password</h1>
-				<p className="mt-2 text-sm text-slate-300">Choose a new password for your LeagueLift account.</p>
+				<p className="mt-2 text-sm text-slate-300">Choose a new password for your Rally26 account.</p>
 
 				{completed ? (
 					<div className="mt-6">

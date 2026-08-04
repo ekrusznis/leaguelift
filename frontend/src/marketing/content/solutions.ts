@@ -26,91 +26,64 @@ export type SolutionContent = {
  */
 export const SOLUTIONS: SolutionContent[] = [
 	{
-		slug: "team-pages",
-		navLabel: "Team Pages",
-		heading: "Team Pages",
+		slug: "team-and-tournament-pages",
+		navLabel: "Team & Tournament Pages",
+		heading: "Team & Tournament Pages",
 		shortDescription:
-			"Give each team a branded home for updates, fundraising, apparel, sponsors, and supporter links.",
+			"Give every team and tournament a branded public home for updates, fundraising, apparel, sponsors, and supporter links.",
 		availability: "Available in Initial Release",
 		hero: {
-			headline: "A public home for every team.",
-			copy: "Publish a branded page for each team with a public slug and QR code your families can share.",
+			headline: "A public home for every team and tournament.",
+			copy: "Publish a branded page for each team or tournament — with dates, divisions, and participating teams — plus a public slug and QR code your families and supporters can share.",
 		},
 		problem:
-			"Teams rely on scattered group chats and printed flyers to reach parents and supporters, with no single public page to point people to.",
+			"Teams rely on scattered group chats and printed flyers to reach parents and supporters, and tournament organizers usually cobble together a PDF, a spreadsheet, and a social post to describe a single event — with no single public page to point people to.",
 		approach:
-			"LeagueLift gives every team a draft, preview, and publish workflow so administrators control exactly what's public and when.",
+			"Rally26 gives every team and tournament the same draft, preview, and publish workflow, with tournaments adding fields for dates, venue, and divisions, so administrators control exactly what's public and when.",
 		capabilities: [
-			"Team branding",
+			"Team and tournament branding",
 			"Public description",
 			"Sport, division, and season",
+			"Dates and venue for tournaments",
+			"Participating teams and divisions for tournaments",
 			"Fundraising links",
-			"Apparel collection",
-			"Sponsor recognition",
-			"QR code",
+			"Apparel and tournament merchandise",
+			"Sponsor recognition and vendor information",
+			"QR code promotion",
 			"Adult-controlled public contact options",
 			"Draft, preview, publish, and archive",
 		],
 		workflow: [
-			"Create the team under your organization",
-			"Add branding, description, and season details",
+			"Create the team or tournament under your organization",
+			"Add branding, description, and — for tournaments — dates, venue, and divisions",
 			"Preview the draft page",
 			"Publish and share the link or QR code",
 		],
-		relatedUsers: ["Team managers", "League presidents", "Parents and guardians", "Supporters"],
-		faq: [
-			{
-				question: "Can a team page go live before the season starts?",
-				answer: "Yes. Pages stay in draft until an administrator explicitly publishes them.",
-			},
-			{
-				question: "Do team pages replace our roster or scheduling tool?",
-				answer: "No. Team pages are a public front door — rostering and scheduling stay in the tools you already use.",
-			},
-		],
-	},
-	{
-		slug: "tournament-pages",
-		navLabel: "Tournament Pages",
-		heading: "Tournament Pages",
-		shortDescription:
-			"Promote an event, highlight participating teams, sell tournament apparel, and recognize sponsors.",
-		availability: "Available in Initial Release",
-		hero: {
-			headline: "One page for the whole tournament.",
-			copy: "Publish dates, venue, divisions, and participating teams, and give sponsors and supporters one link to follow.",
-		},
-		problem:
-			"Tournament organizers usually cobble together a PDF, a spreadsheet, and a social post to describe a single event.",
-		approach:
-			"A tournament gets the same draft/publish page model as a team, plus fields for dates, venue, and divisions.",
-		capabilities: [
-			"Dates and venue",
-			"Participating teams",
-			"Divisions",
-			"Tournament merchandise",
-			"Fundraising",
+		relatedUsers: [
+			"Team managers",
+			"Tournament directors",
+			"League presidents",
+			"Club directors",
+			"Parents and guardians",
+			"Supporters",
 			"Sponsors",
-			"Vendor information",
-			"QR-code promotion",
-			"Post-event products",
-			"Results or schedule links",
 		],
-		workflow: [
-			"Create the tournament under your organization",
-			"Set dates, venue, and divisions",
-			"Add participating teams",
-			"Publish and promote with a QR code",
-		],
-		relatedUsers: ["Tournament directors", "Club directors", "Team managers", "Sponsors"],
 		requiredStatement: "Live scheduling and ticketing are planned for a future release, not part of the initial pilot.",
 		faq: [
 			{
-				question: "Can we list divisions and participating teams?",
+				question: "Can a team or tournament page go live before the season starts?",
+				answer: "Yes. Pages stay in draft until an administrator explicitly publishes them.",
+			},
+			{
+				question: "Do these pages replace our roster or scheduling tool?",
+				answer: "No. Team and tournament pages are a public front door — rostering and scheduling stay in the tools you already use.",
+			},
+			{
+				question: "Can we list divisions and participating teams for a tournament?",
 				answer: "Yes — divisions and participating teams are part of the published tournament page.",
 			},
 			{
-				question: "Does LeagueLift handle live brackets or ticketing?",
+				question: "Does Rally26 handle live brackets or ticketing?",
 				answer: "Not yet. Live scheduling and ticketing are planned for a future release.",
 			},
 		],
@@ -149,7 +122,7 @@ export const SOLUTIONS: SolutionContent[] = [
 		],
 		relatedUsers: ["Fundraising coordinators", "Booster officers", "Supporters", "Parents and guardians"],
 		requiredStatement:
-			"LeagueLift does not represent a contribution as tax-deductible unless the organization and transaction qualify.",
+			"Rally26 does not represent a contribution as tax-deductible unless the organization and transaction qualify.",
 		faq: [
 			{
 				question: "Is fundraising available today?",
@@ -157,7 +130,7 @@ export const SOLUTIONS: SolutionContent[] = [
 			},
 			{
 				question: "Will contributions be tax-deductible?",
-				answer: "Only when the organization and the specific transaction qualify. LeagueLift never assumes deductibility.",
+				answer: "Only when the organization and the specific transaction qualify. Rally26 never assumes deductibility.",
 			},
 		],
 	},
@@ -284,7 +257,7 @@ export const SOLUTIONS: SolutionContent[] = [
 		],
 		relatedUsers: ["Parents and guardians", "Treasurers", "Fundraising coordinators"],
 		requiredStatement:
-			"LeagueLift family credits are organization-approved fee credits. They are not cash accounts and are not withdrawable or transferable.",
+			"Rally26 family credits are organization-approved fee credits. They are not cash accounts and are not withdrawable or transferable.",
 		faq: [
 			{
 				question: "Are family credits available today?",

@@ -2,7 +2,7 @@ import type { SVGProps } from "react";
 
 /**
  * Shared line-icon set for the dashboard shell and widgets
- * (docs/LEAGUELIFT_DASHBOARD_DESIGN.md section 4.1: "consistent icons and
+ * (docs/RALLY26_DASHBOARD_DESIGN.md section 4.1: "consistent icons and
  * typography"). Same stroke style as the marketing site's icons — no icon
  * library dependency added for a handful of glyphs.
  */

@@ -13,7 +13,7 @@ function initials(name: string) {
 type AvatarProps = {
 	name: string;
 	size?: "sm" | "md" | "lg";
-	/** Demo/uploaded photo URL. Falls back to initials when absent (docs/LEAGUELIFT_MEDIA_ASSET_DESIGN.md section 15.1). */
+	/** Demo/uploaded photo URL. Falls back to initials when absent (docs/RALLY26_MEDIA_ASSET_DESIGN.md section 15.1). */
 	src?: string;
 };
 

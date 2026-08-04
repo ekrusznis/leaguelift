@@ -5,7 +5,7 @@ Accepted
 
 ## Context
 
-LeagueLift's core value is trustworthy financial and organizational data (fees,
+Rally26's core value is trustworthy financial and organizational data (fees,
 credits, ledger entries, memberships). This requires strong relational integrity,
 transactional guarantees, and an auditable, forward-only schema history — one
 database per environment, managed by one engineer.

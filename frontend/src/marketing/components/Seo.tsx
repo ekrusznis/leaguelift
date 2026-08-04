@@ -23,7 +23,7 @@ function setMetaTag(attr: "name" | "property", key: string, content: string) {
  */
 export function Seo({ title, description, noIndex = false }: SeoProps) {
 	useEffect(() => {
-		const fullTitle = title.includes("LeagueLift") ? title : `${title} | LeagueLift`;
+		const fullTitle = title.includes("Rally26") ? title : `${title} | Rally26`;
 		document.title = fullTitle;
 
 		setMetaTag("name", "description", description);

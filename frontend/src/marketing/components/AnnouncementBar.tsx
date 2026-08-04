@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { featureFlags } from "../featureFlags";
 
-const DISMISS_KEY = "ll_announcement_dismissed";
+const DISMISS_KEY = "r26_announcement_dismissed";
 
 /** Dismissible per browser session (section 12.1) — no fake scarcity language. */
 export function AnnouncementBar() {
@@ -11,9 +11,9 @@ export function AnnouncementBar() {
 	if (!featureFlags.pilotAnnouncementBar || dismissed) return null;
 
 	return (
-		<div className="relative bg-gradient-to-r from-green-600 to-green-500 text-white">
+		<div className="relative bg-gradient-to-r from-orange-600 to-orange-500 text-white">
 			<div className="mx-auto flex w-[min(100%-40px,1360px)] items-center justify-center gap-3 py-2 text-center text-sm font-medium">
-				<span>LeagueLift is open for new organizations.</span>
+				<span>Rally26 is open for new organizations.</span>
 				<Link to="/auth/register" className="font-semibold underline underline-offset-2 hover:no-underline">
 					Get Started
 				</Link>

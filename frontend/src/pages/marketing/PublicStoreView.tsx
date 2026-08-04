@@ -145,7 +145,7 @@ export function PublicStoreView() {
 
 	return (
 		<>
-			<Seo title={store.name} description={`Shop ${store.name} on LeagueLift.`} />
+			<Seo title={store.name} description={`Shop ${store.name} on Rally26.`} />
 
 			<section className="bg-navy-950 py-20 sm:py-28">
 				<PageContainer className="max-w-2xl">
@@ -187,7 +187,7 @@ export function PublicStoreView() {
 					)}
 
 					<SecondaryLightButton to="/" className="mt-8">
-						Learn more about LeagueLift
+						Learn more about Rally26
 					</SecondaryLightButton>
 				</PageContainer>
 			</section>

@@ -9,7 +9,7 @@ export function SupportAccessBanner({ access }: { access: PlatformSupportAccess 
 	return (
 		<section aria-label="Active platform support access" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
 			<div>
-				<p className="font-semibold">LeagueLift support access: {access.organizationName}</p>
+				<p className="font-semibold">Rally26 support access: {access.organizationName}</p>
 				<p className="mt-0.5 text-xs">Reason: {access.reason} · Expires {new Date(access.expiresAt).toLocaleString()}</p>
 			</div>
 			<div className="flex flex-wrap gap-2">

@@ -207,7 +207,7 @@ export function PublicCampaignView() {
 
 	return (
 		<>
-			<Seo title={campaign.name} description={campaign.description ?? `Support ${campaign.name} on LeagueLift.`} />
+			<Seo title={campaign.name} description={campaign.description ?? `Support ${campaign.name} on Rally26.`} />
 
 			<section className="bg-navy-950 py-20 sm:py-28">
 				<PageContainer className="max-w-2xl">
@@ -250,7 +250,7 @@ export function PublicCampaignView() {
 					)}
 
 					<SecondaryLightButton to="/" className="mt-8">
-						Learn more about LeagueLift
+						Learn more about Rally26
 					</SecondaryLightButton>
 				</PageContainer>
 			</section>
