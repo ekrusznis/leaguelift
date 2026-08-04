@@ -66,6 +66,12 @@ rally26:
   # The deployed production frontend origin — no default, startup fails if unset.
   frontend:
     base-url: ${FRONTEND_BASE_URL}
+  # CORS allowlist for the browser-facing API (rally26.com talking to api.rally26.com
+  # are different origins). CorsProperties defaults to localhost:5173 only, which is
+  # correct for local dev but left prod with no allowed browser origin at all until
+  # this was added — every cross-origin fetch from the real site was failing preflight.
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://rally26.com,https://www.rally26.com}
   # Phase 8 slice 2 (ADR-023) — fee-due payment reminders. Not secrets — safe
   # defaults, overridable without a redeploy.
   fee:

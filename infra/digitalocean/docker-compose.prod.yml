@@ -57,6 +57,12 @@ services:
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+    # Bound to loopback only — reachable from the droplet itself (the GitHub Actions
+    # deploy health check curls http://localhost:8080 over SSH on the host) without
+    # exposing the backend directly to the internet. Public traffic still only reaches
+    # it through Caddy -> the `backend` service name on the compose network.
+    ports:
+      - "127.0.0.1:8080:8080"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
       interval: 15s
