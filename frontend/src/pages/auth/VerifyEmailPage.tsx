@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { verifyEmail } from "../../auth/authApi";
+import { ApiError } from "../../lib/apiError";
 import { InlineAlert } from "../../marketing/components/InlineAlert";
 import { Seo } from "../../marketing/components/Seo";
 import { PrimaryButton, SecondaryDarkButton } from "../../marketing/components/buttons";
@@ -10,17 +11,34 @@ export function VerifyEmailPage() {
 	const token = searchParams.get("token")?.trim() ?? "";
 	const [status, setStatus] = useState<"idle" | "submitting" | "verified" | "error">("idle");
 	const [error, setError] = useState<string | null>(null);
+	// Guards against a double-click firing two requests before the button's `disabled`
+	// state re-renders. Without this, a fast double-click can send the same token twice:
+	// the first request succeeds, the second correctly gets rejected as already-used, and
+	// (before the EMAIL_VERIFICATION_ALREADY_USED special-case below existed) that second
+	// response would overwrite the successful "verified" state with a scary generic error.
+	const inFlightRef = useRef(false);
 
 	const onVerify = async () => {
-		if (!token) return;
+		if (!token || inFlightRef.current) return;
+		inFlightRef.current = true;
 		setError(null);
 		setStatus("submitting");
 		try {
 			await verifyEmail(token);
 			setStatus("verified");
-		} catch {
-			setError("This verification link is invalid or expired. Request a new account verification email.");
-			setStatus("error");
+		} catch (err) {
+			// A link that's "already been used" almost always means this exact account
+			// already got verified — by an earlier click, a slow request that actually
+			// succeeded, or (rarely) a genuine race — not that the link was ever invalid.
+			// Show success rather than an alarming error the user has no useful action for.
+			if (err instanceof ApiError && err.code === "EMAIL_VERIFICATION_ALREADY_USED") {
+				setStatus("verified");
+			} else {
+				setError("This verification link is invalid or expired. Request a new account verification email.");
+				setStatus("error");
+			}
+		} finally {
+			inFlightRef.current = false;
 		}
 	};
 

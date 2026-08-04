@@ -328,3 +328,18 @@ Additional, unreserved decisions:
 - ADR-055: Phase 19 personal/organization/platform integration placement and disabled Google Calendar scaffold with ICS fallback (2026-08-02)
 - ADR-056: Phase 19 QuickBooks/sports-data provider scaffolds, durable sync/issue history, platform-provider contract hardening, and disabled-by-default completion (2026-08-02)
 - ADR-057: Product renamed from LeagueLift to Rally26 (leaguelift.io -> rally26.com), full codebase/package/domain sweep (2026-08-03)
+- ADR-058: Resend hosted visual templates for the four auth-lifecycle emails
+  (verify-email, password-reset, invitation, and a new welcome email sent on first
+  membership grant with a role-scoped feature list), replacing inline HTML for those
+  four; an `EMAIL_VERIFICATION_ALREADY_USED` conflict code closing both a UX
+  false-negative and a real consume-token race; an explicit Sign In / Create Account
+  choice on the invitation-acceptance page with a `next` redirect back to it; a
+  dark-background form-label contrast fix on three auth pages; and a scroll-to-top
+  fix for client-side route navigation (2026-08-04)
+- ADR-059: Book a Demo removed and `/contact` redirected to a new landing-page Contact
+  Us section reusing the existing `support_case` backend; a new `SmtpEmailProvider`
+  (Google Workspace SMTP, app-password auth) plus Mustache plain-text templating for
+  human-authored support correspondence (contact-us and in-app ticket creation), kept
+  deliberately separate from Resend, which stays reserved for automated lifecycle
+  notifications — including a new `support.case.status_changed` Resend-templated
+  email sent on real status transitions (2026-08-04)

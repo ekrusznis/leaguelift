@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AuthTabs } from "../../components/forms/AuthTabs";
 import { CheckboxField } from "../../components/forms/CheckboxField";
 import { FormField } from "../../components/forms/FormField";
@@ -14,13 +14,21 @@ import { useAuth } from "../../auth/AuthContext";
 import { registerAccountSchema, type RegisterAccountFormValues } from "./schema";
 
 /**
- * Owner registration only — non-owner personas are invitation-only in Phase 15.
- * Organization setup still happens after sign-in inside the app (`/app/organizations`),
- * so this page collects only identity credentials and now requires email verification
- * before first login.
+ * The backend endpoint this calls (`/auth/register-owner`) only ever creates a bare
+ * AppUser account pending email verification — it never creates an organization, so
+ * this same form doubles as the "I don't have an account yet" path for someone
+ * accepting an invitation (InvitationPage.tsx), not just for people setting up their
+ * own org. Organization setup itself still happens after sign-in inside the app
+ * (`/app/organizations`).
+ *
+ * `next` (if present) is carried through to the post-verification "Go to Sign In" link
+ * so an invited person who registers lands back on the invitation page — where they can
+ * accept with their invited role — instead of the generic sign-in destination.
  */
 export function RegisterPage() {
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
+	const next = searchParams.get("next");
 	const { register: registerAccount } = useAuth();
 	const [step, setStep] = useState<"form" | "confirmation">("form");
 	const [submitError, setSubmitError] = useState<string | null>(null);
@@ -156,7 +164,13 @@ export function RegisterPage() {
 						<Link to="/auth/resend-verification" className="text-sm text-green-400 hover:underline">
 							Didn&rsquo;t get the email? Resend verification
 						</Link>
-						<PrimaryButton onClick={() => navigate("/auth/sign-in")} icon="arrow" className="mt-2">
+						<PrimaryButton
+							onClick={() =>
+								navigate(next && next.startsWith("/") ? `/auth/sign-in?next=${encodeURIComponent(next)}` : "/auth/sign-in")
+							}
+							icon="arrow"
+							className="mt-2"
+						>
 							Go to Sign In
 						</PrimaryButton>
 					</div>

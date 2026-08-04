@@ -1,5 +1,6 @@
 package com.rally26.identity.application
 
+import com.rally26.common.error.ConflictException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.identity.domain.AppUser
@@ -128,6 +129,41 @@ class EmailVerificationServiceTest {
 
 		verify(exactly = 1) { appUserRepository.markActive(record.userId) }
 		verify(exactly = 1) { tokenRepository.consume(record.id, any()) }
+	}
+
+	@Test
+	fun `verify rejects a token that was already consumed with a distinct conflict code`() {
+		val record = EmailVerificationTokenRecord(
+			id = UUID.randomUUID(),
+			userId = UUID.randomUUID(),
+			tokenHash = "hash",
+			expiresAt = Instant.now().plusSeconds(3600),
+			consumedAt = Instant.now().minusSeconds(30),
+		)
+		every { tokenRepository.findByTokenHash(any()) } returns record
+
+		val thrown = assertFailsWith<ConflictException> { service.verify("already-used") }
+		assertEquals("EMAIL_VERIFICATION_ALREADY_USED", thrown.code)
+	}
+
+	@Test
+	fun `verify rejects when a concurrent request already consumed the token`() {
+		// Simulates two requests racing past the consumedAt == null check before either
+		// commits — the loser's UPDATE affects 0 rows, which must surface as a conflict
+		// rather than silently reporting success.
+		val record = EmailVerificationTokenRecord(
+			id = UUID.randomUUID(),
+			userId = UUID.randomUUID(),
+			tokenHash = "hash",
+			expiresAt = Instant.now().plusSeconds(3600),
+			consumedAt = null,
+		)
+		every { tokenRepository.findByTokenHash(any()) } returns record
+		every { appUserRepository.markActive(record.userId) } returns 1
+		every { tokenRepository.consume(record.id, any()) } returns 0
+
+		val thrown = assertFailsWith<ConflictException> { service.verify("racing") }
+		assertEquals("EMAIL_VERIFICATION_ALREADY_USED", thrown.code)
 	}
 
 	private fun pendingUser(email: String) = AppUser(
