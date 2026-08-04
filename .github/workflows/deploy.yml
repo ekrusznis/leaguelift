@@ -28,7 +28,7 @@ jobs:
     outputs:
       image_tag: ${{ steps.tag.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Compute image tag
         id: tag
@@ -73,7 +73,7 @@ jobs:
     needs: build-and-push
     environment: production # GitHub Environment — add a required-reviewer rule here for a manual approval click before prod actually deploys, if you want one.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Copy compose files to droplet
         uses: appleboy/scp-action@v0.1.7
