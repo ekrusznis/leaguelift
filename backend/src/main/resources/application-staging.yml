@@ -62,6 +62,14 @@ rally26:
       api-key: ${RESEND_API_KEY:}
       from-address: ${RESEND_FROM_ADDRESS:}
       webhook-secret: ${RESEND_WEBHOOK_SECRET:}
+      # Phase 8 slice 4 — published Resend Template IDs. Blank until each is created
+      # and published in the Resend dashboard; a handler with a blank ID here just
+      # falls back to its original plain-text send (see ResendTemplateProperties).
+      templates:
+        verify-email-id: ${RESEND_TEMPLATE_VERIFY_EMAIL_ID:}
+        password-reset-id: ${RESEND_TEMPLATE_PASSWORD_RESET_ID:}
+        invitation-id: ${RESEND_TEMPLATE_INVITATION_ID:}
+        welcome-id: ${RESEND_TEMPLATE_WELCOME_ID:}
   # The deployed staging frontend origin — no default, startup fails if unset.
   frontend:
     base-url: ${FRONTEND_BASE_URL}

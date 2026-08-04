@@ -7,6 +7,7 @@ import com.rally26.common.web.CurrentUser
 import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.membership.persistence.MembershipRepository
+import com.rally26.outbox.application.OutboxWriter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -17,11 +18,18 @@ import java.util.UUID
  * than querying organization_membership directly (DESIGN-DOC.md sections 7, 18.2).
  */
 @Service
-class MembershipService(private val membershipRepository: MembershipRepository) {
+class MembershipService(
+	private val membershipRepository: MembershipRepository,
+	private val outboxWriter: OutboxWriter,
+) {
 
 	@Transactional
-	fun grantOwner(organizationId: UUID, userId: UUID): OrganizationMembership =
-		membershipRepository.insert(organizationId, userId, MembershipRole.OWNER)
+	fun grantOwner(organizationId: UUID, userId: UUID): OrganizationMembership {
+		val isFirstMembership = membershipRepository.findAnyActiveMembershipForUser(userId) == null
+		val membership = membershipRepository.insert(organizationId, userId, MembershipRole.OWNER)
+		if (isFirstMembership) enqueueWelcomeEmail(membership)
+		return membership
+	}
 
 	@Transactional
 	fun grantMembership(organizationId: UUID, userId: UUID, role: MembershipRole): OrganizationMembership {
@@ -31,7 +39,28 @@ class MembershipService(private val membershipRepository: MembershipRepository) 
 		if (membershipRepository.existsForUser(organizationId, userId)) {
 			throw ValidationException("This user is already a member of the organization.")
 		}
-		return membershipRepository.insert(organizationId, userId, role)
+		val isFirstMembership = membershipRepository.findAnyActiveMembershipForUser(userId) == null
+		val membership = membershipRepository.insert(organizationId, userId, role)
+		if (isFirstMembership) enqueueWelcomeEmail(membership)
+		return membership
+	}
+
+	/**
+	 * Fires the welcome email (Phase 8 slice 4, [WelcomeEmailHandler]) exactly once per
+	 * user platform-wide — the first time they're granted any active membership,
+	 * whether that's the owner completing org creation or an invited user accepting
+	 * their first invitation. Checked before the insert above (not after) so a
+	 * subsequent membership for the same user never re-triggers it.
+	 */
+	private fun enqueueWelcomeEmail(membership: OrganizationMembership) {
+		outboxWriter.write(
+			aggregateType = "organization_membership",
+			aggregateId = membership.id,
+			organizationId = membership.organizationId,
+			eventType = "membership.first_granted",
+			payloadJson =
+				"""{"membershipId":"${membership.id}","userId":"${membership.userId}","organizationId":"${membership.organizationId}","role":"${membership.role.name}"}""",
+		)
 	}
 
 	/**

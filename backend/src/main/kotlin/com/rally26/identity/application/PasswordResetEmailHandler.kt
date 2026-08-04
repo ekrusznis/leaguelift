@@ -2,10 +2,12 @@ package com.rally26.identity.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.config.FrontendProperties
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.identity.domain.AppUserStatus
 import com.rally26.identity.persistence.AppUserRepository
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
+import com.rally26.notification.EmailTemplateRef
 import com.rally26.outbox.application.OutboxEventHandler
 import com.rally26.outbox.domain.OutboxEvent
 import org.springframework.stereotype.Component
@@ -16,6 +18,7 @@ class PasswordResetEmailHandler(
 	private val appUserRepository: AppUserRepository,
 	private val emailProvider: EmailProvider,
 	private val frontendProperties: FrontendProperties,
+	private val resendTemplateProperties: ResendTemplateProperties,
 	private val objectMapper: ObjectMapper,
 ) : OutboxEventHandler {
 
@@ -37,6 +40,9 @@ class PasswordResetEmailHandler(
 				body = "We received a request to reset your Rally26 password.\n\n" +
 					"Reset password: $resetUrl\n\n" +
 					"This link expires in 2 hours. If you did not request this, you can ignore this email.\n\n— Rally26",
+				template = resendTemplateProperties.passwordResetId.takeIf { it.isNotBlank() }?.let { templateId ->
+					EmailTemplateRef(id = templateId, variables = mapOf("RESET_URL" to resetUrl))
+				},
 			),
 		)
 	}

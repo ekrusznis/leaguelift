@@ -2,6 +2,7 @@ package com.rally26.identity.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.config.FrontendProperties
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.identity.domain.AppUser
 import com.rally26.identity.domain.AppUserStatus
 import com.rally26.identity.persistence.AppUserRepository
@@ -18,18 +19,24 @@ import io.mockk.verify
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class OwnerEmailVerificationHandlerTest {
 
 	private val appUserRepository = mockk<AppUserRepository>()
 	private val emailProvider = mockk<EmailProvider>()
-	private val handler = OwnerEmailVerificationHandler(
+
+	private fun handlerWith(resendTemplateProperties: ResendTemplateProperties) = OwnerEmailVerificationHandler(
 		appUserRepository,
 		emailProvider,
 		FrontendProperties(baseUrl = "https://app.rally26.test"),
+		resendTemplateProperties,
 		ObjectMapper(),
 	)
+
+	private val handler = handlerWith(ResendTemplateProperties())
 
 	@Test
 	fun `sends verification email for pending user`() {
@@ -42,6 +49,24 @@ class OwnerEmailVerificationHandlerTest {
 
 		verify(exactly = 1) { emailProvider.send(any()) }
 		assertTrue(messageSlot.captured.body.contains("/auth/verify-email?token=abc-token"))
+		assertNull(messageSlot.captured.template)
+	}
+
+	@Test
+	fun `sends via the Resend template when a template id is configured`() {
+		val userId = UUID.randomUUID()
+		every { appUserRepository.findById(userId) } returns pendingUser(userId)
+		val messageSlot = slot<EmailMessage>()
+		every { emailProvider.send(capture(messageSlot)) } just runs
+
+		handlerWith(ResendTemplateProperties(verifyEmailId = "template-verify-email")).handle(eventFor(userId, "abc-token"))
+
+		val template = messageSlot.captured.template
+		assertEquals("template-verify-email", template?.id)
+		assertEquals(
+			"https://app.rally26.test/auth/verify-email?token=abc-token",
+			template?.variables?.get("VERIFY_URL"),
+		)
 	}
 
 	@Test

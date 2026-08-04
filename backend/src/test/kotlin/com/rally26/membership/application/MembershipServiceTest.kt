@@ -8,8 +8,12 @@ import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.membership.persistence.MembershipRepository
+import com.rally26.outbox.application.OutboxWriter
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.slot
 import io.mockk.verify
 import java.time.Instant
 import java.util.UUID
@@ -24,7 +28,8 @@ import kotlin.test.assertFailsWith
 class MembershipServiceTest {
 
 	private val membershipRepository = mockk<MembershipRepository>()
-	private val service = MembershipService(membershipRepository)
+	private val outboxWriter = mockk<OutboxWriter>()
+	private val service = MembershipService(membershipRepository, outboxWriter)
 
 	@Test
 	fun `user without a membership is denied access to the organization`() {
@@ -212,6 +217,52 @@ class MembershipServiceTest {
 		assertFailsWith<ValidationException> {
 			service.grantMembership(organizationId, userId, MembershipRole.VIEWER)
 		}
+	}
+
+	@Test
+	fun `grantOwner enqueues a welcome email for a user's first-ever membership`() {
+		val organizationId = UUID.randomUUID()
+		val userId = UUID.randomUUID()
+		val created = membership(organizationId, userId, MembershipRole.OWNER)
+		every { membershipRepository.findAnyActiveMembershipForUser(userId) } returns null
+		every { membershipRepository.insert(organizationId, userId, MembershipRole.OWNER) } returns created
+		val payloadSlot = slot<String>()
+		every { outboxWriter.write(any(), any(), any(), any(), capture(payloadSlot)) } just runs
+
+		service.grantOwner(organizationId, userId)
+
+		verify(exactly = 1) { outboxWriter.write("organization_membership", created.id, organizationId, "membership.first_granted", any()) }
+		assertEquals(true, payloadSlot.captured.contains("\"role\":\"OWNER\""))
+	}
+
+	@Test
+	fun `grantMembership does not enqueue a welcome email when the user already has another active membership`() {
+		val organizationId = UUID.randomUUID()
+		val userId = UUID.randomUUID()
+		val existingElsewhere = membership(UUID.randomUUID(), userId, MembershipRole.VIEWER)
+		every { membershipRepository.existsForUser(organizationId, userId) } returns false
+		every { membershipRepository.findAnyActiveMembershipForUser(userId) } returns existingElsewhere
+		every { membershipRepository.insert(organizationId, userId, MembershipRole.VIEWER) } returns
+			membership(organizationId, userId, MembershipRole.VIEWER)
+
+		service.grantMembership(organizationId, userId, MembershipRole.VIEWER)
+
+		verify(exactly = 0) { outboxWriter.write(any(), any(), any(), any(), any()) }
+	}
+
+	@Test
+	fun `grantMembership enqueues a welcome email for a user's first-ever membership`() {
+		val organizationId = UUID.randomUUID()
+		val userId = UUID.randomUUID()
+		val created = membership(organizationId, userId, MembershipRole.VIEWER)
+		every { membershipRepository.existsForUser(organizationId, userId) } returns false
+		every { membershipRepository.findAnyActiveMembershipForUser(userId) } returns null
+		every { membershipRepository.insert(organizationId, userId, MembershipRole.VIEWER) } returns created
+		every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
+
+		service.grantMembership(organizationId, userId, MembershipRole.VIEWER)
+
+		verify(exactly = 1) { outboxWriter.write("organization_membership", created.id, organizationId, "membership.first_granted", any()) }
 	}
 
 	private fun membership(organizationId: UUID, userId: UUID, role: MembershipRole) = OrganizationMembership(
