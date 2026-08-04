@@ -10,7 +10,6 @@ enum class InvitationStatus { PENDING, ACCEPTED, REVOKED, EXPIRED }
  *  — ownership transfer is its own controlled workflow (DESIGN-DOC.md section 7.2). */
 val INVITABLE_ROLES: Set<MembershipRole> = setOf(
 	MembershipRole.ADMINISTRATOR,
-	MembershipRole.FINANCE_MANAGER,
 	MembershipRole.TEAM_ADMINISTRATOR,
 	MembershipRole.TOURNAMENT_ADMINISTRATOR,
 	MembershipRole.VIEWER,

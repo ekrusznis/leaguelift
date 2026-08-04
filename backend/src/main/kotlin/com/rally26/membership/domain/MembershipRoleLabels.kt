@@ -10,7 +10,6 @@ object MembershipRoleLabels {
 	fun label(role: MembershipRole): String = when (role) {
 		MembershipRole.OWNER -> "Owner"
 		MembershipRole.ADMINISTRATOR -> "Administrator"
-		MembershipRole.FINANCE_MANAGER -> "Finance Manager"
 		MembershipRole.TEAM_ADMINISTRATOR -> "Team Administrator"
 		MembershipRole.TOURNAMENT_ADMINISTRATOR -> "Tournament Administrator"
 		MembershipRole.VIEWER -> "Member"

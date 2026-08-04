@@ -124,15 +124,15 @@ class AuthorizationServiceTest {
 	}
 
 	@Test
-	fun `a finance manager does not inherit team capabilities`() {
+	fun `a viewer does not inherit team capabilities`() {
 		val organizationId = UUID.randomUUID()
 		val teamId = UUID.randomUUID()
-		val financeManager = user()
-		every { membershipRepository.findActiveMembership(organizationId, financeManager.userId) } returns
-			membership(organizationId, financeManager.userId, MembershipRole.FINANCE_MANAGER)
-		every { roleAssignmentRepository.findActiveForResource(financeManager.userId, RoleAssignmentContextType.TEAM, teamId) } returns null
+		val viewer = user()
+		every { membershipRepository.findActiveMembership(organizationId, viewer.userId) } returns
+			membership(organizationId, viewer.userId, MembershipRole.VIEWER)
+		every { roleAssignmentRepository.findActiveForResource(viewer.userId, RoleAssignmentContextType.TEAM, teamId) } returns null
 
-		assertFalse(service.hasTeamCapability(organizationId, teamId, financeManager, Capabilities.TEAM_VIEW))
+		assertFalse(service.hasTeamCapability(organizationId, teamId, viewer, Capabilities.TEAM_VIEW))
 	}
 
 	@Test
@@ -197,20 +197,6 @@ class AuthorizationServiceTest {
 		every { guardianRelationshipRepository.findActiveForHousehold(outsider.userId, householdId) } returns null
 
 		assertFalse(service.hasHouseholdCapability(organizationId, householdId, outsider, Capabilities.HOUSEHOLD_VIEW))
-	}
-
-	@Test
-	fun `a finance manager can view and pay fees org-wide but cannot manage a household's profile`() {
-		val organizationId = UUID.randomUUID()
-		val householdId = UUID.randomUUID()
-		val financeManager = user()
-		every { membershipRepository.findActiveMembership(organizationId, financeManager.userId) } returns
-			membership(organizationId, financeManager.userId, MembershipRole.FINANCE_MANAGER)
-		every { guardianRelationshipRepository.findActiveForHousehold(financeManager.userId, householdId) } returns null
-
-		assertTrue(service.hasHouseholdCapability(organizationId, householdId, financeManager, Capabilities.HOUSEHOLD_FEE_VIEW))
-		assertTrue(service.hasHouseholdCapability(organizationId, householdId, financeManager, Capabilities.HOUSEHOLD_FEE_PAY))
-		assertFalse(service.hasHouseholdCapability(organizationId, householdId, financeManager, Capabilities.HOUSEHOLD_PROFILE_MANAGE))
 	}
 
 	@Test

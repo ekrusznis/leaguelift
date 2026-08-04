@@ -64,7 +64,6 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 	const roleLabel = {
 		OWNER: "Owner",
 		ADMINISTRATOR: "Administrator",
-		FINANCE_MANAGER: "Finance Manager",
 		VIEWER: "Viewer",
 	}[organizationContext?.role ?? ""] ?? "Organization Member";
 

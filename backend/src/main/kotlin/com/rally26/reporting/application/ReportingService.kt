@@ -73,7 +73,7 @@ data class PlatformReport(
 
 /**
  * Org reports (Phase 9 slice 1, ADR-025) — every report requires the read-only
- * reporting role boundary (OWNER, ADMINISTRATOR, FINANCE_MANAGER, or VIEWER).
+ * reporting role boundary (OWNER, ADMINISTRATOR, or VIEWER).
  * Mutating fee/payment operations remain behind their existing manager checks.
  * `from`/`to` default to the trailing 30 days when omitted, a common reporting-tool
  * convention this codebase hadn't needed before (every other date-range-shaped query

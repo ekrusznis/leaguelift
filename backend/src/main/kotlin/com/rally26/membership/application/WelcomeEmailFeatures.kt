@@ -27,12 +27,6 @@ object WelcomeEmailFeatures {
 		"Reports & insights",
 	)
 
-	private val FINANCE_MANAGER_FEATURES = listOf(
-		"Fee collection & payment plans",
-		"Offline payment reconciliation",
-		"Reports & insights",
-	)
-
 	private val TEAM_ADMINISTRATOR_FEATURES = listOf(
 		"Team schedules & events",
 		"Team communications",
@@ -52,7 +46,6 @@ object WelcomeEmailFeatures {
 
 	fun featuresFor(role: MembershipRole): List<String> = when (role) {
 		MembershipRole.OWNER, MembershipRole.ADMINISTRATOR -> OWNER_AND_ADMINISTRATOR_FEATURES
-		MembershipRole.FINANCE_MANAGER -> FINANCE_MANAGER_FEATURES
 		MembershipRole.TEAM_ADMINISTRATOR -> TEAM_ADMINISTRATOR_FEATURES
 		MembershipRole.TOURNAMENT_ADMINISTRATOR -> TOURNAMENT_ADMINISTRATOR_FEATURES
 		MembershipRole.VIEWER -> VIEWER_FEATURES

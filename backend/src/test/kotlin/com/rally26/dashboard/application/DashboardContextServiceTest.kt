@@ -54,8 +54,8 @@ class DashboardContextServiceTest {
 	}
 
 	@Test
-	fun `finance manager and viewer roles also resolve to OWNER dashboard`() {
-		every { membershipRepository.findAnyActiveMembershipForUser(currentUser.userId) } returns membership(MembershipRole.FINANCE_MANAGER)
+	fun `administrator and viewer roles also resolve to OWNER dashboard`() {
+		every { membershipRepository.findAnyActiveMembershipForUser(currentUser.userId) } returns membership(MembershipRole.ADMINISTRATOR)
 		assertEquals(DashboardRole.OWNER, service.resolve(currentUser).role)
 
 		every { membershipRepository.findAnyActiveMembershipForUser(currentUser.userId) } returns membership(MembershipRole.VIEWER)

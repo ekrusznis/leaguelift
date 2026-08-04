@@ -10,7 +10,6 @@ import { INVITABLE_ROLES, type InvitableRole } from "./types";
 
 const ROLE_LABELS: Record<InvitableRole, string> = {
 	ADMINISTRATOR: "Administrator",
-	FINANCE_MANAGER: "Finance manager",
 	TEAM_ADMINISTRATOR: "Team administrator",
 	TOURNAMENT_ADMINISTRATOR: "Tournament administrator",
 	VIEWER: "Viewer",

@@ -133,7 +133,7 @@ object CapabilityRegistry {
 			Capabilities.ORG_MANAGE, Capabilities.ORG_MEMBERS_MANAGE, Capabilities.ORG_REPORT_VIEW,
 			Capabilities.ORG_TEAM_MANAGE, Capabilities.ORG_TOURNAMENT_MANAGE, Capabilities.ORG_COMMUNICATION_MANAGE, Capabilities.ORG_EVENT_MANAGE, Capabilities.EVENT_READ,
 		)
-		MembershipRole.FINANCE_MANAGER, MembershipRole.VIEWER -> setOf(Capabilities.ORG_REPORT_VIEW)
+		MembershipRole.VIEWER -> setOf(Capabilities.ORG_REPORT_VIEW)
 		MembershipRole.TEAM_ADMINISTRATOR, MembershipRole.TOURNAMENT_ADMINISTRATOR -> emptySet()
 	}
 
@@ -194,19 +194,12 @@ object CapabilityRegistry {
 	 * family's profile requires either OWNER/ADMINISTRATOR or an actual guardian
 	 * relationship (the AuthorizationService.hasHouseholdCapability fallback).
 	 */
-	fun householdCapabilitiesForOrgRole(role: MembershipRole): Set<String> {
-		val financialView = setOf(
-			Capabilities.HOUSEHOLD_VIEW, Capabilities.HOUSEHOLD_FEE_VIEW, Capabilities.HOUSEHOLD_FEE_PAY,
-			Capabilities.HOUSEHOLD_CREDIT_VIEW, Capabilities.HOUSEHOLD_ORDER_VIEW,
+	fun householdCapabilitiesForOrgRole(role: MembershipRole): Set<String> = when (role) {
+		MembershipRole.OWNER, MembershipRole.ADMINISTRATOR -> householdCapabilities()
+		MembershipRole.VIEWER -> setOf(
+			Capabilities.HOUSEHOLD_VIEW, Capabilities.HOUSEHOLD_FEE_VIEW, Capabilities.HOUSEHOLD_FEE_PAY, Capabilities.EVENT_READ,
 		)
-		return when (role) {
-			MembershipRole.OWNER, MembershipRole.ADMINISTRATOR -> householdCapabilities()
-			MembershipRole.FINANCE_MANAGER -> financialView + Capabilities.EVENT_READ
-			MembershipRole.VIEWER -> setOf(
-				Capabilities.HOUSEHOLD_VIEW, Capabilities.HOUSEHOLD_FEE_VIEW, Capabilities.HOUSEHOLD_FEE_PAY, Capabilities.EVENT_READ,
-			)
-			MembershipRole.TEAM_ADMINISTRATOR, MembershipRole.TOURNAMENT_ADMINISTRATOR -> setOf(Capabilities.EVENT_READ)
-		}
+		MembershipRole.TEAM_ADMINISTRATOR, MembershipRole.TOURNAMENT_ADMINISTRATOR -> setOf(Capabilities.EVENT_READ)
 	}
 
 	/** Deliberately excludes anything fee/payment/report-related — see the class doc. */

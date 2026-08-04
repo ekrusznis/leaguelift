@@ -6020,7 +6020,7 @@ paths:
     get:
       tags: [reporting]
       summary: "Org revenue report — by source type (CONTRIBUTION/ORDER) and by team, date-ranged (Phase 9 slice 1, ADR-025; requires an active
-        reporting role: OWNER, ADMINISTRATOR, FINANCE_MANAGER, or VIEWER)"
+        reporting role: OWNER, ADMINISTRATOR, or VIEWER)"
       operationId: getRevenueReport
       parameters:
       - name: organizationId
@@ -6048,8 +6048,7 @@ paths:
   /organizations/{organizationId}/reports/revenue/export:
     get:
       tags: [reporting]
-      summary: "Revenue report as CSV (Phase 9 slice 1, ADR-025; requires an active reporting role: OWNER, ADMINISTRATOR, FINANCE_MANAGER, or
-        VIEWER)"
+      summary: "Revenue report as CSV (Phase 9 slice 1, ADR-025; requires an active reporting role: OWNER, ADMINISTRATOR, or VIEWER)"
       operationId: exportRevenueReport
       parameters:
       - name: organizationId
@@ -6076,7 +6075,7 @@ paths:
   /organizations/{organizationId}/reports/campaigns:
     get:
       tags: [reporting]
-      summary: "Revenue by campaign, date-ranged (Phase 9 slice 1, ADR-025; requires an active reporting role: OWNER, ADMINISTRATOR, FINANCE_MANAGER,
+      summary: "Revenue by campaign, date-ranged (Phase 9 slice 1, ADR-025; requires an active reporting role: OWNER, ADMINISTRATOR,
         or VIEWER)"
       operationId: getCampaignRevenueReport
       parameters:
@@ -6108,7 +6107,7 @@ paths:
     get:
       tags: [reporting]
       summary: "Product performance (quantity sold/revenue) from confirmed orders, date-ranged (Phase 9 slice 1, ADR-025; requires an active reporting
-        role: OWNER, ADMINISTRATOR, FINANCE_MANAGER, or VIEWER)"
+        role: OWNER, ADMINISTRATOR, or VIEWER)"
       operationId: getProductPerformanceReport
       parameters:
       - name: organizationId
@@ -6138,7 +6137,7 @@ paths:
   /organizations/{organizationId}/reports/refunds:
     get:
       tags: [reporting]
-      summary: "Refunds report, date-ranged (Phase 9 slice 1, ADR-025; requires an active reporting role: OWNER, ADMINISTRATOR, FINANCE_MANAGER,
+      summary: "Refunds report, date-ranged (Phase 9 slice 1, ADR-025; requires an active reporting role: OWNER, ADMINISTRATOR,
         or VIEWER)"
       operationId: getRefundsReport
       parameters:
@@ -6168,7 +6167,7 @@ paths:
     get:
       tags: [reporting]
       summary: "Org-wide fee payments actually collected in range, plus current outstanding total (Phase 9 slice 1, ADR-025; requires an active
-        reporting role: OWNER, ADMINISTRATOR, FINANCE_MANAGER, or VIEWER)"
+        reporting role: OWNER, ADMINISTRATOR, or VIEWER)"
       operationId: getFeeCollectionsReport
       parameters:
       - name: organizationId
@@ -9143,7 +9142,6 @@ components:
       enum:
       - OWNER
       - ADMINISTRATOR
-      - FINANCE_MANAGER
       - TEAM_ADMINISTRATOR
       - TOURNAMENT_ADMINISTRATOR
       - VIEWER
@@ -9212,7 +9210,6 @@ components:
       description: MembershipRole minus OWNER — ownership transfer is a separate workflow.
       enum:
       - ADMINISTRATOR
-      - FINANCE_MANAGER
       - TEAM_ADMINISTRATOR
       - TOURNAMENT_ADMINISTRATOR
       - VIEWER
@@ -13924,7 +13921,7 @@ components:
           format: email
         role:
           type: string
-          enum: [ADMINISTRATOR, FINANCE_MANAGER, TEAM_ADMINISTRATOR, TOURNAMENT_ADMINISTRATOR, VIEWER]
+          enum: [ADMINISTRATOR, TEAM_ADMINISTRATOR, TOURNAMENT_ADMINISTRATOR, VIEWER]
 
     BulkInvitationRequest:
       type: object

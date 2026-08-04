@@ -65,8 +65,8 @@ class MembershipService(
 
 	/**
 	 * Read-only organization reporting access. OWNER/ADMINISTRATOR may manage the
-	 * underlying data; FINANCE_MANAGER and VIEWER may inspect reports but are not
-	 * promoted to manager-level mutation rights. This mirrors the capability registry's
+	 * underlying data; VIEWER may inspect reports but is not promoted to manager-level
+	 * mutation rights. This mirrors the capability registry's
 	 * `organization.report.view` grant instead of routing report reads through the
 	 * broader manager check.
 	 */
@@ -173,7 +173,6 @@ class MembershipService(
 		val REPORTING_ROLES = setOf(
 			MembershipRole.OWNER,
 			MembershipRole.ADMINISTRATOR,
-			MembershipRole.FINANCE_MANAGER,
 			MembershipRole.VIEWER,
 		)
 	}

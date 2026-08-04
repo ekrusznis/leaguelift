@@ -53,7 +53,7 @@ class DashboardContextService(
 		val membership = membershipRepository.findAnyActiveMembershipForUser(currentUser.userId)
 		if (membership != null) {
 			val role = when (membership.role) {
-				MembershipRole.OWNER, MembershipRole.ADMINISTRATOR, MembershipRole.FINANCE_MANAGER, MembershipRole.VIEWER ->
+				MembershipRole.OWNER, MembershipRole.ADMINISTRATOR, MembershipRole.VIEWER ->
 					DashboardRole.OWNER
 				MembershipRole.TEAM_ADMINISTRATOR -> DashboardRole.COACH
 				MembershipRole.TOURNAMENT_ADMINISTRATOR -> DashboardRole.TOURNAMENT_ADMIN

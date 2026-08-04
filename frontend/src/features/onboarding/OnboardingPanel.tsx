@@ -24,7 +24,6 @@ PARTICIPANT,participant-riley-smith,household-smith,team-u14-blue,,,,,Riley,Smit
 
 const STAFF_ROLES = [
 	"ADMINISTRATOR",
-	"FINANCE_MANAGER",
 	"TEAM_ADMINISTRATOR",
 	"TOURNAMENT_ADMINISTRATOR",
 	"VIEWER",

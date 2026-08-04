@@ -343,3 +343,10 @@ Additional, unreserved decisions:
   deliberately separate from Resend, which stays reserved for automated lifecycle
   notifications — including a new `support.case.status_changed` Resend-templated
   email sent on real status transitions (2026-08-04)
+- ADR-060: `MembershipRole.FINANCE_MANAGER` removed and merged into `ADMINISTRATOR`,
+  closing a real capability bug found by a code-level audit of the four org-facing
+  dashboard roles — Finance Manager had drifted to the exact same organization
+  capabilities as Viewer despite being documented as having real financial-operations
+  authority (refunds, offline records, reconciliation), which Administrator already
+  had; migration V43 converts existing rows before narrowing the role check constraints
+  (2026-08-04)

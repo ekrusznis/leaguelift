@@ -39,7 +39,6 @@ export interface OnboardingProgress {
 
 export const INVITABLE_ROLES = [
 	"ADMINISTRATOR",
-	"FINANCE_MANAGER",
 	"TEAM_ADMINISTRATOR",
 	"TOURNAMENT_ADMINISTRATOR",
 	"VIEWER",
