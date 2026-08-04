@@ -5,10 +5,13 @@
 #
 # Run this ONCE, as root, either via the DigitalOcean web console (Droplet -> Access ->
 # Launch Droplet Console — no local SSH client needed) or over SSH if you already have
-# access:
+# access. This doesn't depend on anything being pushed or merged first — the simplest
+# path is to paste this file's contents directly into the DO console and run it, or:
 #
-#   curl -fsSL https://raw.githubusercontent.com/ekrusznis/rally26/main/infra/digitalocean/bootstrap-droplet.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/ekrusznis/leaguelift/main/infra/digitalocean/bootstrap-droplet.sh | bash
 #
+# (the GitHub repo is still named "leaguelift" as of this writing — update this URL, or
+# just paste the script directly, if/when the repo itself gets renamed to rally26) —
 # or copy the file over and run `bash bootstrap-droplet.sh`.
 #
 # Safe to re-run — every step below no-ops if already done.
