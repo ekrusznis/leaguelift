@@ -14,6 +14,7 @@ export type AnalyticsEvent =
 	| "guided_onboarding_viewed"
 	| "faq_opened"
 	| "final_cta_clicked"
+	| "final_cta_contact_clicked"
 	| "sales_form_viewed"
 	| "sales_form_started"
 	| "sales_form_step_completed"

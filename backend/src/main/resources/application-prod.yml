@@ -71,6 +71,17 @@ rally26:
         password-reset-id: ${RESEND_TEMPLATE_PASSWORD_RESET_ID:}
         invitation-id: ${RESEND_TEMPLATE_INVITATION_ID:}
         welcome-id: ${RESEND_TEMPLATE_WELCOME_ID:}
+        support-case-update-id: ${RESEND_TEMPLATE_SUPPORT_CASE_UPDATE_ID:}
+    # ADR-059 — Google Workspace SMTP, used only for support-case correspondence
+    # (SupportCaseCreatedEmailHandler), never as the ambient EmailProvider above. Blank
+    # username until a real Google Workspace app password is supplied; SmtpEmailProvider
+    # logs and no-ops instead of attempting a real send until then.
+    smtp:
+      host: ${SMTP_HOST:smtp.gmail.com}
+      port: ${SMTP_PORT:587}
+      username: ${SMTP_USERNAME:}
+      password: ${SMTP_PASSWORD:}
+      from-address: ${SMTP_FROM_ADDRESS:support@rally26.com}
   # The deployed production frontend origin — no default, startup fails if unset.
   frontend:
     base-url: ${FRONTEND_BASE_URL}

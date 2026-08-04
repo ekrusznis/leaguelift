@@ -21,7 +21,7 @@ export const FOOTER_COLUMNS: { heading: string; links: { label: string; to: stri
 		links: [
 			{ label: "Help", to: "/help" },
 			{ label: "Security", to: "/security" },
-			{ label: "Contact", to: "/contact" },
+			{ label: "Contact", to: "/#contact-us" },
 		],
 	},
 	{

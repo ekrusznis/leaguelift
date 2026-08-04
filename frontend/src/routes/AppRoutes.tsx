@@ -38,8 +38,7 @@ import { ResendVerificationPage } from "../pages/auth/ResendVerificationPage";
 import { ResetPasswordPage } from "../pages/auth/ResetPasswordPage";
 import { SignInPage } from "../pages/auth/SignInPage";
 import { VerifyEmailPage } from "../pages/auth/VerifyEmailPage";
-import { BookDemoPage } from "../pages/marketing/BookDemoPage";
-import { ContactPage } from "../pages/marketing/ContactPage";
+import { ContactRedirect } from "../pages/marketing/ContactRedirect";
 import { HomePage } from "../pages/marketing/HomePage";
 import { PublicCampaignView } from "../pages/marketing/PublicCampaignView";
 import { PublicSponsorshipView } from "../pages/marketing/PublicSponsorshipView";
@@ -66,8 +65,10 @@ export function AppRoutes() {
 				<Route path="solutions/:slug" element={<SolutionDetailPage />} />
 				<Route path="talk-to-sales" element={<TalkToSalesPage />} />
 				<Route path="founding-pilot" element={<Navigate to="/talk-to-sales" replace />} />
-				<Route path="book-demo" element={<BookDemoPage />} />
-				<Route path="contact" element={<ContactPage />} />
+				{/* Book a Demo was removed (ADR-059) in favor of the homepage Contact Us section — redirect any stale bookmarks/links straight to Talk to Sales, the closest surviving equivalent. */}
+				<Route path="book-demo" element={<Navigate to="/talk-to-sales" replace />} />
+				{/* /contact was a non-functional mock form (ADR-059) — every existing link to it now lands on the real, backend-wired Contact Us section on the homepage instead. */}
+				<Route path="contact" element={<ContactRedirect />} />
 				<Route path="security" element={<SecurityPage />} />
 				<Route path="help" element={<HelpCenterPage />} />
 				<Route path="help/support" element={<SupportRequestPage />} />

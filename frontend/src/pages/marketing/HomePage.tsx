@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { AnnouncementBar } from "../../marketing/components/AnnouncementBar";
 import { AudienceCard } from "../../marketing/components/AudienceCard";
+import { ContactUsSection } from "../../marketing/components/ContactUsSection";
 import { FaqAccordion } from "../../marketing/components/FaqAccordion";
 import { FeatureCard } from "../../marketing/components/FeatureCard";
 import { HomeHeader } from "../../marketing/components/HomeHeader";
@@ -700,10 +701,19 @@ export function HomePage() {
 							<PrimaryButton to="/auth/register" icon="arrow" onClick={() => track("final_cta_clicked")}>
 								Get Started
 							</PrimaryButton>
-							<SecondaryDarkButton to="/book-demo">Book a Demo</SecondaryDarkButton>
+							<SecondaryDarkButton
+								onClick={() => {
+									track("final_cta_contact_clicked");
+									document.getElementById(HOMEPAGE_SECTION_IDS.contactUs)?.scrollIntoView({ behavior: "smooth", block: "start" });
+								}}
+							>
+								Contact Us
+							</SecondaryDarkButton>
 						</div>
 					</PageContainer>
 				</section>
+
+				<ContactUsSection />
 			</main>
 
 			<SiteFooter />
