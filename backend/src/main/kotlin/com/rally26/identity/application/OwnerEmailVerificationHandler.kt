@@ -2,10 +2,12 @@ package com.rally26.identity.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.config.FrontendProperties
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.identity.domain.AppUserStatus
 import com.rally26.identity.persistence.AppUserRepository
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
+import com.rally26.notification.EmailTemplateRef
 import com.rally26.outbox.application.OutboxEventHandler
 import com.rally26.outbox.domain.OutboxEvent
 import org.springframework.stereotype.Component
@@ -16,6 +18,7 @@ class OwnerEmailVerificationHandler(
 	private val appUserRepository: AppUserRepository,
 	private val emailProvider: EmailProvider,
 	private val frontendProperties: FrontendProperties,
+	private val resendTemplateProperties: ResendTemplateProperties,
 	private val objectMapper: ObjectMapper,
 ) : OutboxEventHandler {
 
@@ -37,6 +40,9 @@ class OwnerEmailVerificationHandler(
 				body = "Welcome to Rally26. Verify your email to finish account setup.\n\n" +
 					"Verify email: $verifyUrl\n\n" +
 					"This link expires in 24 hours.\n\n— Rally26",
+				template = resendTemplateProperties.verifyEmailId.takeIf { it.isNotBlank() }?.let { templateId ->
+					EmailTemplateRef(id = templateId, variables = mapOf("VERIFY_URL" to verifyUrl))
+				},
 			),
 		)
 	}

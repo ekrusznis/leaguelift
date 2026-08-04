@@ -114,6 +114,10 @@ jobs:
             RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
             RESEND_FROM_ADDRESS=${{ vars.RESEND_FROM_ADDRESS }}
             RESEND_WEBHOOK_SECRET=${{ secrets.RESEND_WEBHOOK_SECRET }}
+            RESEND_TEMPLATE_VERIFY_EMAIL_ID=${{ vars.RESEND_TEMPLATE_VERIFY_EMAIL_ID }}
+            RESEND_TEMPLATE_PASSWORD_RESET_ID=${{ vars.RESEND_TEMPLATE_PASSWORD_RESET_ID }}
+            RESEND_TEMPLATE_INVITATION_ID=${{ vars.RESEND_TEMPLATE_INVITATION_ID }}
+            RESEND_TEMPLATE_WELCOME_ID=${{ vars.RESEND_TEMPLATE_WELCOME_ID }}
             EOF
             chmod 600 .env
             # DO Container Registry accepts the API token as both username and

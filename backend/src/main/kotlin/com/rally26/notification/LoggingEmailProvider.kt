@@ -24,6 +24,19 @@ private val log = LoggerFactory.getLogger(LoggingEmailProvider::class.java)
 @ConditionalOnProperty(prefix = "rally26.email", name = ["provider"], havingValue = "logging", matchIfMissing = true)
 class LoggingEmailProvider : EmailProvider {
 	override fun send(message: EmailMessage) {
+		val template = message.template
+		if (template != null && template.id.isNotBlank()) {
+			// Variable keys only, never values — a variable could carry a name/URL/token
+			// that DESIGN-DOC.md section 18.2 doesn't want in logs.
+			log.info(
+				"Email would be sent to {} (cc={}) via Resend template {} — variables: {}",
+				message.to,
+				message.cc,
+				template.id,
+				template.variables.keys,
+			)
+			return
+		}
 		log.info("Email would be sent to {} (cc={}) — subject: \"{}\"", message.to, message.cc, message.subject)
 	}
 }
