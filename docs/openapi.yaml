@@ -7494,6 +7494,7 @@ paths:
           content:
             application/json:
               schema:
+                type: object
                 allOf:
                 - $ref: "#/components/schemas/PlatformSupportAccessResponse"
                 nullable: true
@@ -8568,6 +8569,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+    ServiceUnavailable:
+      description: The upstream integration provider is not available right now (e.g. disabled, unconfigured, or a stub/local-only provider outside dev)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   schemas:
 
     SupportAudience:
@@ -9552,10 +9559,12 @@ components:
           type: string
           format: date-time
         logo:
+          type: object
           allOf:
           - $ref: "#/components/schemas/PublicPageMediaResponse"
           nullable: true
         cover:
+          type: object
           allOf:
           - $ref: "#/components/schemas/PublicPageMediaResponse"
           nullable: true
@@ -11379,6 +11388,7 @@ components:
           type: string
           format: uuid
         previousStatus:
+          type: string
           allOf:
           - $ref: "#/components/schemas/FulfillmentStatus"
           nullable: true
@@ -14421,7 +14431,7 @@ components:
         activationRequirement: {type: string}
         defaultScopes: {type: array, items: {type: string}}
         stub: {type: boolean, description: True only for an explicitly configured local/test stub; production rejects stub mode.}
-        connection: {allOf: [$ref: "#/components/schemas/IntegrationConnectionResponse"], nullable: true}
+        connection: {type: object, allOf: [$ref: "#/components/schemas/IntegrationConnectionResponse"], nullable: true}
     AuthorizationStartResponse:
       type: object
       required: [provider, connectionId, authorizationUrl, expiresAt]
@@ -14522,6 +14532,7 @@ components:
         catalog:
           $ref: '#/components/schemas/IntegrationCatalogResponse'
         setting:
+          type: object
           allOf:
           - $ref: '#/components/schemas/GoogleCalendarSettingResponse'
           nullable: true

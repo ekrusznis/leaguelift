@@ -9,7 +9,7 @@ export function StepTimeline({ steps }: { steps: Step[] }) {
 			{steps.map((step, index) => (
 				<li key={step.title} className="relative flex flex-col gap-3">
 					<div className="flex items-center gap-3">
-						<span className="flex size-12 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-green-400">
+						<span className="flex size-12 shrink-0 items-center justify-center rounded-full border border-orange-400/50 bg-orange-500/10 text-orange-400">
 							{step.icon}
 						</span>
 						{index < steps.length - 1 && (
@@ -17,7 +17,7 @@ export function StepTimeline({ steps }: { steps: Step[] }) {
 						)}
 					</div>
 					<h3 className="font-heading text-lg font-bold text-white">
-						<span className="text-green-400">{index + 1}</span> {step.title}
+						<span className="text-orange-400">{index + 1}</span> {step.title}
 					</h3>
 					<p className="text-sm leading-relaxed text-slate-300">{step.copy}</p>
 				</li>

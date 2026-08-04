@@ -549,7 +549,7 @@ export function HomePage() {
 						</div>
 
 						<ResponsiveVisual
-							src="/demo-assets/landing/landing-page-vis-2.png"
+							src="/demo-assets/landing/landing-page-vis-2.svg"
 							alt="Diagram showing the Rally26 mark at the center, connected to Campaigns, Fees & Payments, Team Stores, Store Orders, Communications, and Reports & Insights — one connected platform."
 							width={1536}
 							height={1024}
