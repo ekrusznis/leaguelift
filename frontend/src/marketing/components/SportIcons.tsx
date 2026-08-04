@@ -78,7 +78,7 @@ export const SPORT_ICONS = [
 
 export function SportIconRow({ tone = "dark" }: { tone?: "dark" | "light" }) {
 	const textColor = tone === "dark" ? "text-slate-300" : "text-slate-700";
-	const iconColor = tone === "dark" ? "text-green-400" : "text-green-600";
+	const iconColor = tone === "dark" ? "text-orange-400" : "text-orange-600";
 
 	return (
 		<ul className="flex flex-wrap items-center justify-center gap-6 sm:justify-start" aria-label="Sports Rally26 supports">
