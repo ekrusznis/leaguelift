@@ -103,7 +103,7 @@ jobs:
             JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}
             SPACES_ENDPOINT=${{ vars.DO_SPACES_ENDPOINT }}
             SPACES_ACCESS_KEY=${{ secrets.DO_SPACES_ACCESS_KEY_ID }}
-            SPACES_SECRET_KEY=${{ secrets.DO_SPACES_SECRET_KEY }}
+            SPACES_SECRET_KEY=${{ secrets.DO_SPACES_SECRET }}
             SPACES_BUCKET=${{ vars.DO_SPACES_BUCKET || 'll-allbuckets-1785762425006' }}
             SPACES_REGION=${{ vars.DO_SPACES_REGION }}
             STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
