@@ -261,8 +261,12 @@ class OrderService(
                         currency = variant.currency,
                     ),
                 )
-            val successUrl = "${frontendProperties.baseUrl}/app/swag-shop/orders/${order.id}?status=success"
-            val cancelUrl = "${frontendProperties.baseUrl}/app/swag-shop?canceled=1"
+            // Redirects back to the order form itself (not a separate confirmation page/route,
+            // which doesn't exist) with a status flag the page reads to show a banner —
+            // matches the founder's own suggested UX after this was tested live and landed
+            // on a dead route.
+            val successUrl = "${frontendProperties.baseUrl}/app/organizations/$organizationId/swag-shop/order?orderId=${order.id}&status=success"
+            val cancelUrl = "${frontendProperties.baseUrl}/app/organizations/$organizationId/swag-shop/order?status=canceled"
             val session = stripeOrderCheckoutClient.createOrderCheckoutSession(order.id, lineItems, successUrl, cancelUrl)
             orderRepository.attachStripeSession(order.id, session.sessionId)
             OrderCheckout(order.id, session.checkoutUrl)

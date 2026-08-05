@@ -73,10 +73,14 @@ class StripeWebhookController(
             try {
                 when (event.type) {
                     "checkout.session.completed" -> {
-                        val session =
-                            event.dataObjectDeserializer.getObject().orElseThrow {
-                                IllegalStateException("Unable to deserialize checkout.session.completed payload")
-                            } as Session
+                        // deserializeUnsafe (not getObject) deliberately skips Stripe's
+                        // API-version compatibility check and parses the raw JSON directly
+                        // — getObject() returns an empty Optional whenever the webhook
+                        // event's own api_version differs from the one stripe-java was
+                        // compiled against (Stripe's own documented workaround for this).
+                        // The Session fields this handler reads (id/paymentStatus/
+                        // paymentIntent/metadata/address) are stable across versions.
+                        val session = event.dataObjectDeserializer.deserializeUnsafe() as Session
                         if (session.metadata?.containsKey("orderId") == true) {
                             relatedEntityType = "order"
                             relatedEntityId =

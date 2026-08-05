@@ -1,4 +1,3 @@
-import { heroImages } from "../heroImages";
 import { solutionHeroImages } from "../solutionHeroImages";
 
 export type SolutionContent = {
@@ -131,7 +130,7 @@ export const SOLUTIONS: SolutionContent[] = [
 		hero: {
 			headline: "Merchandise without the inventory risk.",
 			copy: "Sell organization, team, season, and tournament products with attribution back to the right program.",
-			image: heroImages.apparelCollection,
+			image: "/demo-assets/swagshop/swagshop_banner.png",
 		},
 		problem:
 			"Booster clubs and teams often avoid selling merchandise because it means fronting money for inventory nobody's sure will sell.",

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useContexts } from "../../authorization/api";
 import { Capabilities } from "../../authorization/capabilityConstants";
 import { Button } from "../../components/Button";
@@ -18,6 +18,9 @@ const PLACEMENT_OPTIONS: { value: PersonalizationPlacement; label: string }[] = 
 
 export function SwagShopOrderFlow() {
 	const { organizationId } = useParams<{ organizationId: string }>();
+	const [searchParams] = useSearchParams();
+	const checkoutStatus = searchParams.get("status");
+	const returnedOrderId = searchParams.get("orderId");
 	const contexts = useContexts();
 	const apparelTypes = useSwagShopApparelTypes(organizationId ?? "");
 	const createOrder = useCreateSwagShopOrder(organizationId ?? "");
@@ -85,6 +88,21 @@ export function SwagShopOrderFlow() {
 				<img src="/demo-assets/swagshop/swagshoplogo.png" alt="Swag Shop" className="h-16 w-auto" />
 				<p className="mt-2 text-slate-gray">Order personalized team apparel — the team logo is added automatically.</p>
 			</div>
+
+			{checkoutStatus === "success" && (
+				<div role="status" className="rounded-lg border border-green-600/30 bg-green-50 p-4 text-green-800">
+					<p className="font-medium">Order placed!</p>
+					<p className="mt-1 text-sm">
+						{returnedOrderId ? `Order ${returnedOrderId.slice(0, 8)} is confirmed. ` : ""}
+						We&rsquo;ll send apparel to production once the team logo and personalization are ready. Watch for a confirmation email.
+					</p>
+				</div>
+			)}
+			{checkoutStatus === "canceled" && (
+				<div role="status" className="rounded-lg border border-slate-gray/30 bg-ice-white p-4 text-slate-gray">
+					Checkout was canceled — no order was placed.
+				</div>
+			)}
 
 			{teams.length > 1 && (
 				<div className="flex flex-col gap-1">
