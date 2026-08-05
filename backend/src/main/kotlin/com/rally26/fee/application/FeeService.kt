@@ -1,6 +1,9 @@
 package com.rally26.fee.application
 
 import com.rally26.audit.application.AuditService
+import com.rally26.authorization.application.AuthorizationService
+import com.rally26.authorization.domain.Capabilities
+import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.util.CsvUtil
@@ -36,6 +39,7 @@ class FeeService(
     private val householdRepository: HouseholdRepository,
     private val membershipService: MembershipService,
     private val auditService: AuditService,
+    private val authorizationService: AuthorizationService,
 ) {
     // --- Fee Templates ---
 
@@ -113,6 +117,7 @@ class FeeService(
 
     // --- Fee Assignments ---
 
+    /** Read-only, so open to a guardian viewing their own household's fees, not just org staff. */
     fun listForHousehold(
         organizationId: UUID,
         householdId: UUID,
@@ -120,20 +125,25 @@ class FeeService(
         offset: Int,
         limit: Int,
     ): List<FeeAssignmentWithBalance> {
-        membershipService.requireActiveMembership(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
+        if (!authorizationService.hasHouseholdCapability(organizationId, householdId, currentUser, Capabilities.HOUSEHOLD_FEE_VIEW)) {
+            throw ForbiddenException("HOUSEHOLD_ACCESS_DENIED", "You do not have access to this household's fees.")
+        }
         return feeRepository.findByHousehold(householdId, organizationId, offset, limit).map(::withBalance)
     }
 
+    /** Read-only — same guardian-or-staff access as [listForHousehold]. */
     fun countForHousehold(
         organizationId: UUID,
         householdId: UUID,
         currentUser: CurrentUser,
     ): Long {
-        membershipService.requireActiveMembership(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
+        if (!authorizationService.hasHouseholdCapability(organizationId, householdId, currentUser, Capabilities.HOUSEHOLD_FEE_VIEW)) {
+            throw ForbiddenException("HOUSEHOLD_ACCESS_DENIED", "You do not have access to this household's fees.")
+        }
         return feeRepository.countByHousehold(householdId, organizationId)
     }
 

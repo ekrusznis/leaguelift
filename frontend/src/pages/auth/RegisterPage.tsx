@@ -13,6 +13,16 @@ import { track } from "../../marketing/analytics";
 import { useAuth } from "../../auth/AuthContext";
 import { registerAccountSchema, type RegisterAccountFormValues } from "./schema";
 
+/** Reads the invitation token out of a `next=/auth/invitation?token=...` destination, if that's where `next` points. */
+function invitationTokenFromNext(next: string | null): string | undefined {
+	if (!next || !next.startsWith("/auth/invitation")) return undefined;
+	try {
+		return new URL(next, window.location.origin).searchParams.get("token") ?? undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 /**
  * The backend endpoint this calls (`/auth/register-owner`) only ever creates a bare
  * AppUser account pending email verification — it never creates an organization, so
@@ -23,12 +33,17 @@ import { registerAccountSchema, type RegisterAccountFormValues } from "./schema"
  *
  * `next` (if present) is carried through to the post-verification "Go to Sign In" link
  * so an invited person who registers lands back on the invitation page — where they can
- * accept with their invited role — instead of the generic sign-in destination.
+ * accept with their invited role — instead of the generic sign-in destination. When
+ * `next` points at an invitation, its token is also sent with registration itself so the
+ * *verification email's own link* (opened from a different tab/device than this one)
+ * carries the same redirect — otherwise the invitation would be silently orphaned for
+ * anyone who doesn't keep this exact tab open through email verification.
  */
 export function RegisterPage() {
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const next = searchParams.get("next");
+	const invitationToken = invitationTokenFromNext(next);
 	const { register: registerAccount } = useAuth();
 	const [step, setStep] = useState<"form" | "confirmation">("form");
 	const [submitError, setSubmitError] = useState<string | null>(null);
@@ -55,6 +70,7 @@ export function RegisterPage() {
 			lastName: values.lastName,
 			email: values.email,
 			password: values.password,
+			invitationToken,
 		});
 		if (result.success) {
 			track("registration_succeeded");
@@ -159,7 +175,8 @@ export function RegisterPage() {
 						</span>
 						<h1 className="font-heading text-2xl font-extrabold text-white">Check your email, {createdName}</h1>
 						<p className="max-w-sm text-sm text-slate-300">
-							Use the verification link we sent to activate your account, then sign in to create your organization.
+							Use the verification link we sent to activate your account, then sign in to{" "}
+							{invitationToken ? "accept your invitation" : "create your organization"}.
 						</p>
 						<Link to="/auth/resend-verification" className="text-sm text-green-400 hover:underline">
 							Didn&rsquo;t get the email? Resend verification

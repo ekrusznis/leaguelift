@@ -11,6 +11,8 @@ import com.rally26.notification.EmailTemplateRef
 import com.rally26.outbox.application.OutboxEventHandler
 import com.rally26.outbox.domain.OutboxEvent
 import org.springframework.stereotype.Component
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 
 @Component
@@ -36,7 +38,18 @@ class OwnerEmailVerificationHandler(
         val user = appUserRepository.findById(userId) ?: return
         if (user.status != AppUserStatus.PENDING_EMAIL_VERIFICATION) return
 
-        val verifyUrl = "${frontendProperties.baseUrl}/auth/verify-email?token=$verificationToken"
+        // Carries an invitation an invitee registered from through to the verify-email
+        // page, so its post-verify "Sign In" can redirect back to accepting the
+        // invitation instead of stranding it — see EmailVerificationService.
+        val invitationToken = payload.get("invitationToken")?.asText()?.trim().orEmpty()
+        val nextParam =
+            if (invitationToken.isNotBlank()) {
+                val next = "/auth/invitation?token=$invitationToken"
+                "&next=${URLEncoder.encode(next, StandardCharsets.UTF_8)}"
+            } else {
+                ""
+            }
+        val verifyUrl = "${frontendProperties.baseUrl}/auth/verify-email?token=$verificationToken$nextParam"
         emailProvider.send(
             EmailMessage(
                 to = user.email,

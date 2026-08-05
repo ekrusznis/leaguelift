@@ -24,10 +24,15 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
-/** A staff-visible list of individual responses; guardians/athletes only ever get [summary]. */
+/**
+ * A staff-visible list of individual responses; guardians/athletes only ever get
+ * [summary]. [participantNames] is empty whenever [responses] is (never populated for
+ * the guardian/athlete summary-only branch) -- see [EventRsvpService.getRsvps].
+ */
 data class EventRsvpsResult(
     val summary: RsvpSummary,
     val responses: List<EventRsvp>,
+    val participantNames: Map<UUID, String> = emptyMap(),
 )
 
 /**
@@ -141,7 +146,15 @@ class EventRsvpService(
         val responses = eventRsvpRepository.findByEvent(eventId)
         val summary = RsvpSummary.of(responses)
 
-        if (hasStaffReadAccess(event, currentUser)) return EventRsvpsResult(summary, responses)
+        if (hasStaffReadAccess(event, currentUser)) {
+            val names =
+                responses
+                    .map { it.participantId }
+                    .distinct()
+                    .mapNotNull { id -> participantRepository.findById(id, organizationId)?.let { id to "${it.firstName} ${it.lastName}" } }
+                    .toMap()
+            return EventRsvpsResult(summary, responses, names)
+        }
         val teamId = event.teamId
         if (teamId != null &&
             currentUserHasParticipantOnTeam(organizationId, teamId, currentUser)

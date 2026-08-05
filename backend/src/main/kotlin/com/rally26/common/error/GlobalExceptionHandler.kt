@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 
@@ -61,6 +62,20 @@ class GlobalExceptionHandler(
                 code = "MALFORMED_REQUEST_BODY",
                 message = "The request body could not be read. Check for missing or invalid fields.",
                 requestId = requestId,
+            )
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body)
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException::class)
+    fun handleMissingParameter(ex: MissingServletRequestParameterException): ResponseEntity<ErrorResponse> {
+        // A missing required query/path param is a client-input problem, same treatment
+        // as handleMalformedBody -- found via a guardian-portal fix (2026-08-05) where
+        // this fell through to handleUnexpected's opaque 500 instead.
+        val body =
+            ErrorResponse(
+                code = "MISSING_REQUEST_PARAMETER",
+                message = "Required parameter '${ex.parameterName}' is missing.",
+                requestId = requestIdProvider.currentRequestId(),
             )
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body)
     }

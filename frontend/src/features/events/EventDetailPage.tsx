@@ -155,7 +155,7 @@ export function EventDetailPage() {
 						<ul className="mt-5 flex flex-col gap-2" aria-label="Individual RSVP responses">
 							{rsvps.data.responses.map((response) => (
 								<li key={response.id} className="flex items-center justify-between rounded-lg bg-ice-white px-3 py-2 text-sm">
-									<span className="text-slate-gray">Participant {response.participantId.slice(0, 8)}</span>
+									<span className="text-slate-gray">{response.participantName ?? `Participant ${response.participantId.slice(0, 8)}`}</span>
 									<span className="font-medium text-navy">{response.response.replace("_", " ")}</span>
 								</li>
 							))}
