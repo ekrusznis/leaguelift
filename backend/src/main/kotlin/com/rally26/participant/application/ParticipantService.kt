@@ -1,7 +1,10 @@
 package com.rally26.participant.application
 
 import com.rally26.audit.application.AuditService
+import com.rally26.authorization.application.AuthorizationService
+import com.rally26.authorization.domain.Capabilities
 import com.rally26.common.error.ConflictException
+import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.web.CurrentUser
 import com.rally26.household.persistence.HouseholdRepository
@@ -21,6 +24,7 @@ class ParticipantService(
     private val householdRepository: HouseholdRepository,
     private val membershipService: MembershipService,
     private val auditService: AuditService,
+    private val authorizationService: AuthorizationService,
 ) {
     fun listForOrganization(
         organizationId: UUID,
@@ -40,14 +44,17 @@ class ParticipantService(
         return participantRepository.countAllForOrganization(organizationId)
     }
 
+    /** Read-only, so open to a guardian viewing their own household's participants, not just org staff. */
     fun listForHousehold(
         organizationId: UUID,
         householdId: UUID,
         currentUser: CurrentUser,
     ): List<Participant> {
-        membershipService.requireActiveMembership(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
+        if (!authorizationService.hasHouseholdCapability(organizationId, householdId, currentUser, Capabilities.HOUSEHOLD_VIEW)) {
+            throw ForbiddenException("HOUSEHOLD_ACCESS_DENIED", "You do not have access to this household.")
+        }
         return participantRepository.findByHousehold(householdId, organizationId)
     }
 

@@ -9,6 +9,12 @@ import { PrimaryButton, SecondaryDarkButton } from "../../marketing/components/b
 export function VerifyEmailPage() {
 	const [searchParams] = useSearchParams();
 	const token = searchParams.get("token")?.trim() ?? "";
+	// Set when this link was reached via registering from an invitation-accept page
+	// (EmailVerificationService/OwnerEmailVerificationHandler embed it in the emailed
+	// link) — carried through to Sign In so the invitee lands back on accepting the
+	// invitation instead of a generic destination.
+	const next = searchParams.get("next");
+	const signInHref = next && next.startsWith("/") ? `/auth/sign-in?next=${encodeURIComponent(next)}` : "/auth/sign-in";
 	const [status, setStatus] = useState<"idle" | "submitting" | "verified" | "error">("idle");
 	const [error, setError] = useState<string | null>(null);
 	// Guards against a double-click firing two requests before the button's `disabled`
@@ -62,13 +68,17 @@ export function VerifyEmailPage() {
 			<h1 className="font-heading text-2xl font-extrabold text-white">Verify your email</h1>
 			<p className="max-w-sm text-sm text-slate-300">Finish owner account setup by verifying your email address.</p>
 			{error && <InlineAlert tone="error" title={error} />}
-			{status === "verified" && <InlineAlert tone="success" title="Email verified">You can now sign in and create your organization.</InlineAlert>}
+			{status === "verified" && (
+				<InlineAlert tone="success" title="Email verified">
+					{next ? "You can now sign in to accept your invitation." : "You can now sign in and create your organization."}
+				</InlineAlert>
+			)}
 			<div className="mt-2 flex flex-wrap justify-center gap-3">
 				<PrimaryButton onClick={onVerify} loading={status === "submitting"}>
 					Verify Email
 				</PrimaryButton>
 				<SecondaryDarkButton to="/auth/resend-verification">Resend verification</SecondaryDarkButton>
-				<SecondaryDarkButton to="/auth/sign-in">Sign In</SecondaryDarkButton>
+				<SecondaryDarkButton to={signInHref}>Sign In</SecondaryDarkButton>
 			</div>
 		</div>
 	);

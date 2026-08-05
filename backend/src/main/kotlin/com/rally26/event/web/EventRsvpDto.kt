@@ -18,6 +18,8 @@ data class EventRsvpResponse(
     val id: UUID,
     val eventId: UUID,
     val participantId: UUID,
+    /** Null for the guardian/athlete summary-only view, where [EventRsvpsResult.responses] is always empty anyway. */
+    val participantName: String?,
     val response: String,
     val note: String?,
     val source: String,
@@ -25,7 +27,8 @@ data class EventRsvpResponse(
     val updatedAt: Instant,
 )
 
-fun EventRsvp.toResponse() = EventRsvpResponse(id, eventId, participantId, response.name, note, source.name, createdAt, updatedAt)
+fun EventRsvp.toResponse(participantName: String? = null) =
+    EventRsvpResponse(id, eventId, participantId, participantName, response.name, note, source.name, createdAt, updatedAt)
 
 data class RsvpSummaryResponse(
     val attending: Long,
@@ -41,4 +44,10 @@ data class EventRsvpsResponse(
     val responses: List<EventRsvpResponse>,
 )
 
-fun EventRsvpsResult.toResponse() = EventRsvpsResponse(summary.toResponse(), responses.map { it.toResponse() })
+fun EventRsvpsResult.toResponse() =
+    EventRsvpsResponse(
+        summary.toResponse(),
+        responses.map {
+            it.toResponse(participantNames[it.participantId])
+        },
+    )

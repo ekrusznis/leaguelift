@@ -23,6 +23,8 @@ export interface RegisterParams {
 	lastName: string;
 	email: string;
 	password: string;
+	/** Set when registration was reached from an invitation-accept link, so the verification email can redirect back to it. */
+	invitationToken?: string;
 }
 
 export interface RegistrationAcceptedResponse {

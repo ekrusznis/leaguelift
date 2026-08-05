@@ -64,6 +64,8 @@ export interface EventRsvp {
 	id: string;
 	eventId: string;
 	participantId: string;
+	/** Staff-visible individual responses only; null on the guardian/athlete summary-only view or when submitting your own RSVP. */
+	participantName: string | null;
 	response: RsvpResponse;
 	note: string | null;
 	source: string;

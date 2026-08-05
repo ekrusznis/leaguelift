@@ -212,4 +212,11 @@ class PlatformSupportCaseController(
             request.assignedPlatformUserId,
             request.resolution,
         ).toResponse()
+
+    @PostMapping("/{caseId}/send-email")
+    fun sendEmail(
+        @PathVariable caseId: UUID,
+        @Valid @RequestBody request: SendSupportCaseEmailRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = service.sendPlatformEmail(currentUser, caseId, request.subject, request.body).toResponse()
 }

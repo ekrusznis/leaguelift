@@ -1,6 +1,9 @@
 package com.rally26.household.application
 
 import com.rally26.audit.application.AuditService
+import com.rally26.authorization.application.AuthorizationService
+import com.rally26.authorization.domain.Capabilities
+import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.web.CurrentUser
 import com.rally26.household.domain.Household
@@ -16,6 +19,7 @@ class HouseholdService(
     private val householdRepository: HouseholdRepository,
     private val membershipService: MembershipService,
     private val auditService: AuditService,
+    private val authorizationService: AuthorizationService,
 ) {
     fun list(
         organizationId: UUID,
@@ -35,14 +39,23 @@ class HouseholdService(
         return householdRepository.countAll(organizationId)
     }
 
+    /**
+     * Read-only, so open to a guardian viewing their own household in addition to org
+     * staff — unlike [create]/[update]/[addAdult]/[removeAdult], which stay
+     * manager-only. See [com.rally26.authorization.application.AuthorizationService.hasHouseholdCapability].
+     */
     fun get(
         organizationId: UUID,
         householdId: UUID,
         currentUser: CurrentUser,
     ): Household {
-        membershipService.requireActiveMembership(organizationId, currentUser)
-        return householdRepository.findById(householdId, organizationId)
-            ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
+        val household =
+            householdRepository.findById(householdId, organizationId)
+                ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
+        if (!authorizationService.hasHouseholdCapability(organizationId, householdId, currentUser, Capabilities.HOUSEHOLD_VIEW)) {
+            throw ForbiddenException("HOUSEHOLD_ACCESS_DENIED", "You do not have access to this household.")
+        }
+        return household
     }
 
     @Transactional
@@ -89,14 +102,17 @@ class HouseholdService(
         return householdRepository.findById(householdId, organizationId)!!
     }
 
+    /** Read-only — same guardian-or-staff access as [get]. */
     fun listAdults(
         organizationId: UUID,
         householdId: UUID,
         currentUser: CurrentUser,
     ): List<HouseholdAdult> {
-        membershipService.requireActiveMembership(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
+        if (!authorizationService.hasHouseholdCapability(organizationId, householdId, currentUser, Capabilities.HOUSEHOLD_VIEW)) {
+            throw ForbiddenException("HOUSEHOLD_ACCESS_DENIED", "You do not have access to this household.")
+        }
         return householdRepository.listAdults(householdId, organizationId)
     }
 

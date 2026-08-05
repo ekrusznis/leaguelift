@@ -32,7 +32,13 @@ class AuthController(
         @Valid @RequestBody request: RegisterRequest,
     ): ResponseEntity<RegistrationAcceptedResponse> {
         val displayName = "${request.firstName} ${request.lastName}".trim()
-        val accepted = passwordAuthenticationService.registerOwner(request.email, request.password, displayName)
+        val accepted =
+            passwordAuthenticationService.registerOwner(
+                request.email,
+                request.password,
+                displayName,
+                request.invitationToken,
+            )
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(RegistrationAcceptedResponse(email = accepted.email))
     }
 

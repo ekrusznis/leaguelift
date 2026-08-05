@@ -28,10 +28,20 @@ class EmailVerificationService(
         val userId: UUID,
         val email: String,
         val rawToken: String,
+        /**
+         * Present only when registration was reached from an invitation-accept link.
+         * Threaded into the verification email's link so the invitee lands back on
+         * accepting the invitation after verifying, instead of a generic sign-in —
+         * see [com.rally26.identity.application.OwnerEmailVerificationHandler].
+         */
+        val invitationToken: String? = null,
     )
 
     @Transactional
-    fun issueForUser(userId: UUID): IssuedVerification {
+    fun issueForUser(
+        userId: UUID,
+        invitationToken: String? = null,
+    ): IssuedVerification {
         val user =
             appUserRepository.findById(userId)
                 ?: throw NotFoundException("USER_NOT_FOUND", "The user could not be found.")
@@ -44,7 +54,7 @@ class EmailVerificationService(
             tokenHash = sha256Hex(rawToken),
             expiresAt = Instant.now().plus(Duration.ofHours(EMAIL_VERIFICATION_VALIDITY_HOURS)),
         )
-        return IssuedVerification(user.id, user.email, rawToken)
+        return IssuedVerification(user.id, user.email, rawToken, invitationToken)
     }
 
     @Transactional
@@ -56,13 +66,14 @@ class EmailVerificationService(
     }
 
     fun enqueueVerificationEmail(issued: IssuedVerification) {
+        val invitationTokenField = issued.invitationToken?.let { ""","invitationToken":"$it"""" } ?: ""
         outboxWriter.write(
             aggregateType = "app_user",
             aggregateId = issued.userId,
             organizationId = null,
             eventType = "auth.owner_verification_requested",
             payloadJson =
-                """{"userId":"${issued.userId}","email":"${issued.email}","verificationToken":"${issued.rawToken}"}""",
+                """{"userId":"${issued.userId}","email":"${issued.email}","verificationToken":"${issued.rawToken}"$invitationTokenField}""",
         )
     }
 

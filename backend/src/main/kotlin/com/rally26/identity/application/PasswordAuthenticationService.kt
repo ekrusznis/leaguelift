@@ -57,6 +57,7 @@ class PasswordAuthenticationService(
         email: String,
         password: String,
         displayName: String,
+        invitationToken: String? = null,
     ): RegistrationAccepted {
         val normalizedEmail = email.trim().lowercase()
         if (appUserRepository.findByEmail(normalizedEmail) != null) {
@@ -73,7 +74,7 @@ class PasswordAuthenticationService(
             } catch (_: DuplicateKeyException) {
                 throw emailAlreadyRegistered()
             }
-        val issued = emailVerificationService.issueForUser(created.id)
+        val issued = emailVerificationService.issueForUser(created.id, invitationToken)
         emailVerificationService.enqueueVerificationEmail(issued)
         return RegistrationAccepted(email = normalizedEmail)
     }

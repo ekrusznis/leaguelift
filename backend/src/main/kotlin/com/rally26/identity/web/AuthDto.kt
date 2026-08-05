@@ -17,6 +17,15 @@ data class RegisterRequest(
     @field:NotBlank
     @field:Size(max = 60)
     val lastName: String,
+    /**
+     * Set when registration was reached from an invitation-accept link
+     * (`/auth/invitation?token=...`) by someone with no existing account yet. Carried
+     * through to the verification email so its link can redirect back to accepting the
+     * invitation after verifying, instead of stranding a real invitation as permanently
+     * unclaimed — see [com.rally26.identity.application.EmailVerificationService].
+     */
+    @field:Size(max = 500)
+    val invitationToken: String? = null,
 )
 
 data class RegistrationAcceptedResponse(
