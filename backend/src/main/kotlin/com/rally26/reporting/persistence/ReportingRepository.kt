@@ -98,10 +98,11 @@ class ReportingRepository(
                 """
                 select team_id, team_name, coalesce(sum(amount_minor), 0) as amount_minor
                 from (
-                	select c.team_id as team_id, t.name as team_name, le.amount_minor as amount_minor
+                	select camp.team_id as team_id, t.name as team_name, le.amount_minor as amount_minor
                 	from ledger_entry le
                 	join contribution c on c.id = le.source_id and le.source_type = 'CONTRIBUTION'
-                	left join team t on t.id = c.team_id
+                	join campaign camp on camp.id = c.campaign_id
+                	left join team t on t.id = camp.team_id
                 	where le.organization_id = :organizationId and le.direction = 'CREDIT' and le.entry_type = 'CONTRIBUTION'
                 	  and le.effective_at >= :from and le.effective_at < :to
                 	union all
@@ -132,12 +133,13 @@ class ReportingRepository(
         jdbcClient
             .sql(
                 """
-                select c.id as campaign_id, c.name as campaign_name, coalesce(sum(le.amount_minor), 0) as amount_minor
+                select camp.id as campaign_id, camp.name as campaign_name, coalesce(sum(le.amount_minor), 0) as amount_minor
                 from ledger_entry le
                 join contribution c on c.id = le.source_id and le.source_type = 'CONTRIBUTION'
+                join campaign camp on camp.id = c.campaign_id
                 where le.organization_id = :organizationId and le.direction = 'CREDIT' and le.entry_type = 'CONTRIBUTION'
                   and le.effective_at >= :from and le.effective_at < :to
-                group by c.id, c.name
+                group by camp.id, camp.name
                 order by amount_minor desc
                 """.trimIndent(),
             ).param("organizationId", organizationId)
