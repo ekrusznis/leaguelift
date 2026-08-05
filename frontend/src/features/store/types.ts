@@ -48,6 +48,8 @@ export interface Product {
 	printifyBlueprintId: number | null;
 	printifyPrintPosition: string;
 	hasDesign: boolean;
+	/** Swag Shop: whether a team logo has been frozen onto this product for order-time compositing. */
+	hasSwagLogo: boolean;
 	status: ProductStatus;
 	createdAt: string;
 	updatedAt: string;
@@ -74,6 +76,9 @@ export interface ProductVariant {
 	costMinor: number;
 	priceMinor: number;
 	isActive: boolean;
+	/** Swag Shop: real Printify print-area pixel dimensions, captured at creation time — null for manual variants. */
+	printAreaWidthPx: number | null;
+	printAreaHeightPx: number | null;
 }
 
 export interface PrintifyBlueprint {
@@ -96,10 +101,17 @@ export interface EligiblePrintProvider {
 	location: PrintifyLocation;
 }
 
+export interface PrintifyPlaceholder {
+	position: string;
+	widthPx: number;
+	heightPx: number;
+}
+
 export interface PrintifyCatalogVariant {
 	id: number;
 	title: string;
 	options: Record<string, string> | null;
+	placeholders: PrintifyPlaceholder[] | null;
 }
 
 export interface MediaAssignmentDescriptor {
@@ -248,4 +260,24 @@ export interface FulfillmentReprint {
 export interface CartLine {
 	productVariantId: string;
 	quantity: number;
+}
+
+export type PersonalizationPlacement = "LEFT_CHEST" | "RIGHT_CHEST" | "BACK";
+
+export interface SwagShopApparelType {
+	storeId: string;
+	storeName: string;
+	productId: string;
+	productName: string;
+	description: string | null;
+	hasSwagLogo: boolean;
+	variants: ProductVariant[];
+}
+
+export interface CreateSwagShopOrderRequest {
+	productVariantId: string;
+	participantId: string;
+	personalizationName?: string | null;
+	personalizationNumber?: string | null;
+	personalizationPlacement?: PersonalizationPlacement | null;
 }

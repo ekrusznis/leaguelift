@@ -18,6 +18,7 @@ import {
 	PackageIcon,
 	SettingsIcon,
 	ShieldIcon,
+	ShirtIcon,
 	TrophyIcon,
 	UserIcon,
 	UserPlusIcon,
@@ -42,6 +43,7 @@ export type NavDestination =
 	| { type: "team-events" }
 	| { type: "tournament-events" }
 	| { type: "participant-events" }
+	| { type: "swag-shop-order" }
 	| { type: "platform-reports" };
 
 export interface NavRegistryItem {
@@ -87,7 +89,7 @@ export const NAV_REGISTRY: NavRegistryItem[] = [
 	{ id: "owner.events", label: "Events", icon: <CalendarIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.EVENT_READ, Capabilities.ORG_EVENT_MANAGE], destination: { type: "organization", section: "events" } },
 	{ id: "owner.fees", label: "Fees & Payments", icon: <DollarIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_REPORT_VIEW, Capabilities.ORG_MANAGE], destination: { type: "organization", section: "fees" } },
 	{ id: "owner.fundraising", label: "Fundraising", icon: <HeartHandshakeIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_MANAGE], destination: { type: "organization", section: "fundraising" } },
-	{ id: "owner.stores", label: "Stores & Orders", icon: <PackageIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_MANAGE], destination: { type: "organization", section: "stores" } },
+	{ id: "owner.swag-shop", label: "Swag Shop", icon: <PackageIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_MANAGE], destination: { type: "organization", section: "swag-shop" } },
 	{ id: "owner.sponsorships", label: "Sponsorships", icon: <MegaphoneIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_MANAGE], destination: { type: "organization", section: "sponsorships" } },
 	{ id: "owner.reports", label: "Reports", icon: <ChartIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_REPORT_VIEW], destination: { type: "organization", section: "reports" } },
 	{ id: "owner.documents", label: "Documents", icon: <FileTextIcon className="size-5" />, contextTypes: ["ORGANIZATION"], requiredCapabilities: [Capabilities.ORG_MANAGE], destination: { type: "organization", section: "documents" } },
@@ -104,6 +106,7 @@ export const NAV_REGISTRY: NavRegistryItem[] = [
 	{ id: "parent.schedule", label: "Family Schedule", icon: <CalendarIcon className="size-5" />, contextTypes: ["HOUSEHOLD"], requiredCapabilities: [Capabilities.EVENT_READ], destination: { type: "household", section: "events" } },
 	{ id: "parent.fees", label: "Fees & Payments", icon: <DollarIcon className="size-5" />, contextTypes: ["HOUSEHOLD"], requiredCapabilities: [Capabilities.HOUSEHOLD_FEE_VIEW], destination: { type: "household", section: "fees" } },
 	{ id: "parent.fundraising", label: "Fundraising", icon: <HeartHandshakeIcon className="size-5" />, contextTypes: ["HOUSEHOLD"], destination: { type: "dashboard", hash: "parent-fundraising" } },
+	{ id: "parent.swag-shop", label: "Swag Shop", icon: <ShirtIcon className="size-5" />, contextTypes: ["HOUSEHOLD"], requiredCapabilities: [Capabilities.HOUSEHOLD_ORDER_CREATE], destination: { type: "swag-shop-order" } },
 	{ id: "parent.documents", label: "Documents", icon: <FileTextIcon className="size-5" />, contextTypes: ["HOUSEHOLD"], destination: { type: "household", section: "documents" } },
 	{ id: "parent.profile", label: "Household Profile", icon: <UserIcon className="size-5" />, contextTypes: ["HOUSEHOLD"], requiredCapabilities: [Capabilities.HOUSEHOLD_VIEW], destination: { type: "household", section: "profile" } },
 
@@ -126,6 +129,7 @@ export const NAV_REGISTRY: NavRegistryItem[] = [
 	{ id: "coach.roster", label: "Roster Summary", icon: <UserIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_VIEW], destination: { type: "dashboard", hash: "coach-roster" } },
 	{ id: "coach.team-page", label: "Team Page", icon: <LayoutIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_VIEW, Capabilities.TEAM_PAGE_EDIT], destination: { type: "dashboard", hash: "coach-team-page" } },
 	{ id: "coach.fundraising", label: "Fundraising", icon: <HeartHandshakeIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_VIEW, Capabilities.TEAM_FUNDRAISING_MANAGE], destination: { type: "dashboard", hash: "coach-fundraising" } },
+	{ id: "coach.swag-shop", label: "Swag Shop", icon: <ShirtIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_ORDER_CREATE], destination: { type: "swag-shop-order" } },
 
 	// Tournament Admin (TOURNAMENT context)
 	{ id: "tournament.overview", label: "Overview", icon: <HomeIcon className="size-5" />, contextTypes: ["TOURNAMENT"], destination: { type: "dashboard" } },
@@ -193,6 +197,8 @@ function resolveDestination(destination: NavDestination, context: NavRouteContex
 			return context.organizationId && context.participantId
 				? appPaths.participantEvents(context.organizationId, context.participantId)
 				: appPaths.dashboard("athlete-schedule");
+		case "swag-shop-order":
+			return context.organizationId ? appPaths.swagShopOrder(context.organizationId) : null;
 		case "platform-reports":
 			return appPaths.platformReports();
 	}

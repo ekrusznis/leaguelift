@@ -137,6 +137,17 @@ fun ProductVariant.toResponse() =
         printAreaHeightPx,
     )
 
+/** Swag Shop (DESIGN-DOC.md section 13) buyer picker — one row per active apparel type, combining store/product/variant so the frontend doesn't need three round trips per store. */
+data class SwagShopApparelTypeResponse(
+    val storeId: java.util.UUID,
+    val storeName: String,
+    val productId: java.util.UUID,
+    val productName: String,
+    val description: String?,
+    val hasSwagLogo: Boolean,
+    val variants: List<ProductVariantResponse>,
+)
+
 data class PrintifyBlueprintResponse(
     val id: Long,
     val title: String,

@@ -7,7 +7,7 @@ export type OrganizationSection =
 	| "households"
 	| "fees"
 	| "fundraising"
-	| "stores"
+	| "swag-shop"
 	| "financial-operations"
 	| "sponsorships"
 	| "events"
@@ -25,6 +25,7 @@ export const appPaths = {
 	organization: (organizationId: string, section: OrganizationSection = "overview") =>
 		`/app/organizations/${organizationId}/${section}`,
 	collections: (organizationId: string) => `/app/organizations/${organizationId}/collections`,
+	swagShopOrder: (organizationId: string) => `/app/organizations/${organizationId}/swag-shop/order`,
 	household: (organizationId: string, householdId: string, section: HouseholdSection = "profile") =>
 		`/app/organizations/${organizationId}/households/${householdId}/${section}`,
 	organizationEvents: (organizationId: string) => `/app/organizations/${organizationId}/events`,

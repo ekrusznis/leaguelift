@@ -130,6 +130,23 @@ class ProductService(
 
     fun listPublicVariants(productId: UUID): List<ProductVariant> = productVariantRepository.findActiveByProduct(productId)
 
+    /**
+     * Swag Shop (DESIGN-DOC.md section 13) buyer picker: every ACTIVE Printify-backed
+     * product/variant across every ACTIVE store in the org, in one call. Deliberately
+     * no org-membership/capability gate beyond being signed in — a pure guardian or
+     * coach (household/team relationship only, no organization_membership row) must
+     * be able to browse this, and the same data is already fully public via
+     * GET /public/stores/{slug}, so an authenticated-only gate reveals nothing new.
+     */
+    fun listSwagShopApparelTypes(organizationId: UUID): List<Triple<Store, Product, List<ProductVariant>>> {
+        val activeStores = storeRepository.findAll(organizationId, 0, 500).filter { it.status == com.rally26.store.domain.StoreStatus.ACTIVE }
+        return activeStores.flatMap { store ->
+            listPublicProducts(store.id)
+                .filter { it.catalogSource == CatalogSource.PRINTIFY }
+                .map { product -> Triple(store, product, productVariantRepository.findActiveByProduct(product.id)) }
+        }
+    }
+
     fun getPublicDesignUrl(productId: UUID): String? {
         val assignment =
             mediaAssignmentService.getPublicAssignment(MediaEntityType.PRODUCT, productId, MediaUsageSlot.PRODUCT_DESIGN) ?: return null

@@ -125,8 +125,8 @@ export const SOLUTIONS: SolutionContent[] = [
 	},
 	{
 		slug: "apparel",
-		navLabel: "Apparel Stores",
-		heading: "Apparel Stores",
+		navLabel: "Swag Shop",
+		heading: "Swag Shop",
 		shortDescription: "Sell organization, team, season, and tournament merchandise without requiring large inventory purchases.",
 		hero: {
 			headline: "Merchandise without the inventory risk.",
@@ -136,7 +136,7 @@ export const SOLUTIONS: SolutionContent[] = [
 		problem:
 			"Booster clubs and teams often avoid selling merchandise because it means fronting money for inventory nobody's sure will sell.",
 		approach:
-			"Apparel stores connect orders to fulfillment partners so organizations aren't holding physical inventory up front.",
+			"The Swag Shop connects orders to fulfillment partners so organizations aren't holding physical inventory up front.",
 		capabilities: [
 			"Organization collections",
 			"Team collections",
@@ -151,18 +151,18 @@ export const SOLUTIONS: SolutionContent[] = [
 		workflow: [
 			"Build a collection for your organization, team, or tournament",
 			"Set variants, personalization, and markup",
-			"Share the store link",
+			"Share the Swag Shop link",
 			"Track orders and fulfillment status",
 		],
 		relatedUsers: ["Merchandise coordinators", "Team managers", "Parents and guardians", "Supporters"],
 		faq: [
 			{
 				question: "Do we need to buy inventory upfront?",
-				answer: "No — the store model is built around per-order fulfillment rather than bulk inventory purchases.",
+				answer: "No — the Swag Shop is built around per-order fulfillment rather than bulk inventory purchases.",
 			},
 			{
 				question: "Can we offer different product types?",
-				answer: "Product options depend on which fulfillment providers are connected to your store.",
+				answer: "Product options depend on which fulfillment providers are connected to your Swag Shop.",
 			},
 		],
 	},

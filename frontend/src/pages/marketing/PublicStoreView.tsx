@@ -106,7 +106,7 @@ export function PublicStoreView() {
 	if (isLoading) {
 		return (
 			<div className="flex min-h-[60vh] items-center justify-center">
-				<LoadingState label="Loading store…" />
+				<LoadingState label="Loading Swag Shop…" />
 			</div>
 		);
 	}
@@ -114,7 +114,7 @@ export function PublicStoreView() {
 	if (isError || !store) {
 		return (
 			<div className="flex min-h-[60vh] items-center justify-center">
-				<ErrorState message="This store could not be found or is not currently open." />
+				<ErrorState message="This Swag Shop could not be found or is not currently open." />
 			</div>
 		);
 	}

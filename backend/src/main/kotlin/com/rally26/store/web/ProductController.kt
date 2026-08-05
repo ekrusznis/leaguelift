@@ -33,6 +33,23 @@ class ProductController(
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): List<PrintifyBlueprintResponse> = productService.listBlueprints(organizationId, currentUser).map { it.toResponse() }
 
+    /** Swag Shop (DESIGN-DOC.md section 13) buyer picker. Any signed-in user, no org-membership gate — see ProductService.listSwagShopApparelTypes. */
+    @GetMapping("/swag-shop/apparel-types")
+    fun listSwagShopApparelTypes(
+        @PathVariable organizationId: UUID,
+    ): List<SwagShopApparelTypeResponse> =
+        productService.listSwagShopApparelTypes(organizationId).map { (store, product, variants) ->
+            SwagShopApparelTypeResponse(
+                storeId = store.id,
+                storeName = store.name,
+                productId = product.id,
+                productName = product.name,
+                description = product.description,
+                hasSwagLogo = product.swagLogoMediaAssetId != null,
+                variants = variants.map { it.toResponse() },
+            )
+        }
+
     @GetMapping("/printify/blueprints/{blueprintId}/print-providers")
     fun listUsPrintProviders(
         @PathVariable organizationId: UUID,

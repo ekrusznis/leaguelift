@@ -9,6 +9,8 @@ import type {
 } from "./schema";
 import type {
 	CartLine,
+	CreateSwagShopOrderRequest,
+	SwagShopApparelType,
 	EligiblePrintProvider,
 	Fulfillment,
 	FulfillmentHistory,
@@ -30,6 +32,7 @@ import type {
 	Store,
 	StorePage,
 } from "./types";
+import type { Participant } from "../households/types";
 
 const storesKey = (organizationId: string) => ["organizations", organizationId, "stores"] as const;
 const vendorsKey = (organizationId: string) => ["organizations", organizationId, "manual-vendors"] as const;
@@ -260,6 +263,36 @@ export function useRefundOrder(organizationId: string, storeId: string) {
 	return useMutation({
 		mutationFn: (orderId: string) => apiFetch<Order>(`/organizations/${organizationId}/orders/${orderId}/refund`, { method: "POST" }),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ordersKey(organizationId, storeId) }),
+	});
+}
+
+export function useSwagShopApparelTypes(organizationId: string) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "swag-shop", "apparel-types"] as const,
+		queryFn: () => apiFetch<SwagShopApparelType[]>(`/organizations/${organizationId}/swag-shop/apparel-types`),
+		enabled: !!organizationId,
+	});
+}
+
+export function useTeamRoster(organizationId: string, teamId: string | null) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "teams", teamId, "participants"] as const,
+		queryFn: () => apiFetch<Participant[]>(`/organizations/${organizationId}/teams/${teamId}/participants`),
+		enabled: !!organizationId && !!teamId,
+	});
+}
+
+export function useCreateSwagShopOrder(organizationId: string) {
+	return useMutation({
+		mutationFn: (request: CreateSwagShopOrderRequest) => apiFetch<OrderCheckout>(`/organizations/${organizationId}/swag-shop/orders`, { method: "POST", body: request }),
+	});
+}
+
+export function useAssignSwagLogo(organizationId: string, storeId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (productId: string) => apiFetch<Product>(`/organizations/${organizationId}/products/${productId}/use-team-logo`, { method: "POST" }),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: productsKey(organizationId, storeId) }),
 	});
 }
 

@@ -39,10 +39,10 @@ export function StoreList({ organizationId }: { organizationId: string }) {
 			<ManualVendorPanel organizationId={organizationId} />
 			<div className="flex items-center justify-between">
 				<span className="text-sm text-slate-gray">
-					{data ? `${data.totalElements} store${data.totalElements !== 1 ? "s" : ""}` : ""}
+					{data ? `${data.totalElements} Swag Shop${data.totalElements !== 1 ? "s" : ""}` : ""}
 				</span>
 				<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
-					{showForm ? "Cancel" : "Add store"}
+					{showForm ? "Cancel" : "Add Swag Shop"}
 				</Button>
 			</div>
 
@@ -51,7 +51,7 @@ export function StoreList({ organizationId }: { organizationId: string }) {
 					onSubmit={onSubmit}
 					className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-4"
 					noValidate
-					aria-label="Create a store"
+					aria-label="Create a Swag Shop"
 				>
 					<div className="flex flex-wrap gap-3">
 						<div className="flex flex-col gap-1">
@@ -61,7 +61,7 @@ export function StoreList({ organizationId }: { organizationId: string }) {
 							<input
 								id="store-name"
 								type="text"
-								placeholder="e.g. Team Store"
+								placeholder="e.g. Team Swag Shop"
 								{...register("name")}
 								aria-invalid={!!errors.name}
 								aria-describedby={errors.name ? "store-name-error" : undefined}
@@ -76,7 +76,7 @@ export function StoreList({ organizationId }: { organizationId: string }) {
 							<input
 								id="store-slug"
 								type="text"
-								placeholder="team-store"
+								placeholder="team-swag-shop"
 								{...register("slug")}
 								aria-invalid={!!errors.slug}
 								aria-describedby={errors.slug ? "store-slug-error" : undefined}
@@ -90,19 +90,19 @@ export function StoreList({ organizationId }: { organizationId: string }) {
 							Cancel
 						</Button>
 						<Button type="submit" disabled={isSubmitting}>
-							{isSubmitting ? "Creating…" : "Create store"}
+							{isSubmitting ? "Creating…" : "Create Swag Shop"}
 						</Button>
 					</div>
 				</form>
 			)}
 
-			{isLoading && <LoadingState label="Loading stores…" />}
-			{isError && <ErrorState message="Could not load stores." onRetry={() => refetch()} />}
+			{isLoading && <LoadingState label="Loading Swag Shops…" />}
+			{isError && <ErrorState message="Could not load Swag Shops." onRetry={() => refetch()} />}
 			{data && data.items.length === 0 && !showForm && (
-				<EmptyState title="No stores yet" description="Create a store to sell apparel for your organization or a team." />
+				<EmptyState title="No Swag Shops yet" description="Create a Swag Shop to sell apparel for your organization or a team." />
 			)}
 			{data && data.items.length > 0 && (
-				<ul className="flex flex-col gap-2" aria-label="Stores">
+				<ul className="flex flex-col gap-2" aria-label="Swag Shops">
 					{data.items.map((store) => (
 						<li key={store.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
 							<div className="flex flex-wrap items-center justify-between gap-3">
@@ -117,8 +117,8 @@ export function StoreList({ organizationId }: { organizationId: string }) {
 								</div>
 								<div className="flex shrink-0 flex-wrap gap-2">
 									{store.status === "ACTIVE" && (
-										<Link to={`/stores/${store.slug}`} className="inline-flex min-h-11 items-center rounded-md border border-slate-gray/30 bg-pure-white px-4 py-2 text-sm font-medium text-navy hover:bg-ice-white">
-											View store
+										<Link to={`/swag-shop/${store.slug}`} className="inline-flex min-h-11 items-center rounded-md border border-slate-gray/30 bg-pure-white px-4 py-2 text-sm font-medium text-navy hover:bg-ice-white">
+											View Swag Shop
 										</Link>
 									)}
 									{store.status === "DRAFT" && (
@@ -142,7 +142,7 @@ export function StoreList({ organizationId }: { organizationId: string }) {
 							</div>
 							{expandedStoreId === store.id && (
 								<div className="mt-4 border-t border-slate-gray/20 pt-4">
-									<ProductManagementPanel organizationId={organizationId} storeId={store.id} />
+									<ProductManagementPanel organizationId={organizationId} storeId={store.id} teamId={store.teamId} />
 								</div>
 							)}
 						</li>

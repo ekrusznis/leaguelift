@@ -145,7 +145,7 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 			}
 			if (mode === "ORDER") {
 				const validLines = orderLines.filter((line) => line.productVariantId && line.quantity > 0);
-				if (!storeId || validLines.length !== orderLines.length || validLines.length === 0) throw new Error("Select a store, product variant, and quantity for every order line.");
+				if (!storeId || validLines.length !== orderLines.length || validLines.length === 0) throw new Error("Select a Swag Shop, product variant, and quantity for every order line.");
 				await createOrder.mutateAsync({
 					...commonInput(), storeId,
 					items: validLines.map((line) => ({ productVariantId: line.productVariantId, quantity: line.quantity })),
@@ -182,7 +182,7 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 				<div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Offline transaction type">
 					{(["CONTRIBUTION", "SPONSORSHIP", "ORDER"] as const).map((item) => (
 						<Button key={item} type="button" variant={mode === item ? "primary" : "secondary"} onClick={() => { setMode(item); setFormError(""); setSuccessMessage(""); }}>
-							{item === "CONTRIBUTION" ? "Contribution" : item === "SPONSORSHIP" ? "Sponsorship" : "Store order"}
+							{item === "CONTRIBUTION" ? "Contribution" : item === "SPONSORSHIP" ? "Sponsorship" : "Swag Shop order"}
 						</Button>
 					))}
 				</div>
@@ -210,7 +210,7 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 
 					{mode === "ORDER" && (
 						<div className="grid gap-4">
-							<Field label="Store" id="offline-store" required><select id="offline-store" value={storeId} onChange={(event) => { setStoreId(event.target.value); setOrderLines([newOrderLine()]); }} className={inputClass}><option value="">Select active store</option>{stores.data?.items.filter((item) => item.status === "ACTIVE").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
+							<Field label="Swag Shop" id="offline-store" required><select id="offline-store" value={storeId} onChange={(event) => { setStoreId(event.target.value); setOrderLines([newOrderLine()]); }} className={inputClass}><option value="">Select active Swag Shop</option>{stores.data?.items.filter((item) => item.status === "ACTIVE").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
 							<div className="grid gap-3">
 								{orderLines.map((line, index) => <OrderLineEditor key={line.key} organizationId={organizationId} line={line} index={index} products={manualProducts} onChange={(next) => setOrderLines((current) => current.map((item) => item.key === line.key ? next : item))} onRemove={orderLines.length > 1 ? () => setOrderLines((current) => current.filter((item) => item.key !== line.key)) : undefined} />)}
 								<Button type="button" variant="secondary" className="justify-self-start" onClick={() => setOrderLines((current) => [...current, newOrderLine()])} disabled={!storeId}>Add line item</Button>

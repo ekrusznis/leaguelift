@@ -14,7 +14,7 @@ const MODULES: Array<{ section: OrganizationSection; label: string; description:
 	{ section: "events", label: "Events", description: "Manual and imported organization events.", countKey: "events" },
 	{ section: "fees", label: "Fees & payments", description: "Fee templates, assignments, payments, and collections." },
 	{ section: "fundraising", label: "Fundraising", description: "Campaigns and contributions.", countKey: "campaigns" },
-	{ section: "stores", label: "Stores & orders", description: "Stores, products, orders, and fulfillment.", countKey: "stores" },
+	{ section: "swag-shop", label: "Swag Shop", description: "Swag Shop, products, orders, and fulfillment.", countKey: "stores" },
 	{ section: "sponsorships", label: "Sponsorships", description: "Packages, sponsors, approvals, and refunds.", countKey: "sponsorships" },
 	{ section: "reports", label: "Reports", description: "Revenue, fees, refunds, and product performance." },
 	{ section: "documents", label: "Documents", description: "Organization and household documents.", countKey: "documents" },
@@ -78,7 +78,7 @@ export function PlatformOrganizationConsolePage() {
 				<Metric label="Teams & tournaments" value={data.teams + data.tournaments} detail={`${data.teams} teams · ${data.tournaments} tournaments`} />
 				<Metric label="Households & athletes" value={data.households + data.participants} detail={`${data.guardians} guardians · ${data.participants} athletes`} />
 				<Metric label="Events" value={data.events} detail={`${data.activeEventConnections} active source connections`} />
-				<Metric label="Stores & orders" value={data.stores + data.orders} detail={`${data.stores} stores · ${data.orders} orders`} />
+				<Metric label="Swag Shop" value={data.stores + data.orders} detail={`${data.stores} shops · ${data.orders} orders`} />
 				<Metric label="Campaign activity" value={data.campaigns + data.contributions} detail={`${data.campaigns} campaigns · ${data.contributions} contributions`} />
 				<Metric label="Gross volume" value={formatMoneyMinorUnits(data.grossVolumeMinor, "USD")} detail={`${formatMoneyMinorUnits(data.refundedMinor, "USD")} refunded`} />
 				<Metric label="Organization earnings" value={formatMoneyMinorUnits(data.organizationEarningsMinor, "USD")} detail={`${data.sponsorships} sponsorship records`} />

@@ -19,6 +19,7 @@ import { PlatformOrganizationsPage } from "../features/platformAdmin/PlatformOrg
 import { PlatformSupportSessionsPage } from "../features/platformAdmin/PlatformSupportSessionsPage";
 import { PlatformUsersPage } from "../features/platformAdmin/PlatformUsersPage";
 import { PlatformReportsPage } from "../features/reporting/PlatformReportsPage";
+import { SwagShopOrderFlow } from "../features/swagshop/SwagShopOrderFlow";
 import { HelpArticlePage } from "../features/support/HelpArticlePage";
 import { HelpCenterPage } from "../features/support/HelpCenterPage";
 import { PlatformHelpArticlesPage } from "../features/support/PlatformHelpArticlesPage";
@@ -77,7 +78,7 @@ export function AppRoutes() {
 				<Route path="terms" element={<TermsPage />} />
 				<Route path="accessibility" element={<AccessibilityPage />} />
 				<Route path="campaigns/:slug" element={<PublicCampaignView />} />
-				<Route path="stores/:slug" element={<PublicStoreView />} />
+				<Route path="swag-shop/:slug" element={<PublicStoreView />} />
 				<Route path="sponsors/:slug" element={<PublicSponsorshipView />} />
 				<Route path="404" element={<NotFoundPage />} />
 			</Route>
@@ -107,6 +108,7 @@ export function AppRoutes() {
 					<Route path="organizations" element={<OrganizationsPage />} />
 					<Route path="organizations/:organizationId" element={<OrganizationDetailPage />} />
 					<Route path="organizations/:organizationId/collections" element={<CollectionsPage />} />
+					<Route path="organizations/:organizationId/swag-shop/order" element={<SwagShopOrderFlow />} />
 					<Route path="organizations/:organizationId/events/:eventId" element={<EventDetailPage />} />
 					<Route path="organizations/:organizationId/teams/:teamId/events" element={<EventsPage scopeType="team" />} />
 					<Route path="organizations/:organizationId/tournaments/:tournamentId/events" element={<EventsPage scopeType="tournament" />} />

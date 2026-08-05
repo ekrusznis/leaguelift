@@ -47,7 +47,7 @@ const SECTION_LABELS: Array<{ id: OrganizationSection; label: string }> = [
 	{ id: "events", label: "Events" },
 	{ id: "fees", label: "Fees & Payments" },
 	{ id: "fundraising", label: "Fundraising" },
-	{ id: "stores", label: "Stores & Orders" },
+	{ id: "swag-shop", label: "Swag Shop" },
 	{ id: "financial-operations", label: "Financial Operations" },
 	{ id: "sponsorships", label: "Sponsorships" },
 	{ id: "reports", label: "Reports" },
@@ -107,7 +107,7 @@ export function OrganizationDetailPage() {
 		if (id === "members") return canManageMembers;
 		if (id === "integrations") return canManageOrganization;
 		if (id === "settings") return canManageOrganization || canManagePayouts;
-		if (["households", "fundraising", "stores", "financial-operations", "sponsorships", "documents"].includes(id)) return canManageOrganization;
+		if (["households", "fundraising", "swag-shop", "financial-operations", "sponsorships", "documents"].includes(id)) return canManageOrganization;
 		return false;
 	});
 
@@ -224,8 +224,8 @@ function OrganizationSectionContent({
 			);
 		case "fundraising":
 			return <Section title="Fundraising Campaigns"><CampaignList organizationId={organization.id} /></Section>;
-		case "stores":
-			return <Section title="Stores & Orders"><StoreList organizationId={organization.id} /></Section>;
+		case "swag-shop":
+			return <Section title="Swag Shop"><StoreList organizationId={organization.id} /></Section>;
 		case "financial-operations":
 			return (
 				<Section title="Financial Operations" description="Record offline money, preview append-only corrections, and run durable reconciliation checks.">

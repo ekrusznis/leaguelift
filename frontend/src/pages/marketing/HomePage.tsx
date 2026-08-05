@@ -131,8 +131,8 @@ const PLATFORM_MODULES = [
 		),
 	},
 	{
-		heading: "Team Stores",
-		copy: "Custom apparel stores that are easy to manage.",
+		heading: "Swag Shop",
+		copy: "Custom team apparel, personalized and easy to manage.",
 		icon: (
 			<svg viewBox="0 0 24 24" fill="none" className="size-6" aria-hidden="true">
 				<path d="M8 4h8l1.5 4h-11z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
@@ -333,7 +333,7 @@ const PRICING_TIERS: PricingTier[] = [
 			"Up to 20 teams",
 			"Everything in Starter",
 			"Fundraising campaigns",
-			"Team apparel stores",
+			"Team Swag Shop",
 			"Family credits",
 			"Priority support",
 			"Advanced reporting",

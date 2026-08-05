@@ -30,11 +30,11 @@ describe("StoreList", () => {
 	});
 
 	it("shows an empty state when there are no stores", async () => {
-		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(emptyStores)));
+		vi.stubGlobal("fetch", vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(emptyStores))));
 
 		renderWithProviders(<StoreList organizationId={organizationId} />);
 
-		expect(await screen.findByText(/no stores yet/i)).toBeInTheDocument();
+		expect(await screen.findByText(/no swag shops yet/i)).toBeInTheDocument();
 	});
 
 	it("creates a store from the form", async () => {
@@ -46,12 +46,12 @@ describe("StoreList", () => {
 		const user = userEvent.setup();
 
 		renderWithProviders(<StoreList organizationId={organizationId} />);
-		await screen.findByText(/no stores yet/i);
+		await screen.findByText(/no swag shops yet/i);
 
-		await user.click(screen.getByRole("button", { name: /add store/i }));
+		await user.click(screen.getByRole("button", { name: /add swag shop/i }));
 		await user.type(screen.getByLabelText(/^name/i), "Spring Store");
 		await user.type(screen.getByLabelText(/public url slug/i), "spring-store");
-		await user.click(screen.getByRole("button", { name: /create store/i }));
+		await user.click(screen.getByRole("button", { name: /create swag shop/i }));
 
 		await waitFor(() =>
 			expect(fetchMock).toHaveBeenCalledWith(

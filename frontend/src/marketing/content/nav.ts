@@ -51,7 +51,7 @@ export const PRIMARY_NAV: NavGroup[] = [
 		items: [
 			{ label: "Team & Tournament Pages", to: "/solutions/team-and-tournament-pages" },
 			{ label: "Fundraising", to: "/solutions/fundraising" },
-			{ label: "Apparel Stores", to: "/solutions/apparel" },
+			{ label: "Swag Shop", to: "/solutions/apparel" },
 			{ label: "Dues & Fees", to: "/solutions/dues-and-fees" },
 			{ label: "Family Credits", to: "/solutions/family-credits" },
 			{ label: "Sponsorships", to: "/solutions/sponsorships" },

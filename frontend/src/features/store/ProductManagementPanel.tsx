@@ -13,6 +13,7 @@ import { fileSchemaFor } from "../media/schema";
 import { uploadToSignedUrl } from "../media/uploadToSignedUrl";
 import {
 	useAssignProductDesign,
+	useAssignSwagLogo,
 	useCreateManualProductVariant,
 	useCreateProduct,
 	useCreateProductVariant,
@@ -30,7 +31,7 @@ import { createProductSchema, createProductVariantSchema, manualProductVariantSc
 import type { Product, ProductVariant } from "./types";
 import { OrderList } from "./OrderList";
 
-export function ProductManagementPanel({ organizationId, storeId }: { organizationId: string; storeId: string }) {
+export function ProductManagementPanel({ organizationId, storeId, teamId = null }: { organizationId: string; storeId: string; teamId?: string | null }) {
 	const products = useProducts(organizationId, storeId);
 	const vendors = useManualVendors(organizationId);
 	const createProduct = useCreateProduct(organizationId, storeId);
@@ -133,7 +134,7 @@ export function ProductManagementPanel({ organizationId, storeId }: { organizati
 									<Button type="button" variant="secondary" onClick={() => setExpandedProductId((current) => current === product.id ? null : product.id)}>{expandedProductId === product.id ? "Hide details" : "Manage"}</Button>
 								</div>
 							</div>
-							{expandedProductId === product.id && <ProductDetails organizationId={organizationId} storeId={storeId} product={product} />}
+							{expandedProductId === product.id && <ProductDetails organizationId={organizationId} storeId={storeId} teamId={teamId} product={product} />}
 						</li>
 					))}
 				</ul>
@@ -144,13 +145,39 @@ export function ProductManagementPanel({ organizationId, storeId }: { organizati
 	);
 }
 
-function ProductDetails({ organizationId, storeId, product }: { organizationId: string; storeId: string; product: Product }) {
+function ProductDetails({ organizationId, storeId, teamId, product }: { organizationId: string; storeId: string; teamId: string | null; product: Product }) {
 	return (
 		<div className="mt-4 flex flex-col gap-4 border-t border-slate-gray/20 pt-4">
 			<ProductDesignUpload organizationId={organizationId} storeId={storeId} productId={product.id} />
+			{teamId && product.catalogSource === "PRINTIFY" && <SwagLogoAssignment organizationId={organizationId} storeId={storeId} productId={product.id} hasSwagLogo={product.hasSwagLogo} />}
 			{product.catalogSource === "PRINTIFY" && product.printifyBlueprintId != null
 				? <PrintifyVariantManagement organizationId={organizationId} productId={product.id} printifyBlueprintId={product.printifyBlueprintId} />
 				: <ManualVariantManagement organizationId={organizationId} productId={product.id} />}
+		</div>
+	);
+}
+
+/** Swag Shop (DESIGN-DOC.md section 13): freezes the team's current logo onto this product so coaches/guardians can order personalized items — see ProductService.useTeamLogo. */
+function SwagLogoAssignment({ organizationId, storeId, productId, hasSwagLogo }: { organizationId: string; storeId: string; productId: string; hasSwagLogo: boolean }) {
+	const assignLogo = useAssignSwagLogo(organizationId, storeId);
+	const [error, setError] = useState<string | null>(null);
+	async function onClick() {
+		setError(null);
+		try {
+			await assignLogo.mutateAsync(productId);
+		} catch (err) {
+			setError(err instanceof ApiError ? err.message : "Could not use the team logo. Upload a team logo (PNG/JPEG) on the Team page first.");
+		}
+	}
+	return (
+		<div className="flex flex-col gap-1">
+			<div className="flex items-center gap-2">
+				<Button type="button" variant="secondary" onClick={onClick} disabled={assignLogo.isPending}>
+					{assignLogo.isPending ? "Enabling…" : hasSwagLogo ? "Refresh team logo for Swag Shop" : "Use team logo for Swag Shop personalization"}
+				</Button>
+				{hasSwagLogo && <Badge>Swag Shop ready</Badge>}
+			</div>
+			{error && <p role="alert" className="text-sm text-error-red">{error}</p>}
 		</div>
 	);
 }
