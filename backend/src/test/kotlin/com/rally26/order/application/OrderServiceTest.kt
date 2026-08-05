@@ -3,6 +3,8 @@ package com.rally26.order.application
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
 import com.rally26.authorization.application.AuthorizationService
+import com.rally26.authorization.domain.Capabilities
+import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
@@ -31,6 +33,10 @@ import com.rally26.order.persistence.FulfillmentRepository
 import com.rally26.order.persistence.OrderItemRepository
 import com.rally26.order.persistence.OrderRepository
 import com.rally26.outbox.application.OutboxWriter
+import com.rally26.order.domain.PersonalizationPlacement
+import com.rally26.participant.domain.Participant
+import com.rally26.participant.domain.ParticipantStatus
+import com.rally26.participant.domain.ParticipantTeamAssignment
 import com.rally26.participant.persistence.ParticipantRepository
 import com.rally26.store.application.SwagDesignCompositor
 import com.rally26.store.domain.CatalogSource
@@ -513,4 +519,79 @@ class OrderServiceTest {
             refundedAt = null,
             createdAt = Instant.now(),
         )
+
+    private fun participant(householdId: UUID) =
+        Participant(
+            id = UUID.randomUUID(),
+            householdId = householdId,
+            organizationId = orgId,
+            firstName = "Maya",
+            lastName = "Johnson",
+            dateOfBirth = null,
+            notes = null,
+            status = ParticipantStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
+
+    @Test
+    fun `createSwagShopCheckoutSession succeeds for a real guardian ordering for their own household`() {
+        val currentUser = CurrentUser(UUID.randomUUID(), "guardian@example.com", "Sarah Johnson")
+        val householdId = UUID.randomUUID()
+        val participant = participant(householdId)
+        val storeEntity = store()
+        val product = product(storeEntity.id)
+        val variant = productVariant(product.id).copy(printAreaWidthPx = 1000, printAreaHeightPx = 1000)
+        every { participantRepository.findById(participant.id, orgId) } returns participant
+        every { authorizationService.hasGuardianRelationship(orgId, householdId, currentUser) } returns true
+        every { productVariantRepository.findById(variant.id, orgId) } returns variant
+        every { productRepository.findById(product.id, orgId) } returns product.copy(swagLogoMediaAssetId = UUID.randomUUID())
+        every { storeRepository.findById(product.storeId, orgId) } returns storeEntity
+        every { orderRepository.insertPending(orgId, storeEntity.id, "USD", currentUser.displayName, currentUser.email) } returns
+            pendingOrder(storeEntity)
+        every {
+            orderItemRepository.insert(
+                any(),
+                variant.id,
+                1,
+                variant.priceMinor,
+                variant.costMinor,
+                participant.id,
+                "Johnson",
+                "7",
+                PersonalizationPlacement.BACK,
+            )
+        } returns mockk(relaxed = true)
+        every { stripeOrderCheckoutClient.createOrderCheckoutSession(any(), any(), any(), any()) } returns
+            OrderCheckoutSession("cs_test_1", "https://checkout.stripe.com/test")
+        every { orderRepository.attachStripeSession(any(), "cs_test_1") } returns 1
+
+        val result =
+            service.createSwagShopCheckoutSession(
+                orgId,
+                variant.id,
+                participant.id,
+                "Johnson",
+                "7",
+                PersonalizationPlacement.BACK,
+                currentUser,
+            )
+
+        assertEquals("https://checkout.stripe.com/test", result.checkoutUrl)
+    }
+
+    @Test
+    fun `createSwagShopCheckoutSession denies a stranger with no guardian relationship or team access`() {
+        val currentUser = CurrentUser(UUID.randomUUID(), "stranger@example.com", "Stranger")
+        val householdId = UUID.randomUUID()
+        val participant = participant(householdId)
+        every { participantRepository.findById(participant.id, orgId) } returns participant
+        every { authorizationService.hasGuardianRelationship(orgId, householdId, currentUser) } returns false
+        every { authorizationService.hasHouseholdCapability(orgId, householdId, currentUser, Capabilities.HOUSEHOLD_ORDER_CREATE) } returns false
+        every { participantRepository.listTeamAssignments(participant.id, orgId) } returns emptyList()
+
+        assertFailsWith<ForbiddenException> {
+            service.createSwagShopCheckoutSession(orgId, UUID.randomUUID(), participant.id, null, null, null, currentUser)
+        }
+    }
 }
