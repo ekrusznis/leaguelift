@@ -41,7 +41,12 @@ class OwnerEmailVerificationHandler(
         // Carries an invitation an invitee registered from through to the verify-email
         // page, so its post-verify "Sign In" can redirect back to accepting the
         // invitation instead of stranding it — see EmailVerificationService.
-        val invitationToken = payload.get("invitationToken")?.asText()?.trim().orEmpty()
+        val invitationToken =
+            payload
+                .get("invitationToken")
+                ?.asText()
+                ?.trim()
+                .orEmpty()
         val nextParam =
             if (invitationToken.isNotBlank()) {
                 val next = "/auth/invitation?token=$invitationToken"

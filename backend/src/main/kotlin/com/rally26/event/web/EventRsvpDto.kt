@@ -44,4 +44,10 @@ data class EventRsvpsResponse(
     val responses: List<EventRsvpResponse>,
 )
 
-fun EventRsvpsResult.toResponse() = EventRsvpsResponse(summary.toResponse(), responses.map { it.toResponse(participantNames[it.participantId]) })
+fun EventRsvpsResult.toResponse() =
+    EventRsvpsResponse(
+        summary.toResponse(),
+        responses.map {
+            it.toResponse(participantNames[it.participantId])
+        },
+    )
