@@ -4,8 +4,11 @@ import java.time.Instant
 import java.util.UUID
 
 enum class IntegrationSyncDirection { READ, WRITE, WEBHOOK, HEALTH }
+
 enum class IntegrationSyncTrigger { MANUAL, SCHEDULED, OUTBOX, WEBHOOK, STUB }
+
 enum class IntegrationSyncStatus { QUEUED, RUNNING, SUCCEEDED, PARTIAL, FAILED, CANCELLED }
+
 enum class IntegrationSyncIssueSeverity { INFO, WARNING, ERROR }
 
 data class IntegrationSyncRun(

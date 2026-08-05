@@ -6,13 +6,13 @@ package com.rally26.authorization.domain
  * and, in the full design target, switches between them rather than between "apps".
  */
 enum class ContextType {
-	PERSONAL,
-	ATHLETE,
-	HOUSEHOLD,
-	TEAM,
-	ORGANIZATION,
-	TOURNAMENT,
-	PLATFORM_ADMIN,
+    PERSONAL,
+    ATHLETE,
+    HOUSEHOLD,
+    TEAM,
+    ORGANIZATION,
+    TOURNAMENT,
+    PLATFORM_ADMIN,
 }
 
 /**
@@ -24,8 +24,8 @@ enum class ContextType {
  * table respectively — see [com.rally26.authorization.domain.GuardianRelationship].
  */
 enum class RoleAssignmentContextType {
-	TEAM,
-	TOURNAMENT,
-	PLATFORM,
-	PARTICIPANT,
+    TEAM,
+    TOURNAMENT,
+    PLATFORM,
+    PARTICIPANT,
 }

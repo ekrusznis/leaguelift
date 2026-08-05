@@ -50,13 +50,28 @@ data class ParticipantTeamResponse(
     val createdAt: Instant,
 )
 
-fun Participant.toResponse() = ParticipantResponse(
-    id, householdId, organizationId, firstName, lastName, dateOfBirth, notes, status.name, createdAt, updatedAt,
-)
+fun Participant.toResponse() =
+    ParticipantResponse(
+        id,
+        householdId,
+        organizationId,
+        firstName,
+        lastName,
+        dateOfBirth,
+        notes,
+        status.name,
+        createdAt,
+        updatedAt,
+    )
 
-fun ParticipantTeamAssignment.toResponse() = ParticipantTeamResponse(
-    id, participantId, teamId, status, joinedAt, createdAt,
-)
-
+fun ParticipantTeamAssignment.toResponse() =
+    ParticipantTeamResponse(
+        id,
+        participantId,
+        teamId,
+        status,
+        joinedAt,
+        createdAt,
+    )
 
 typealias ParticipantPageResponse = PageResponse<ParticipantResponse>

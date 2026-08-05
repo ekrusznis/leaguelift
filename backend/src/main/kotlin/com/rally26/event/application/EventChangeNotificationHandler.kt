@@ -27,44 +27,61 @@ private val log = LoggerFactory.getLogger(EventChangeNotificationHandler::class.
  * gets nine distinct entries.
  */
 class EventChangeNotificationHandler(
-	override val eventType: String,
-	private val emailProvider: EmailProvider,
-	private val smsProvider: SmsProvider,
-	private val objectMapper: ObjectMapper,
+    override val eventType: String,
+    private val emailProvider: EmailProvider,
+    private val smsProvider: SmsProvider,
+    private val objectMapper: ObjectMapper,
 ) : OutboxEventHandler {
-
-	override fun handle(event: OutboxEvent) {
-		val payload = objectMapper.readValue(event.payload, EventChangeNotificationPayload::class.java)
-		if (payload.recipients.isEmpty()) {
-			log.info("Event {} (\"{}\") has no notification-eligible household this change — nothing to send.", event.aggregateId, payload.displayTitle)
-			return
-		}
-		for (recipient in payload.recipients) {
-			recipient.email?.let {
-				emailProvider.send(EmailMessage(to = it, subject = "Schedule update: ${payload.displayTitle}", body = "${payload.changeSummary}\n\n— Rally26"))
-			}
-			recipient.phone?.let {
-				smsProvider.send(SmsMessage(to = it, body = "Rally26: ${payload.changeSummary}"))
-			}
-		}
-	}
+    override fun handle(event: OutboxEvent) {
+        val payload = objectMapper.readValue(event.payload, EventChangeNotificationPayload::class.java)
+        if (payload.recipients.isEmpty()) {
+            log.info(
+                "Event {} (\"{}\") has no notification-eligible household this change — nothing to send.",
+                event.aggregateId,
+                payload.displayTitle,
+            )
+            return
+        }
+        for (recipient in payload.recipients) {
+            recipient.email?.let {
+                emailProvider.send(
+                    EmailMessage(
+                        to = it,
+                        subject = "Schedule update: ${payload.displayTitle}",
+                        body = "${payload.changeSummary}\n\n— Rally26",
+                    ),
+                )
+            }
+            recipient.phone?.let {
+                smsProvider.send(SmsMessage(to = it, body = "Rally26: ${payload.changeSummary}"))
+            }
+        }
+    }
 }
 
 @Configuration
 class EventNotificationHandlerConfig(
-	private val emailProvider: EmailProvider,
-	private val smsProvider: SmsProvider,
-	private val objectMapper: ObjectMapper,
+    private val emailProvider: EmailProvider,
+    private val smsProvider: SmsProvider,
+    private val objectMapper: ObjectMapper,
 ) {
-	private fun handlerFor(eventType: String) = EventChangeNotificationHandler(eventType, emailProvider, smsProvider, objectMapper)
+    private fun handlerFor(eventType: String) = EventChangeNotificationHandler(eventType, emailProvider, smsProvider, objectMapper)
 
-	@Bean fun eventCreatedNotificationHandler() = handlerFor("event.created")
-	@Bean fun eventTimeChangedNotificationHandler() = handlerFor("event.time_changed")
-	@Bean fun eventLocationChangedNotificationHandler() = handlerFor("event.location_changed")
-	@Bean fun eventAreaAssignedNotificationHandler() = handlerFor("event.area_assigned")
-	@Bean fun eventArrivalTimeChangedNotificationHandler() = handlerFor("event.arrival_time_changed")
-	@Bean fun eventPostponedNotificationHandler() = handlerFor("event.postponed")
-	@Bean fun eventCancelledNotificationHandler() = handlerFor("event.cancelled")
-	@Bean fun tournamentEventAddedNotificationHandler() = handlerFor("tournament.event_added")
-	@Bean fun tournamentEventUpdatedNotificationHandler() = handlerFor("tournament.event_updated")
+    @Bean fun eventCreatedNotificationHandler() = handlerFor("event.created")
+
+    @Bean fun eventTimeChangedNotificationHandler() = handlerFor("event.time_changed")
+
+    @Bean fun eventLocationChangedNotificationHandler() = handlerFor("event.location_changed")
+
+    @Bean fun eventAreaAssignedNotificationHandler() = handlerFor("event.area_assigned")
+
+    @Bean fun eventArrivalTimeChangedNotificationHandler() = handlerFor("event.arrival_time_changed")
+
+    @Bean fun eventPostponedNotificationHandler() = handlerFor("event.postponed")
+
+    @Bean fun eventCancelledNotificationHandler() = handlerFor("event.cancelled")
+
+    @Bean fun tournamentEventAddedNotificationHandler() = handlerFor("tournament.event_added")
+
+    @Bean fun tournamentEventUpdatedNotificationHandler() = handlerFor("tournament.event_updated")
 }

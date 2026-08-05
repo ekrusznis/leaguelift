@@ -11,5 +11,5 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.payout")
 data class PayoutProperties(
-	val holdingPeriodDays: Long = 7,
+    val holdingPeriodDays: Long = 7,
 )

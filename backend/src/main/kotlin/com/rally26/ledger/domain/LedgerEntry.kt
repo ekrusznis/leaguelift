@@ -9,7 +9,17 @@ import java.util.UUID
  * FULFILLMENT_SHIPPING_COST, TEAM_ALLOCATION, HOUSEHOLD_CREDIT, CHARGEBACK,
  * PAYOUT, and MANUAL_ADJUSTMENT remain design target.
  */
-enum class LedgerEntryType { CONTRIBUTION, GROSS_SALE, PRODUCTION_COST, RALLY26_PLATFORM_FEE, ORGANIZATION_EARNING, TRANSFER, REFUND, OFFLINE_SETTLEMENT, MANUAL_ADJUSTMENT }
+enum class LedgerEntryType {
+    CONTRIBUTION,
+    GROSS_SALE,
+    PRODUCTION_COST,
+    RALLY26_PLATFORM_FEE,
+    ORGANIZATION_EARNING,
+    TRANSFER,
+    REFUND,
+    OFFLINE_SETTLEMENT,
+    MANUAL_ADJUSTMENT,
+}
 
 enum class LedgerDirection { CREDIT, DEBIT }
 
@@ -23,20 +33,20 @@ enum class LedgerSourceType { CONTRIBUTION, ORDER, TRANSFER, REFUND, SPONSORSHIP
  * consumed them (LedgerService.recordTransfer).
  */
 data class LedgerEntry(
-	val id: UUID,
-	val organizationId: UUID,
-	val accountCode: String,
-	val entryType: LedgerEntryType,
-	val direction: LedgerDirection,
-	val amountMinor: Long,
-	val currency: String,
-	val sourceType: LedgerSourceType,
-	val sourceId: UUID,
-	val externalReference: String?,
-	val description: String?,
-	val includedInTransferEntryId: UUID?,
-	val effectiveAt: Instant,
-	val createdAt: Instant,
+    val id: UUID,
+    val organizationId: UUID,
+    val accountCode: String,
+    val entryType: LedgerEntryType,
+    val direction: LedgerDirection,
+    val amountMinor: Long,
+    val currency: String,
+    val sourceType: LedgerSourceType,
+    val sourceId: UUID,
+    val externalReference: String?,
+    val description: String?,
+    val includedInTransferEntryId: UUID?,
+    val effectiveAt: Instant,
+    val createdAt: Instant,
 )
 
 /** Credits increase what an org is owed; debits decrease it. Used to net a set of entries into a single signed total. */

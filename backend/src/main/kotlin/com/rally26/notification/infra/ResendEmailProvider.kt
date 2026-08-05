@@ -1,11 +1,11 @@
 package com.rally26.notification.infra
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.config.ResendProperties
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonProperty
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
@@ -20,16 +20,23 @@ import java.util.UUID
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 private data class SendEmailRequestDto(
-	val from: String,
-	val to: List<String>,
-	val subject: String? = null,
-	val text: String? = null,
-	val cc: List<String>? = null,
-	@JsonProperty("reply_to") val replyTo: String? = null,
-	val template: SendEmailTemplateDto? = null,
+    val from: String,
+    val to: List<String>,
+    val subject: String? = null,
+    val text: String? = null,
+    val cc: List<String>? = null,
+    @JsonProperty("reply_to") val replyTo: String? = null,
+    val template: SendEmailTemplateDto? = null,
 )
-private data class SendEmailTemplateDto(val id: String, val variables: Map<String, Any>)
-private data class SendEmailResponseDto(val id: String)
+
+private data class SendEmailTemplateDto(
+    val id: String,
+    val variables: Map<String, Any>,
+)
+
+private data class SendEmailResponseDto(
+    val id: String,
+)
 
 /**
  * Real send path for `EmailProvider` (Phase 8 slice 1, ADR-022) — Resend's HTTP API
@@ -48,34 +55,33 @@ private data class SendEmailResponseDto(val id: String)
 @Component
 @ConditionalOnProperty(prefix = "rally26.email", name = ["provider"], havingValue = "resend")
 class ResendEmailProvider(
-	private val resendRestClient: RestClient,
-	private val resendProperties: ResendProperties,
+    private val resendRestClient: RestClient,
+    private val resendProperties: ResendProperties,
 ) : EmailProvider {
-
-	override fun send(message: EmailMessage) {
-		try {
-			val template = message.template?.takeIf { it.id.isNotBlank() }
-			resendRestClient.post()
-				.uri("/emails")
-				.header("Idempotency-Key", message.idempotencyKey ?: "rally26-${UUID.randomUUID()}")
-				.body(
-					SendEmailRequestDto(
-						from = resendProperties.fromAddress,
-						to = listOf(message.to),
-						subject = if (template == null) message.subject else null,
-						text = if (template == null) message.body else null,
-						cc = message.cc.takeIf { it.isNotEmpty() },
-						replyTo = message.replyTo,
-						template = template?.let { SendEmailTemplateDto(it.id, it.variables) },
-					),
-				)
-				.retrieve()
-				.body(SendEmailResponseDto::class.java)
-		} catch (e: RestClientException) {
-			throw ServiceUnavailableException(
-				"EMAIL_PROVIDER_UNAVAILABLE",
-				"Resend could not be reached or rejected the request: ${e.message}",
-			)
-		}
-	}
+    override fun send(message: EmailMessage) {
+        try {
+            val template = message.template?.takeIf { it.id.isNotBlank() }
+            resendRestClient
+                .post()
+                .uri("/emails")
+                .header("Idempotency-Key", message.idempotencyKey ?: "rally26-${UUID.randomUUID()}")
+                .body(
+                    SendEmailRequestDto(
+                        from = resendProperties.fromAddress,
+                        to = listOf(message.to),
+                        subject = if (template == null) message.subject else null,
+                        text = if (template == null) message.body else null,
+                        cc = message.cc.takeIf { it.isNotEmpty() },
+                        replyTo = message.replyTo,
+                        template = template?.let { SendEmailTemplateDto(it.id, it.variables) },
+                    ),
+                ).retrieve()
+                .body(SendEmailResponseDto::class.java)
+        } catch (e: RestClientException) {
+            throw ServiceUnavailableException(
+                "EMAIL_PROVIDER_UNAVAILABLE",
+                "Resend could not be reached or rejected the request: ${e.message}",
+            )
+        }
+    }
 }

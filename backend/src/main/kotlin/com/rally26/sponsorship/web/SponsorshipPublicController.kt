@@ -24,31 +24,38 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1/public")
 class SponsorshipPublicController(
-	private val sponsorshipPackageService: SponsorshipPackageService,
-	private val sponsorshipService: SponsorshipService,
+    private val sponsorshipPackageService: SponsorshipPackageService,
+    private val sponsorshipService: SponsorshipService,
 ) {
+    @GetMapping("/organizations/{slug}/sponsorship-packages")
+    fun listPackages(
+        @PathVariable slug: String,
+    ): List<PublicSponsorshipPackageResponse> =
+        sponsorshipPackageService.listPublic(slug).map { it.toPublicResponse(sponsorshipService.getConfirmedCount(it.id)) }
 
-	@GetMapping("/organizations/{slug}/sponsorship-packages")
-	fun listPackages(@PathVariable slug: String): List<PublicSponsorshipPackageResponse> =
-		sponsorshipPackageService.listPublic(slug).map { it.toPublicResponse(sponsorshipService.getConfirmedCount(it.id)) }
+    /** The public sponsor directory (DESIGN-DOC.md section 14.1 scope) — confirmed sponsors + their logo, for a simple "our sponsors" section on the org's public page. */
+    @GetMapping("/organizations/{slug}/sponsors")
+    fun listSponsorDirectory(
+        @PathVariable slug: String,
+    ): List<SponsorDirectoryEntryResponse> = sponsorshipService.listPublicDirectory(slug).map { it.toResponse() }
 
-	/** The public sponsor directory (DESIGN-DOC.md section 14.1 scope) — confirmed sponsors + their logo, for a simple "our sponsors" section on the org's public page. */
-	@GetMapping("/organizations/{slug}/sponsors")
-	fun listSponsorDirectory(@PathVariable slug: String): List<SponsorDirectoryEntryResponse> =
-		sponsorshipService.listPublicDirectory(slug).map { it.toResponse() }
+    @PostMapping("/sponsorship-packages/{packageId}/sponsorships")
+    fun createCheckoutSession(
+        @PathVariable packageId: UUID,
+        @Valid @RequestBody request: CreateSponsorshipCheckoutRequest,
+    ): SponsorshipCheckoutResponse =
+        sponsorshipService
+            .createCheckoutSession(
+                packageId,
+                request.sponsorName,
+                request.sponsorContactEmail,
+                request.successUrl,
+                request.cancelUrl,
+            ).toResponse()
 
-	@PostMapping("/sponsorship-packages/{packageId}/sponsorships")
-	fun createCheckoutSession(
-		@PathVariable packageId: UUID,
-		@Valid @RequestBody request: CreateSponsorshipCheckoutRequest,
-	): SponsorshipCheckoutResponse =
-		sponsorshipService.createCheckoutSession(
-			packageId, request.sponsorName, request.sponsorContactEmail, request.successUrl, request.cancelUrl,
-		).toResponse()
-
-	@GetMapping("/sponsorship-packages/{packageId}/sponsorships/{sponsorshipId}")
-	fun getStatus(
-		@PathVariable packageId: UUID,
-		@PathVariable sponsorshipId: UUID,
-	): SponsorshipStatusResponse = sponsorshipService.getStatus(packageId, sponsorshipId).toStatusResponse()
+    @GetMapping("/sponsorship-packages/{packageId}/sponsorships/{sponsorshipId}")
+    fun getStatus(
+        @PathVariable packageId: UUID,
+        @PathVariable sponsorshipId: UUID,
+    ): SponsorshipStatusResponse = sponsorshipService.getStatus(packageId, sponsorshipId).toStatusResponse()
 }

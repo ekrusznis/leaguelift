@@ -26,7 +26,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class PublicPageServiceTest {
-
     private val publicPageRepository = mockk<PublicPageRepository>()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
@@ -158,27 +157,29 @@ class PublicPageServiceTest {
         }
     }
 
-    private fun samplePage() = PublicPage(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        pageType = PageType.ORGANIZATION,
-        entityId = orgId,
-        slug = "my-org",
-        title = "My Organization",
-        summary = null,
-        status = PageStatus.DRAFT,
-        publishedAt = null,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun samplePage() =
+        PublicPage(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            pageType = PageType.ORGANIZATION,
+            entityId = orgId,
+            slug = "my-org",
+            title = "My Organization",
+            summary = null,
+            status = PageStatus.DRAFT,
+            publishedAt = null,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
-    private fun managerMembership() = OrganizationMembership(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        userId = currentUser.userId,
-        role = MembershipRole.ADMINISTRATOR,
-        status = MembershipStatus.ACTIVE,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun managerMembership() =
+        OrganizationMembership(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            userId = currentUser.userId,
+            role = MembershipRole.ADMINISTRATOR,
+            status = MembershipStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 }

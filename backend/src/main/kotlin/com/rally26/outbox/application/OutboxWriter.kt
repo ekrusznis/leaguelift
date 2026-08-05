@@ -10,15 +10,16 @@ import java.util.UUID
  * with the business state change it describes (DESIGN-DOC.md section 13.4).
  */
 @Service
-class OutboxWriter(private val outboxEventRepository: OutboxEventRepository) {
-
-	fun write(
-		aggregateType: String,
-		aggregateId: UUID,
-		organizationId: UUID?,
-		eventType: String,
-		payloadJson: String = "{}",
-	) {
-		outboxEventRepository.insert(aggregateType, aggregateId, organizationId, eventType, payloadJson)
-	}
+class OutboxWriter(
+    private val outboxEventRepository: OutboxEventRepository,
+) {
+    fun write(
+        aggregateType: String,
+        aggregateId: UUID,
+        organizationId: UUID?,
+        eventType: String,
+        payloadJson: String = "{}",
+    ) {
+        outboxEventRepository.insert(aggregateType, aggregateId, organizationId, eventType, payloadJson)
+    }
 }

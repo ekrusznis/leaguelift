@@ -50,89 +50,98 @@ private const val WEEK_EVENTS_LIMIT = 50
  */
 @Service
 class AthleteDashboardService(
-	private val authorizationService: AuthorizationService,
-	private val roleAssignmentRepository: RoleAssignmentRepository,
-	private val participantRepository: ParticipantRepository,
-	private val householdRepository: HouseholdRepository,
-	private val teamRepository: TeamRepository,
-	private val appUserRepository: AppUserRepository,
-	private val eventService: EventService,
+    private val authorizationService: AuthorizationService,
+    private val roleAssignmentRepository: RoleAssignmentRepository,
+    private val participantRepository: ParticipantRepository,
+    private val householdRepository: HouseholdRepository,
+    private val teamRepository: TeamRepository,
+    private val appUserRepository: AppUserRepository,
+    private val eventService: EventService,
 ) {
+    private fun linkedParticipant(currentUser: CurrentUser): Participant? {
+        val link = authorizationService.findAthleteSelfLink(currentUser) ?: return null
+        val organizationId = link.organizationId ?: return null
+        val participantId = link.resourceId ?: return null
+        return participantRepository.findById(participantId, organizationId)
+    }
 
-	private fun linkedParticipant(currentUser: CurrentUser): Participant? {
-		val link = authorizationService.findAthleteSelfLink(currentUser) ?: return null
-		val organizationId = link.organizationId ?: return null
-		val participantId = link.resourceId ?: return null
-		return participantRepository.findById(participantId, organizationId)
-	}
+    /** Upcoming (not cancelled/completed), soonest first. */
+    private fun upcomingEvents(
+        participant: Participant,
+        currentUser: CurrentUser,
+    ): List<Event> {
+        val now = Instant.now()
+        return eventService
+            .listForParticipant(participant.organizationId, participant.id, currentUser, 0, WEEK_EVENTS_LIMIT)
+            .filter { it.status != EventStatus.CANCELLED && it.status != EventStatus.COMPLETED }
+            .filter { it.startAt == null || it.startAt.isAfter(now) }
+            .sortedBy { it.startAt ?: Instant.MAX }
+    }
 
-	/** Upcoming (not cancelled/completed), soonest first. */
-	private fun upcomingEvents(participant: Participant, currentUser: CurrentUser): List<Event> {
-		val now = Instant.now()
-		return eventService.listForParticipant(participant.organizationId, participant.id, currentUser, 0, WEEK_EVENTS_LIMIT)
-			.filter { it.status != EventStatus.CANCELLED && it.status != EventStatus.COMPLETED }
-			.filter { it.startAt == null || it.startAt.isAfter(now) }
-			.sortedBy { it.startAt ?: Instant.MAX }
-	}
+    private fun toScheduleItem(
+        event: Event,
+        participant: Participant,
+    ): ScheduleItem {
+        val teamName = event.teamId?.let { teamRepository.findById(it, participant.organizationId)?.name }
+        val opponentName = event.opponentTeamId?.let { teamRepository.findById(it, participant.organizationId)?.name }
+        val zone = runCatching { ZoneId.of(event.timezone) }.getOrDefault(ZoneId.systemDefault())
+        val zoned = event.startAt?.atZone(zone)
+        return ScheduleItem(
+            id = event.id.toString(),
+            day = zoned?.dayOfWeek?.getDisplayName(TextStyle.SHORT, Locale.US) ?: "TBD",
+            date = zoned?.toLocalDate()?.toString() ?: "TBD",
+            title = displayTitle(event, teamName, opponentName),
+            subtitle = event.venueName ?: event.address ?: "",
+            time = zoned?.toLocalTime()?.toString() ?: "TBD",
+            tag = event.eventType.name,
+        )
+    }
 
-	private fun toScheduleItem(event: Event, participant: Participant): ScheduleItem {
-		val teamName = event.teamId?.let { teamRepository.findById(it, participant.organizationId)?.name }
-		val opponentName = event.opponentTeamId?.let { teamRepository.findById(it, participant.organizationId)?.name }
-		val zone = runCatching { ZoneId.of(event.timezone) }.getOrDefault(ZoneId.systemDefault())
-		val zoned = event.startAt?.atZone(zone)
-		return ScheduleItem(
-			id = event.id.toString(),
-			day = zoned?.dayOfWeek?.getDisplayName(TextStyle.SHORT, Locale.US) ?: "TBD",
-			date = zoned?.toLocalDate()?.toString() ?: "TBD",
-			title = displayTitle(event, teamName, opponentName),
-			subtitle = event.venueName ?: event.address ?: "",
-			time = zoned?.toLocalTime()?.toString() ?: "TBD",
-			tag = event.eventType.name,
-		)
-	}
+    fun getOverview(currentUser: CurrentUser): AthleteOverviewResponse {
+        val participant = linkedParticipant(currentUser)
+        return AthleteOverviewResponse(
+            displayName = participant?.let { "${it.firstName} ${it.lastName}" } ?: currentUser.displayName,
+            isDemoData = false,
+            nextEvent =
+                participant?.let { p ->
+                    upcomingEvents(p, currentUser).firstOrNull()?.let { event ->
+                        val item = toScheduleItem(event, p)
+                        NextEventSummary(item.title, item.tag ?: "", "${item.day} ${item.date} ${item.time}".trim(), item.subtitle)
+                    }
+                },
+        )
+    }
 
-	fun getOverview(currentUser: CurrentUser): AthleteOverviewResponse {
-		val participant = linkedParticipant(currentUser)
-		return AthleteOverviewResponse(
-			displayName = participant?.let { "${it.firstName} ${it.lastName}" } ?: currentUser.displayName,
-			isDemoData = false,
-			nextEvent = participant?.let { p ->
-				upcomingEvents(p, currentUser).firstOrNull()?.let { event ->
-					val item = toScheduleItem(event, p)
-					NextEventSummary(item.title, item.tag ?: "", "${item.day} ${item.date} ${item.time}".trim(), item.subtitle)
-				}
-			},
-		)
-	}
+    fun getTeams(currentUser: CurrentUser): List<AthleteTeamSummary> {
+        val participant = linkedParticipant(currentUser) ?: return emptyList()
+        return participantRepository.listTeamAssignments(participant.id, participant.organizationId).mapNotNull { assignment ->
+            val team = teamRepository.findById(assignment.teamId, participant.organizationId) ?: return@mapNotNull null
+            val coachName =
+                roleAssignmentRepository
+                    .listActiveForResource(RoleAssignmentContextType.TEAM, team.id)
+                    .firstOrNull()
+                    ?.let { appUserRepository.findById(it.userId)?.displayName }
+                    ?: "Not yet assigned"
+            AthleteTeamSummary(team.name, "${team.sport}${team.season?.let { " · $it" } ?: ""}", coachName)
+        }
+    }
 
-	fun getTeams(currentUser: CurrentUser): List<AthleteTeamSummary> {
-		val participant = linkedParticipant(currentUser) ?: return emptyList()
-		return participantRepository.listTeamAssignments(participant.id, participant.organizationId).mapNotNull { assignment ->
-			val team = teamRepository.findById(assignment.teamId, participant.organizationId) ?: return@mapNotNull null
-			val coachName = roleAssignmentRepository.listActiveForResource(RoleAssignmentContextType.TEAM, team.id)
-				.firstOrNull()
-				?.let { appUserRepository.findById(it.userId)?.displayName }
-				?: "Not yet assigned"
-			AthleteTeamSummary(team.name, "${team.sport}${team.season?.let { " · $it" } ?: ""}", coachName)
-		}
-	}
+    fun getWeekEvents(currentUser: CurrentUser): List<ScheduleItem> {
+        val participant = linkedParticipant(currentUser) ?: return emptyList()
+        val weekFromNow = Instant.now().plusSeconds(7 * 24 * 60 * 60)
+        return upcomingEvents(participant, currentUser)
+            .filter { it.startAt == null || it.startAt.isBefore(weekFromNow) }
+            .map { toScheduleItem(it, participant) }
+    }
 
-	fun getWeekEvents(currentUser: CurrentUser): List<ScheduleItem> {
-		val participant = linkedParticipant(currentUser) ?: return emptyList()
-		val weekFromNow = Instant.now().plusSeconds(7 * 24 * 60 * 60)
-		return upcomingEvents(participant, currentUser)
-			.filter { it.startAt == null || it.startAt.isBefore(weekFromNow) }
-			.map { toScheduleItem(it, participant) }
-	}
+    fun getRecentHistory(currentUser: CurrentUser): List<HistoryItem> = emptyList()
 
-	fun getRecentHistory(currentUser: CurrentUser): List<HistoryItem> = emptyList()
+    fun getGuardians(currentUser: CurrentUser): List<GuardianSummary> {
+        val participant = linkedParticipant(currentUser) ?: return emptyList()
+        return householdRepository.listAdults(participant.householdId, participant.organizationId).map { adult ->
+            GuardianSummary("${adult.firstName} ${adult.lastName}", adult.relationship ?: "Guardian", adult.email ?: "", adult.phone ?: "")
+        }
+    }
 
-	fun getGuardians(currentUser: CurrentUser): List<GuardianSummary> {
-		val participant = linkedParticipant(currentUser) ?: return emptyList()
-		return householdRepository.listAdults(participant.householdId, participant.organizationId).map { adult ->
-			GuardianSummary("${adult.firstName} ${adult.lastName}", adult.relationship ?: "Guardian", adult.email ?: "", adult.phone ?: "")
-		}
-	}
-
-	fun getOrders(currentUser: CurrentUser): List<OrderSummary> = emptyList()
+    fun getOrders(currentUser: CurrentUser): List<OrderSummary> = emptyList()
 }

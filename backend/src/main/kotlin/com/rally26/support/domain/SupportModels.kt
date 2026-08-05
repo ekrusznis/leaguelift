@@ -4,6 +4,7 @@ import java.time.Instant
 import java.util.UUID
 
 enum class SupportAudience { PUBLIC, OWNER_ADMIN, COACH, GUARDIAN, ATHLETE, PLATFORM }
+
 enum class SupportArticleStatus { DRAFT, PUBLISHED, ARCHIVED }
 
 data class SupportArticle(
@@ -38,6 +39,7 @@ enum class SupportCaseCategory {
 }
 
 enum class SupportCasePriority { LOW, NORMAL, HIGH, URGENT }
+
 enum class SupportCaseStatus { OPEN, IN_PROGRESS, WAITING_ON_CUSTOMER, RESOLVED, CLOSED }
 
 data class SupportCase(

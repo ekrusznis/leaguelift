@@ -14,9 +14,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.email.smtp")
 data class SmtpMailProperties(
-	val host: String = "smtp.gmail.com",
-	val port: Int = 587,
-	val username: String = "",
-	val password: String = "",
-	val fromAddress: String = "support@rally26.com",
+    val host: String = "smtp.gmail.com",
+    val port: Int = 587,
+    val username: String = "",
+    val password: String = "",
+    val fromAddress: String = "support@rally26.com",
 )

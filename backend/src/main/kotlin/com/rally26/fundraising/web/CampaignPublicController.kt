@@ -13,9 +13,10 @@ class CampaignPublicController(
     private val campaignService: CampaignService,
     private val contributionService: ContributionService,
 ) {
-
     @GetMapping("/{slug}")
-    fun getCampaign(@PathVariable slug: String): PublicCampaignResponse {
+    fun getCampaign(
+        @PathVariable slug: String,
+    ): PublicCampaignResponse {
         val campaign = campaignService.getPublic(slug)
         return campaign.toPublicResponse(contributionService.getConfirmedTotal(campaign.id))
     }

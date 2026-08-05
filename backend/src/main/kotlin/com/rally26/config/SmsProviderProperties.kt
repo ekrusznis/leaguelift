@@ -10,5 +10,5 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.sms")
 data class SmsProviderProperties(
-	val provider: String = "logging",
+    val provider: String = "logging",
 )

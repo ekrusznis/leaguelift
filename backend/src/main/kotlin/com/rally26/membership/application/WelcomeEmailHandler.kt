@@ -27,47 +27,49 @@ import java.util.UUID
  */
 @Component
 class WelcomeEmailHandler(
-	private val membershipRepository: MembershipRepository,
-	private val appUserRepository: AppUserRepository,
-	private val organizationRepository: OrganizationRepository,
-	private val emailProvider: EmailProvider,
-	private val frontendProperties: FrontendProperties,
-	private val resendTemplateProperties: ResendTemplateProperties,
-	private val objectMapper: ObjectMapper,
+    private val membershipRepository: MembershipRepository,
+    private val appUserRepository: AppUserRepository,
+    private val organizationRepository: OrganizationRepository,
+    private val emailProvider: EmailProvider,
+    private val frontendProperties: FrontendProperties,
+    private val resendTemplateProperties: ResendTemplateProperties,
+    private val objectMapper: ObjectMapper,
 ) : OutboxEventHandler {
+    override val eventType: String = "membership.first_granted"
 
-	override val eventType: String = "membership.first_granted"
+    override fun handle(event: OutboxEvent) {
+        val payload = objectMapper.readTree(event.payload)
+        val userId = UUID.fromString(payload.get("userId").asText())
+        val organizationId = UUID.fromString(payload.get("organizationId").asText())
+        val role = MembershipRole.valueOf(payload.get("role").asText())
 
-	override fun handle(event: OutboxEvent) {
-		val payload = objectMapper.readTree(event.payload)
-		val userId = UUID.fromString(payload.get("userId").asText())
-		val organizationId = UUID.fromString(payload.get("organizationId").asText())
-		val role = MembershipRole.valueOf(payload.get("role").asText())
+        val membership = membershipRepository.findActiveMembership(organizationId, userId) ?: return
+        val user = appUserRepository.findById(userId) ?: return
+        val organization = organizationRepository.findById(organizationId) ?: return
 
-		val membership = membershipRepository.findActiveMembership(organizationId, userId) ?: return
-		val user = appUserRepository.findById(userId) ?: return
-		val organization = organizationRepository.findById(organizationId) ?: return
-
-		val roleLabel = MembershipRoleLabels.label(membership.role)
-		val dashboardUrl = "${frontendProperties.baseUrl}/dashboard"
-		emailProvider.send(
-			EmailMessage(
-				to = user.email,
-				subject = "Welcome to Rally26",
-				body = "Welcome to Rally26. You're all set on ${organization.name} as a $roleLabel.\n\n" +
-					"Go to your dashboard: $dashboardUrl\n\n— Rally26",
-				template = resendTemplateProperties.welcomeId.takeIf { it.isNotBlank() }?.let { templateId ->
-					EmailTemplateRef(
-						id = templateId,
-						variables = mapOf(
-							"ORG_NAME" to organization.name,
-							"ROLE_LABEL" to roleLabel,
-							"FEATURES_HTML" to WelcomeEmailFeatures.featuresHtml(role),
-							"DASHBOARD_URL" to dashboardUrl,
-						),
-					)
-				},
-			),
-		)
-	}
+        val roleLabel = MembershipRoleLabels.label(membership.role)
+        val dashboardUrl = "${frontendProperties.baseUrl}/dashboard"
+        emailProvider.send(
+            EmailMessage(
+                to = user.email,
+                subject = "Welcome to Rally26",
+                body =
+                    "Welcome to Rally26. You're all set on ${organization.name} as a $roleLabel.\n\n" +
+                        "Go to your dashboard: $dashboardUrl\n\n— Rally26",
+                template =
+                    resendTemplateProperties.welcomeId.takeIf { it.isNotBlank() }?.let { templateId ->
+                        EmailTemplateRef(
+                            id = templateId,
+                            variables =
+                                mapOf(
+                                    "ORG_NAME" to organization.name,
+                                    "ROLE_LABEL" to roleLabel,
+                                    "FEATURES_HTML" to WelcomeEmailFeatures.featuresHtml(role),
+                                    "DASHBOARD_URL" to dashboardUrl,
+                                ),
+                        )
+                    },
+            ),
+        )
+    }
 }

@@ -21,14 +21,12 @@ import java.util.UUID
 class EventTemplateController(
     private val service: EventTemplateService,
 ) {
-
     @GetMapping
     fun list(
         @PathVariable organizationId: UUID,
         @RequestParam(defaultValue = "false") includeArchived: Boolean,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): List<EventTemplateResponse> =
-        service.list(organizationId, includeArchived, currentUser).map { it.toResponse() }
+    ): List<EventTemplateResponse> = service.list(organizationId, includeArchived, currentUser).map { it.toResponse() }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -37,12 +35,25 @@ class EventTemplateController(
         @Valid @RequestBody request: SaveEventTemplateRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): EventTemplateResponse =
-        service.create(
-            organizationId, request.name, request.eventType, request.title, request.description,
-            request.durationMinutes, request.arrivalOffsetMinutes, request.meetingOffsetMinutes,
-            request.timezone, request.venueName, request.address, request.area, request.meetingPoint,
-            request.directionsNotes, request.visibility, currentUser,
-        ).toResponse()
+        service
+            .create(
+                organizationId,
+                request.name,
+                request.eventType,
+                request.title,
+                request.description,
+                request.durationMinutes,
+                request.arrivalOffsetMinutes,
+                request.meetingOffsetMinutes,
+                request.timezone,
+                request.venueName,
+                request.address,
+                request.area,
+                request.meetingPoint,
+                request.directionsNotes,
+                request.visibility,
+                currentUser,
+            ).toResponse()
 
     @PutMapping("/{templateId}")
     fun update(
@@ -51,12 +62,26 @@ class EventTemplateController(
         @Valid @RequestBody request: SaveEventTemplateRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): EventTemplateResponse =
-        service.update(
-            organizationId, templateId, request.name, request.eventType, request.title, request.description,
-            request.durationMinutes, request.arrivalOffsetMinutes, request.meetingOffsetMinutes,
-            request.timezone, request.venueName, request.address, request.area, request.meetingPoint,
-            request.directionsNotes, request.visibility, currentUser,
-        ).toResponse()
+        service
+            .update(
+                organizationId,
+                templateId,
+                request.name,
+                request.eventType,
+                request.title,
+                request.description,
+                request.durationMinutes,
+                request.arrivalOffsetMinutes,
+                request.meetingOffsetMinutes,
+                request.timezone,
+                request.venueName,
+                request.address,
+                request.area,
+                request.meetingPoint,
+                request.directionsNotes,
+                request.visibility,
+                currentUser,
+            ).toResponse()
 
     @PostMapping("/{templateId}/archive")
     fun archive(

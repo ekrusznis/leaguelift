@@ -35,7 +35,10 @@ class SecurityConfigIntegrationTest : AbstractIntegrationTest() {
 
     private val httpClient: HttpClient = HttpClient.newHttpClient()
 
-    private fun get(path: String, bearerToken: String? = null): HttpResponse<String> {
+    private fun get(
+        path: String,
+        bearerToken: String? = null,
+    ): HttpResponse<String> {
         val builder = HttpRequest.newBuilder(URI.create("http://localhost:$port$path")).GET()
         if (bearerToken != null) builder.header("Authorization", "Bearer $bearerToken")
         return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString())
@@ -57,22 +60,25 @@ class SecurityConfigIntegrationTest : AbstractIntegrationTest() {
 
     @Test
     fun `a real, freshly-issued JWT authenticates successfully against the real filter chain`() {
-        val appUser = passwordAuthenticationService.register(
-            email = "security-config-test-${System.nanoTime()}@example.com",
-            password = "password1234",
-            displayName = "Security Test",
-        )
+        val appUser =
+            passwordAuthenticationService.register(
+                email = "security-config-test-${System.nanoTime()}@example.com",
+                password = "password1234",
+                displayName = "Security Test",
+            )
 
-        val token = tokenService.issueAccessToken(
-            userId = appUser.id,
-            email = appUser.email,
-            displayName = appUser.displayName,
-        )
+        val token =
+            tokenService.issueAccessToken(
+                userId = appUser.id,
+                email = appUser.email,
+                displayName = appUser.displayName,
+            )
 
-        val meResponse = get(
-            path = "/api/v1/me",
-            bearerToken = token.accessToken,
-        )
+        val meResponse =
+            get(
+                path = "/api/v1/me",
+                bearerToken = token.accessToken,
+            )
 
         assertEquals(200, meResponse.statusCode())
     }

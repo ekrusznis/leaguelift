@@ -35,16 +35,17 @@ class SupportCaseCreatedEmailHandler(
     override fun handle(event: OutboxEvent) {
         val caseId = UUID.fromString(objectMapper.readTree(event.payload).get("caseId").asText())
         val supportCase = repository.findById(caseId) ?: return
-        val body = templateRenderer.render(
-            "mail-templates/support-case-created.mustache",
-            mapOf(
-                "requesterName" to supportCase.requesterName,
-                "caseId" to supportCase.id.toString(),
-                "category" to supportCase.category.name.replace('_', ' '),
-                "subject" to supportCase.subject,
-                "description" to supportCase.description,
-            ),
-        )
+        val body =
+            templateRenderer.render(
+                "mail-templates/support-case-created.mustache",
+                mapOf(
+                    "requesterName" to supportCase.requesterName,
+                    "caseId" to supportCase.id.toString(),
+                    "category" to supportCase.category.name.replace('_', ' '),
+                    "subject" to supportCase.subject,
+                    "description" to supportCase.description,
+                ),
+            )
         smtpEmailProvider.send(
             EmailMessage(
                 to = supportCase.requesterEmail,

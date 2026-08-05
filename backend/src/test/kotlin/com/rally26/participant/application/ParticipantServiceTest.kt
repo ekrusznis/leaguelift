@@ -27,7 +27,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class ParticipantServiceTest {
-
     private val participantRepository = mockk<ParticipantRepository>()
     private val householdRepository = mockk<HouseholdRepository>()
     private val membershipService = mockk<MembershipService>()
@@ -64,10 +63,28 @@ class ParticipantServiceTest {
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
         every { householdRepository.findById(householdId, orgId) } returns mockk()
         val participant = sampleParticipant()
-        every { participantRepository.insert(organizationId = orgId, householdId = householdId, firstName = participant.firstName, lastName = participant.lastName, dateOfBirth = participant.dateOfBirth, notes = participant.notes) } returns participant
+        every {
+            participantRepository.insert(
+                organizationId = orgId,
+                householdId = householdId,
+                firstName = participant.firstName,
+                lastName = participant.lastName,
+                dateOfBirth = participant.dateOfBirth,
+                notes = participant.notes,
+            )
+        } returns participant
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 
-        val result = service.create(orgId, householdId, participant.firstName, participant.lastName, participant.dateOfBirth, participant.notes, currentUser)
+        val result =
+            service.create(
+                orgId,
+                householdId,
+                participant.firstName,
+                participant.lastName,
+                participant.dateOfBirth,
+                participant.notes,
+                currentUser,
+            )
 
         assertEquals(participant.id, result.id)
         verify(exactly = 1) { membershipService.requireManagerRole(orgId, currentUser) }
@@ -142,7 +159,9 @@ class ParticipantServiceTest {
 
         service.assignToTeam(orgId, participant.id, teamId, null, currentUser)
 
-        verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "participant.team.assigned", "participant_team", assignment.id, any()) }
+        verify(exactly = 1) {
+            auditService.record(currentUser.userId, orgId, "participant.team.assigned", "participant_team", assignment.id, any())
+        }
     }
 
     @Test
@@ -155,20 +174,24 @@ class ParticipantServiceTest {
         }
     }
 
-    private fun sampleParticipant() = Participant(
-        id = UUID.randomUUID(),
-        householdId = householdId,
-        organizationId = orgId,
-        firstName = "Emma",
-        lastName = "Smith",
-        dateOfBirth = LocalDate.of(2014, 5, 10),
-        notes = null,
-        status = ParticipantStatus.ACTIVE,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun sampleParticipant() =
+        Participant(
+            id = UUID.randomUUID(),
+            householdId = householdId,
+            organizationId = orgId,
+            firstName = "Emma",
+            lastName = "Smith",
+            dateOfBirth = LocalDate.of(2014, 5, 10),
+            notes = null,
+            status = ParticipantStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
-    private fun sampleAssignment(participantId: UUID, teamId: UUID) = ParticipantTeamAssignment(
+    private fun sampleAssignment(
+        participantId: UUID,
+        teamId: UUID,
+    ) = ParticipantTeamAssignment(
         id = UUID.randomUUID(),
         participantId = participantId,
         teamId = teamId,
@@ -179,13 +202,14 @@ class ParticipantServiceTest {
         updatedAt = Instant.now(),
     )
 
-    private fun managerMembership() = OrganizationMembership(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        userId = currentUser.userId,
-        role = MembershipRole.ADMINISTRATOR,
-        status = MembershipStatus.ACTIVE,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun managerMembership() =
+        OrganizationMembership(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            userId = currentUser.userId,
+            role = MembershipRole.ADMINISTRATOR,
+            status = MembershipStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 }

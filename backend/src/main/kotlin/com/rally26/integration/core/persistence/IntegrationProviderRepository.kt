@@ -18,28 +18,35 @@ class IntegrationProviderRepository(
     private val objectMapper: ObjectMapper,
 ) {
     fun find(provider: IntegrationProvider): IntegrationProviderDefinition? =
-        jdbcClient.sql("select $COLUMNS from integration_provider_catalog where provider = :provider")
+        jdbcClient
+            .sql("select $COLUMNS from integration_provider_catalog where provider = :provider")
             .param("provider", provider.name)
             .query(::mapRow)
             .optional()
             .orElse(null)
 
-    fun list(ownerType: IntegrationOwnerType, customerVisibleOnly: Boolean = true): List<IntegrationProviderDefinition> {
+    fun list(
+        ownerType: IntegrationOwnerType,
+        customerVisibleOnly: Boolean = true,
+    ): List<IntegrationProviderDefinition> {
         val visibleClause = if (customerVisibleOnly) "and visible_to_customers = true" else ""
-        return jdbcClient.sql(
-            """
-            select $COLUMNS
-            from integration_provider_catalog
-            where ownership_scope = :ownerType $visibleClause
-            order by sort_order, display_name
-            """.trimIndent(),
-        )
-            .param("ownerType", ownerType.name)
+        return jdbcClient
+            .sql(
+                """
+                select $COLUMNS
+                from integration_provider_catalog
+                where ownership_scope = :ownerType $visibleClause
+                order by sort_order, display_name
+                """.trimIndent(),
+            ).param("ownerType", ownerType.name)
             .query(::mapRow)
             .list()
     }
 
-    private fun mapRow(rs: java.sql.ResultSet, rowNum: Int) = IntegrationProviderDefinition(
+    private fun mapRow(
+        rs: java.sql.ResultSet,
+        rowNum: Int,
+    ) = IntegrationProviderDefinition(
         provider = IntegrationProvider.valueOf(rs.getString("provider")),
         displayName = rs.getString("display_name"),
         category = IntegrationCategory.valueOf(rs.getString("category")),
@@ -55,10 +62,11 @@ class IntegrationProviderRepository(
         visibleToCustomers = rs.getBoolean("visible_to_customers"),
     )
 
-    private fun readStrings(json: String): List<String> =
-        objectMapper.readValue(json, object : TypeReference<List<String>>() {})
+    private fun readStrings(json: String): List<String> = objectMapper.readValue(json, object : TypeReference<List<String>>() {})
 
     private companion object {
-        const val COLUMNS = "provider, display_name, category, ownership_scope, primary_auth_mode, supported_auth_modes, baseline_readiness, adapter_mode, description, activation_requirement, default_scopes, sort_order, visible_to_customers"
+        const val COLUMNS =
+            "provider, display_name, category, ownership_scope, primary_auth_mode, supported_auth_modes, baseline_readiness, " +
+                "adapter_mode, description, activation_requirement, default_scopes, sort_order, visible_to_customers"
     }
 }

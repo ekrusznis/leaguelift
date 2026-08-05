@@ -7,12 +7,12 @@ import org.springframework.stereotype.Service
 import java.time.Duration
 
 data class MediaDescriptor(
-	val assignment: MediaAssignment,
-	val url: String,
-	val contentType: String?,
-	val byteSizeBytes: Long?,
-	val widthPx: Int?,
-	val heightPx: Int?,
+    val assignment: MediaAssignment,
+    val url: String,
+    val contentType: String?,
+    val byteSizeBytes: Long?,
+    val widthPx: Int?,
+    val heightPx: Int?,
 )
 
 /**
@@ -23,22 +23,21 @@ data class MediaDescriptor(
  */
 @Service
 class MediaReadService(
-	private val mediaAssetRepository: MediaAssetRepository,
-	private val spacesClient: SpacesClient,
+    private val mediaAssetRepository: MediaAssetRepository,
+    private val spacesClient: SpacesClient,
 ) {
+    fun describe(assignment: MediaAssignment): MediaDescriptor? {
+        val asset = mediaAssetRepository.findById(assignment.assetId, assignment.organizationId) ?: return null
+        val url = spacesClient.presignedGetUrl(asset.storageKey, Duration.ofMinutes(15))
+        return MediaDescriptor(
+            assignment = assignment,
+            url = url,
+            contentType = asset.detectedContentType ?: asset.declaredContentType,
+            byteSizeBytes = asset.byteSize,
+            widthPx = asset.widthPx,
+            heightPx = asset.heightPx,
+        )
+    }
 
-	fun describe(assignment: MediaAssignment): MediaDescriptor? {
-		val asset = mediaAssetRepository.findById(assignment.assetId, assignment.organizationId) ?: return null
-		val url = spacesClient.presignedGetUrl(asset.storageKey, Duration.ofMinutes(15))
-		return MediaDescriptor(
-			assignment = assignment,
-			url = url,
-			contentType = asset.detectedContentType ?: asset.declaredContentType,
-			byteSizeBytes = asset.byteSize,
-			widthPx = asset.widthPx,
-			heightPx = asset.heightPx,
-		)
-	}
-
-	fun describeAll(assignments: List<MediaAssignment>): List<MediaDescriptor> = assignments.mapNotNull(::describe)
+    fun describeAll(assignments: List<MediaAssignment>): List<MediaDescriptor> = assignments.mapNotNull(::describe)
 }

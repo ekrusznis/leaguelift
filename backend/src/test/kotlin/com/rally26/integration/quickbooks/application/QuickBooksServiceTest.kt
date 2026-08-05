@@ -37,9 +37,10 @@ class QuickBooksServiceTest {
 
     @Test
     fun `overview never enables provider writes during scaffold phase`() {
-        every { catalog.listForOrganization(organizationId, currentUser) } returns listOf(
-            IntegrationCatalogItem(definition(), IntegrationReadiness.NOT_CONFIGURED, null, false),
-        )
+        every { catalog.listForOrganization(organizationId, currentUser) } returns
+            listOf(
+                IntegrationCatalogItem(definition(), IntegrationReadiness.NOT_CONFIGURED, null, false),
+            )
         every { repository.listBatches(organizationId) } returns emptyList()
 
         val result = service.overview(organizationId, currentUser)
@@ -50,19 +51,20 @@ class QuickBooksServiceTest {
         verify(exactly = 0) { provider.listAccounts(any(), any()) }
     }
 
-    private fun definition() = IntegrationProviderDefinition(
-        IntegrationProvider.QUICKBOOKS_ONLINE,
-        "QuickBooks Online",
-        IntegrationCategory.ACCOUNTING,
-        IntegrationOwnerType.ORGANIZATION,
-        IntegrationAuthMode.OAUTH2,
-        listOf(IntegrationAuthMode.OAUTH2),
-        IntegrationReadiness.NOT_CONFIGURED,
-        IntegrationAdapterMode.OAUTH_SCAFFOLD,
-        "Accounting scaffold",
-        "Phase 20 credentials",
-        emptyList(),
-        20,
-        true,
-    )
+    private fun definition() =
+        IntegrationProviderDefinition(
+            IntegrationProvider.QUICKBOOKS_ONLINE,
+            "QuickBooks Online",
+            IntegrationCategory.ACCOUNTING,
+            IntegrationOwnerType.ORGANIZATION,
+            IntegrationAuthMode.OAUTH2,
+            listOf(IntegrationAuthMode.OAUTH2),
+            IntegrationReadiness.NOT_CONFIGURED,
+            IntegrationAdapterMode.OAUTH_SCAFFOLD,
+            "Accounting scaffold",
+            "Phase 20 credentials",
+            emptyList(),
+            20,
+            true,
+        )
 }

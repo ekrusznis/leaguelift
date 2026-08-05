@@ -4,6 +4,7 @@ import java.time.Instant
 import java.util.UUID
 
 enum class ReconciliationRunStatus { RUNNING, COMPLETED, FAILED }
+
 enum class ReconciliationSeverity { HIGH, MEDIUM, LOW }
 
 data class ReconciliationRun(

@@ -21,8 +21,9 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/households")
-class HouseholdController(private val householdService: HouseholdService) {
-
+class HouseholdController(
+    private val householdService: HouseholdService,
+) {
     @GetMapping
     fun list(
         @PathVariable organizationId: UUID,
@@ -42,9 +43,15 @@ class HouseholdController(private val householdService: HouseholdService) {
         @Valid @RequestBody request: CreateHouseholdRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): ResponseEntity<HouseholdResponse> {
-        val household = householdService.create(
-            organizationId, request.displayName, request.contactEmail, request.contactPhone, request.notes, currentUser,
-        )
+        val household =
+            householdService.create(
+                organizationId,
+                request.displayName,
+                request.contactEmail,
+                request.contactPhone,
+                request.notes,
+                currentUser,
+            )
         return ResponseEntity.status(HttpStatus.CREATED).body(household.toResponse())
     }
 
@@ -61,10 +68,19 @@ class HouseholdController(private val householdService: HouseholdService) {
         @PathVariable householdId: UUID,
         @Valid @RequestBody request: UpdateHouseholdRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): HouseholdResponse = householdService.update(
-        organizationId, householdId, request.displayName, request.contactEmail, request.contactPhone, request.notes, currentUser,
-        request.emailRemindersOptOut, request.smsRemindersOptIn,
-    ).toResponse()
+    ): HouseholdResponse =
+        householdService
+            .update(
+                organizationId,
+                householdId,
+                request.displayName,
+                request.contactEmail,
+                request.contactPhone,
+                request.notes,
+                currentUser,
+                request.emailRemindersOptOut,
+                request.smsRemindersOptIn,
+            ).toResponse()
 
     @GetMapping("/{householdId}/adults")
     fun listAdults(
@@ -80,10 +96,18 @@ class HouseholdController(private val householdService: HouseholdService) {
         @Valid @RequestBody request: AddAdultRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): ResponseEntity<HouseholdAdultResponse> {
-        val adult = householdService.addAdult(
-            organizationId, householdId, request.firstName, request.lastName,
-            request.email, request.phone, request.relationship, request.isPrimary, currentUser,
-        )
+        val adult =
+            householdService.addAdult(
+                organizationId,
+                householdId,
+                request.firstName,
+                request.lastName,
+                request.email,
+                request.phone,
+                request.relationship,
+                request.isPrimary,
+                currentUser,
+            )
         return ResponseEntity.status(HttpStatus.CREATED).body(adult.toResponse())
     }
 

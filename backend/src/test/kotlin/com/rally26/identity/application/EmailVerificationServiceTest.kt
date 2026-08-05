@@ -15,165 +15,170 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class EmailVerificationServiceTest {
+    private val tokenRepository = mockk<EmailVerificationTokenRepository>()
+    private val appUserRepository = mockk<AppUserRepository>()
+    private val outboxWriter = mockk<OutboxWriter>()
+    private val service = EmailVerificationService(tokenRepository, appUserRepository, outboxWriter)
 
-	private val tokenRepository = mockk<EmailVerificationTokenRepository>()
-	private val appUserRepository = mockk<AppUserRepository>()
-	private val outboxWriter = mockk<OutboxWriter>()
-	private val service = EmailVerificationService(tokenRepository, appUserRepository, outboxWriter)
+    @Test
+    fun `issueForUser creates a new token for pending user`() {
+        val user = pendingUser("owner@example.com")
+        every { appUserRepository.findById(user.id) } returns user
+        every { tokenRepository.replaceActiveToken(user.id, any(), any()) } returns
+            EmailVerificationTokenRecord(
+                id = UUID.randomUUID(),
+                userId = user.id,
+                tokenHash = "hash",
+                expiresAt = Instant.now().plusSeconds(3600),
+                consumedAt = null,
+            )
 
-	@Test
-	fun `issueForUser creates a new token for pending user`() {
-		val user = pendingUser("owner@example.com")
-		every { appUserRepository.findById(user.id) } returns user
-		every { tokenRepository.replaceActiveToken(user.id, any(), any()) } returns EmailVerificationTokenRecord(
-			id = UUID.randomUUID(),
-			userId = user.id,
-			tokenHash = "hash",
-			expiresAt = Instant.now().plusSeconds(3600),
-			consumedAt = null,
-		)
+        val issued = service.issueForUser(user.id)
 
-		val issued = service.issueForUser(user.id)
+        assertEquals(user.id, issued.userId)
+        assertEquals("owner@example.com", issued.email)
+        assertEquals(43, issued.rawToken.length)
+    }
 
-		assertEquals(user.id, issued.userId)
-		assertEquals("owner@example.com", issued.email)
-		assertEquals(43, issued.rawToken.length)
-	}
+    @Test
+    fun `enqueueVerificationEmail writes outbox event`() {
+        val issued = EmailVerificationService.IssuedVerification(UUID.randomUUID(), "owner@example.com", "token")
+        every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
 
-	@Test
-	fun `enqueueVerificationEmail writes outbox event`() {
-		val issued = EmailVerificationService.IssuedVerification(UUID.randomUUID(), "owner@example.com", "token")
-		every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
+        service.enqueueVerificationEmail(issued)
 
-		service.enqueueVerificationEmail(issued)
+        verify(exactly = 1) {
+            outboxWriter.write("app_user", issued.userId, null, "auth.owner_verification_requested", any())
+        }
+    }
 
-		verify(exactly = 1) {
-			outboxWriter.write("app_user", issued.userId, null, "auth.owner_verification_requested", any())
-		}
-	}
+    @Test
+    fun `resend is ignored when account is missing`() {
+        every { appUserRepository.findByEmail("missing@example.com") } returns null
 
-	@Test
-	fun `resend is ignored when account is missing`() {
-		every { appUserRepository.findByEmail("missing@example.com") } returns null
+        service.resend("missing@example.com")
 
-		service.resend("missing@example.com")
+        verify(exactly = 0) { tokenRepository.replaceActiveToken(any(), any(), any()) }
+        verify(exactly = 0) { outboxWriter.write(any(), any(), any(), any(), any()) }
+    }
 
-		verify(exactly = 0) { tokenRepository.replaceActiveToken(any(), any(), any()) }
-		verify(exactly = 0) { outboxWriter.write(any(), any(), any(), any(), any()) }
-	}
+    @Test
+    fun `resend issues fresh token and queues email for pending user`() {
+        val user = pendingUser("owner@example.com")
+        every { appUserRepository.findByEmail("owner@example.com") } returns user
+        every { appUserRepository.findById(user.id) } returns user
+        every { tokenRepository.replaceActiveToken(user.id, any(), any()) } returns
+            EmailVerificationTokenRecord(
+                id = UUID.randomUUID(),
+                userId = user.id,
+                tokenHash = "hash",
+                expiresAt = Instant.now().plusSeconds(3600),
+                consumedAt = null,
+            )
+        every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
 
-	@Test
-	fun `resend issues fresh token and queues email for pending user`() {
-		val user = pendingUser("owner@example.com")
-		every { appUserRepository.findByEmail("owner@example.com") } returns user
-		every { appUserRepository.findById(user.id) } returns user
-		every { tokenRepository.replaceActiveToken(user.id, any(), any()) } returns EmailVerificationTokenRecord(
-			id = UUID.randomUUID(),
-			userId = user.id,
-			tokenHash = "hash",
-			expiresAt = Instant.now().plusSeconds(3600),
-			consumedAt = null,
-		)
-		every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
+        service.resend("owner@example.com")
 
-		service.resend("owner@example.com")
+        verify(exactly = 1) { tokenRepository.replaceActiveToken(user.id, any(), any()) }
+        verify(exactly = 1) { outboxWriter.write(any(), any(), any(), any(), any()) }
+    }
 
-		verify(exactly = 1) { tokenRepository.replaceActiveToken(user.id, any(), any()) }
-		verify(exactly = 1) { outboxWriter.write(any(), any(), any(), any(), any()) }
-	}
+    @Test
+    fun `verify rejects invalid token`() {
+        every { tokenRepository.findByTokenHash(any()) } returns null
+        assertFailsWith<NotFoundException> {
+            service.verify("missing")
+        }
+    }
 
-	@Test
-	fun `verify rejects invalid token`() {
-		every { tokenRepository.findByTokenHash(any()) } returns null
-		assertFailsWith<NotFoundException> {
-			service.verify("missing")
-		}
-	}
+    @Test
+    fun `verify rejects expired token`() {
+        val record =
+            EmailVerificationTokenRecord(
+                id = UUID.randomUUID(),
+                userId = UUID.randomUUID(),
+                tokenHash = "hash",
+                expiresAt = Instant.now().minusSeconds(60),
+                consumedAt = null,
+            )
+        every { tokenRepository.findByTokenHash(any()) } returns record
 
-	@Test
-	fun `verify rejects expired token`() {
-		val record = EmailVerificationTokenRecord(
-			id = UUID.randomUUID(),
-			userId = UUID.randomUUID(),
-			tokenHash = "hash",
-			expiresAt = Instant.now().minusSeconds(60),
-			consumedAt = null,
-		)
-		every { tokenRepository.findByTokenHash(any()) } returns record
+        assertFailsWith<ValidationException> {
+            service.verify("expired")
+        }
+    }
 
-		assertFailsWith<ValidationException> {
-			service.verify("expired")
-		}
-	}
+    @Test
+    fun `verify marks user active and consumes token`() {
+        val record =
+            EmailVerificationTokenRecord(
+                id = UUID.randomUUID(),
+                userId = UUID.randomUUID(),
+                tokenHash = "hash",
+                expiresAt = Instant.now().plusSeconds(3600),
+                consumedAt = null,
+            )
+        every { tokenRepository.findByTokenHash(any()) } returns record
+        every { appUserRepository.markActive(record.userId) } returns 1
+        every { tokenRepository.consume(record.id, any()) } returns 1
 
-	@Test
-	fun `verify marks user active and consumes token`() {
-		val record = EmailVerificationTokenRecord(
-			id = UUID.randomUUID(),
-			userId = UUID.randomUUID(),
-			tokenHash = "hash",
-			expiresAt = Instant.now().plusSeconds(3600),
-			consumedAt = null,
-		)
-		every { tokenRepository.findByTokenHash(any()) } returns record
-		every { appUserRepository.markActive(record.userId) } returns 1
-		every { tokenRepository.consume(record.id, any()) } returns 1
+        service.verify("valid")
 
-		service.verify("valid")
+        verify(exactly = 1) { appUserRepository.markActive(record.userId) }
+        verify(exactly = 1) { tokenRepository.consume(record.id, any()) }
+    }
 
-		verify(exactly = 1) { appUserRepository.markActive(record.userId) }
-		verify(exactly = 1) { tokenRepository.consume(record.id, any()) }
-	}
+    @Test
+    fun `verify rejects a token that was already consumed with a distinct conflict code`() {
+        val record =
+            EmailVerificationTokenRecord(
+                id = UUID.randomUUID(),
+                userId = UUID.randomUUID(),
+                tokenHash = "hash",
+                expiresAt = Instant.now().plusSeconds(3600),
+                consumedAt = Instant.now().minusSeconds(30),
+            )
+        every { tokenRepository.findByTokenHash(any()) } returns record
 
-	@Test
-	fun `verify rejects a token that was already consumed with a distinct conflict code`() {
-		val record = EmailVerificationTokenRecord(
-			id = UUID.randomUUID(),
-			userId = UUID.randomUUID(),
-			tokenHash = "hash",
-			expiresAt = Instant.now().plusSeconds(3600),
-			consumedAt = Instant.now().minusSeconds(30),
-		)
-		every { tokenRepository.findByTokenHash(any()) } returns record
+        val thrown = assertFailsWith<ConflictException> { service.verify("already-used") }
+        assertEquals("EMAIL_VERIFICATION_ALREADY_USED", thrown.code)
+    }
 
-		val thrown = assertFailsWith<ConflictException> { service.verify("already-used") }
-		assertEquals("EMAIL_VERIFICATION_ALREADY_USED", thrown.code)
-	}
+    @Test
+    fun `verify rejects when a concurrent request already consumed the token`() {
+        // Simulates two requests racing past the consumedAt == null check before either
+        // commits — the loser's UPDATE affects 0 rows, which must surface as a conflict
+        // rather than silently reporting success.
+        val record =
+            EmailVerificationTokenRecord(
+                id = UUID.randomUUID(),
+                userId = UUID.randomUUID(),
+                tokenHash = "hash",
+                expiresAt = Instant.now().plusSeconds(3600),
+                consumedAt = null,
+            )
+        every { tokenRepository.findByTokenHash(any()) } returns record
+        every { appUserRepository.markActive(record.userId) } returns 1
+        every { tokenRepository.consume(record.id, any()) } returns 0
 
-	@Test
-	fun `verify rejects when a concurrent request already consumed the token`() {
-		// Simulates two requests racing past the consumedAt == null check before either
-		// commits — the loser's UPDATE affects 0 rows, which must surface as a conflict
-		// rather than silently reporting success.
-		val record = EmailVerificationTokenRecord(
-			id = UUID.randomUUID(),
-			userId = UUID.randomUUID(),
-			tokenHash = "hash",
-			expiresAt = Instant.now().plusSeconds(3600),
-			consumedAt = null,
-		)
-		every { tokenRepository.findByTokenHash(any()) } returns record
-		every { appUserRepository.markActive(record.userId) } returns 1
-		every { tokenRepository.consume(record.id, any()) } returns 0
+        val thrown = assertFailsWith<ConflictException> { service.verify("racing") }
+        assertEquals("EMAIL_VERIFICATION_ALREADY_USED", thrown.code)
+    }
 
-		val thrown = assertFailsWith<ConflictException> { service.verify("racing") }
-		assertEquals("EMAIL_VERIFICATION_ALREADY_USED", thrown.code)
-	}
-
-	private fun pendingUser(email: String) = AppUser(
-		id = UUID.randomUUID(),
-		email = email,
-		displayName = "Owner",
-		status = AppUserStatus.PENDING_EMAIL_VERIFICATION,
-		passwordHash = "hash",
-		createdAt = Instant.now(),
-		updatedAt = Instant.now(),
-	)
+    private fun pendingUser(email: String) =
+        AppUser(
+            id = UUID.randomUUID(),
+            email = email,
+            displayName = "Owner",
+            status = AppUserStatus.PENDING_EMAIL_VERIFICATION,
+            passwordHash = "hash",
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 }
-

@@ -26,7 +26,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class TournamentServiceTest {
-
     private val tournamentRepository = mockk<TournamentRepository>()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
@@ -51,16 +50,28 @@ class TournamentServiceTest {
         val tournament = sampleTournament()
         every {
             tournamentRepository.insert(
-                orgId, tournament.name, tournament.sport, tournament.startDate,
-                tournament.endDate, tournament.location, tournament.contactEmail,
+                orgId,
+                tournament.name,
+                tournament.sport,
+                tournament.startDate,
+                tournament.endDate,
+                tournament.location,
+                tournament.contactEmail,
             )
         } returns tournament
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 
-        val result = service.create(
-            orgId, tournament.name, tournament.sport, tournament.startDate,
-            tournament.endDate, tournament.location, tournament.contactEmail, currentUser,
-        )
+        val result =
+            service.create(
+                orgId,
+                tournament.name,
+                tournament.sport,
+                tournament.startDate,
+                tournament.endDate,
+                tournament.location,
+                tournament.contactEmail,
+                currentUser,
+            )
 
         assertEquals(tournament.id, result.id)
         verify(exactly = 1) {
@@ -74,10 +85,14 @@ class TournamentServiceTest {
 
         assertFailsWith<ValidationException> {
             service.create(
-                orgId, "Spring Cup", "Soccer",
+                orgId,
+                "Spring Cup",
+                "Soccer",
                 startDate = LocalDate.of(2026, 6, 10),
                 endDate = LocalDate.of(2026, 6, 5),
-                location = null, contactEmail = null, currentUser = currentUser,
+                location = null,
+                contactEmail = null,
+                currentUser = currentUser,
             )
         }
     }
@@ -135,27 +150,29 @@ class TournamentServiceTest {
         }
     }
 
-    private fun sampleTournament() = Tournament(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        name = "Spring Invitational 2026",
-        sport = "Soccer",
-        status = TournamentStatus.ACTIVE,
-        startDate = LocalDate.of(2026, 5, 1),
-        endDate = LocalDate.of(2026, 5, 3),
-        location = "Riverside Park",
-        contactEmail = "td@riverside.org",
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun sampleTournament() =
+        Tournament(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            name = "Spring Invitational 2026",
+            sport = "Soccer",
+            status = TournamentStatus.ACTIVE,
+            startDate = LocalDate.of(2026, 5, 1),
+            endDate = LocalDate.of(2026, 5, 3),
+            location = "Riverside Park",
+            contactEmail = "td@riverside.org",
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
-    private fun managerMembership() = OrganizationMembership(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        userId = currentUser.userId,
-        role = MembershipRole.ADMINISTRATOR,
-        status = MembershipStatus.ACTIVE,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun managerMembership() =
+        OrganizationMembership(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            userId = currentUser.userId,
+            role = MembershipRole.ADMINISTRATOR,
+            status = MembershipStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 }

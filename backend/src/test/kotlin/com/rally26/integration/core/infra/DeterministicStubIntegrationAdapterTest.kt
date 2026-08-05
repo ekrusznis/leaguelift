@@ -14,17 +14,18 @@ class DeterministicStubIntegrationAdapterTest {
 
     @Test
     fun `authorization url includes state and pkce challenge`() {
-        val url = adapter.buildAuthorizationUrl(
-            OAuthAuthorizationRequest(
-                IntegrationProvider.GOOGLE_CALENDAR,
-                "client",
-                "unused-in-stub",
-                "http://localhost/callback",
-                "state-value",
-                "challenge-value",
-                listOf("calendar.events"),
-            ),
-        )
+        val url =
+            adapter.buildAuthorizationUrl(
+                OAuthAuthorizationRequest(
+                    IntegrationProvider.GOOGLE_CALENDAR,
+                    "client",
+                    "unused-in-stub",
+                    "http://localhost/callback",
+                    "state-value",
+                    "challenge-value",
+                    listOf("calendar.events"),
+                ),
+            )
         assertTrue(url.contains("state=state-value"))
         assertTrue(url.contains("code_challenge=challenge-value"))
         assertTrue(url.contains("code_challenge_method=S256"))
@@ -32,16 +33,17 @@ class DeterministicStubIntegrationAdapterTest {
 
     @Test
     fun `token exchange is deterministic and never marks an unsupported provider`() {
-        val request = OAuthCodeExchangeRequest(
-            IntegrationProvider.QUICKBOOKS_ONLINE,
-            "client",
-            "secret",
-            "unused",
-            "http://localhost/callback",
-            "code",
-            "verifier",
-            listOf("accounting"),
-        )
+        val request =
+            OAuthCodeExchangeRequest(
+                IntegrationProvider.QUICKBOOKS_ONLINE,
+                "client",
+                "secret",
+                "unused",
+                "http://localhost/callback",
+                "code",
+                "verifier",
+                listOf("accounting"),
+            )
         val first = adapter.exchangeCode(request)
         val second = adapter.exchangeCode(request)
         assertEquals(first.accessToken, second.accessToken)
@@ -51,16 +53,17 @@ class DeterministicStubIntegrationAdapterTest {
 
     @Test
     fun `stub can deterministically simulate a rate limit`() {
-        val request = OAuthCodeExchangeRequest(
-            IntegrationProvider.GOOGLE_CALENDAR,
-            "client",
-            "secret",
-            "unused",
-            "http://localhost/callback",
-            "stub-rate-limit",
-            "verifier",
-            emptyList(),
-        )
+        val request =
+            OAuthCodeExchangeRequest(
+                IntegrationProvider.GOOGLE_CALENDAR,
+                "client",
+                "secret",
+                "unused",
+                "http://localhost/callback",
+                "stub-rate-limit",
+                "verifier",
+                emptyList(),
+            )
         assertFailsWith<ServiceUnavailableException> { adapter.exchangeCode(request) }
     }
 }

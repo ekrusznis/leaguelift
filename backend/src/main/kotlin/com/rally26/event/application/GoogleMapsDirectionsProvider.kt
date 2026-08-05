@@ -16,14 +16,18 @@ import java.nio.charset.StandardCharsets
  */
 @Component
 class GoogleMapsDirectionsProvider : MapsProvider {
-
-	override fun buildDirectionsUrl(address: String?, latitude: Double?, longitude: Double?): String? {
-		val destination = when {
-			latitude != null && longitude != null -> "$latitude,$longitude"
-			!address.isNullOrBlank() -> address
-			else -> return null
-		}
-		val encoded = URLEncoder.encode(destination, StandardCharsets.UTF_8)
-		return "https://www.google.com/maps/dir/?api=1&destination=$encoded"
-	}
+    override fun buildDirectionsUrl(
+        address: String?,
+        latitude: Double?,
+        longitude: Double?,
+    ): String? {
+        val destination =
+            when {
+                latitude != null && longitude != null -> "$latitude,$longitude"
+                !address.isNullOrBlank() -> address
+                else -> return null
+            }
+        val encoded = URLEncoder.encode(destination, StandardCharsets.UTF_8)
+        return "https://www.google.com/maps/dir/?api=1&destination=$encoded"
+    }
 }

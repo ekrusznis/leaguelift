@@ -23,27 +23,28 @@ import org.springframework.web.client.RestClientException
 @Component
 @ConditionalOnProperty(prefix = "rally26.sms", name = ["provider"], havingValue = "twilio")
 class TwilioSmsProvider(
-	private val twilioRestClient: RestClient,
-	private val twilioProperties: TwilioProperties,
+    private val twilioRestClient: RestClient,
+    private val twilioProperties: TwilioProperties,
 ) : SmsProvider {
-
-	override fun send(message: SmsMessage) {
-		val form = LinkedMultiValueMap<String, String>().apply {
-			add("To", message.to)
-			add("From", twilioProperties.fromNumber)
-			add("Body", message.body)
-		}
-		try {
-			twilioRestClient.post()
-				.uri("/Messages.json")
-				.body(form)
-				.retrieve()
-				.toBodilessEntity()
-		} catch (e: RestClientException) {
-			throw ServiceUnavailableException(
-				"SMS_PROVIDER_UNAVAILABLE",
-				"Twilio could not be reached or rejected the request: ${e.message}",
-			)
-		}
-	}
+    override fun send(message: SmsMessage) {
+        val form =
+            LinkedMultiValueMap<String, String>().apply {
+                add("To", message.to)
+                add("From", twilioProperties.fromNumber)
+                add("Body", message.body)
+            }
+        try {
+            twilioRestClient
+                .post()
+                .uri("/Messages.json")
+                .body(form)
+                .retrieve()
+                .toBodilessEntity()
+        } catch (e: RestClientException) {
+            throw ServiceUnavailableException(
+                "SMS_PROVIDER_UNAVAILABLE",
+                "Twilio could not be reached or rejected the request: ${e.message}",
+            )
+        }
+    }
 }

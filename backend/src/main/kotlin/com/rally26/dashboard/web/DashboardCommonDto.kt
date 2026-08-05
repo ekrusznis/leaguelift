@@ -12,35 +12,35 @@ import java.util.UUID
  * queries as the backing tables (schedule/events, credits, orders, etc.) are built.
  */
 data class ScheduleItem(
-	val id: String,
-	val day: String,
-	val date: String,
-	val title: String,
-	val subtitle: String,
-	val time: String,
-	val tag: String?,
+    val id: String,
+    val day: String,
+    val date: String,
+    val title: String,
+    val subtitle: String,
+    val time: String,
+    val tag: String?,
 )
 
 data class RequiredActionItem(
-	val id: String,
-	val tone: String,
-	val title: String,
-	val subtitle: String,
-	val dueLabel: String,
+    val id: String,
+    val tone: String,
+    val title: String,
+    val subtitle: String,
+    val dueLabel: String,
 )
 
 data class OrderSummary(
-	val id: String,
-	val productName: String,
-	val orderNumber: String,
-	val orderedAt: LocalDate,
-	val status: String,
+    val id: String,
+    val productName: String,
+    val orderNumber: String,
+    val orderedAt: LocalDate,
+    val status: String,
 )
 
 data class ActivityItem(
-	val id: UUID,
-	val action: String,
-	val entityType: String,
-	val entityId: UUID,
-	val occurredAt: Instant,
+    val id: UUID,
+    val action: String,
+    val entityType: String,
+    val entityId: UUID,
+    val occurredAt: Instant,
 )

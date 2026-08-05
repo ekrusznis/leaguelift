@@ -6,13 +6,13 @@ package com.rally26.common.error
  * names in [message] or [fieldErrors].
  */
 data class ErrorResponse(
-	val code: String,
-	val message: String,
-	val requestId: String,
-	val fieldErrors: List<FieldError> = emptyList(),
+    val code: String,
+    val message: String,
+    val requestId: String,
+    val fieldErrors: List<FieldError> = emptyList(),
 )
 
 data class FieldError(
-	val field: String,
-	val message: String,
+    val field: String,
+    val message: String,
 )

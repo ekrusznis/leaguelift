@@ -52,9 +52,21 @@ class PlatformProviderContractService(
                 "Stripe-Signature verification is active for the existing webhook inbox",
                 "Provider event ID and source transaction identity",
                 listOf(
-                    capability("Payments and refunds", ProviderContractCapabilityStatus.READY, "Existing Stripe payment/refund seams remain intact."),
-                    capability("Connect account health", ProviderContractCapabilityStatus.SCAFFOLDED, "Account-health mapping is modeled; credentialed webhook rehearsal remains Phase 20."),
-                    capability("Subscription billing", ProviderContractCapabilityStatus.SCAFFOLDED, "Platform subscription adapter boundary is reserved; no customer-facing Stripe credential flow exists."),
+                    capability(
+                        "Payments and refunds",
+                        ProviderContractCapabilityStatus.READY,
+                        "Existing Stripe payment/refund seams remain intact.",
+                    ),
+                    capability(
+                        "Connect account health",
+                        ProviderContractCapabilityStatus.SCAFFOLDED,
+                        "Account-health mapping is modeled; credentialed webhook rehearsal remains Phase 20.",
+                    ),
+                    capability(
+                        "Subscription billing",
+                        ProviderContractCapabilityStatus.SCAFFOLDED,
+                        "Platform subscription adapter boundary is reserved; no customer-facing Stripe credential flow exists.",
+                    ),
                 ),
             ),
             contract(
@@ -63,12 +75,28 @@ class PlatformProviderContractService(
                 "Rally26 platform API token",
                 "Replace token in managed secret storage; never organization-entered",
                 "Configuration/shop readiness only until Phase 20",
-                if (printifyProperties.webhookSecret.isNotBlank()) "HMAC secret configured; official event contract still requires verification" else "HMAC verifier seam scaffolded; secret not configured",
+                if (printifyProperties.webhookSecret.isNotBlank()) {
+                    "HMAC secret configured; official event contract still requires verification"
+                } else {
+                    "HMAC verifier seam scaffolded; secret not configured"
+                },
                 "Provider order identity and Rally26 fulfillment identity",
                 listOf(
-                    capability("Catalog and draft orders", ProviderContractCapabilityStatus.READY, "Existing catalog/product/draft-order clients are preserved."),
-                    capability("Shipment webhooks", ProviderContractCapabilityStatus.SCAFFOLDED, "Signature, replay, and normalized status contracts are ready; official payload fixtures remain Phase 20."),
-                    capability("Token rotation", ProviderContractCapabilityStatus.SCAFFOLDED, "Configuration can be rotated without exposing the token to organizations."),
+                    capability(
+                        "Catalog and draft orders",
+                        ProviderContractCapabilityStatus.READY,
+                        "Existing catalog/product/draft-order clients are preserved.",
+                    ),
+                    capability(
+                        "Shipment webhooks",
+                        ProviderContractCapabilityStatus.SCAFFOLDED,
+                        "Signature, replay, and normalized status contracts are ready; official payload fixtures remain Phase 20.",
+                    ),
+                    capability(
+                        "Token rotation",
+                        ProviderContractCapabilityStatus.SCAFFOLDED,
+                        "Configuration can be rotated without exposing the token to organizations.",
+                    ),
                 ),
             ),
             contract(
@@ -77,11 +105,23 @@ class PlatformProviderContractService(
                 "Rally26 email API key and verified sender domain",
                 "Managed secret rotation",
                 "Configuration/delivery-result readiness only",
-                if (resendProperties.webhookSecret.isNotBlank()) "Webhook signing secret configured; official event fixture verification remains Phase 20" else "Bounce/complaint webhook verifier seam scaffolded",
+                if (resendProperties.webhookSecret.isNotBlank()) {
+                    "Webhook signing secret configured; official event fixture verification remains Phase 20"
+                } else {
+                    "Bounce/complaint webhook verifier seam scaffolded"
+                },
                 "Outbox event identity and provider idempotency header",
                 listOf(
-                    capability("Transactional delivery", ProviderContractCapabilityStatus.READY, "Existing EmailProvider/outbox adapter is preserved."),
-                    capability("Bounce and complaint events", ProviderContractCapabilityStatus.SCAFFOLDED, "Normalized result contracts are ready; domain activation remains Phase 20."),
+                    capability(
+                        "Transactional delivery",
+                        ProviderContractCapabilityStatus.READY,
+                        "Existing EmailProvider/outbox adapter is preserved.",
+                    ),
+                    capability(
+                        "Bounce and complaint events",
+                        ProviderContractCapabilityStatus.SCAFFOLDED,
+                        "Normalized result contracts are ready; domain activation remains Phase 20.",
+                    ),
                 ),
             ),
             contract(
@@ -93,8 +133,16 @@ class PlatformProviderContractService(
                 "Twilio request-signature verifier seam scaffolded using the platform auth token",
                 "Outbox event identity and provider message identity",
                 listOf(
-                    capability("Opted-in transactional SMS", ProviderContractCapabilityStatus.READY, "Existing SMS provider interface is preserved."),
-                    capability("Delivery callbacks", ProviderContractCapabilityStatus.SCAFFOLDED, "Normalized undeliverable/opt-out contracts are ready; live callback verification remains Phase 20."),
+                    capability(
+                        "Opted-in transactional SMS",
+                        ProviderContractCapabilityStatus.READY,
+                        "Existing SMS provider interface is preserved.",
+                    ),
+                    capability(
+                        "Delivery callbacks",
+                        ProviderContractCapabilityStatus.SCAFFOLDED,
+                        "Normalized undeliverable/opt-out contracts are ready; live callback verification remains Phase 20.",
+                    ),
                 ),
             ),
             contract(
@@ -107,7 +155,11 @@ class PlatformProviderContractService(
                 "Signed upload key and object identity",
                 listOf(
                     capability("Signed uploads", ProviderContractCapabilityStatus.READY, "Existing FileStorageProvider seam is preserved."),
-                    capability("Read/write/delete probes", ProviderContractCapabilityStatus.SCAFFOLDED, "Credentialed bucket probes remain Phase 20."),
+                    capability(
+                        "Read/write/delete probes",
+                        ProviderContractCapabilityStatus.SCAFFOLDED,
+                        "Credentialed bucket probes remain Phase 20.",
+                    ),
                 ),
             ),
         )
@@ -135,6 +187,9 @@ class PlatformProviderContractService(
         capabilities = capabilities,
     )
 
-    private fun capability(name: String, status: ProviderContractCapabilityStatus, summary: String) =
-        ProviderContractCapability(name, status, summary)
+    private fun capability(
+        name: String,
+        status: ProviderContractCapabilityStatus,
+        summary: String,
+    ) = ProviderContractCapability(name, status, summary)
 }

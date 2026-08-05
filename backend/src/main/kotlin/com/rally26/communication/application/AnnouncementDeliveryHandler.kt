@@ -24,10 +24,16 @@ class AnnouncementDeliveryHandler(
     override val eventType: String = "announcement.published"
 
     override fun handle(event: OutboxEvent) {
-        val announcementId = objectMapper.readTree(event.payload).get("announcementId")?.asText()?.let(java.util.UUID::fromString)
-            ?: event.aggregateId
-        val announcement = repository.findById(announcementId, event.organizationId ?: error("Announcement event is missing organizationId."))
-            ?: error("Announcement $announcementId no longer exists.")
+        val announcementId =
+            objectMapper
+                .readTree(event.payload)
+                .get("announcementId")
+                ?.asText()
+                ?.let(java.util.UUID::fromString)
+                ?: event.aggregateId
+        val announcement =
+            repository.findById(announcementId, event.organizationId ?: error("Announcement event is missing organizationId."))
+                ?: error("Announcement $announcementId no longer exists.")
         var failures = 0
         for (recipient in repository.listDeliveries(announcementId)) {
             if (recipient.emailStatus in setOf(DeliveryStatus.PENDING, DeliveryStatus.FAILED) && recipient.email != null) {

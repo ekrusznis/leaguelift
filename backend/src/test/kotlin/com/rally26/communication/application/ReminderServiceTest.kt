@@ -10,11 +10,15 @@ import com.rally26.communication.domain.AnnouncementScopeType
 import com.rally26.communication.persistence.EventReminderSource
 import com.rally26.communication.persistence.ReminderSourceRepository
 import com.rally26.membership.application.MembershipService
-import io.mockk.*
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.verify
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
-import java.util.*
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -32,24 +36,37 @@ class ReminderServiceTest {
 
     @Test
     fun `event reminder uses the event timezone and team audience`() {
-        val source = EventReminderSource(
-            id = eventId,
-            organizationId = organizationId,
-            teamId = teamId,
-            tournamentId = null,
-            title = "Regional semifinal",
-            status = "SCHEDULED",
-            startAt = Instant.parse("2026-08-02T00:30:00Z"),
-            timezone = "America/New_York",
-            venueName = "Community Center",
-        )
+        val source =
+            EventReminderSource(
+                id = eventId,
+                organizationId = organizationId,
+                teamId = teamId,
+                tournamentId = null,
+                title = "Regional semifinal",
+                status = "SCHEDULED",
+                startAt = Instant.parse("2026-08-02T00:30:00Z"),
+                timezone = "America/New_York",
+                venueName = "Community Center",
+            )
         val result = mockk<Announcement>()
         every { sources.findEvent(organizationId, eventId) } returns source
         every { authorizationService.requireTeamCapability(organizationId, teamId, user, Capabilities.TEAM_COMMUNICATION_MANAGE) } just runs
         every {
             announcements.createSystemAndPublish(
-                organizationId, AnnouncementScopeType.TEAM, teamId, AnnouncementKind.EVENT_REMINDER,
-                "EVENT", eventId, null, any(), any(), any(), AnnouncementAudience.ALL, true, false, user,
+                organizationId,
+                AnnouncementScopeType.TEAM,
+                teamId,
+                AnnouncementKind.EVENT_REMINDER,
+                "EVENT",
+                eventId,
+                null,
+                any(),
+                any(),
+                any(),
+                AnnouncementAudience.ALL,
+                true,
+                false,
+                user,
             )
         } returns result
 
@@ -57,10 +74,20 @@ class ReminderServiceTest {
 
         verify(exactly = 1) {
             announcements.createSystemAndPublish(
-                organizationId, AnnouncementScopeType.TEAM, teamId, AnnouncementKind.EVENT_REMINDER,
-                "EVENT", eventId, null, any(), "Event reminder: Regional semifinal",
+                organizationId,
+                AnnouncementScopeType.TEAM,
+                teamId,
+                AnnouncementKind.EVENT_REMINDER,
+                "EVENT",
+                eventId,
+                null,
+                any(),
+                "Event reminder: Regional semifinal",
                 match { it.contains("Aug 1, 2026 at 8:30 PM") && it.contains("Community Center") },
-                AnnouncementAudience.ALL, true, false, user,
+                AnnouncementAudience.ALL,
+                true,
+                false,
+                user,
             )
         }
         assertTrue(source.timezone == "America/New_York")

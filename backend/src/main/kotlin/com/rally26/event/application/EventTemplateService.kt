@@ -25,8 +25,11 @@ class EventTemplateService(
     private val auditService: AuditService,
     private val objectMapper: ObjectMapper,
 ) {
-
-    fun list(organizationId: UUID, includeArchived: Boolean, currentUser: CurrentUser): List<EventTemplate> {
+    fun list(
+        organizationId: UUID,
+        includeArchived: Boolean,
+        currentUser: CurrentUser,
+    ): List<EventTemplate> {
         if (includeArchived) {
             membershipService.requireManagerRole(organizationId, currentUser)
         } else {
@@ -55,20 +58,44 @@ class EventTemplateService(
         currentUser: CurrentUser,
     ): EventTemplate {
         membershipService.requireManagerRole(organizationId, currentUser)
-        val input = normalize(
-            name, title, description, durationMinutes, arrivalOffsetMinutes, meetingOffsetMinutes,
-            timezone, venueName, address, area, meetingPoint, directionsNotes,
-        )
-        val template = try {
-            repository.insert(
-                organizationId, input.name, eventType, input.title, input.description,
-                input.durationMinutes, input.arrivalOffsetMinutes, input.meetingOffsetMinutes,
-                input.timezone, input.venueName, input.address, input.area, input.meetingPoint,
-                input.directionsNotes, visibility, currentUser.userId,
+        val input =
+            normalize(
+                name,
+                title,
+                description,
+                durationMinutes,
+                arrivalOffsetMinutes,
+                meetingOffsetMinutes,
+                timezone,
+                venueName,
+                address,
+                area,
+                meetingPoint,
+                directionsNotes,
             )
-        } catch (_: DuplicateKeyException) {
-            throw duplicateName()
-        }
+        val template =
+            try {
+                repository.insert(
+                    organizationId,
+                    input.name,
+                    eventType,
+                    input.title,
+                    input.description,
+                    input.durationMinutes,
+                    input.arrivalOffsetMinutes,
+                    input.meetingOffsetMinutes,
+                    input.timezone,
+                    input.venueName,
+                    input.address,
+                    input.area,
+                    input.meetingPoint,
+                    input.directionsNotes,
+                    visibility,
+                    currentUser.userId,
+                )
+            } catch (_: DuplicateKeyException) {
+                throw duplicateName()
+            }
         auditService.record(
             currentUser.userId,
             organizationId,
@@ -105,20 +132,45 @@ class EventTemplateService(
         if (existing.status != EventTemplateStatus.ACTIVE) {
             throw ConflictException("EVENT_TEMPLATE_ARCHIVED", "Archived event templates cannot be edited.")
         }
-        val input = normalize(
-            name, title, description, durationMinutes, arrivalOffsetMinutes, meetingOffsetMinutes,
-            timezone, venueName, address, area, meetingPoint, directionsNotes,
-        )
-        val updated = try {
-            repository.update(
-                templateId, organizationId, input.name, eventType, input.title, input.description,
-                input.durationMinutes, input.arrivalOffsetMinutes, input.meetingOffsetMinutes,
-                input.timezone, input.venueName, input.address, input.area, input.meetingPoint,
-                input.directionsNotes, visibility, currentUser.userId,
+        val input =
+            normalize(
+                name,
+                title,
+                description,
+                durationMinutes,
+                arrivalOffsetMinutes,
+                meetingOffsetMinutes,
+                timezone,
+                venueName,
+                address,
+                area,
+                meetingPoint,
+                directionsNotes,
             )
-        } catch (_: DuplicateKeyException) {
-            throw duplicateName()
-        }
+        val updated =
+            try {
+                repository.update(
+                    templateId,
+                    organizationId,
+                    input.name,
+                    eventType,
+                    input.title,
+                    input.description,
+                    input.durationMinutes,
+                    input.arrivalOffsetMinutes,
+                    input.meetingOffsetMinutes,
+                    input.timezone,
+                    input.venueName,
+                    input.address,
+                    input.area,
+                    input.meetingPoint,
+                    input.directionsNotes,
+                    visibility,
+                    currentUser.userId,
+                )
+            } catch (_: DuplicateKeyException) {
+                throw duplicateName()
+            }
         if (updated == 0) {
             throw ConflictException("EVENT_TEMPLATE_ARCHIVED", "This event template is no longer active.")
         }
@@ -134,7 +186,11 @@ class EventTemplateService(
     }
 
     @Transactional
-    fun archive(organizationId: UUID, templateId: UUID, currentUser: CurrentUser): EventTemplate {
+    fun archive(
+        organizationId: UUID,
+        templateId: UUID,
+        currentUser: CurrentUser,
+    ): EventTemplate {
         membershipService.requireManagerRole(organizationId, currentUser)
         val existing = requireTemplate(organizationId, templateId)
         if (existing.status == EventTemplateStatus.ARCHIVED) return existing
@@ -154,7 +210,10 @@ class EventTemplateService(
         return repository.findById(templateId, organizationId)!!
     }
 
-    private fun requireTemplate(organizationId: UUID, templateId: UUID): EventTemplate =
+    private fun requireTemplate(
+        organizationId: UUID,
+        templateId: UUID,
+    ): EventTemplate =
         repository.findById(templateId, organizationId)
             ?: throw NotFoundException("EVENT_TEMPLATE_NOT_FOUND", "The event template could not be found.")
 
@@ -201,20 +260,28 @@ class EventTemplateService(
         )
     }
 
-    private fun validateRange(label: String, value: Int?, minimum: Int, maximum: Int) {
+    private fun validateRange(
+        label: String,
+        value: Int?,
+        minimum: Int,
+        maximum: Int,
+    ) {
         if (value != null && value !in minimum..maximum) {
             throw ValidationException("$label must be between $minimum and $maximum minutes.")
         }
     }
 
-    private fun normalizeOptional(value: String?, maximum: Int, label: String): String? {
+    private fun normalizeOptional(
+        value: String?,
+        maximum: Int,
+        label: String,
+    ): String? {
         val normalized = value?.trim()?.takeIf { it.isNotEmpty() } ?: return null
         if (normalized.length > maximum) throw ValidationException("$label must not exceed $maximum characters.")
         return normalized
     }
 
-    private fun duplicateName() =
-        ConflictException("EVENT_TEMPLATE_NAME_CONFLICT", "An active event template already uses this name.")
+    private fun duplicateName() = ConflictException("EVENT_TEMPLATE_NAME_CONFLICT", "An active event template already uses this name.")
 
     private data class NormalizedTemplateInput(
         val name: String,

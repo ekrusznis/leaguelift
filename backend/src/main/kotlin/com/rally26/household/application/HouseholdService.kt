@@ -17,18 +17,29 @@ class HouseholdService(
     private val membershipService: MembershipService,
     private val auditService: AuditService,
 ) {
-
-    fun list(organizationId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<Household> {
+    fun list(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<Household> {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return householdRepository.findAll(organizationId, offset, limit)
     }
 
-    fun count(organizationId: UUID, currentUser: CurrentUser): Long {
+    fun count(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): Long {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return householdRepository.countAll(organizationId)
     }
 
-    fun get(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): Household {
+    fun get(
+        organizationId: UUID,
+        householdId: UUID,
+        currentUser: CurrentUser,
+    ): Household {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
@@ -64,12 +75,25 @@ class HouseholdService(
         membershipService.requireManagerRole(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
-        householdRepository.update(householdId, organizationId, displayName, contactEmail, contactPhone, notes, emailRemindersOptOut, smsRemindersOptIn)
+        householdRepository.update(
+            householdId,
+            organizationId,
+            displayName,
+            contactEmail,
+            contactPhone,
+            notes,
+            emailRemindersOptOut,
+            smsRemindersOptIn,
+        )
         auditService.record(currentUser.userId, organizationId, "household.updated", "household", householdId)
         return householdRepository.findById(householdId, organizationId)!!
     }
 
-    fun listAdults(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): List<HouseholdAdult> {
+    fun listAdults(
+        organizationId: UUID,
+        householdId: UUID,
+        currentUser: CurrentUser,
+    ): List<HouseholdAdult> {
         membershipService.requireActiveMembership(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
@@ -109,7 +133,8 @@ class HouseholdService(
         currentUser: CurrentUser,
     ): HouseholdAdult {
         membershipService.requireManagerRole(organizationId, currentUser)
-        householdRepository.findAdultById(adultId, organizationId)
+        householdRepository
+            .findAdultById(adultId, organizationId)
             ?.takeIf { it.householdId == householdId }
             ?: throw NotFoundException("ADULT_NOT_FOUND", "The household adult could not be found.")
         householdRepository.updateAdult(
@@ -127,7 +152,12 @@ class HouseholdService(
     }
 
     @Transactional
-    fun removeAdult(organizationId: UUID, householdId: UUID, adultId: UUID, currentUser: CurrentUser) {
+    fun removeAdult(
+        organizationId: UUID,
+        householdId: UUID,
+        adultId: UUID,
+        currentUser: CurrentUser,
+    ) {
         membershipService.requireManagerRole(organizationId, currentUser)
         val rows = householdRepository.archiveAdult(adultId, householdId, organizationId)
         if (rows == 0) throw NotFoundException("ADULT_NOT_FOUND", "The household adult could not be found.")

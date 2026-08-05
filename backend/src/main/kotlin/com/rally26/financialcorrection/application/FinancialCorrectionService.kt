@@ -103,51 +103,73 @@ class FinancialCorrectionService(
             throw ConflictException("CORRECTION_PREVIEW_STALE", "The financial record changed after preview. Preview the correction again.")
         }
         val resolved = resolveTarget(organizationId, targetType, targetId)
-        val providerReference = if (resolved.correctionType == FinancialCorrectionType.REFUND) {
-            createProviderRefund(resolved, preview.requestedAmountMinor, "financial-correction:$organizationId:$normalizedKey")
-        } else null
-        val correction = repository.insert(
-            organizationId = organizationId,
-            correctionType = resolved.correctionType,
-            targetType = targetType,
-            targetId = targetId,
-            amountMinor = preview.requestedAmountMinor,
-            currency = preview.currency,
-            reason = normalizeReason(reason),
-            providerReference = providerReference,
-            confirmationHash = confirmationHash,
-            idempotencyKey = normalizedKey,
-            createdByUserId = currentUser.userId,
-        )
+        val providerReference =
+            if (resolved.correctionType == FinancialCorrectionType.REFUND) {
+                createProviderRefund(resolved, preview.requestedAmountMinor, "financial-correction:$organizationId:$normalizedKey")
+            } else {
+                null
+            }
+        val correction =
+            repository.insert(
+                organizationId = organizationId,
+                correctionType = resolved.correctionType,
+                targetType = targetType,
+                targetId = targetId,
+                amountMinor = preview.requestedAmountMinor,
+                currency = preview.currency,
+                reason = normalizeReason(reason),
+                providerReference = providerReference,
+                confirmationHash = confirmationHash,
+                idempotencyKey = normalizedKey,
+                createdByUserId = currentUser.userId,
+            )
         if (resolved.correctionType == FinancialCorrectionType.REFUND) {
             ledgerService.recordCorrectionRefund(
-                organizationId, correction.id, correction.amountMinor, correction.currency,
+                organizationId,
+                correction.id,
+                correction.amountMinor,
+                correction.currency,
                 providerReference ?: error("A provider refund must have a provider reference."),
             )
             if (preview.willFullyCorrect) markOnlineSourceRefunded(resolved)
         } else {
             ledgerService.reverseOfflineSource(
-                organizationId, resolved.ledgerSourceType, resolved.ledgerSourceId, correction.id, correction.reason,
+                organizationId,
+                resolved.ledgerSourceType,
+                resolved.ledgerSourceId,
+                correction.id,
+                correction.reason,
             )
             markOfflineSourceReversed(organizationId, targetId, resolved, correction.reason, currentUser)
         }
         auditService.record(
-            currentUser.userId, organizationId, "financial_correction.executed", "financial_correction", correction.id,
+            currentUser.userId,
+            organizationId,
+            "financial_correction.executed",
+            "financial_correction",
+            correction.id,
             "{\"targetType\":\"${targetType.name}\",\"targetId\":\"$targetId\",\"amountMinor\":${correction.amountMinor}}",
         )
         return correction
     }
 
-    fun list(organizationId: UUID, offset: Int, limit: Int, currentUser: CurrentUser): List<FinancialCorrection> {
+    fun list(
+        organizationId: UUID,
+        offset: Int,
+        limit: Int,
+        currentUser: CurrentUser,
+    ): List<FinancialCorrection> {
         membershipService.requireManagerRole(organizationId, currentUser)
         return repository.list(organizationId, offset, limit.coerceIn(1, 100))
     }
 
-    fun count(organizationId: UUID, currentUser: CurrentUser): Long {
+    fun count(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): Long {
         membershipService.requireManagerRole(organizationId, currentUser)
         return repository.count(organizationId)
     }
-
 
     private fun findIdempotentResult(
         organizationId: UUID,
@@ -187,29 +209,52 @@ class FinancialCorrectionService(
             }
         }
         val remainingAfter = remaining - requested
-        val warnings = buildList {
-            if (resolved.correctionType == FinancialCorrectionType.REFUND) {
-                add("The payment provider is called only after this preview is confirmed.")
-                add("The Rally26 platform fee is not returned; the organization earning reversal follows the existing ledger policy.")
-                if (remainingAfter > 0) add("This is a partial refund. The source record will remain confirmed.")
-            } else {
-                add("The original offline record and ledger entries remain visible; opposite ledger entries will be appended.")
-                if (resolved.targetType == FinancialCorrectionTargetType.OFFLINE_FINANCIAL_RECORD) {
-                    add("Any linked manual fulfillment must still be reviewed separately if work has already started.")
+        val warnings =
+            buildList {
+                if (resolved.correctionType == FinancialCorrectionType.REFUND) {
+                    add("The payment provider is called only after this preview is confirmed.")
+                    add("The Rally26 platform fee is not returned; the organization earning reversal follows the existing ledger policy.")
+                    if (remainingAfter > 0) add("This is a partial refund. The source record will remain confirmed.")
+                } else {
+                    add("The original offline record and ledger entries remain visible; opposite ledger entries will be appended.")
+                    if (resolved.targetType == FinancialCorrectionTargetType.OFFLINE_FINANCIAL_RECORD) {
+                        add("Any linked manual fulfillment must still be reviewed separately if work has already started.")
+                    }
                 }
             }
-        }
-        val hash = sha256(
-            listOf(
-                organizationId, resolved.correctionType, targetType, targetId, resolved.paymentSource,
-                resolved.originalAmountMinor, previouslyCorrected, requested, resolved.currency, normalizedReason,
-                resolved.paymentIntentId, resolved.confirmedAt, resolved.ledgerSourceType, resolved.ledgerSourceId,
-            ).joinToString("|"),
-        )
+        val hash =
+            sha256(
+                listOf(
+                    organizationId,
+                    resolved.correctionType,
+                    targetType,
+                    targetId,
+                    resolved.paymentSource,
+                    resolved.originalAmountMinor,
+                    previouslyCorrected,
+                    requested,
+                    resolved.currency,
+                    normalizedReason,
+                    resolved.paymentIntentId,
+                    resolved.confirmedAt,
+                    resolved.ledgerSourceType,
+                    resolved.ledgerSourceId,
+                ).joinToString("|"),
+            )
         return FinancialCorrectionPreview(
-            resolved.correctionType, targetType, targetId, resolved.label, resolved.paymentSource,
-            resolved.originalAmountMinor, previouslyCorrected, requested, remainingAfter, resolved.currency,
-            remainingAfter == 0L, warnings, hash,
+            resolved.correctionType,
+            targetType,
+            targetId,
+            resolved.label,
+            resolved.paymentSource,
+            resolved.originalAmountMinor,
+            previouslyCorrected,
+            requested,
+            remainingAfter,
+            resolved.currency,
+            remainingAfter == 0L,
+            warnings,
+            hash,
         )
     }
 
@@ -217,74 +262,147 @@ class FinancialCorrectionService(
         organizationId: UUID,
         targetType: FinancialCorrectionTargetType,
         targetId: UUID,
-    ): ResolvedCorrectionTarget = when (targetType) {
-        FinancialCorrectionTargetType.CONTRIBUTION -> {
-            val item = contributionRepository.findById(targetId)
-                ?.takeIf { it.organizationId == organizationId }
-                ?: throw NotFoundException("CONTRIBUTION_NOT_FOUND", "The contribution could not be found.")
-            if (item.paymentSource != PaymentSource.STRIPE || item.status != ContributionStatus.CONFIRMED || item.stripePaymentIntentId == null) {
-                throw ValidationException("Only a confirmed Stripe contribution can use the refund workflow.")
+    ): ResolvedCorrectionTarget =
+        when (targetType) {
+            FinancialCorrectionTargetType.CONTRIBUTION -> {
+                val item =
+                    contributionRepository
+                        .findById(targetId)
+                        ?.takeIf { it.organizationId == organizationId }
+                        ?: throw NotFoundException("CONTRIBUTION_NOT_FOUND", "The contribution could not be found.")
+                if (item.paymentSource != PaymentSource.STRIPE ||
+                    item.status != ContributionStatus.CONFIRMED ||
+                    item.stripePaymentIntentId == null
+                ) {
+                    throw ValidationException("Only a confirmed Stripe contribution can use the refund workflow.")
+                }
+                ResolvedCorrectionTarget(
+                    FinancialCorrectionType.REFUND,
+                    targetType,
+                    targetId,
+                    "Campaign contribution",
+                    item.paymentSource.name,
+                    item.amountMinor,
+                    item.currency,
+                    item.stripePaymentIntentId,
+                    item.confirmedAt,
+                    LedgerSourceType.CONTRIBUTION,
+                    item.id,
+                )
             }
-            ResolvedCorrectionTarget(
-                FinancialCorrectionType.REFUND, targetType, targetId, "Campaign contribution", item.paymentSource.name,
-                item.amountMinor, item.currency, item.stripePaymentIntentId, item.confirmedAt,
-                LedgerSourceType.CONTRIBUTION, item.id,
-            )
+            FinancialCorrectionTargetType.SPONSORSHIP -> {
+                val item =
+                    sponsorshipRepository
+                        .findById(targetId)
+                        ?.takeIf { it.organizationId == organizationId }
+                        ?: throw NotFoundException("SPONSORSHIP_NOT_FOUND", "The sponsorship could not be found.")
+                if (item.paymentSource != PaymentSource.STRIPE ||
+                    item.status != SponsorshipStatus.CONFIRMED ||
+                    item.stripePaymentIntentId == null
+                ) {
+                    throw ValidationException("Only a confirmed Stripe sponsorship can use the refund workflow.")
+                }
+                ResolvedCorrectionTarget(
+                    FinancialCorrectionType.REFUND,
+                    targetType,
+                    targetId,
+                    "Sponsorship purchase",
+                    item.paymentSource.name,
+                    item.amountMinor,
+                    item.currency,
+                    item.stripePaymentIntentId,
+                    item.confirmedAt,
+                    LedgerSourceType.SPONSORSHIP,
+                    item.id,
+                )
+            }
+            FinancialCorrectionTargetType.ORDER -> {
+                val item =
+                    orderRepository.findById(targetId, organizationId)
+                        ?: throw NotFoundException("ORDER_NOT_FOUND", "The order could not be found.")
+                if (item.paymentSource != PaymentSource.STRIPE ||
+                    item.status != OrderStatus.CONFIRMED ||
+                    item.stripePaymentIntentId == null
+                ) {
+                    throw ValidationException("Only a confirmed Stripe order can use the refund workflow.")
+                }
+                val gross = orderItemRepository.findByOrder(item.id).sumOf { it.unitPriceMinor * it.quantity }
+                ResolvedCorrectionTarget(
+                    FinancialCorrectionType.REFUND,
+                    targetType,
+                    targetId,
+                    "Store order",
+                    item.paymentSource.name,
+                    gross,
+                    item.currency,
+                    item.stripePaymentIntentId,
+                    item.confirmedAt,
+                    LedgerSourceType.ORDER,
+                    item.id,
+                )
+            }
+            FinancialCorrectionTargetType.OFFLINE_FINANCIAL_RECORD -> {
+                val record =
+                    offlineFinancialRecordRepository.findById(targetId, organizationId)
+                        ?: throw NotFoundException("OFFLINE_FINANCIAL_RECORD_NOT_FOUND", "The offline financial record could not be found.")
+                if (record.verificationStatus != OfflineVerificationStatus.VERIFIED) {
+                    throw ValidationException("Only a verified offline financial record can be reversed.")
+                }
+                val sourceType =
+                    when (record.recordType) {
+                        OfflineFinancialRecordType.CONTRIBUTION -> LedgerSourceType.CONTRIBUTION
+                        OfflineFinancialRecordType.SPONSORSHIP -> LedgerSourceType.SPONSORSHIP
+                        OfflineFinancialRecordType.ORDER -> LedgerSourceType.ORDER
+                    }
+                ResolvedCorrectionTarget(
+                    FinancialCorrectionType.REVERSAL,
+                    targetType,
+                    targetId,
+                    record.displayLabel,
+                    "OFFLINE",
+                    record.amountMinor,
+                    record.currency,
+                    null,
+                    record.verifiedAt,
+                    sourceType,
+                    record.recordId,
+                )
+            }
         }
-        FinancialCorrectionTargetType.SPONSORSHIP -> {
-            val item = sponsorshipRepository.findById(targetId)
-                ?.takeIf { it.organizationId == organizationId }
-                ?: throw NotFoundException("SPONSORSHIP_NOT_FOUND", "The sponsorship could not be found.")
-            if (item.paymentSource != PaymentSource.STRIPE || item.status != SponsorshipStatus.CONFIRMED || item.stripePaymentIntentId == null) {
-                throw ValidationException("Only a confirmed Stripe sponsorship can use the refund workflow.")
-            }
-            ResolvedCorrectionTarget(
-                FinancialCorrectionType.REFUND, targetType, targetId, "Sponsorship purchase", item.paymentSource.name,
-                item.amountMinor, item.currency, item.stripePaymentIntentId, item.confirmedAt,
-                LedgerSourceType.SPONSORSHIP, item.id,
-            )
-        }
-        FinancialCorrectionTargetType.ORDER -> {
-            val item = orderRepository.findById(targetId, organizationId)
-                ?: throw NotFoundException("ORDER_NOT_FOUND", "The order could not be found.")
-            if (item.paymentSource != PaymentSource.STRIPE || item.status != OrderStatus.CONFIRMED || item.stripePaymentIntentId == null) {
-                throw ValidationException("Only a confirmed Stripe order can use the refund workflow.")
-            }
-            val gross = orderItemRepository.findByOrder(item.id).sumOf { it.unitPriceMinor * it.quantity }
-            ResolvedCorrectionTarget(
-                FinancialCorrectionType.REFUND, targetType, targetId, "Store order", item.paymentSource.name,
-                gross, item.currency, item.stripePaymentIntentId, item.confirmedAt,
-                LedgerSourceType.ORDER, item.id,
-            )
-        }
-        FinancialCorrectionTargetType.OFFLINE_FINANCIAL_RECORD -> {
-            val record = offlineFinancialRecordRepository.findById(targetId, organizationId)
-                ?: throw NotFoundException("OFFLINE_FINANCIAL_RECORD_NOT_FOUND", "The offline financial record could not be found.")
-            if (record.verificationStatus != OfflineVerificationStatus.VERIFIED) {
-                throw ValidationException("Only a verified offline financial record can be reversed.")
-            }
-            val sourceType = when (record.recordType) {
-                OfflineFinancialRecordType.CONTRIBUTION -> LedgerSourceType.CONTRIBUTION
-                OfflineFinancialRecordType.SPONSORSHIP -> LedgerSourceType.SPONSORSHIP
-                OfflineFinancialRecordType.ORDER -> LedgerSourceType.ORDER
-            }
-            ResolvedCorrectionTarget(
-                FinancialCorrectionType.REVERSAL, targetType, targetId, record.displayLabel, "OFFLINE",
-                record.amountMinor, record.currency, null, record.verifiedAt, sourceType, record.recordId,
-            )
-        }
-    }
 
-    private fun createProviderRefund(target: ResolvedCorrectionTarget, amountMinor: Long, idempotencyKey: String): String = try {
-        when (target.targetType) {
-            FinancialCorrectionTargetType.CONTRIBUTION -> stripeCheckoutClient.createRefund(target.paymentIntentId!!, amountMinor, idempotencyKey)
-            FinancialCorrectionTargetType.SPONSORSHIP -> stripeSponsorshipCheckoutClient.createRefund(target.paymentIntentId!!, amountMinor, idempotencyKey)
-            FinancialCorrectionTargetType.ORDER -> stripeOrderCheckoutClient.createRefund(target.paymentIntentId!!, amountMinor, idempotencyKey)
-            FinancialCorrectionTargetType.OFFLINE_FINANCIAL_RECORD -> error("Offline reversals do not call a payment provider.")
+    private fun createProviderRefund(
+        target: ResolvedCorrectionTarget,
+        amountMinor: Long,
+        idempotencyKey: String,
+    ): String =
+        try {
+            when (target.targetType) {
+                FinancialCorrectionTargetType.CONTRIBUTION ->
+                    stripeCheckoutClient.createRefund(
+                        target.paymentIntentId!!,
+                        amountMinor,
+                        idempotencyKey,
+                    )
+                FinancialCorrectionTargetType.SPONSORSHIP ->
+                    stripeSponsorshipCheckoutClient.createRefund(
+                        target.paymentIntentId!!,
+                        amountMinor,
+                        idempotencyKey,
+                    )
+                FinancialCorrectionTargetType.ORDER ->
+                    stripeOrderCheckoutClient.createRefund(
+                        target.paymentIntentId!!,
+                        amountMinor,
+                        idempotencyKey,
+                    )
+                FinancialCorrectionTargetType.OFFLINE_FINANCIAL_RECORD -> error("Offline reversals do not call a payment provider.")
+            }
+        } catch (exception: StripeException) {
+            throw ServiceUnavailableException(
+                "REFUND_PROVIDER_UNAVAILABLE",
+                "The payment provider could not complete the refund. No Rally26 correction was recorded.",
+            )
         }
-    } catch (exception: StripeException) {
-        throw ServiceUnavailableException("REFUND_PROVIDER_UNAVAILABLE", "The payment provider could not complete the refund. No Rally26 correction was recorded.")
-    }
 
     private fun markOnlineSourceRefunded(target: ResolvedCorrectionTarget) {
         when (target.targetType) {
@@ -308,7 +426,9 @@ class FinancialCorrectionService(
             LedgerSourceType.ORDER -> orderRepository.markRefunded(target.ledgerSourceId)
             else -> error("Unsupported offline source type ${target.ledgerSourceType}")
         }
-        if (offlineFinancialRecordRepository.markReversed(offlineRecordId, organizationId, currentUser.userId, reason, Instant.now()) != 1) {
+        if (offlineFinancialRecordRepository.markReversed(offlineRecordId, organizationId, currentUser.userId, reason, Instant.now()) !=
+            1
+        ) {
             throw ConflictException("OFFLINE_RECORD_CHANGED", "The offline financial record changed before it could be reversed.")
         }
     }
@@ -319,7 +439,9 @@ class FinancialCorrectionService(
         return normalized
     }
 
-    private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
-        .digest(value.toByteArray(StandardCharsets.UTF_8))
-        .joinToString("") { "%02x".format(it) }
+    private fun sha256(value: String): String =
+        MessageDigest
+            .getInstance("SHA-256")
+            .digest(value.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
 }

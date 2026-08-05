@@ -13,12 +13,12 @@ enum class GuardianRelationshipStatus { ACTIVE, REVOKED }
  * heuristic as a fallback rather than being migrated in this slice.
  */
 data class GuardianRelationship(
-	val id: UUID,
-	val organizationId: UUID,
-	val householdId: UUID,
-	val householdAdultId: UUID,
-	val userId: UUID,
-	val status: GuardianRelationshipStatus,
-	val createdAt: Instant,
-	val updatedAt: Instant,
+    val id: UUID,
+    val organizationId: UUID,
+    val householdId: UUID,
+    val householdAdultId: UUID,
+    val userId: UUID,
+    val status: GuardianRelationshipStatus,
+    val createdAt: Instant,
+    val updatedAt: Instant,
 )

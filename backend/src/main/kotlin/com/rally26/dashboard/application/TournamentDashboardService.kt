@@ -23,35 +23,46 @@ import java.util.UUID
  */
 @Service
 class TournamentDashboardService(
-	private val authorizationService: AuthorizationService,
-	private val tournamentRepository: TournamentRepository,
-	private val publicPageRepository: PublicPageRepository,
+    private val authorizationService: AuthorizationService,
+    private val tournamentRepository: TournamentRepository,
+    private val publicPageRepository: PublicPageRepository,
 ) {
+    fun getSummary(
+        organizationId: UUID,
+        tournamentId: UUID,
+        currentUser: CurrentUser,
+    ): TournamentSummaryResponse {
+        authorizationService.requireTournamentCapability(organizationId, tournamentId, currentUser, Capabilities.TOURNAMENT_VIEW)
+        val tournament =
+            tournamentRepository.findById(tournamentId, organizationId)
+                ?: throw NotFoundException("TOURNAMENT_NOT_FOUND", "The tournament could not be found.")
+        return TournamentSummaryResponse(
+            tournamentId = tournament.id,
+            name = tournament.name,
+            sport = tournament.sport,
+            status = tournament.status.name,
+            startDate = tournament.startDate,
+            endDate = tournament.endDate,
+            location = tournament.location,
+        )
+    }
 
-	fun getSummary(organizationId: UUID, tournamentId: UUID, currentUser: CurrentUser): TournamentSummaryResponse {
-		authorizationService.requireTournamentCapability(organizationId, tournamentId, currentUser, Capabilities.TOURNAMENT_VIEW)
-		val tournament = tournamentRepository.findById(tournamentId, organizationId)
-			?: throw NotFoundException("TOURNAMENT_NOT_FOUND", "The tournament could not be found.")
-		return TournamentSummaryResponse(
-			tournamentId = tournament.id,
-			name = tournament.name,
-			sport = tournament.sport,
-			status = tournament.status.name,
-			startDate = tournament.startDate,
-			endDate = tournament.endDate,
-			location = tournament.location,
-		)
-	}
+    fun getPageStatus(
+        organizationId: UUID,
+        tournamentId: UUID,
+        currentUser: CurrentUser,
+    ): TournamentPageStatusItem {
+        authorizationService.requireTournamentCapability(organizationId, tournamentId, currentUser, Capabilities.TOURNAMENT_VIEW)
+        val tournament =
+            tournamentRepository.findById(tournamentId, organizationId)
+                ?: throw NotFoundException("TOURNAMENT_NOT_FOUND", "The tournament could not be found.")
+        val page = publicPageRepository.findByEntityId(tournament.id)
+        return TournamentPageStatusItem(tournament.id, tournament.name, page?.status?.name ?: "NOT_CREATED", page?.slug)
+    }
 
-	fun getPageStatus(organizationId: UUID, tournamentId: UUID, currentUser: CurrentUser): TournamentPageStatusItem {
-		authorizationService.requireTournamentCapability(organizationId, tournamentId, currentUser, Capabilities.TOURNAMENT_VIEW)
-		val tournament = tournamentRepository.findById(tournamentId, organizationId)
-			?: throw NotFoundException("TOURNAMENT_NOT_FOUND", "The tournament could not be found.")
-		val page = publicPageRepository.findByEntityId(tournament.id)
-		return TournamentPageStatusItem(tournament.id, tournament.name, page?.status?.name ?: "NOT_CREATED", page?.slug)
-	}
-
-	/** Every tournament the caller has TOURNAMENT_VIEW on in this organization — used to pick a default tournament to land on. */
-	fun listAccessibleTournamentIds(organizationId: UUID, currentUser: CurrentUser): Set<UUID> =
-		authorizationService.listAccessibleTournamentIds(organizationId, currentUser, Capabilities.TOURNAMENT_VIEW)
+    /** Every tournament the caller has TOURNAMENT_VIEW on in this organization — used to pick a default tournament to land on. */
+    fun listAccessibleTournamentIds(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): Set<UUID> = authorizationService.listAccessibleTournamentIds(organizationId, currentUser, Capabilities.TOURNAMENT_VIEW)
 }

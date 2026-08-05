@@ -43,14 +43,42 @@ data class IntegrationSyncIssueResponse(
     val createdAt: Instant,
 )
 
-fun IntegrationSyncRun.toResponse() = IntegrationSyncRunResponse(
-    id, connectionId, provider.name, ownerType.name, organizationId, userId,
-    direction.name, trigger.name, status.name, discoveredCount, createdCount,
-    updatedCount, skippedCount, failedCount, rateLimitRemaining, rateLimitResetsAt,
-    errorCode, errorMessage, requestedAt, startedAt, completedAt,
-)
+fun IntegrationSyncRun.toResponse() =
+    IntegrationSyncRunResponse(
+        id,
+        connectionId,
+        provider.name,
+        ownerType.name,
+        organizationId,
+        userId,
+        direction.name,
+        trigger.name,
+        status.name,
+        discoveredCount,
+        createdCount,
+        updatedCount,
+        skippedCount,
+        failedCount,
+        rateLimitRemaining,
+        rateLimitResetsAt,
+        errorCode,
+        errorMessage,
+        requestedAt,
+        startedAt,
+        completedAt,
+    )
 
-fun IntegrationSyncIssue.toResponse() = IntegrationSyncIssueResponse(
-    id, syncRunId, severity.name, code, message, externalEntityType, externalEntityId,
-    internalEntityType, internalEntityId, retryable, createdAt,
-)
+fun IntegrationSyncIssue.toResponse() =
+    IntegrationSyncIssueResponse(
+        id,
+        syncRunId,
+        severity.name,
+        code,
+        message,
+        externalEntityType,
+        externalEntityId,
+        internalEntityType,
+        internalEntityId,
+        retryable,
+        createdAt,
+    )

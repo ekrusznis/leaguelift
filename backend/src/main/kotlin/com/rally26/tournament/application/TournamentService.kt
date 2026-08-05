@@ -22,18 +22,29 @@ class TournamentService(
     private val membershipService: MembershipService,
     private val auditService: AuditService,
 ) {
-
-    fun list(organizationId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<Tournament> {
+    fun list(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<Tournament> {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return tournamentRepository.findAll(organizationId, offset, limit)
     }
 
-    fun count(organizationId: UUID, currentUser: CurrentUser): Long {
+    fun count(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): Long {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return tournamentRepository.countAll(organizationId)
     }
 
-    fun get(organizationId: UUID, tournamentId: UUID, currentUser: CurrentUser): Tournament {
+    fun get(
+        organizationId: UUID,
+        tournamentId: UUID,
+        currentUser: CurrentUser,
+    ): Tournament {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return tournamentRepository.findById(tournamentId, organizationId)
             ?: throw NotFoundException("TOURNAMENT_NOT_FOUND", "The tournament could not be found.")
@@ -107,7 +118,11 @@ class TournamentService(
     }
 
     @Transactional
-    fun archive(organizationId: UUID, tournamentId: UUID, currentUser: CurrentUser) {
+    fun archive(
+        organizationId: UUID,
+        tournamentId: UUID,
+        currentUser: CurrentUser,
+    ) {
         membershipService.requireManagerRole(organizationId, currentUser)
         val rows = tournamentRepository.archive(tournamentId, organizationId)
         if (rows == 0) throw NotFoundException("TOURNAMENT_NOT_FOUND", "The tournament could not be found.")
@@ -120,11 +135,17 @@ class TournamentService(
         )
     }
 
-    private fun validateDates(startDate: LocalDate?, endDate: LocalDate?) {
+    private fun validateDates(
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+    ) {
         if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
             throw ValidationException(
                 "End date must not be before start date.",
-                listOf(com.rally26.common.error.FieldError("endDate", "End date must not be before start date.")),
+                listOf(
+                    com.rally26.common.error
+                        .FieldError("endDate", "End date must not be before start date."),
+                ),
             )
         }
     }
@@ -133,7 +154,10 @@ class TournamentService(
         if (email != null && !EMAIL_PATTERN.matches(email)) {
             throw ValidationException(
                 "Contact email is not a valid email address.",
-                listOf(com.rally26.common.error.FieldError("contactEmail", "Invalid email format.")),
+                listOf(
+                    com.rally26.common.error
+                        .FieldError("contactEmail", "Invalid email format."),
+                ),
             )
         }
     }

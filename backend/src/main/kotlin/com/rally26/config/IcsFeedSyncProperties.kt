@@ -9,6 +9,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.ics-feed.sync")
 data class IcsFeedSyncProperties(
-	val enabled: Boolean = true,
-	val cron: String = "0 */30 * * * *",
+    val enabled: Boolean = true,
+    val cron: String = "0 */30 * * * *",
 )

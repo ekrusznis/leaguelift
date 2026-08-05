@@ -7,43 +7,47 @@ import jakarta.validation.constraints.NotBlank
 import java.time.Instant
 
 data class StartOnboardingRequest(
-	@field:NotBlank val refreshUrl: String,
-	@field:NotBlank val returnUrl: String,
+    @field:NotBlank val refreshUrl: String,
+    @field:NotBlank val returnUrl: String,
 )
 
-data class OnboardingLinkResponse(val onboardingUrl: String)
+data class OnboardingLinkResponse(
+    val onboardingUrl: String,
+)
 
 data class PayoutAccountResponse(
-	val stripeAccountId: String,
-	val detailsSubmitted: Boolean,
-	val chargesEnabled: Boolean,
-	val payoutsEnabled: Boolean,
-	// Kotlin's `val isFoo: Boolean` generates a getter literally named `isFoo()`; Jackson's
-	// standard JavaBean introspection strips the "is" prefix unless pinned explicitly —
-	// see AthleteDashboardDto.kt for the same fix applied to the dashboard DTOs.
-	@get:JsonProperty("isFullyConnected") val isFullyConnected: Boolean,
-	val updatedAt: Instant,
+    val stripeAccountId: String,
+    val detailsSubmitted: Boolean,
+    val chargesEnabled: Boolean,
+    val payoutsEnabled: Boolean,
+    // Kotlin's `val isFoo: Boolean` generates a getter literally named `isFoo()`; Jackson's
+    // standard JavaBean introspection strips the "is" prefix unless pinned explicitly —
+    // see AthleteDashboardDto.kt for the same fix applied to the dashboard DTOs.
+    @get:JsonProperty("isFullyConnected") val isFullyConnected: Boolean,
+    val updatedAt: Instant,
 )
 
-fun OrganizationPayoutAccount.toResponse() = PayoutAccountResponse(
-	stripeAccountId = stripeAccountId,
-	detailsSubmitted = detailsSubmitted,
-	chargesEnabled = chargesEnabled,
-	payoutsEnabled = payoutsEnabled,
-	isFullyConnected = isFullyConnected,
-	updatedAt = updatedAt,
-)
+fun OrganizationPayoutAccount.toResponse() =
+    PayoutAccountResponse(
+        stripeAccountId = stripeAccountId,
+        detailsSubmitted = detailsSubmitted,
+        chargesEnabled = chargesEnabled,
+        payoutsEnabled = payoutsEnabled,
+        isFullyConnected = isFullyConnected,
+        updatedAt = updatedAt,
+    )
 
 data class PayoutSummaryResponse(
-	val eligibleMinor: Long,
-	val heldMinor: Long,
-	val pendingDebitsMinor: Long,
-	val netAvailableMinor: Long,
+    val eligibleMinor: Long,
+    val heldMinor: Long,
+    val pendingDebitsMinor: Long,
+    val netAvailableMinor: Long,
 )
 
-fun PayoutSummary.toResponse() = PayoutSummaryResponse(
-	eligibleMinor = eligibleMinor,
-	heldMinor = heldMinor,
-	pendingDebitsMinor = pendingDebitsMinor,
-	netAvailableMinor = netAvailableMinor,
-)
+fun PayoutSummary.toResponse() =
+    PayoutSummaryResponse(
+        eligibleMinor = eligibleMinor,
+        heldMinor = heldMinor,
+        pendingDebitsMinor = pendingDebitsMinor,
+        netAvailableMinor = netAvailableMinor,
+    )

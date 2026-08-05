@@ -11,13 +11,20 @@ import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
-private const val COLUMNS = "id, organization_id, team_id, name, slug, description, campaign_type, goal_amount_minor, currency, start_date, end_date, status, published_at, created_at, updated_at"
+private const val COLUMNS =
+    "id, organization_id, team_id, name, slug, description, campaign_type, goal_amount_minor, currency, start_date, end_date, status, " +
+        "published_at, created_at, updated_at"
 
 @Repository
-class CampaignRepository(private val jdbcClient: JdbcClient) {
-
-    fun findById(id: UUID, organizationId: UUID): Campaign? =
-        jdbcClient.sql("select $COLUMNS from campaign where id = :id and organization_id = :organizationId")
+class CampaignRepository(
+    private val jdbcClient: JdbcClient,
+) {
+    fun findById(
+        id: UUID,
+        organizationId: UUID,
+    ): Campaign? =
+        jdbcClient
+            .sql("select $COLUMNS from campaign where id = :id and organization_id = :organizationId")
             .param("id", id)
             .param("organizationId", organizationId)
             .query(::mapRow)
@@ -25,45 +32,54 @@ class CampaignRepository(private val jdbcClient: JdbcClient) {
             .orElse(null)
 
     /** Most recently created active campaign for a team — used by the owner dashboard's team-performance row (one team, one headline fundraiser at a time is enough for that card). */
-    fun findActiveByTeam(teamId: UUID, organizationId: UUID): Campaign? =
-        jdbcClient.sql(
-            """
-            select $COLUMNS from campaign
-            where team_id = :teamId and organization_id = :organizationId and status = 'ACTIVE'
-            order by created_at desc
-            limit 1
-            """.trimIndent(),
-        )
-            .param("teamId", teamId)
+    fun findActiveByTeam(
+        teamId: UUID,
+        organizationId: UUID,
+    ): Campaign? =
+        jdbcClient
+            .sql(
+                """
+                select $COLUMNS from campaign
+                where team_id = :teamId and organization_id = :organizationId and status = 'ACTIVE'
+                order by created_at desc
+                limit 1
+                """.trimIndent(),
+            ).param("teamId", teamId)
             .param("organizationId", organizationId)
             .query(::mapRow)
             .optional()
             .orElse(null)
 
     fun findBySlug(slug: String): Campaign? =
-        jdbcClient.sql("select $COLUMNS from campaign where lower(slug) = lower(:slug)")
+        jdbcClient
+            .sql("select $COLUMNS from campaign where lower(slug) = lower(:slug)")
             .param("slug", slug)
             .query(::mapRow)
             .optional()
             .orElse(null)
 
-    fun findAll(organizationId: UUID, offset: Int, limit: Int): List<Campaign> =
-        jdbcClient.sql(
-            """
-            select $COLUMNS from campaign
-            where organization_id = :organizationId
-            order by created_at desc
-            offset :offset limit :limit
-            """.trimIndent(),
-        )
-            .param("organizationId", organizationId)
+    fun findAll(
+        organizationId: UUID,
+        offset: Int,
+        limit: Int,
+    ): List<Campaign> =
+        jdbcClient
+            .sql(
+                """
+                select $COLUMNS from campaign
+                where organization_id = :organizationId
+                order by created_at desc
+                offset :offset limit :limit
+                """.trimIndent(),
+            ).param("organizationId", organizationId)
             .param("offset", offset)
             .param("limit", limit)
             .query(::mapRow)
             .list()
 
     fun countAll(organizationId: UUID): Long =
-        jdbcClient.sql("select count(*) from campaign where organization_id = :organizationId")
+        jdbcClient
+            .sql("select count(*) from campaign where organization_id = :organizationId")
             .param("organizationId", organizationId)
             .query(Long::class.java)
             .single()
@@ -82,13 +98,13 @@ class CampaignRepository(private val jdbcClient: JdbcClient) {
     ): Campaign {
         val now = Instant.now()
         val id = UUID.randomUUID()
-        jdbcClient.sql(
-            """
-            insert into campaign (id, organization_id, team_id, name, slug, description, campaign_type, goal_amount_minor, currency, start_date, end_date, status, created_at, updated_at)
-            values (:id, :organizationId, :teamId, :name, :slug, :description, :campaignType, :goalAmountMinor, :currency, :startDate, :endDate, 'DRAFT', :now, :now)
-            """.trimIndent(),
-        )
-            .param("id", id)
+        jdbcClient
+            .sql(
+                """
+                insert into campaign (id, organization_id, team_id, name, slug, description, campaign_type, goal_amount_minor, currency, start_date, end_date, status, created_at, updated_at)
+                values (:id, :organizationId, :teamId, :name, :slug, :description, :campaignType, :goalAmountMinor, :currency, :startDate, :endDate, 'DRAFT', :now, :now)
+                """.trimIndent(),
+            ).param("id", id)
             .param("organizationId", organizationId)
             .param("teamId", teamId)
             .param("name", name)
@@ -130,19 +146,19 @@ class CampaignRepository(private val jdbcClient: JdbcClient) {
         endDate: LocalDate?,
     ): Int {
         val now = Instant.now()
-        return jdbcClient.sql(
-            """
-            update campaign
-            set name              = coalesce(:name, name),
-                description       = coalesce(:description, description),
-                goal_amount_minor = coalesce(:goalAmountMinor, goal_amount_minor),
-                start_date        = coalesce(:startDate, start_date),
-                end_date          = coalesce(:endDate, end_date),
-                updated_at        = :now
-            where id = :id and organization_id = :organizationId
-            """.trimIndent(),
-        )
-            .param("name", name)
+        return jdbcClient
+            .sql(
+                """
+                update campaign
+                set name              = coalesce(:name, name),
+                    description       = coalesce(:description, description),
+                    goal_amount_minor = coalesce(:goalAmountMinor, goal_amount_minor),
+                    start_date        = coalesce(:startDate, start_date),
+                    end_date          = coalesce(:endDate, end_date),
+                    updated_at        = :now
+                where id = :id and organization_id = :organizationId
+                """.trimIndent(),
+            ).param("name", name)
             .param("description", description)
             .param("goalAmountMinor", goalAmountMinor)
             .param("startDate", startDate?.let { Date.valueOf(it) })
@@ -153,16 +169,21 @@ class CampaignRepository(private val jdbcClient: JdbcClient) {
             .update()
     }
 
-    fun updateStatus(id: UUID, organizationId: UUID, status: CampaignStatus, publishedAt: Instant?): Int {
+    fun updateStatus(
+        id: UUID,
+        organizationId: UUID,
+        status: CampaignStatus,
+        publishedAt: Instant?,
+    ): Int {
         val now = Instant.now()
-        return jdbcClient.sql(
-            """
-            update campaign
-            set status = :status, published_at = coalesce(:publishedAt, published_at), updated_at = :now
-            where id = :id and organization_id = :organizationId
-            """.trimIndent(),
-        )
-            .param("status", status.name)
+        return jdbcClient
+            .sql(
+                """
+                update campaign
+                set status = :status, published_at = coalesce(:publishedAt, published_at), updated_at = :now
+                where id = :id and organization_id = :organizationId
+                """.trimIndent(),
+            ).param("status", status.name)
             .param("publishedAt", publishedAt?.let { Timestamp.from(it) })
             .param("now", Timestamp.from(now))
             .param("id", id)
@@ -170,7 +191,10 @@ class CampaignRepository(private val jdbcClient: JdbcClient) {
             .update()
     }
 
-    private fun mapRow(rs: java.sql.ResultSet, rowNum: Int): Campaign =
+    private fun mapRow(
+        rs: java.sql.ResultSet,
+        rowNum: Int,
+    ): Campaign =
         Campaign(
             id = rs.getObject("id", UUID::class.java),
             organizationId = rs.getObject("organization_id", UUID::class.java),

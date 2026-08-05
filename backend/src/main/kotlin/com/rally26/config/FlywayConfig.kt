@@ -22,16 +22,17 @@ class FlywayConfig(
     // apply strictly in order regardless of this flag.
     @Value("\${spring.flyway.out-of-order:false}") private val outOfOrder: Boolean,
 ) {
-
     @Bean
     fun flyway(): Flyway {
-        val flyway = Flyway.configure()
-            .dataSource(dataSource)
-            .locations(*locations.split(",").map { it.trim() }.toTypedArray())
-            .baselineOnMigrate(baselineOnMigrate)
-            .cleanDisabled(cleanDisabled)
-            .outOfOrder(outOfOrder)
-            .load()
+        val flyway =
+            Flyway
+                .configure()
+                .dataSource(dataSource)
+                .locations(*locations.split(",").map { it.trim() }.toTypedArray())
+                .baselineOnMigrate(baselineOnMigrate)
+                .cleanDisabled(cleanDisabled)
+                .outOfOrder(outOfOrder)
+                .load()
         flyway.migrate()
         return flyway
     }

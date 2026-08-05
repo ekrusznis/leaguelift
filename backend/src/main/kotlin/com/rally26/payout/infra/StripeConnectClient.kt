@@ -7,7 +7,11 @@ import com.stripe.param.TransferCreateParams
 import org.springframework.stereotype.Component
 import java.util.UUID
 
-data class StripeAccountStatus(val detailsSubmitted: Boolean, val chargesEnabled: Boolean, val payoutsEnabled: Boolean)
+data class StripeAccountStatus(
+    val detailsSubmitted: Boolean,
+    val chargesEnabled: Boolean,
+    val payoutsEnabled: Boolean,
+)
 
 /**
  * Thin seam over the Stripe SDK so no other file in the payout module imports Stripe
@@ -20,47 +24,62 @@ data class StripeAccountStatus(val detailsSubmitted: Boolean, val chargesEnabled
  * deferred to the Live Payments Launch phase (DESIGN-DOC.md section 14.4).
  */
 @Component
-class StripeConnectClient(private val stripeClient: StripeClient) {
+class StripeConnectClient(
+    private val stripeClient: StripeClient,
+) {
+    fun createExpressAccount(): String {
+        val account =
+            stripeClient.accounts().create(
+                AccountCreateParams
+                    .builder()
+                    .setType(AccountCreateParams.Type.EXPRESS)
+                    .build(),
+            )
+        return account.id
+    }
 
-	fun createExpressAccount(): String {
-		val account = stripeClient.accounts().create(
-			AccountCreateParams.builder()
-				.setType(AccountCreateParams.Type.EXPRESS)
-				.build(),
-		)
-		return account.id
-	}
+    fun createOnboardingLink(
+        stripeAccountId: String,
+        refreshUrl: String,
+        returnUrl: String,
+    ): String {
+        val link =
+            stripeClient.accountLinks().create(
+                AccountLinkCreateParams
+                    .builder()
+                    .setAccount(stripeAccountId)
+                    .setRefreshUrl(refreshUrl)
+                    .setReturnUrl(returnUrl)
+                    .setType(AccountLinkCreateParams.Type.ACCOUNT_ONBOARDING)
+                    .build(),
+            )
+        return link.url
+    }
 
-	fun createOnboardingLink(stripeAccountId: String, refreshUrl: String, returnUrl: String): String {
-		val link = stripeClient.accountLinks().create(
-			AccountLinkCreateParams.builder()
-				.setAccount(stripeAccountId)
-				.setRefreshUrl(refreshUrl)
-				.setReturnUrl(returnUrl)
-				.setType(AccountLinkCreateParams.Type.ACCOUNT_ONBOARDING)
-				.build(),
-		)
-		return link.url
-	}
+    fun retrieveAccountStatus(stripeAccountId: String): StripeAccountStatus {
+        val account = stripeClient.accounts().retrieve(stripeAccountId)
+        return StripeAccountStatus(
+            detailsSubmitted = account.detailsSubmitted ?: false,
+            chargesEnabled = account.chargesEnabled ?: false,
+            payoutsEnabled = account.payoutsEnabled ?: false,
+        )
+    }
 
-	fun retrieveAccountStatus(stripeAccountId: String): StripeAccountStatus {
-		val account = stripeClient.accounts().retrieve(stripeAccountId)
-		return StripeAccountStatus(
-			detailsSubmitted = account.detailsSubmitted ?: false,
-			chargesEnabled = account.chargesEnabled ?: false,
-			payoutsEnabled = account.payoutsEnabled ?: false,
-		)
-	}
-
-	fun createTransfer(destinationStripeAccountId: String, amountMinor: Long, currency: String): String {
-		val transfer = stripeClient.transfers().create(
-			TransferCreateParams.builder()
-				.setAmount(amountMinor)
-				.setCurrency(currency.lowercase())
-				.setDestination(destinationStripeAccountId)
-				.setTransferGroup(UUID.randomUUID().toString())
-				.build(),
-		)
-		return transfer.id
-	}
+    fun createTransfer(
+        destinationStripeAccountId: String,
+        amountMinor: Long,
+        currency: String,
+    ): String {
+        val transfer =
+            stripeClient.transfers().create(
+                TransferCreateParams
+                    .builder()
+                    .setAmount(amountMinor)
+                    .setCurrency(currency.lowercase())
+                    .setDestination(destinationStripeAccountId)
+                    .setTransferGroup(UUID.randomUUID().toString())
+                    .build(),
+            )
+        return transfer.id
+    }
 }

@@ -23,21 +23,23 @@ import java.util.UUID
  */
 @Component
 class JwtCurrentUserConverter(
-	private val appUserRepository: AppUserRepository,
-	private val roleAssignmentRepository: RoleAssignmentRepository,
+    private val appUserRepository: AppUserRepository,
+    private val roleAssignmentRepository: RoleAssignmentRepository,
 ) : Converter<Jwt, AbstractAuthenticationToken> {
-
-	override fun convert(jwt: Jwt): AbstractAuthenticationToken {
-		val userId = jwt.subject?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-			?: throw IllegalArgumentException("JWT missing or invalid 'sub' claim")
-		val appUser = appUserRepository.findById(userId)
-			?: throw IllegalArgumentException("Token subject $userId has no app_user record")
-		val currentUser = CurrentUser(
-			userId = appUser.id,
-			email = appUser.email,
-			displayName = appUser.displayName,
-			platformAdministrator = roleAssignmentRepository.findActivePlatformGrant(appUser.id) != null,
-		)
-		return CurrentUserAuthenticationToken(currentUser)
-	}
+    override fun convert(jwt: Jwt): AbstractAuthenticationToken {
+        val userId =
+            jwt.subject?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+                ?: throw IllegalArgumentException("JWT missing or invalid 'sub' claim")
+        val appUser =
+            appUserRepository.findById(userId)
+                ?: throw IllegalArgumentException("Token subject $userId has no app_user record")
+        val currentUser =
+            CurrentUser(
+                userId = appUser.id,
+                email = appUser.email,
+                displayName = appUser.displayName,
+                platformAdministrator = roleAssignmentRepository.findActivePlatformGrant(appUser.id) != null,
+            )
+        return CurrentUserAuthenticationToken(currentUser)
+    }
 }

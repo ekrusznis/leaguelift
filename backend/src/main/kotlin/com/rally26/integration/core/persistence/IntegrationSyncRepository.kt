@@ -16,7 +16,9 @@ import java.time.Instant
 import java.util.UUID
 
 @Repository
-class IntegrationSyncRepository(private val jdbcClient: JdbcClient) {
+class IntegrationSyncRepository(
+    private val jdbcClient: JdbcClient,
+) {
     fun create(
         connectionId: UUID?,
         provider: IntegrationProvider,
@@ -29,17 +31,17 @@ class IntegrationSyncRepository(private val jdbcClient: JdbcClient) {
         requestedByUserId: UUID?,
     ): IntegrationSyncRun {
         val id = UUID.randomUUID()
-        jdbcClient.sql(
-            """
-            insert into integration_sync_run
-                (id, connection_id, provider, owner_type, organization_id, user_id,
-                 direction, trigger_type, status, idempotency_key, requested_by_user_id)
-            values
-                (:id, :connectionId, :provider, :ownerType, :organizationId, :userId,
-                 :direction, :triggerType, 'QUEUED', :idempotencyKey, :requestedByUserId)
-            """.trimIndent(),
-        )
-            .param("id", id)
+        jdbcClient
+            .sql(
+                """
+                insert into integration_sync_run
+                    (id, connection_id, provider, owner_type, organization_id, user_id,
+                     direction, trigger_type, status, idempotency_key, requested_by_user_id)
+                values
+                    (:id, :connectionId, :provider, :ownerType, :organizationId, :userId,
+                     :direction, :triggerType, 'QUEUED', :idempotencyKey, :requestedByUserId)
+                """.trimIndent(),
+            ).param("id", id)
             .param("connectionId", connectionId)
             .param("provider", provider.name)
             .param("ownerType", ownerType.name)
@@ -60,24 +62,29 @@ class IntegrationSyncRepository(private val jdbcClient: JdbcClient) {
         userId: UUID?,
         idempotencyKey: String,
     ): IntegrationSyncRun? {
-        val ownerClause = when (ownerType) {
-            IntegrationOwnerType.PLATFORM -> "owner_type = 'PLATFORM'"
-            IntegrationOwnerType.ORGANIZATION -> "owner_type = 'ORGANIZATION' and organization_id = :organizationId"
-            IntegrationOwnerType.USER -> "owner_type = 'USER' and user_id = :userId"
-        }
-        var query = jdbcClient.sql(
-            "select $RUN_COLUMNS from integration_sync_run where provider = :provider and idempotency_key = :idempotencyKey and $ownerClause order by requested_at desc limit 1",
-        )
-            .param("provider", provider.name)
-            .param("idempotencyKey", idempotencyKey)
+        val ownerClause =
+            when (ownerType) {
+                IntegrationOwnerType.PLATFORM -> "owner_type = 'PLATFORM'"
+                IntegrationOwnerType.ORGANIZATION -> "owner_type = 'ORGANIZATION' and organization_id = :organizationId"
+                IntegrationOwnerType.USER -> "owner_type = 'USER' and user_id = :userId"
+            }
+        var query =
+            jdbcClient
+                .sql(
+                    "select $RUN_COLUMNS from integration_sync_run where provider = :provider and idempotency_key = :idempotencyKey and $ownerClause order by requested_at desc limit 1",
+                ).param("provider", provider.name)
+                .param("idempotencyKey", idempotencyKey)
         if (ownerType == IntegrationOwnerType.ORGANIZATION) query = query.param("organizationId", organizationId)
         if (ownerType == IntegrationOwnerType.USER) query = query.param("userId", userId)
         return query.query(::mapRun).optional().orElse(null)
     }
 
     fun markRunning(id: UUID): IntegrationSyncRun {
-        jdbcClient.sql("update integration_sync_run set status = 'RUNNING', started_at = coalesce(started_at, now()) where id = :id and status = 'QUEUED'")
-            .param("id", id).update()
+        jdbcClient
+            .sql(
+                "update integration_sync_run set status = 'RUNNING', started_at = coalesce(started_at, now()) where id = :id and status = 'QUEUED'",
+            ).param("id", id)
+            .update()
         return requireNotNull(find(id))
     }
 
@@ -93,21 +100,21 @@ class IntegrationSyncRepository(private val jdbcClient: JdbcClient) {
         errorMessage: String? = null,
     ): IntegrationSyncRun {
         require(status in TERMINAL_STATUSES)
-        jdbcClient.sql(
-            """
-            update integration_sync_run
-            set status = :status, cursor_value = :cursorValue,
-                checkpoint_json = cast(:checkpointJson as jsonb),
-                discovered_count = :discoveredCount, created_count = :createdCount,
-                updated_count = :updatedCount, skipped_count = :skippedCount,
-                failed_count = :failedCount, rate_limit_remaining = :rateLimitRemaining,
-                rate_limit_resets_at = :rateLimitResetsAt, error_code = :errorCode,
-                error_message = :errorMessage, started_at = coalesce(started_at, now()),
-                completed_at = now()
-            where id = :id
-            """.trimIndent(),
-        )
-            .param("id", id)
+        jdbcClient
+            .sql(
+                """
+                update integration_sync_run
+                set status = :status, cursor_value = :cursorValue,
+                    checkpoint_json = cast(:checkpointJson as jsonb),
+                    discovered_count = :discoveredCount, created_count = :createdCount,
+                    updated_count = :updatedCount, skipped_count = :skippedCount,
+                    failed_count = :failedCount, rate_limit_remaining = :rateLimitRemaining,
+                    rate_limit_resets_at = :rateLimitResetsAt, error_code = :errorCode,
+                    error_message = :errorMessage, started_at = coalesce(started_at, now()),
+                    completed_at = now()
+                where id = :id
+                """.trimIndent(),
+            ).param("id", id)
             .param("status", status.name)
             .param("cursorValue", cursor?.take(1000))
             .param("checkpointJson", checkpointJson)
@@ -137,19 +144,19 @@ class IntegrationSyncRepository(private val jdbcClient: JdbcClient) {
         detailsJson: String = "{}",
     ): IntegrationSyncIssue {
         val id = UUID.randomUUID()
-        jdbcClient.sql(
-            """
-            insert into integration_sync_issue
-                (id, sync_run_id, severity, code, message, external_entity_type,
-                 external_entity_id, internal_entity_type, internal_entity_id,
-                 retryable, details_json)
-            values
-                (:id, :syncRunId, :severity, :code, :message, :externalEntityType,
-                 :externalEntityId, :internalEntityType, :internalEntityId,
-                 :retryable, cast(:detailsJson as jsonb))
-            """.trimIndent(),
-        )
-            .param("id", id)
+        jdbcClient
+            .sql(
+                """
+                insert into integration_sync_issue
+                    (id, sync_run_id, severity, code, message, external_entity_type,
+                     external_entity_id, internal_entity_type, internal_entity_id,
+                     retryable, details_json)
+                values
+                    (:id, :syncRunId, :severity, :code, :message, :externalEntityType,
+                     :externalEntityId, :internalEntityType, :internalEntityId,
+                     :retryable, cast(:detailsJson as jsonb))
+                """.trimIndent(),
+            ).param("id", id)
             .param("syncRunId", syncRunId)
             .param("severity", severity.name)
             .param("code", code.take(120))
@@ -161,31 +168,62 @@ class IntegrationSyncRepository(private val jdbcClient: JdbcClient) {
             .param("retryable", retryable)
             .param("detailsJson", detailsJson)
             .update()
-        return jdbcClient.sql("select $ISSUE_COLUMNS from integration_sync_issue where id = :id")
-            .param("id", id).query(::mapIssue).single()
+        return jdbcClient
+            .sql("select $ISSUE_COLUMNS from integration_sync_issue where id = :id")
+            .param("id", id)
+            .query(::mapIssue)
+            .single()
     }
 
     fun find(id: UUID): IntegrationSyncRun? =
-        jdbcClient.sql("select $RUN_COLUMNS from integration_sync_run where id = :id")
-            .param("id", id).query(::mapRun).optional().orElse(null)
+        jdbcClient
+            .sql("select $RUN_COLUMNS from integration_sync_run where id = :id")
+            .param("id", id)
+            .query(::mapRun)
+            .optional()
+            .orElse(null)
 
-    fun listForOrganization(organizationId: UUID, limit: Int): List<IntegrationSyncRun> =
-        jdbcClient.sql("select $RUN_COLUMNS from integration_sync_run where organization_id = :organizationId order by requested_at desc limit :limit")
-            .param("organizationId", organizationId).param("limit", limit).query(::mapRun).list()
+    fun listForOrganization(
+        organizationId: UUID,
+        limit: Int,
+    ): List<IntegrationSyncRun> =
+        jdbcClient
+            .sql(
+                "select $RUN_COLUMNS from integration_sync_run where organization_id = :organizationId order by requested_at desc limit :limit",
+            ).param("organizationId", organizationId)
+            .param("limit", limit)
+            .query(::mapRun)
+            .list()
 
-    fun listForUser(userId: UUID, limit: Int): List<IntegrationSyncRun> =
-        jdbcClient.sql("select $RUN_COLUMNS from integration_sync_run where user_id = :userId order by requested_at desc limit :limit")
-            .param("userId", userId).param("limit", limit).query(::mapRun).list()
+    fun listForUser(
+        userId: UUID,
+        limit: Int,
+    ): List<IntegrationSyncRun> =
+        jdbcClient
+            .sql("select $RUN_COLUMNS from integration_sync_run where user_id = :userId order by requested_at desc limit :limit")
+            .param("userId", userId)
+            .param("limit", limit)
+            .query(::mapRun)
+            .list()
 
     fun listPlatform(limit: Int): List<IntegrationSyncRun> =
-        jdbcClient.sql("select $RUN_COLUMNS from integration_sync_run order by requested_at desc limit :limit")
-            .param("limit", limit).query(::mapRun).list()
+        jdbcClient
+            .sql("select $RUN_COLUMNS from integration_sync_run order by requested_at desc limit :limit")
+            .param("limit", limit)
+            .query(::mapRun)
+            .list()
 
     fun listIssues(syncRunId: UUID): List<IntegrationSyncIssue> =
-        jdbcClient.sql("select $ISSUE_COLUMNS from integration_sync_issue where sync_run_id = :syncRunId order by created_at, id")
-            .param("syncRunId", syncRunId).query(::mapIssue).list()
+        jdbcClient
+            .sql("select $ISSUE_COLUMNS from integration_sync_issue where sync_run_id = :syncRunId order by created_at, id")
+            .param("syncRunId", syncRunId)
+            .query(::mapIssue)
+            .list()
 
-    private fun mapRun(rs: ResultSet, rowNum: Int) = IntegrationSyncRun(
+    private fun mapRun(
+        rs: ResultSet,
+        rowNum: Int,
+    ) = IntegrationSyncRun(
         id = rs.getObject("id", UUID::class.java),
         connectionId = rs.getObject("connection_id", UUID::class.java),
         provider = IntegrationProvider.valueOf(rs.getString("provider")),
@@ -213,7 +251,10 @@ class IntegrationSyncRepository(private val jdbcClient: JdbcClient) {
         completedAt = rs.getTimestamp("completed_at")?.toInstant(),
     )
 
-    private fun mapIssue(rs: ResultSet, rowNum: Int) = IntegrationSyncIssue(
+    private fun mapIssue(
+        rs: ResultSet,
+        rowNum: Int,
+    ) = IntegrationSyncIssue(
         id = rs.getObject("id", UUID::class.java),
         syncRunId = rs.getObject("sync_run_id", UUID::class.java),
         severity = IntegrationSyncIssueSeverity.valueOf(rs.getString("severity")),
@@ -229,8 +270,20 @@ class IntegrationSyncRepository(private val jdbcClient: JdbcClient) {
     )
 
     private companion object {
-        val TERMINAL_STATUSES = setOf(IntegrationSyncStatus.SUCCEEDED, IntegrationSyncStatus.PARTIAL, IntegrationSyncStatus.FAILED, IntegrationSyncStatus.CANCELLED)
-        const val RUN_COLUMNS = "id, connection_id, provider, owner_type, organization_id, user_id, direction, trigger_type, status, idempotency_key, cursor_value, checkpoint_json, discovered_count, created_count, updated_count, skipped_count, failed_count, rate_limit_remaining, rate_limit_resets_at, error_code, error_message, requested_by_user_id, requested_at, started_at, completed_at"
-        const val ISSUE_COLUMNS = "id, sync_run_id, severity, code, message, external_entity_type, external_entity_id, internal_entity_type, internal_entity_id, retryable, details_json, created_at"
+        val TERMINAL_STATUSES =
+            setOf(
+                IntegrationSyncStatus.SUCCEEDED,
+                IntegrationSyncStatus.PARTIAL,
+                IntegrationSyncStatus.FAILED,
+                IntegrationSyncStatus.CANCELLED,
+            )
+        const val RUN_COLUMNS =
+            "id, connection_id, provider, owner_type, organization_id, user_id, direction, trigger_type, status, idempotency_key, " +
+                "cursor_value, checkpoint_json, discovered_count, created_count, updated_count, skipped_count, failed_count, " +
+                "rate_limit_remaining, rate_limit_resets_at, error_code, error_message, requested_by_user_id, requested_at, started_at, " +
+                "completed_at"
+        const val ISSUE_COLUMNS =
+            "id, sync_run_id, severity, code, message, external_entity_type, external_entity_id, internal_entity_type, " +
+                "internal_entity_id, retryable, details_json, created_at"
     }
 }

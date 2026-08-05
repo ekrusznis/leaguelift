@@ -13,20 +13,23 @@ class PlatformProviderAdapterTest {
     @Test
     fun `subscription billing fails closed until Stripe activation`() {
         val provider = DisabledPlatformSubscriptionBillingProvider()
-        val error = assertFailsWith<ServiceUnavailableException> {
-            provider.createCustomer(
-                PlatformSubscriptionCustomerRequest(UUID.randomUUID(), "billing@example.com", "Test Club", "customer-1"),
-            )
-        }
+        val error =
+            assertFailsWith<ServiceUnavailableException> {
+                provider.createCustomer(
+                    PlatformSubscriptionCustomerRequest(UUID.randomUUID(), "billing@example.com", "Test Club", "customer-1"),
+                )
+            }
         assertEquals("PLATFORM_SUBSCRIPTION_BILLING_NOT_ACTIVATED", error.code)
     }
 
     @Test
     fun `webhook verifier registry exposes only registered official verifier`() {
-        val verifier = object : ProviderWebhookVerifier {
-            override fun supports(provider: IntegrationProvider) = provider == IntegrationProvider.STRIPE
-            override fun verify(request: ProviderWebhookVerificationRequest) = ProviderWebhookVerificationResult(true, "evt_1", "test")
-        }
+        val verifier =
+            object : ProviderWebhookVerifier {
+                override fun supports(provider: IntegrationProvider) = provider == IntegrationProvider.STRIPE
+
+                override fun verify(request: ProviderWebhookVerificationRequest) = ProviderWebhookVerificationResult(true, "evt_1", "test")
+            }
         val registry = ProviderWebhookVerifierRegistry(listOf(verifier))
         assertSame(verifier, registry.find(IntegrationProvider.STRIPE))
         assertNull(registry.find(IntegrationProvider.PRINTIFY))

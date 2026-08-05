@@ -20,35 +20,37 @@ private val log = LoggerFactory.getLogger(SponsorshipRenewalReminderHandler::cla
  */
 @Component
 class SponsorshipRenewalReminderHandler(
-	private val emailProvider: EmailProvider,
-	private val objectMapper: ObjectMapper,
+    private val emailProvider: EmailProvider,
+    private val objectMapper: ObjectMapper,
 ) : OutboxEventHandler {
+    override val eventType: String = "sponsorship.renewal_reminder_due"
 
-	override val eventType: String = "sponsorship.renewal_reminder_due"
+    override fun handle(event: OutboxEvent) {
+        val payload = objectMapper.readTree(event.payload)
+        val sponsorContactEmail = payload.get("sponsorContactEmail")?.takeIf { !it.isNull }?.asText()
+        val sponsorName = payload.get("sponsorName").asText()
+        val packageName = payload.get("packageName").asText()
+        val placementEndDate = payload.get("placementEndDate").asText()
 
-	override fun handle(event: OutboxEvent) {
-		val payload = objectMapper.readTree(event.payload)
-		val sponsorContactEmail = payload.get("sponsorContactEmail")?.takeIf { !it.isNull }?.asText()
-		val sponsorName = payload.get("sponsorName").asText()
-		val packageName = payload.get("packageName").asText()
-		val placementEndDate = payload.get("placementEndDate").asText()
-
-		if (sponsorContactEmail == null) {
-			log.info(
-				"Sponsorship {} for package \"{}\" expiring {} has no sponsor contact email on file — nothing to send.",
-				event.aggregateId, packageName, placementEndDate,
-			)
-			return
-		}
-		emailProvider.send(
-			EmailMessage(
-				to = sponsorContactEmail,
-				subject = "Your sponsorship of $packageName is ending soon",
-				body = "Hi $sponsorName,\n\n" +
-					"Your sponsorship placement for \"$packageName\" is scheduled to end on $placementEndDate. " +
-					"Reach out to the organization if you'd like to renew.\n\n" +
-					"— Rally26",
-			),
-		)
-	}
+        if (sponsorContactEmail == null) {
+            log.info(
+                "Sponsorship {} for package \"{}\" expiring {} has no sponsor contact email on file — nothing to send.",
+                event.aggregateId,
+                packageName,
+                placementEndDate,
+            )
+            return
+        }
+        emailProvider.send(
+            EmailMessage(
+                to = sponsorContactEmail,
+                subject = "Your sponsorship of $packageName is ending soon",
+                body =
+                    "Hi $sponsorName,\n\n" +
+                        "Your sponsorship placement for \"$packageName\" is scheduled to end on $placementEndDate. " +
+                        "Reach out to the organization if you'd like to renew.\n\n" +
+                        "— Rally26",
+            ),
+        )
+    }
 }

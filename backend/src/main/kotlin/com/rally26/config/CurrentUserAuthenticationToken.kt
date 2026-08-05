@@ -12,19 +12,20 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority
  * business logic independent of the identity-provider implementation
  * (DESIGN-DOC.md section 11.5).
  */
-class CurrentUserAuthenticationToken(private val currentUser: CurrentUser) :
-	AbstractAuthenticationToken(
-		if (currentUser.platformAdministrator) {
-			listOf(SimpleGrantedAuthority("ROLE_PLATFORM_ADMIN"))
-		} else {
-			emptyList()
-		},
-	) {
+class CurrentUserAuthenticationToken(
+    private val currentUser: CurrentUser,
+) : AbstractAuthenticationToken(
+        if (currentUser.platformAdministrator) {
+            listOf(SimpleGrantedAuthority("ROLE_PLATFORM_ADMIN"))
+        } else {
+            emptyList()
+        },
+    ) {
+    init {
+        isAuthenticated = true
+    }
 
-	init {
-		isAuthenticated = true
-	}
+    override fun getCredentials(): Any = ""
 
-	override fun getCredentials(): Any = ""
-	override fun getPrincipal(): CurrentUser = currentUser
+    override fun getPrincipal(): CurrentUser = currentUser
 }

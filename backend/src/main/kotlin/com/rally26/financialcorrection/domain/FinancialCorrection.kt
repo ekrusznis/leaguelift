@@ -4,6 +4,7 @@ import java.time.Instant
 import java.util.UUID
 
 enum class FinancialCorrectionType { REFUND, REVERSAL }
+
 enum class FinancialCorrectionTargetType { CONTRIBUTION, SPONSORSHIP, ORDER, OFFLINE_FINANCIAL_RECORD }
 
 data class FinancialCorrection(

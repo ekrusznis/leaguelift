@@ -13,6 +13,7 @@ import com.rally26.outbox.domain.OutboxEvent
  * dead-lettering) rather than swallowing the error itself.
  */
 interface OutboxEventHandler {
-	val eventType: String
-	fun handle(event: OutboxEvent)
+    val eventType: String
+
+    fun handle(event: OutboxEvent)
 }

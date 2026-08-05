@@ -51,8 +51,10 @@ class PlatformIntegrationReadinessService(
 ) {
     fun list(currentUser: CurrentUser): List<PlatformIntegrationReadiness> {
         authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_INTEGRATION_VIEW)
-        val definitions = providerRepository.list(IntegrationOwnerType.PLATFORM, customerVisibleOnly = false)
-            .associateBy { it.provider }
+        val definitions =
+            providerRepository
+                .list(IntegrationOwnerType.PLATFORM, customerVisibleOnly = false)
+                .associateBy { it.provider }
         return listOf(
             readiness(
                 IntegrationProvider.STRIPE,
@@ -74,7 +76,15 @@ class PlatformIntegrationReadinessService(
                     check("API key", resend.apiKey),
                     check("From address", resend.fromAddress),
                 ),
-                if (emailProvider.provider.equals("resend", true)) "Transactional email is configured for Resend when all checks pass." else "The logging email adapter is selected; no live Resend delivery is claimed.",
+                if (emailProvider.provider.equals(
+                        "resend",
+                        true,
+                    )
+                ) {
+                    "Transactional email is configured for Resend when all checks pass."
+                } else {
+                    "The logging email adapter is selected; no live Resend delivery is claimed."
+                },
             ),
             readiness(
                 IntegrationProvider.TWILIO,
@@ -85,7 +95,15 @@ class PlatformIntegrationReadinessService(
                     check("Auth token", twilio.authToken),
                     check("From number", twilio.fromNumber),
                 ),
-                if (smsProvider.provider.equals("twilio", true)) "Transactional SMS is configured for Twilio when all checks pass." else "The logging SMS adapter is selected; no live Twilio delivery is claimed.",
+                if (smsProvider.provider.equals(
+                        "twilio",
+                        true,
+                    )
+                ) {
+                    "Transactional SMS is configured for Twilio when all checks pass."
+                } else {
+                    "The logging SMS adapter is selected; no live Twilio delivery is claimed."
+                },
             ),
             readiness(
                 IntegrationProvider.DIGITALOCEAN_SPACES,
@@ -105,7 +123,9 @@ class PlatformIntegrationReadinessService(
                 category = definitions[IntegrationProvider.GOOGLE_MAPS]?.category?.name ?: "MAPS",
                 status = PlatformIntegrationConfigurationStatus.BUILT_IN,
                 mode = "Keyless directions links",
-                summary = "Safe external directions links remain available without a Google Maps API credential. Richer APIs are not enabled.",
+                summary =
+                    "Safe external directions links remain available without a Google Maps API credential. " +
+                        "Richer APIs are not enabled.",
                 checks = listOf(PlatformIntegrationConfigurationCheck("Keyless directions available", true)),
             ),
         ).map { item ->
@@ -121,13 +141,17 @@ class PlatformIntegrationReadinessService(
         summary: String,
     ): PlatformIntegrationReadiness {
         val configured = checks.count { it.configured }
-        val status = when {
-            configured == checks.size -> PlatformIntegrationConfigurationStatus.CONFIGURED
-            configured == 0 -> PlatformIntegrationConfigurationStatus.NOT_CONFIGURED
-            else -> PlatformIntegrationConfigurationStatus.PARTIAL
-        }
+        val status =
+            when {
+                configured == checks.size -> PlatformIntegrationConfigurationStatus.CONFIGURED
+                configured == 0 -> PlatformIntegrationConfigurationStatus.NOT_CONFIGURED
+                else -> PlatformIntegrationConfigurationStatus.PARTIAL
+            }
         return PlatformIntegrationReadiness(provider, provider.name, "", status, mode, summary, checks)
     }
 
-    private fun check(label: String, value: String) = PlatformIntegrationConfigurationCheck(label, value.isNotBlank())
+    private fun check(
+        label: String,
+        value: String,
+    ) = PlatformIntegrationConfigurationCheck(label, value.isNotBlank())
 }

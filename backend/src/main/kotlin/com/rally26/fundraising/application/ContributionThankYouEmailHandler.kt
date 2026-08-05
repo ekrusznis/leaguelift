@@ -12,23 +12,23 @@ import java.util.Locale
 /** Sends the contribution thank-you email (Phase 8 slice 2) — `contribution.confirmed` is only written by `ContributionService.confirmFromWebhook` when the contribution has a supporter email on file. */
 @Component
 class ContributionThankYouEmailHandler(
-	private val emailProvider: EmailProvider,
-	private val objectMapper: ObjectMapper,
+    private val emailProvider: EmailProvider,
+    private val objectMapper: ObjectMapper,
 ) : OutboxEventHandler {
+    override val eventType: String = "contribution.confirmed"
 
-	override val eventType: String = "contribution.confirmed"
-
-	override fun handle(event: OutboxEvent) {
-		val payload = objectMapper.readValue(event.payload, ContributionConfirmedPayload::class.java)
-		val amount = NumberFormat.getCurrencyInstance(Locale.US).format(payload.amountMinor / 100.0)
-		emailProvider.send(
-			EmailMessage(
-				to = payload.supporterEmail,
-				subject = "Thank you for your contribution",
-				body = "Hi ${payload.supporterName ?: "there"},\n\n" +
-					"Thank you for your contribution of $amount to ${payload.campaignName}. " +
-					"Your support makes a real difference.\n\n— Rally26",
-			),
-		)
-	}
+    override fun handle(event: OutboxEvent) {
+        val payload = objectMapper.readValue(event.payload, ContributionConfirmedPayload::class.java)
+        val amount = NumberFormat.getCurrencyInstance(Locale.US).format(payload.amountMinor / 100.0)
+        emailProvider.send(
+            EmailMessage(
+                to = payload.supporterEmail,
+                subject = "Thank you for your contribution",
+                body =
+                    "Hi ${payload.supporterName ?: "there"},\n\n" +
+                        "Thank you for your contribution of $amount to ${payload.campaignName}. " +
+                        "Your support makes a real difference.\n\n— Rally26",
+            ),
+        )
+    }
 }

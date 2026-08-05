@@ -38,14 +38,16 @@ import org.springframework.context.annotation.Configuration
  */
 @Configuration
 class JacksonConfig {
-
     @Bean
     @ConditionalOnMissingBean
     fun objectMapper(): com.fasterxml.jackson.databind.ObjectMapper {
-        val kotlinModule = com.fasterxml.jackson.module.kotlin.KotlinModule.Builder()
-            .enable(com.fasterxml.jackson.module.kotlin.KotlinFeature.NullIsSameAsDefault)
-            .build()
-        return com.fasterxml.jackson.databind.json.JsonMapper.builder()
+        val kotlinModule =
+            com.fasterxml.jackson.module.kotlin.KotlinModule
+                .Builder()
+                .enable(com.fasterxml.jackson.module.kotlin.KotlinFeature.NullIsSameAsDefault)
+                .build()
+        return com.fasterxml.jackson.databind.json.JsonMapper
+            .builder()
             .addModule(kotlinModule)
             .build()
             .apply {
@@ -58,9 +60,11 @@ class JacksonConfig {
     @ConditionalOnMissingBean
     fun jsonMapperBuilderCustomizer(): JsonMapperBuilderCustomizer =
         JsonMapperBuilderCustomizer { builder: tools.jackson.databind.json.JsonMapper.Builder ->
-            val kotlinModule = tools.jackson.module.kotlin.KotlinModule.Builder()
-                .enable(tools.jackson.module.kotlin.KotlinFeature.NullIsSameAsDefault)
-                .build()
+            val kotlinModule =
+                tools.jackson.module.kotlin.KotlinModule
+                    .Builder()
+                    .enable(tools.jackson.module.kotlin.KotlinFeature.NullIsSameAsDefault)
+                    .build()
             builder.addModule(kotlinModule)
         }
 }

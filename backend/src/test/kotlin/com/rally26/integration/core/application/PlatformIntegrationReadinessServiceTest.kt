@@ -34,24 +34,28 @@ class PlatformIntegrationReadinessServiceTest {
         every { authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_INTEGRATION_VIEW) } just runs
         every { providerRepository.list(IntegrationOwnerType.PLATFORM, false) } returns emptyList()
         val secretKey = "stripe-secret-value"
-        val service = PlatformIntegrationReadinessService(
-            providerRepository = providerRepository,
-            authorizationService = authorizationService,
-            stripe = StripeProperties(secretKey, "stripe-webhook-value"),
-            printify = PrintifyProperties("printify-token-value", "shop-123"),
-            emailProvider = EmailProviderProperties("logging"),
-            resend = ResendProperties("resend-key-value", "notifications@example.com"),
-            smsProvider = SmsProviderProperties("logging"),
-            twilio = TwilioProperties("sid-value", "twilio-token-value", "+15555550100"),
-            spaces = SpacesProperties("https://spaces.invalid", "access-value", "secret-value", "bucket", "nyc3"),
-        )
+        val service =
+            PlatformIntegrationReadinessService(
+                providerRepository = providerRepository,
+                authorizationService = authorizationService,
+                stripe = StripeProperties(secretKey, "stripe-webhook-value"),
+                printify = PrintifyProperties("printify-token-value", "shop-123"),
+                emailProvider = EmailProviderProperties("logging"),
+                resend = ResendProperties("resend-key-value", "notifications@example.com"),
+                smsProvider = SmsProviderProperties("logging"),
+                twilio = TwilioProperties("sid-value", "twilio-token-value", "+15555550100"),
+                spaces = SpacesProperties("https://spaces.invalid", "access-value", "secret-value", "bucket", "nyc3"),
+            )
 
         val result = service.list(currentUser)
 
         assertEquals(6, result.size)
         assertEquals(PlatformIntegrationConfigurationStatus.CONFIGURED, result.first { it.provider == IntegrationProvider.STRIPE }.status)
         assertEquals(PlatformIntegrationConfigurationStatus.PARTIAL, result.first { it.provider == IntegrationProvider.RESEND }.status)
-        assertEquals(PlatformIntegrationConfigurationStatus.BUILT_IN, result.first { it.provider == IntegrationProvider.GOOGLE_MAPS }.status)
+        assertEquals(
+            PlatformIntegrationConfigurationStatus.BUILT_IN,
+            result.first { it.provider == IntegrationProvider.GOOGLE_MAPS }.status,
+        )
         val serializedView = result.toString()
         assertFalse(serializedView.contains(secretKey))
         assertFalse(serializedView.contains("printify-token-value"))

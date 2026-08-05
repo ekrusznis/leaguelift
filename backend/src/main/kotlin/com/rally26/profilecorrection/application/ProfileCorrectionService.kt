@@ -40,7 +40,6 @@ class ProfileCorrectionService(
     private val auditService: AuditService,
     private val objectMapper: ObjectMapper,
 ) {
-
     @Transactional
     fun create(
         organizationId: UUID,
@@ -68,22 +67,23 @@ class ProfileCorrectionService(
         if (repository.hasPending(organizationId, targetType, targetId, field)) {
             throw ConflictException("CORRECTION_ALREADY_PENDING", "A correction for this field is already awaiting review.")
         }
-        val request = try {
-            repository.insert(
-                organizationId = organizationId,
-                householdId = target.householdId,
-                targetType = targetType,
-                targetId = targetId,
-                field = field,
-                targetLabel = target.label,
-                currentValue = currentValue,
-                proposedValue = normalizedValue,
-                reason = normalizedReason,
-                requestedBy = currentUser.userId,
-            )
-        } catch (_: DuplicateKeyException) {
-            throw ConflictException("CORRECTION_ALREADY_PENDING", "A correction for this field is already awaiting review.")
-        }
+        val request =
+            try {
+                repository.insert(
+                    organizationId = organizationId,
+                    householdId = target.householdId,
+                    targetType = targetType,
+                    targetId = targetId,
+                    field = field,
+                    targetLabel = target.label,
+                    currentValue = currentValue,
+                    proposedValue = normalizedValue,
+                    reason = normalizedReason,
+                    requestedBy = currentUser.userId,
+                )
+            } catch (_: DuplicateKeyException) {
+                throw ConflictException("CORRECTION_ALREADY_PENDING", "A correction for this field is already awaiting review.")
+            }
         auditService.record(
             currentUser.userId,
             organizationId,
@@ -116,7 +116,10 @@ class ProfileCorrectionService(
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
         val manager = membershipService.hasManagerRole(organizationId, currentUser)
         if (!manager && !authorizationService.hasGuardianRelationship(organizationId, householdId, currentUser)) {
-            throw ForbiddenException("CORRECTION_REQUEST_ACCESS_DENIED", "You do not have access to correction requests for this household.")
+            throw ForbiddenException(
+                "CORRECTION_REQUEST_ACCESS_DENIED",
+                "You do not have access to correction requests for this household.",
+            )
         }
         val requests = repository.listForHousehold(organizationId, householdId)
         if (manager) return requests
@@ -144,13 +147,14 @@ class ProfileCorrectionService(
             )
         }
         applyCorrection(organizationId, request, target, currentUser)
-        val updated = repository.review(
-            request.id,
-            organizationId,
-            ProfileCorrectionStatus.APPROVED,
-            currentUser.userId,
-            normalizeOptionalNote(reviewNote),
-        )
+        val updated =
+            repository.review(
+                request.id,
+                organizationId,
+                ProfileCorrectionStatus.APPROVED,
+                currentUser.userId,
+                normalizeOptionalNote(reviewNote),
+            )
         if (updated == 0) throw ConflictException("CORRECTION_ALREADY_REVIEWED", "This correction request is no longer pending.")
         auditService.record(
             currentUser.userId,
@@ -158,7 +162,13 @@ class ProfileCorrectionService(
             "profile_correction.approved",
             "profile_correction_request",
             request.id,
-            objectMapper.writeValueAsString(mapOf("targetType" to request.targetType.name, "targetId" to request.targetId, "field" to request.field.name)),
+            objectMapper.writeValueAsString(
+                mapOf(
+                    "targetType" to request.targetType.name,
+                    "targetId" to request.targetId,
+                    "field" to request.field.name,
+                ),
+            ),
         )
         return repository.findById(request.id, organizationId)!!
     }
@@ -174,13 +184,14 @@ class ProfileCorrectionService(
         val request = pendingRequest(organizationId, requestId)
         val note = reviewNote.trim()
         if (note.length !in 3..500) throw ValidationException("A rejection note between 3 and 500 characters is required.")
-        val updated = repository.review(
-            request.id,
-            organizationId,
-            ProfileCorrectionStatus.REJECTED,
-            currentUser.userId,
-            note,
-        )
+        val updated =
+            repository.review(
+                request.id,
+                organizationId,
+                ProfileCorrectionStatus.REJECTED,
+                currentUser.userId,
+                note,
+            )
         if (updated == 0) throw ConflictException("CORRECTION_ALREADY_REVIEWED", "This correction request is no longer pending.")
         auditService.record(
             currentUser.userId,
@@ -194,11 +205,19 @@ class ProfileCorrectionService(
     }
 
     @Transactional
-    fun withdraw(organizationId: UUID, requestId: UUID, currentUser: CurrentUser) {
-        val request = repository.findById(requestId, organizationId)
-            ?: throw NotFoundException("CORRECTION_REQUEST_NOT_FOUND", "The correction request could not be found.")
+    fun withdraw(
+        organizationId: UUID,
+        requestId: UUID,
+        currentUser: CurrentUser,
+    ) {
+        val request =
+            repository.findById(requestId, organizationId)
+                ?: throw NotFoundException("CORRECTION_REQUEST_NOT_FOUND", "The correction request could not be found.")
         if (request.requestedBy != currentUser.userId && !membershipService.hasManagerRole(organizationId, currentUser)) {
-            throw ForbiddenException("CORRECTION_WITHDRAW_DENIED", "Only the requester or an organization manager can withdraw this request.")
+            throw ForbiddenException(
+                "CORRECTION_WITHDRAW_DENIED",
+                "Only the requester or an organization manager can withdraw this request.",
+            )
         }
         val updated = repository.withdraw(requestId, organizationId, request.requestedBy)
         if (updated == 0) throw ConflictException("CORRECTION_ALREADY_REVIEWED", "Only a pending correction request can be withdrawn.")
@@ -212,9 +231,13 @@ class ProfileCorrectionService(
         )
     }
 
-    private fun pendingRequest(organizationId: UUID, requestId: UUID): ProfileCorrectionRequest {
-        val request = repository.findById(requestId, organizationId)
-            ?: throw NotFoundException("CORRECTION_REQUEST_NOT_FOUND", "The correction request could not be found.")
+    private fun pendingRequest(
+        organizationId: UUID,
+        requestId: UUID,
+    ): ProfileCorrectionRequest {
+        val request =
+            repository.findById(requestId, organizationId)
+                ?: throw NotFoundException("CORRECTION_REQUEST_NOT_FOUND", "The correction request could not be found.")
         if (request.status != ProfileCorrectionStatus.PENDING) {
             throw ConflictException("CORRECTION_ALREADY_REVIEWED", "This correction request is no longer pending.")
         }
@@ -225,66 +248,91 @@ class ProfileCorrectionService(
         organizationId: UUID,
         targetType: ProfileCorrectionTargetType,
         targetId: UUID,
-    ): CorrectionTarget = when (targetType) {
-        ProfileCorrectionTargetType.HOUSEHOLD_ADULT -> {
-            val adult = householdRepository.findAdultById(targetId, organizationId)
-                ?.takeIf { it.status == AdultStatus.ACTIVE }
-                ?: throw NotFoundException("ADULT_NOT_FOUND", "The household adult could not be found.")
-            CorrectionTarget(
-                householdId = adult.householdId,
-                label = "${adult.firstName} ${adult.lastName}".trim(),
-                adult = adult,
-            )
+    ): CorrectionTarget =
+        when (targetType) {
+            ProfileCorrectionTargetType.HOUSEHOLD_ADULT -> {
+                val adult =
+                    householdRepository
+                        .findAdultById(targetId, organizationId)
+                        ?.takeIf { it.status == AdultStatus.ACTIVE }
+                        ?: throw NotFoundException("ADULT_NOT_FOUND", "The household adult could not be found.")
+                CorrectionTarget(
+                    householdId = adult.householdId,
+                    label = "${adult.firstName} ${adult.lastName}".trim(),
+                    adult = adult,
+                )
+            }
+            ProfileCorrectionTargetType.PARTICIPANT -> {
+                val participant =
+                    participantRepository
+                        .findById(targetId, organizationId)
+                        ?.takeIf { it.status == ParticipantStatus.ACTIVE }
+                        ?: throw NotFoundException("PARTICIPANT_NOT_FOUND", "The active participant could not be found.")
+                CorrectionTarget(
+                    householdId = participant.householdId,
+                    label = "${participant.firstName} ${participant.lastName}".trim(),
+                    participant = participant,
+                )
+            }
         }
-        ProfileCorrectionTargetType.PARTICIPANT -> {
-            val participant = participantRepository.findById(targetId, organizationId)
-                ?.takeIf { it.status == ParticipantStatus.ACTIVE }
-                ?: throw NotFoundException("PARTICIPANT_NOT_FOUND", "The active participant could not be found.")
-            CorrectionTarget(
-                householdId = participant.householdId,
-                label = "${participant.firstName} ${participant.lastName}".trim(),
-                participant = participant,
-            )
-        }
-    }
 
-    private fun requireCanRequest(organizationId: UUID, target: CorrectionTarget, currentUser: CurrentUser) {
+    private fun requireCanRequest(
+        organizationId: UUID,
+        target: CorrectionTarget,
+        currentUser: CurrentUser,
+    ) {
         if (membershipService.hasManagerRole(organizationId, currentUser)) return
         if (target.adult != null && authorizationService.hasGuardianAdultRelationship(organizationId, target.adult.id, currentUser)) return
         if (target.participant != null) {
             if (authorizationService.hasGuardianRelationship(organizationId, target.householdId, currentUser)) return
-            if (authorizationService.hasParticipantCapability(currentUser, target.participant.id, Capabilities.ATHLETE_PROFILE_UPDATE)) return
-            val canManageRoster = participantRepository.listTeamAssignments(target.participant.id, organizationId).any { assignment ->
-                authorizationService.hasTeamCapability(
-                    organizationId,
-                    assignment.teamId,
+            if (authorizationService.hasParticipantCapability(
                     currentUser,
-                    Capabilities.TEAM_ROSTER_MANAGE,
+                    target.participant.id,
+                    Capabilities.ATHLETE_PROFILE_UPDATE,
                 )
+            ) {
+                return
             }
+            val canManageRoster =
+                participantRepository.listTeamAssignments(target.participant.id, organizationId).any { assignment ->
+                    authorizationService.hasTeamCapability(
+                        organizationId,
+                        assignment.teamId,
+                        currentUser,
+                        Capabilities.TEAM_ROSTER_MANAGE,
+                    )
+                }
             if (canManageRoster) return
         }
         throw ForbiddenException("CORRECTION_REQUEST_DENIED", "You cannot request a correction for this profile.")
     }
 
-    private fun currentValue(target: CorrectionTarget, field: ProfileCorrectionField): String? = when (field) {
-        ProfileCorrectionField.ADULT_FIRST_NAME -> target.adult!!.firstName
-        ProfileCorrectionField.ADULT_LAST_NAME -> target.adult!!.lastName
-        ProfileCorrectionField.ADULT_EMAIL -> target.adult!!.email
-        ProfileCorrectionField.ADULT_PHONE -> target.adult!!.phone
-        ProfileCorrectionField.ADULT_RELATIONSHIP -> target.adult!!.relationship
-        ProfileCorrectionField.PARTICIPANT_FIRST_NAME -> target.participant!!.firstName
-        ProfileCorrectionField.PARTICIPANT_LAST_NAME -> target.participant!!.lastName
-        ProfileCorrectionField.PARTICIPANT_DATE_OF_BIRTH -> target.participant!!.dateOfBirth?.toString()
-    }
+    private fun currentValue(
+        target: CorrectionTarget,
+        field: ProfileCorrectionField,
+    ): String? =
+        when (field) {
+            ProfileCorrectionField.ADULT_FIRST_NAME -> target.adult!!.firstName
+            ProfileCorrectionField.ADULT_LAST_NAME -> target.adult!!.lastName
+            ProfileCorrectionField.ADULT_EMAIL -> target.adult!!.email
+            ProfileCorrectionField.ADULT_PHONE -> target.adult!!.phone
+            ProfileCorrectionField.ADULT_RELATIONSHIP -> target.adult!!.relationship
+            ProfileCorrectionField.PARTICIPANT_FIRST_NAME -> target.participant!!.firstName
+            ProfileCorrectionField.PARTICIPANT_LAST_NAME -> target.participant!!.lastName
+            ProfileCorrectionField.PARTICIPANT_DATE_OF_BIRTH -> target.participant!!.dateOfBirth?.toString()
+        }
 
-    private fun normalizeProposedValue(field: ProfileCorrectionField, raw: String): String {
+    private fun normalizeProposedValue(
+        field: ProfileCorrectionField,
+        raw: String,
+    ): String {
         val value = raw.trim()
         return when (field) {
             ProfileCorrectionField.ADULT_FIRST_NAME,
             ProfileCorrectionField.ADULT_LAST_NAME,
             ProfileCorrectionField.PARTICIPANT_FIRST_NAME,
-            ProfileCorrectionField.PARTICIPANT_LAST_NAME -> {
+            ProfileCorrectionField.PARTICIPANT_LAST_NAME,
+            -> {
                 if (value.length !in 1..100) throw ValidationException("Names must contain 1 to 100 characters.")
                 value
             }
@@ -303,18 +351,24 @@ class ProfileCorrectionService(
                 if (value.length !in 1..100) throw ValidationException("Relationship must contain 1 to 100 characters.")
                 value
             }
-            ProfileCorrectionField.PARTICIPANT_DATE_OF_BIRTH -> try {
-                LocalDate.parse(value).toString()
-            } catch (_: DateTimeParseException) {
-                throw ValidationException("Date of birth must use YYYY-MM-DD format.")
-            }
+            ProfileCorrectionField.PARTICIPANT_DATE_OF_BIRTH ->
+                try {
+                    LocalDate.parse(value).toString()
+                } catch (_: DateTimeParseException) {
+                    throw ValidationException("Date of birth must use YYYY-MM-DD format.")
+                }
         }
     }
 
-    private fun valuesEqual(field: ProfileCorrectionField, left: String?, right: String?): Boolean = when (field) {
-        ProfileCorrectionField.ADULT_EMAIL -> left?.trim()?.lowercase() == right?.trim()?.lowercase()
-        else -> left?.trim() == right?.trim()
-    }
+    private fun valuesEqual(
+        field: ProfileCorrectionField,
+        left: String?,
+        right: String?,
+    ): Boolean =
+        when (field) {
+            ProfileCorrectionField.ADULT_EMAIL -> left?.trim()?.lowercase() == right?.trim()?.lowercase()
+            else -> left?.trim() == right?.trim()
+        }
 
     private fun applyCorrection(
         organizationId: UUID,
@@ -323,40 +377,96 @@ class ProfileCorrectionService(
         currentUser: CurrentUser,
     ) {
         when (request.field) {
-            ProfileCorrectionField.ADULT_FIRST_NAME -> householdService.updateAdult(
-                organizationId, target.householdId, request.targetId,
-                firstName = request.proposedValue, lastName = null, email = null, phone = null, relationship = null,
-                currentUser = currentUser,
-            )
-            ProfileCorrectionField.ADULT_LAST_NAME -> householdService.updateAdult(
-                organizationId, target.householdId, request.targetId,
-                firstName = null, lastName = request.proposedValue, email = null, phone = null, relationship = null,
-                currentUser = currentUser,
-            )
-            ProfileCorrectionField.ADULT_EMAIL -> householdService.updateAdult(
-                organizationId, target.householdId, request.targetId,
-                firstName = null, lastName = null, email = request.proposedValue, phone = null, relationship = null,
-                currentUser = currentUser,
-            )
-            ProfileCorrectionField.ADULT_PHONE -> householdService.updateAdult(
-                organizationId, target.householdId, request.targetId,
-                firstName = null, lastName = null, email = null, phone = request.proposedValue, relationship = null,
-                currentUser = currentUser,
-            )
-            ProfileCorrectionField.ADULT_RELATIONSHIP -> householdService.updateAdult(
-                organizationId, target.householdId, request.targetId,
-                firstName = null, lastName = null, email = null, phone = null, relationship = request.proposedValue,
-                currentUser = currentUser,
-            )
-            ProfileCorrectionField.PARTICIPANT_FIRST_NAME -> participantService.update(
-                organizationId, request.targetId, request.proposedValue, null, null, null, currentUser,
-            )
-            ProfileCorrectionField.PARTICIPANT_LAST_NAME -> participantService.update(
-                organizationId, request.targetId, null, request.proposedValue, null, null, currentUser,
-            )
-            ProfileCorrectionField.PARTICIPANT_DATE_OF_BIRTH -> participantService.update(
-                organizationId, request.targetId, null, null, LocalDate.parse(request.proposedValue), null, currentUser,
-            )
+            ProfileCorrectionField.ADULT_FIRST_NAME ->
+                householdService.updateAdult(
+                    organizationId,
+                    target.householdId,
+                    request.targetId,
+                    firstName = request.proposedValue,
+                    lastName = null,
+                    email = null,
+                    phone = null,
+                    relationship = null,
+                    currentUser = currentUser,
+                )
+            ProfileCorrectionField.ADULT_LAST_NAME ->
+                householdService.updateAdult(
+                    organizationId,
+                    target.householdId,
+                    request.targetId,
+                    firstName = null,
+                    lastName = request.proposedValue,
+                    email = null,
+                    phone = null,
+                    relationship = null,
+                    currentUser = currentUser,
+                )
+            ProfileCorrectionField.ADULT_EMAIL ->
+                householdService.updateAdult(
+                    organizationId,
+                    target.householdId,
+                    request.targetId,
+                    firstName = null,
+                    lastName = null,
+                    email = request.proposedValue,
+                    phone = null,
+                    relationship = null,
+                    currentUser = currentUser,
+                )
+            ProfileCorrectionField.ADULT_PHONE ->
+                householdService.updateAdult(
+                    organizationId,
+                    target.householdId,
+                    request.targetId,
+                    firstName = null,
+                    lastName = null,
+                    email = null,
+                    phone = request.proposedValue,
+                    relationship = null,
+                    currentUser = currentUser,
+                )
+            ProfileCorrectionField.ADULT_RELATIONSHIP ->
+                householdService.updateAdult(
+                    organizationId,
+                    target.householdId,
+                    request.targetId,
+                    firstName = null,
+                    lastName = null,
+                    email = null,
+                    phone = null,
+                    relationship = request.proposedValue,
+                    currentUser = currentUser,
+                )
+            ProfileCorrectionField.PARTICIPANT_FIRST_NAME ->
+                participantService.update(
+                    organizationId,
+                    request.targetId,
+                    request.proposedValue,
+                    null,
+                    null,
+                    null,
+                    currentUser,
+                )
+            ProfileCorrectionField.PARTICIPANT_LAST_NAME ->
+                participantService.update(
+                    organizationId,
+                    request.targetId,
+                    null,
+                    request.proposedValue,
+                    null,
+                    null,
+                    currentUser,
+                )
+            ProfileCorrectionField.PARTICIPANT_DATE_OF_BIRTH ->
+                participantService.update(
+                    organizationId,
+                    request.targetId,
+                    null,
+                    null,
+                    LocalDate.parse(request.proposedValue),
+                    null,
+                    currentUser,
+                )
         }
     }
 

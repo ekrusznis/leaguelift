@@ -19,8 +19,9 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/pages")
-class PublicPageController(private val publicPageService: PublicPageService) {
-
+class PublicPageController(
+    private val publicPageService: PublicPageService,
+) {
     @GetMapping
     fun list(
         @PathVariable organizationId: UUID,
@@ -40,15 +41,16 @@ class PublicPageController(private val publicPageService: PublicPageService) {
         @Valid @RequestBody request: CreatePublicPageRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): ResponseEntity<PublicPageResponse> {
-        val publicPage = publicPageService.create(
-            organizationId,
-            request.pageType,
-            request.entityId,
-            request.slug,
-            request.title,
-            request.summary,
-            currentUser,
-        )
+        val publicPage =
+            publicPageService.create(
+                organizationId,
+                request.pageType,
+                request.entityId,
+                request.slug,
+                request.title,
+                request.summary,
+                currentUser,
+            )
         return ResponseEntity.status(HttpStatus.CREATED).body(publicPage.toResponse())
     }
 
@@ -65,9 +67,16 @@ class PublicPageController(private val publicPageService: PublicPageService) {
         @PathVariable pageId: UUID,
         @Valid @RequestBody request: UpdatePublicPageRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): PublicPageResponse = publicPageService.update(
-        organizationId, pageId, request.title, request.slug, request.summary, currentUser,
-    ).toResponse()
+    ): PublicPageResponse =
+        publicPageService
+            .update(
+                organizationId,
+                pageId,
+                request.title,
+                request.slug,
+                request.summary,
+                currentUser,
+            ).toResponse()
 
     @PostMapping("/{pageId}/publish")
     fun publish(

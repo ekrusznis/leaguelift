@@ -12,13 +12,13 @@ import java.util.UUID
  * provider" seams, not feature-specific.
  */
 interface AnalyticsProvider {
-	fun track(event: AnalyticsEvent)
+    fun track(event: AnalyticsEvent)
 }
 
 data class AnalyticsEvent(
-	val name: String,
-	val organizationId: UUID?,
-	val userId: UUID?,
-	/** Keep this small and non-sensitive — see `LoggingAnalyticsProvider`'s doc comment on what never belongs here. */
-	val properties: Map<String, String> = emptyMap(),
+    val name: String,
+    val organizationId: UUID?,
+    val userId: UUID?,
+    /** Keep this small and non-sensitive — see `LoggingAnalyticsProvider`'s doc comment on what never belongs here. */
+    val properties: Map<String, String> = emptyMap(),
 )

@@ -19,28 +19,30 @@ private const val ADMIN_LIST_LIMIT = 100
  */
 @Service
 class OutboxAdminService(
-	private val authorizationService: AuthorizationService,
-	private val outboxEventRepository: OutboxEventRepository,
+    private val authorizationService: AuthorizationService,
+    private val outboxEventRepository: OutboxEventRepository,
 ) {
+    fun listDeadLetter(currentUser: CurrentUser): List<OutboxEvent> {
+        authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_INTEGRATION_VIEW)
+        return outboxEventRepository.findByStatus("DEAD_LETTER", ADMIN_LIST_LIMIT)
+    }
 
-	fun listDeadLetter(currentUser: CurrentUser): List<OutboxEvent> {
-		authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_INTEGRATION_VIEW)
-		return outboxEventRepository.findByStatus("DEAD_LETTER", ADMIN_LIST_LIMIT)
-	}
+    fun listFailed(currentUser: CurrentUser): List<OutboxEvent> {
+        authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_INTEGRATION_VIEW)
+        return outboxEventRepository.findByStatus("FAILED", ADMIN_LIST_LIMIT)
+    }
 
-	fun listFailed(currentUser: CurrentUser): List<OutboxEvent> {
-		authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_INTEGRATION_VIEW)
-		return outboxEventRepository.findByStatus("FAILED", ADMIN_LIST_LIMIT)
-	}
-
-	fun reprocess(id: java.util.UUID, currentUser: CurrentUser) {
-		authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_INTEGRATION_MANAGE)
-		val reset = outboxEventRepository.reprocess(id)
-		if (!reset) {
-			throw NotFoundException(
-				"OUTBOX_EVENT_NOT_REPROCESSABLE",
-				"No DEAD_LETTER or FAILED outbox event with that id was found.",
-			)
-		}
-	}
+    fun reprocess(
+        id: java.util.UUID,
+        currentUser: CurrentUser,
+    ) {
+        authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_INTEGRATION_MANAGE)
+        val reset = outboxEventRepository.reprocess(id)
+        if (!reset) {
+            throw NotFoundException(
+                "OUTBOX_EVENT_NOT_REPROCESSABLE",
+                "No DEAD_LETTER or FAILED outbox event with that id was found.",
+            )
+        }
+    }
 }

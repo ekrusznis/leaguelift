@@ -18,27 +18,44 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/financial-corrections")
-class FinancialCorrectionController(private val service: FinancialCorrectionService) {
+class FinancialCorrectionController(
+    private val service: FinancialCorrectionService,
+) {
     @PostMapping("/preview")
     fun preview(
         @PathVariable organizationId: UUID,
         @Valid @RequestBody request: PreviewFinancialCorrectionRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): FinancialCorrectionPreviewResponse = service.preview(
-        organizationId, request.targetType, request.targetId, request.amountMinor, request.reason, currentUser,
-    ).toResponse()
+    ): FinancialCorrectionPreviewResponse =
+        service
+            .preview(
+                organizationId,
+                request.targetType,
+                request.targetId,
+                request.amountMinor,
+                request.reason,
+                currentUser,
+            ).toResponse()
 
     @PostMapping("/execute")
     fun execute(
         @PathVariable organizationId: UUID,
         @Valid @RequestBody request: ExecuteFinancialCorrectionRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): ResponseEntity<FinancialCorrectionResponse> = ResponseEntity.status(HttpStatus.CREATED).body(
-        service.execute(
-            organizationId, request.targetType, request.targetId, request.amountMinor, request.reason,
-            request.confirmationHash, request.idempotencyKey, currentUser,
-        ).toResponse(),
-    )
+    ): ResponseEntity<FinancialCorrectionResponse> =
+        ResponseEntity.status(HttpStatus.CREATED).body(
+            service
+                .execute(
+                    organizationId,
+                    request.targetType,
+                    request.targetId,
+                    request.amountMinor,
+                    request.reason,
+                    request.confirmationHash,
+                    request.idempotencyKey,
+                    currentUser,
+                ).toResponse(),
+        )
 
     @GetMapping
     fun list(

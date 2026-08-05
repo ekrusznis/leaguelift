@@ -13,24 +13,27 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/season-rollovers")
-class SeasonRolloverController(private val service: SeasonRolloverService) {
+class SeasonRolloverController(
+    private val service: SeasonRolloverService,
+) {
+    @PostMapping("/preview")
+    fun preview(
+        @PathVariable organizationId: UUID,
+        @Valid @RequestBody request: SeasonRolloverPreviewRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): SeasonRolloverPreviewResponse = service.preview(organizationId, request.toCommand(), currentUser).toResponse()
 
-	@PostMapping("/preview")
-	fun preview(
-		@PathVariable organizationId: UUID,
-		@Valid @RequestBody request: SeasonRolloverPreviewRequest,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): SeasonRolloverPreviewResponse = service.preview(organizationId, request.toCommand(), currentUser).toResponse()
-
-	@PostMapping("/execute")
-	fun execute(
-		@PathVariable organizationId: UUID,
-		@Valid @RequestBody request: SeasonRolloverExecuteRequest,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): SeasonRolloverResultResponse = service.execute(
-		organizationId,
-		request.toCommand(),
-		request.expectedConfirmationHash,
-		currentUser,
-	).toResponse()
+    @PostMapping("/execute")
+    fun execute(
+        @PathVariable organizationId: UUID,
+        @Valid @RequestBody request: SeasonRolloverExecuteRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): SeasonRolloverResultResponse =
+        service
+            .execute(
+                organizationId,
+                request.toCommand(),
+                request.expectedConfirmationHash,
+                currentUser,
+            ).toResponse()
 }

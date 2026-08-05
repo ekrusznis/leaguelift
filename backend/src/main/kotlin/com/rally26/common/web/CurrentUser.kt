@@ -9,8 +9,8 @@ import java.util.UUID
  * object, so authorization logic stays independent of the token/session mechanism.
  */
 data class CurrentUser(
-	val userId: UUID,
-	val email: String,
-	val displayName: String,
-	val platformAdministrator: Boolean = false,
+    val userId: UUID,
+    val email: String,
+    val displayName: String,
+    val platformAdministrator: Boolean = false,
 )

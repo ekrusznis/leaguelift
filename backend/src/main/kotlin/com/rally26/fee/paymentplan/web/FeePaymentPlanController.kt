@@ -17,7 +17,9 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/fee-assignments/{assignmentId}/payment-plan")
-class FeePaymentPlanController(private val service: FeePaymentPlanService) {
+class FeePaymentPlanController(
+    private val service: FeePaymentPlanService,
+) {
     @GetMapping
     fun get(
         @PathVariable organizationId: UUID,
@@ -34,8 +36,10 @@ class FeePaymentPlanController(private val service: FeePaymentPlanService) {
         @PathVariable assignmentId: UUID,
         @Valid @RequestBody request: CreateFeePaymentPlanRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): ResponseEntity<FeePaymentPlanResponse> = ResponseEntity.status(HttpStatus.CREATED)
-        .body(service.create(organizationId, assignmentId, request.toDomain(), request.note, currentUser).toResponse())
+    ): ResponseEntity<FeePaymentPlanResponse> =
+        ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(service.create(organizationId, assignmentId, request.toDomain(), request.note, currentUser).toResponse())
 
     @DeleteMapping
     fun cancel(

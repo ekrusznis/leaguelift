@@ -12,12 +12,12 @@ import java.util.UUID
  * it).
  */
 data class DocumentAcknowledgment(
-	val id: UUID,
-	val organizationId: UUID,
-	val mediaAssignmentId: UUID,
-	val householdId: UUID,
-	val householdAdultId: UUID,
-	val acknowledgedByUserId: UUID,
-	val acknowledgedAt: Instant,
-	val createdAt: Instant,
+    val id: UUID,
+    val organizationId: UUID,
+    val mediaAssignmentId: UUID,
+    val householdId: UUID,
+    val householdAdultId: UUID,
+    val acknowledgedByUserId: UUID,
+    val acknowledgedAt: Instant,
+    val createdAt: Instant,
 )

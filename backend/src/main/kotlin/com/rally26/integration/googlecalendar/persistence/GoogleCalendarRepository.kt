@@ -7,7 +7,7 @@ import com.rally26.integration.googlecalendar.domain.GoogleCalendarSyncDirection
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import java.sql.ResultSet
-import java.util.*
+import java.util.UUID
 
 @Repository
 class GoogleCalendarRepository(
@@ -191,7 +191,11 @@ class GoogleCalendarRepository(
     )
 
     private companion object {
-        const val SETTING_COLUMNS = "connection_id, selected_calendar_id, selected_calendar_name, selected_calendar_timezone, sync_direction, automatic_sync_enabled, last_calendar_listed_at, created_at, updated_at"
-        const val MAPPING_COLUMNS = "id, connection_id, event_id, external_calendar_id, external_event_id, external_etag, sync_status, last_export_hash, last_synced_at, last_error_code, last_error_message, created_at, updated_at"
+        const val SETTING_COLUMNS =
+            "connection_id, selected_calendar_id, selected_calendar_name, selected_calendar_timezone, sync_direction, " +
+                "automatic_sync_enabled, last_calendar_listed_at, created_at, updated_at"
+        const val MAPPING_COLUMNS =
+            "id, connection_id, event_id, external_calendar_id, external_event_id, external_etag, sync_status, " +
+                "last_export_hash, last_synced_at, last_error_code, last_error_message, created_at, updated_at"
     }
 }

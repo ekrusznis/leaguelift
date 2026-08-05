@@ -32,21 +32,49 @@ data class ProviderWebhookVerificationResult(
  */
 interface ProviderWebhookVerifier {
     fun supports(provider: IntegrationProvider): Boolean
+
     fun verify(request: ProviderWebhookVerificationRequest): ProviderWebhookVerificationResult
 }
 
 @Component
-class ProviderWebhookVerifierRegistry(private val verifiers: List<ProviderWebhookVerifier>) {
+class ProviderWebhookVerifierRegistry(
+    private val verifiers: List<ProviderWebhookVerifier>,
+) {
     fun find(provider: IntegrationProvider): ProviderWebhookVerifier? = verifiers.firstOrNull { it.supports(provider) }
 }
 
 /** Metadata-only registry used by Platform Admin readiness. It does not accept a
  * webhook or invent a provider payload; real handlers must verify official contracts. */
 object ProviderWebhookContracts {
-    val all = listOf(
-        ProviderWebhookContract(IntegrationProvider.STRIPE, "Stripe-Signature", "event.id", "webhook_event(provider, external_event_id)", true),
-        ProviderWebhookContract(IntegrationProvider.PRINTIFY, "HMAC scaffold", "provider event ID", "webhook_event(provider, external_event_id)", false),
-        ProviderWebhookContract(IntegrationProvider.RESEND, "Signing-secret scaffold", "provider event ID", "webhook_event(provider, external_event_id)", false),
-        ProviderWebhookContract(IntegrationProvider.TWILIO, "X-Twilio-Signature scaffold", "message/event identity", "webhook_event(provider, external_event_id)", false),
-    )
+    val all =
+        listOf(
+            ProviderWebhookContract(
+                IntegrationProvider.STRIPE,
+                "Stripe-Signature",
+                "event.id",
+                "webhook_event(provider, external_event_id)",
+                true,
+            ),
+            ProviderWebhookContract(
+                IntegrationProvider.PRINTIFY,
+                "HMAC scaffold",
+                "provider event ID",
+                "webhook_event(provider, external_event_id)",
+                false,
+            ),
+            ProviderWebhookContract(
+                IntegrationProvider.RESEND,
+                "Signing-secret scaffold",
+                "provider event ID",
+                "webhook_event(provider, external_event_id)",
+                false,
+            ),
+            ProviderWebhookContract(
+                IntegrationProvider.TWILIO,
+                "X-Twilio-Signature scaffold",
+                "message/event identity",
+                "webhook_event(provider, external_event_id)",
+                false,
+            ),
+        )
 }

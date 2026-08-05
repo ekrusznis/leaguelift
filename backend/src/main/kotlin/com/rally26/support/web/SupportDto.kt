@@ -26,14 +26,35 @@ data class SaveSupportArticleRequest(
 )
 
 data class SupportArticleResponse(
-    val id: UUID, val slug: String, val title: String, val summary: String, val bodyMarkdown: String,
-    val category: String, val audience: String, val status: String, val sortOrder: Int,
-    val publishedAt: Instant?, val createdAt: Instant, val updatedAt: Instant,
+    val id: UUID,
+    val slug: String,
+    val title: String,
+    val summary: String,
+    val bodyMarkdown: String,
+    val category: String,
+    val audience: String,
+    val status: String,
+    val sortOrder: Int,
+    val publishedAt: Instant?,
+    val createdAt: Instant,
+    val updatedAt: Instant,
 )
 
-fun SupportArticle.toResponse() = SupportArticleResponse(
-    id, slug, title, summary, bodyMarkdown, category, audience.name, status.name, sortOrder, publishedAt, createdAt, updatedAt,
-)
+fun SupportArticle.toResponse() =
+    SupportArticleResponse(
+        id,
+        slug,
+        title,
+        summary,
+        bodyMarkdown,
+        category,
+        audience.name,
+        status.name,
+        sortOrder,
+        publishedAt,
+        createdAt,
+        updatedAt,
+    )
 
 data class PublicSupportCaseRequest(
     @field:NotBlank @field:Size(min = 8, max = 120) val idempotencyKey: String,
@@ -60,14 +81,42 @@ data class UpdateSupportCaseRequest(
 )
 
 data class SupportCaseResponse(
-    val id: UUID, val organizationId: UUID?, val organizationName: String?, val requesterUserId: UUID?,
-    val requesterName: String, val requesterEmail: String, val category: String, val priority: String,
-    val subject: String, val description: String, val status: String, val assignedPlatformUserId: UUID?,
-    val assignedPlatformUserName: String?, val resolution: String?, val closedAt: Instant?,
-    val createdAt: Instant, val updatedAt: Instant,
+    val id: UUID,
+    val organizationId: UUID?,
+    val organizationName: String?,
+    val requesterUserId: UUID?,
+    val requesterName: String,
+    val requesterEmail: String,
+    val category: String,
+    val priority: String,
+    val subject: String,
+    val description: String,
+    val status: String,
+    val assignedPlatformUserId: UUID?,
+    val assignedPlatformUserName: String?,
+    val resolution: String?,
+    val closedAt: Instant?,
+    val createdAt: Instant,
+    val updatedAt: Instant,
 )
 
-fun SupportCase.toResponse() = SupportCaseResponse(
-    id, organizationId, organizationName, requesterUserId, requesterName, requesterEmail, category.name, priority.name,
-    subject, description, status.name, assignedPlatformUserId, assignedPlatformUserName, resolution, closedAt, createdAt, updatedAt,
-)
+fun SupportCase.toResponse() =
+    SupportCaseResponse(
+        id,
+        organizationId,
+        organizationName,
+        requesterUserId,
+        requesterName,
+        requesterEmail,
+        category.name,
+        priority.name,
+        subject,
+        description,
+        status.name,
+        assignedPlatformUserId,
+        assignedPlatformUserName,
+        resolution,
+        closedAt,
+        createdAt,
+        updatedAt,
+    )

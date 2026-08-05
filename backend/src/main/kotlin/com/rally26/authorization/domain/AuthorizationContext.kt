@@ -8,10 +8,10 @@ import java.util.UUID
  * [contextType] — the frontend never re-derives capabilities from a role name.
  */
 data class AuthorizationContext(
-	val contextType: ContextType,
-	val resourceId: UUID?,
-	val organizationId: UUID?,
-	val label: String,
-	val role: String,
-	val capabilities: Set<String>,
+    val contextType: ContextType,
+    val resourceId: UUID?,
+    val organizationId: UUID?,
+    val label: String,
+    val role: String,
+    val capabilities: Set<String>,
 )

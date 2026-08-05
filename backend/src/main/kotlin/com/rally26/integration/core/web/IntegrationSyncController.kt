@@ -11,7 +11,9 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1")
-class IntegrationSyncController(private val service: IntegrationSyncService) {
+class IntegrationSyncController(
+    private val service: IntegrationSyncService,
+) {
     @GetMapping("/organizations/{organizationId}/integration-sync-runs")
     fun organizationRuns(
         @PathVariable organizationId: UUID,
@@ -19,12 +21,14 @@ class IntegrationSyncController(private val service: IntegrationSyncService) {
     ): List<IntegrationSyncRunResponse> = service.listOrganization(organizationId, currentUser).map { it.toResponse() }
 
     @GetMapping("/me/integration-sync-runs")
-    fun personalRuns(@AuthenticationPrincipal currentUser: CurrentUser): List<IntegrationSyncRunResponse> =
-        service.listPersonal(currentUser).map { it.toResponse() }
+    fun personalRuns(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): List<IntegrationSyncRunResponse> = service.listPersonal(currentUser).map { it.toResponse() }
 
     @GetMapping("/platform/integrations/sync-runs")
-    fun platformRuns(@AuthenticationPrincipal currentUser: CurrentUser): List<IntegrationSyncRunResponse> =
-        service.listPlatform(currentUser).map { it.toResponse() }
+    fun platformRuns(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): List<IntegrationSyncRunResponse> = service.listPlatform(currentUser).map { it.toResponse() }
 
     @GetMapping("/integration-sync-runs/{runId}/issues")
     fun issues(

@@ -7,21 +7,21 @@ import java.util.UUID
 enum class ContributionStatus { PENDING, CONFIRMED, CANCELED, REFUNDED }
 
 data class Contribution(
-	val id: UUID,
-	val organizationId: UUID,
-	val campaignId: UUID,
-	val amountMinor: Long,
-	val currency: String,
-	val supporterName: String?,
-	val isAnonymous: Boolean,
-	val supporterEmail: String?,
-	val status: ContributionStatus,
-	val stripeCheckoutSessionId: String?,
-	val stripePaymentIntentId: String?,
-	val confirmedAt: Instant?,
-	val refundedAt: Instant?,
-	val createdAt: Instant,
-	val paymentSource: PaymentSource = PaymentSource.STRIPE,
+    val id: UUID,
+    val organizationId: UUID,
+    val campaignId: UUID,
+    val amountMinor: Long,
+    val currency: String,
+    val supporterName: String?,
+    val isAnonymous: Boolean,
+    val supporterEmail: String?,
+    val status: ContributionStatus,
+    val stripeCheckoutSessionId: String?,
+    val stripePaymentIntentId: String?,
+    val confirmedAt: Instant?,
+    val refundedAt: Instant?,
+    val createdAt: Instant,
+    val paymentSource: PaymentSource = PaymentSource.STRIPE,
 )
 
 /**
@@ -32,8 +32,8 @@ data class Contribution(
  * unit-testable validation constants).
  */
 object ContributionLimits {
-	const val MIN_AMOUNT_MINOR = 100L
-	const val MAX_AMOUNT_MINOR = 5_000_000L
+    const val MIN_AMOUNT_MINOR = 100L
+    const val MAX_AMOUNT_MINOR = 5_000_000L
 
-	fun isAmountAllowed(amountMinor: Long): Boolean = amountMinor in MIN_AMOUNT_MINOR..MAX_AMOUNT_MINOR
+    fun isAmountAllowed(amountMinor: Long): Boolean = amountMinor in MIN_AMOUNT_MINOR..MAX_AMOUNT_MINOR
 }

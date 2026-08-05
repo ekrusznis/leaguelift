@@ -5,8 +5,11 @@ import java.time.Instant
 import java.util.UUID
 
 enum class SportsDataEntityType { ORGANIZATION, TEAM, PARTICIPANT, ROSTER_MEMBERSHIP, EVENT }
+
 enum class SportsDataSourceMode { OAUTH, API_TOKEN, FILE_IMPORT, ICS }
+
 enum class SportsDataImportStatus { PREVIEWED, READY, BLOCKED, IMPORTED, PARTIAL, FAILED }
+
 enum class SportsDataIssueSeverity { WARNING, ERROR }
 
 data class SportsDataExternalRecord(

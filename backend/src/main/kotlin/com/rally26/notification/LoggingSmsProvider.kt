@@ -17,7 +17,7 @@ private val log = LoggerFactory.getLogger(LoggingSmsProvider::class.java)
 @Component
 @ConditionalOnProperty(prefix = "rally26.sms", name = ["provider"], havingValue = "logging", matchIfMissing = true)
 class LoggingSmsProvider : SmsProvider {
-	override fun send(message: SmsMessage) {
-		log.info("SMS would be sent to {}", message.to)
-	}
+    override fun send(message: SmsMessage) {
+        log.info("SMS would be sent to {}", message.to)
+    }
 }

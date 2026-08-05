@@ -21,8 +21,9 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/teams")
-class TeamController(private val teamService: TeamService) {
-
+class TeamController(
+    private val teamService: TeamService,
+) {
     @GetMapping
     fun list(
         @PathVariable organizationId: UUID,
@@ -42,14 +43,15 @@ class TeamController(private val teamService: TeamService) {
         @Valid @RequestBody request: CreateTeamRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): ResponseEntity<TeamResponse> {
-        val team = teamService.create(
-            organizationId,
-            request.name,
-            request.sport,
-            request.season,
-            request.contactEmail,
-            currentUser,
-        )
+        val team =
+            teamService.create(
+                organizationId,
+                request.name,
+                request.sport,
+                request.season,
+                request.contactEmail,
+                currentUser,
+            )
         return ResponseEntity.status(HttpStatus.CREATED).body(team.toResponse())
     }
 
@@ -66,15 +68,17 @@ class TeamController(private val teamService: TeamService) {
         @PathVariable teamId: UUID,
         @Valid @RequestBody request: UpdateTeamRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): TeamResponse = teamService.update(
-        organizationId,
-        teamId,
-        request.name,
-        request.sport,
-        request.season,
-        request.contactEmail,
-        currentUser,
-    ).toResponse()
+    ): TeamResponse =
+        teamService
+            .update(
+                organizationId,
+                teamId,
+                request.name,
+                request.sport,
+                request.season,
+                request.contactEmail,
+                currentUser,
+            ).toResponse()
 
     @DeleteMapping("/{teamId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

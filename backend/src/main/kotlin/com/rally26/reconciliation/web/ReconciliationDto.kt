@@ -36,13 +36,31 @@ data class ReconciliationResultResponse(
     val issues: List<ReconciliationIssueResponse>,
 )
 
-fun ReconciliationRun.toResponse() = ReconciliationRunResponse(
-    id, organizationId, status.name, issueCount, highCount, mediumCount, lowCount,
-    startedByUserId, startedAt, completedAt,
-)
+fun ReconciliationRun.toResponse() =
+    ReconciliationRunResponse(
+        id,
+        organizationId,
+        status.name,
+        issueCount,
+        highCount,
+        mediumCount,
+        lowCount,
+        startedByUserId,
+        startedAt,
+        completedAt,
+    )
 
-fun ReconciliationIssue.toResponse() = ReconciliationIssueResponse(
-    id, issueType, severity.name, resourceType, resourceId, title, detail, actionPath, createdAt,
-)
+fun ReconciliationIssue.toResponse() =
+    ReconciliationIssueResponse(
+        id,
+        issueType,
+        severity.name,
+        resourceType,
+        resourceId,
+        title,
+        detail,
+        actionPath,
+        createdAt,
+    )
 
 fun ReconciliationResult.toResponse() = ReconciliationResultResponse(run.toResponse(), issues.map { it.toResponse() })

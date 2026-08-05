@@ -9,6 +9,10 @@ package com.rally26.event.application
  * per section 14.1A's explicit rule.
  */
 interface MapsProvider {
-	/** Null when there's nothing to build a link from (no address, no coordinates). */
-	fun buildDirectionsUrl(address: String?, latitude: Double?, longitude: Double?): String?
+    /** Null when there's nothing to build a link from (no address, no coordinates). */
+    fun buildDirectionsUrl(
+        address: String?,
+        latitude: Double?,
+        longitude: Double?,
+    ): String?
 }

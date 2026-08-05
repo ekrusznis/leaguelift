@@ -4,10 +4,15 @@ import java.time.Instant
 import java.util.UUID
 
 enum class AnnouncementScopeType { ORGANIZATION, TEAM, TOURNAMENT }
+
 enum class AnnouncementKind { GENERAL, CAMPAIGN_LAUNCH, EVENT_REMINDER, FEE_REMINDER, DOCUMENT_REMINDER }
+
 enum class AnnouncementAudience { ALL, STAFF, GUARDIANS, ATHLETES }
+
 enum class AnnouncementStatus { DRAFT, PUBLISHED, ARCHIVED }
+
 enum class AnnouncementRecipientType { STAFF, GUARDIAN, ATHLETE }
+
 enum class DeliveryStatus { NONE, PENDING, SENT, FAILED, SKIPPED }
 
 data class Announcement(

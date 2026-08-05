@@ -25,33 +25,42 @@ private val RESOURCE_SCOPED_PATH = Regex("^/api/v1/(?:teams|tournaments|househol
  * opening a team, tournament, household, participant, or RSVP deep link directly.
  */
 @Component
-class PlatformSupportAccessInterceptor(private val service: PlatformAdminConsoleService) : HandlerInterceptor {
-	override fun preHandle(request: HttpServletRequest, response: HttpServletResponse, handler: Any): Boolean {
-		val currentUser = SecurityContextHolder.getContext().authentication?.principal as? CurrentUser ?: return true
-		if (!currentUser.platformAdministrator) return true
+class PlatformSupportAccessInterceptor(
+    private val service: PlatformAdminConsoleService,
+) : HandlerInterceptor {
+    override fun preHandle(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        handler: Any,
+    ): Boolean {
+        val currentUser = SecurityContextHolder.getContext().authentication?.principal as? CurrentUser ?: return true
+        if (!currentUser.platformAdministrator) return true
 
-		val organizationId = organizationIdFor(request) ?: return true
-		val accessId = request.getHeader(PLATFORM_SUPPORT_ACCESS_HEADER)
-			?.let(::parseUuid)
-			?: throw ForbiddenException("SUPPORT_ACCESS_REQUIRED", "Start a support access session before opening organization data.")
-		service.requireActiveSupportAccess(currentUser, accessId, organizationId)
-		return true
-	}
+        val organizationId = organizationIdFor(request) ?: return true
+        val accessId =
+            request
+                .getHeader(PLATFORM_SUPPORT_ACCESS_HEADER)
+                ?.let(::parseUuid)
+                ?: throw ForbiddenException("SUPPORT_ACCESS_REQUIRED", "Start a support access session before opening organization data.")
+        service.requireActiveSupportAccess(currentUser, accessId, organizationId)
+        return true
+    }
 
-	private fun organizationIdFor(request: HttpServletRequest): UUID? {
-		val pathOrganization = ORGANIZATION_PATH.matchEntire(request.requestURI)?.groupValues?.get(1)
-		if (pathOrganization != null) {
-			return parseUuid(pathOrganization)
-				?: throw ForbiddenException("SUPPORT_ACCESS_SCOPE_INVALID", "The organization in this request is invalid.")
-		}
-		if (!RESOURCE_SCOPED_PATH.matches(request.requestURI)) return null
-		return request.getParameter("organizationId")
-			?.let(::parseUuid)
-			?: throw ForbiddenException(
-				"SUPPORT_ACCESS_SCOPE_REQUIRED",
-				"Organization scope is required before a Platform Admin can open this resource.",
-			)
-	}
+    private fun organizationIdFor(request: HttpServletRequest): UUID? {
+        val pathOrganization = ORGANIZATION_PATH.matchEntire(request.requestURI)?.groupValues?.get(1)
+        if (pathOrganization != null) {
+            return parseUuid(pathOrganization)
+                ?: throw ForbiddenException("SUPPORT_ACCESS_SCOPE_INVALID", "The organization in this request is invalid.")
+        }
+        if (!RESOURCE_SCOPED_PATH.matches(request.requestURI)) return null
+        return request
+            .getParameter("organizationId")
+            ?.let(::parseUuid)
+            ?: throw ForbiddenException(
+                "SUPPORT_ACCESS_SCOPE_REQUIRED",
+                "Organization scope is required before a Platform Admin can open this resource.",
+            )
+    }
 
-	private fun parseUuid(value: String): UUID? = runCatching { UUID.fromString(value) }.getOrNull()
+    private fun parseUuid(value: String): UUID? = runCatching { UUID.fromString(value) }.getOrNull()
 }

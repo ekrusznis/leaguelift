@@ -22,8 +22,9 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}")
-class FeeAssignmentController(private val feeService: FeeService) {
-
+class FeeAssignmentController(
+    private val feeService: FeeService,
+) {
     @GetMapping("/households/{householdId}/fee-assignments")
     fun list(
         @PathVariable organizationId: UUID,
@@ -45,10 +46,18 @@ class FeeAssignmentController(private val feeService: FeeService) {
         @Valid @RequestBody request: CreateFeeAssignmentRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): ResponseEntity<FeeAssignmentResponse> {
-        val assignment = feeService.createAssignment(
-            organizationId, householdId, request.participantId, request.feeTemplateId,
-            request.description, request.originalAmountMinor, request.currency, request.dueDate, currentUser,
-        )
+        val assignment =
+            feeService.createAssignment(
+                organizationId,
+                householdId,
+                request.participantId,
+                request.feeTemplateId,
+                request.description,
+                request.originalAmountMinor,
+                request.currency,
+                request.dueDate,
+                currentUser,
+            )
         return ResponseEntity.status(HttpStatus.CREATED).body(assignment.toResponse())
     }
 
@@ -75,7 +84,8 @@ class FeeAssignmentController(private val feeService: FeeService) {
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): ResponseEntity<String> {
         val csv = feeService.exportCollectionsCsv(organizationId, status, overdueOnly, currentUser)
-        return ResponseEntity.ok()
+        return ResponseEntity
+            .ok()
             .contentType(MediaType.parseMediaType("text/csv"))
             .header("Content-Disposition", "attachment; filename=\"collections-$organizationId.csv\"")
             .body(csv)
@@ -105,7 +115,16 @@ class FeeAssignmentController(private val feeService: FeeService) {
         @Valid @RequestBody request: RecordPaymentRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): ResponseEntity<FeeAssignmentResponse> {
-        val result = feeService.recordPayment(organizationId, assignmentId, request.amountMinor, request.method, request.paidAt, request.note, currentUser)
+        val result =
+            feeService.recordPayment(
+                organizationId,
+                assignmentId,
+                request.amountMinor,
+                request.method,
+                request.paidAt,
+                request.note,
+                currentUser,
+            )
         return ResponseEntity.status(HttpStatus.CREATED).body(result.toResponse())
     }
 
@@ -134,7 +153,15 @@ class FeeAssignmentController(private val feeService: FeeService) {
         @Valid @RequestBody request: ApplyAdjustmentRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): ResponseEntity<FeeAssignmentResponse> {
-        val result = feeService.applyAdjustment(organizationId, assignmentId, request.adjustmentType, request.amountMinor, request.reason, currentUser)
+        val result =
+            feeService.applyAdjustment(
+                organizationId,
+                assignmentId,
+                request.adjustmentType,
+                request.amountMinor,
+                request.reason,
+                currentUser,
+            )
         return ResponseEntity.status(HttpStatus.CREATED).body(result.toResponse())
     }
 
@@ -152,5 +179,6 @@ class FeeAssignmentController(private val feeService: FeeService) {
         @PathVariable adjustmentId: UUID,
         @Valid @RequestBody request: VoidRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): FeeAssignmentResponse = feeService.voidAdjustment(organizationId, assignmentId, adjustmentId, request.reason, currentUser).toResponse()
+    ): FeeAssignmentResponse =
+        feeService.voidAdjustment(organizationId, assignmentId, adjustmentId, request.reason, currentUser).toResponse()
 }

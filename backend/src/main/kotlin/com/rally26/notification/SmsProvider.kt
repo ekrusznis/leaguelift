@@ -7,10 +7,10 @@ package com.rally26.notification
  * real send path, active only when `rally26.sms.provider = twilio`.
  */
 interface SmsProvider {
-	fun send(message: SmsMessage)
+    fun send(message: SmsMessage)
 }
 
 data class SmsMessage(
-	val to: String,
-	val body: String,
+    val to: String,
+    val body: String,
 )

@@ -20,24 +20,27 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}")
-class ProfileCorrectionController(private val service: ProfileCorrectionService) {
-
+class ProfileCorrectionController(
+    private val service: ProfileCorrectionService,
+) {
     @PostMapping("/profile-correction-requests")
     fun create(
         @PathVariable organizationId: UUID,
         @Valid @RequestBody request: CreateProfileCorrectionRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): ResponseEntity<ProfileCorrectionResponse> = ResponseEntity.status(HttpStatus.CREATED).body(
-        service.create(
-            organizationId = organizationId,
-            targetType = request.targetType,
-            targetId = request.targetId,
-            field = request.field,
-            proposedValue = request.proposedValue,
-            reason = request.reason,
-            currentUser = currentUser,
-        ).toResponse(),
-    )
+    ): ResponseEntity<ProfileCorrectionResponse> =
+        ResponseEntity.status(HttpStatus.CREATED).body(
+            service
+                .create(
+                    organizationId = organizationId,
+                    targetType = request.targetType,
+                    targetId = request.targetId,
+                    field = request.field,
+                    proposedValue = request.proposedValue,
+                    reason = request.reason,
+                    currentUser = currentUser,
+                ).toResponse(),
+        )
 
     @GetMapping("/profile-correction-requests")
     fun listForOrganization(
@@ -49,9 +52,14 @@ class ProfileCorrectionController(private val service: ProfileCorrectionService)
     ): PageResponse<ProfileCorrectionResponse> {
         val safePage = page.coerceAtLeast(0)
         val safeSize = size.coerceIn(1, 100)
-        val (items, total) = service.listForOrganization(
-            organizationId, status, currentUser, safePage * safeSize, safeSize,
-        )
+        val (items, total) =
+            service.listForOrganization(
+                organizationId,
+                status,
+                currentUser,
+                safePage * safeSize,
+                safeSize,
+            )
         return PageResponse(items.map { it.toResponse() }, safePage, safeSize, total)
     }
 
@@ -60,8 +68,7 @@ class ProfileCorrectionController(private val service: ProfileCorrectionService)
         @PathVariable organizationId: UUID,
         @PathVariable householdId: UUID,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): List<ProfileCorrectionResponse> =
-        service.listForHousehold(organizationId, householdId, currentUser).map { it.toResponse() }
+    ): List<ProfileCorrectionResponse> = service.listForHousehold(organizationId, householdId, currentUser).map { it.toResponse() }
 
     @PostMapping("/profile-correction-requests/{requestId}/approve")
     fun approve(
@@ -69,8 +76,7 @@ class ProfileCorrectionController(private val service: ProfileCorrectionService)
         @PathVariable requestId: UUID,
         @Valid @RequestBody request: ReviewProfileCorrectionRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): ProfileCorrectionResponse =
-        service.approve(organizationId, requestId, request.reviewNote, currentUser).toResponse()
+    ): ProfileCorrectionResponse = service.approve(organizationId, requestId, request.reviewNote, currentUser).toResponse()
 
     @PostMapping("/profile-correction-requests/{requestId}/reject")
     fun reject(
@@ -78,8 +84,7 @@ class ProfileCorrectionController(private val service: ProfileCorrectionService)
         @PathVariable requestId: UUID,
         @Valid @RequestBody request: RejectProfileCorrectionRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): ProfileCorrectionResponse =
-        service.reject(organizationId, requestId, request.reviewNote, currentUser).toResponse()
+    ): ProfileCorrectionResponse = service.reject(organizationId, requestId, request.reviewNote, currentUser).toResponse()
 
     @PostMapping("/profile-correction-requests/{requestId}/withdraw")
     @ResponseStatus(HttpStatus.NO_CONTENT)

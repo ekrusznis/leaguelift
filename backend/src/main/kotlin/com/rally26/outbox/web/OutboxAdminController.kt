@@ -18,18 +18,24 @@ import java.util.UUID
  */
 @RestController
 @RequestMapping("/api/v1/admin/outbox-events")
-class OutboxAdminController(private val outboxAdminService: OutboxAdminService) {
+class OutboxAdminController(
+    private val outboxAdminService: OutboxAdminService,
+) {
+    @GetMapping("/dead-letter")
+    fun listDeadLetter(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): List<OutboxEventResponse> = outboxAdminService.listDeadLetter(currentUser).map { it.toResponse() }
 
-	@GetMapping("/dead-letter")
-	fun listDeadLetter(@AuthenticationPrincipal currentUser: CurrentUser): List<OutboxEventResponse> =
-		outboxAdminService.listDeadLetter(currentUser).map { it.toResponse() }
+    @GetMapping("/failed")
+    fun listFailed(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): List<OutboxEventResponse> = outboxAdminService.listFailed(currentUser).map { it.toResponse() }
 
-	@GetMapping("/failed")
-	fun listFailed(@AuthenticationPrincipal currentUser: CurrentUser): List<OutboxEventResponse> =
-		outboxAdminService.listFailed(currentUser).map { it.toResponse() }
-
-	@PostMapping("/{id}/reprocess")
-	fun reprocess(@PathVariable id: UUID, @AuthenticationPrincipal currentUser: CurrentUser) {
-		outboxAdminService.reprocess(id, currentUser)
-	}
+    @PostMapping("/{id}/reprocess")
+    fun reprocess(
+        @PathVariable id: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) {
+        outboxAdminService.reprocess(id, currentUser)
+    }
 }

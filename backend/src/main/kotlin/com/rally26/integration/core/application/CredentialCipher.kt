@@ -16,9 +16,15 @@ class CredentialCipher(
 ) {
     private val secureRandom = SecureRandom()
 
-    data class EncryptedValue(val ciphertext: String, val keyVersion: Int)
+    data class EncryptedValue(
+        val ciphertext: String,
+        val keyVersion: Int,
+    )
 
-    fun encrypt(plaintext: String, aadContext: String): EncryptedValue {
+    fun encrypt(
+        plaintext: String,
+        aadContext: String,
+    ): EncryptedValue {
         val key = configuredKey()
         val nonce = ByteArray(NONCE_BYTES).also(secureRandom::nextBytes)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -31,18 +37,23 @@ class CredentialCipher(
         )
     }
 
-    fun decrypt(ciphertext: String, aadContext: String, keyVersion: Int): String {
+    fun decrypt(
+        ciphertext: String,
+        aadContext: String,
+        keyVersion: Int,
+    ): String {
         if (keyVersion != properties.encryptionKeyVersion) {
             throw ServiceUnavailableException(
                 "INTEGRATION_KEY_VERSION_UNAVAILABLE",
                 "The integration credential uses an unavailable encryption key version.",
             )
         }
-        val bytes = try {
-            Base64.getDecoder().decode(ciphertext)
-        } catch (_: IllegalArgumentException) {
-            throw ServiceUnavailableException("INTEGRATION_CREDENTIAL_INVALID", "The integration credential could not be decrypted.")
-        }
+        val bytes =
+            try {
+                Base64.getDecoder().decode(ciphertext)
+            } catch (_: IllegalArgumentException) {
+                throw ServiceUnavailableException("INTEGRATION_CREDENTIAL_INVALID", "The integration credential could not be decrypted.")
+            }
         if (bytes.size <= NONCE_BYTES) {
             throw ServiceUnavailableException("INTEGRATION_CREDENTIAL_INVALID", "The integration credential could not be decrypted.")
         }
@@ -67,14 +78,15 @@ class CredentialCipher(
                 "Integration credential encryption is not configured.",
             )
         }
-        val decoded = try {
-            Base64.getDecoder().decode(properties.encryptionKey)
-        } catch (_: IllegalArgumentException) {
-            throw ServiceUnavailableException(
-                "INTEGRATION_ENCRYPTION_NOT_CONFIGURED",
-                "Integration credential encryption is not configured correctly.",
-            )
-        }
+        val decoded =
+            try {
+                Base64.getDecoder().decode(properties.encryptionKey)
+            } catch (_: IllegalArgumentException) {
+                throw ServiceUnavailableException(
+                    "INTEGRATION_ENCRYPTION_NOT_CONFIGURED",
+                    "Integration credential encryption is not configured correctly.",
+                )
+            }
         if (decoded.size != KEY_BYTES) {
             throw ServiceUnavailableException(
                 "INTEGRATION_ENCRYPTION_NOT_CONFIGURED",

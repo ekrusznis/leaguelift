@@ -54,24 +54,31 @@ data class FeeInstallmentResponse(
 
 fun CreateFeePaymentPlanRequest.toDomain(): List<NewInstallment> = installments.map { NewInstallment(it.amountMinor, it.dueDate) }
 
-fun FeePaymentPlanDetails.toResponse() = FeePaymentPlanResponse(
-    id = plan.id,
-    organizationId = plan.organizationId,
-    feeAssignmentId = plan.feeAssignmentId,
-    householdId = plan.householdId,
-    status = plan.status.name,
-    totalMinor = plan.totalMinor,
-    paidMinor = paidMinor,
-    remainingMinor = remainingMinor,
-    currency = plan.currency,
-    note = plan.note,
-    cancelReason = plan.cancelReason,
-    createdAt = plan.createdAt,
-    updatedAt = plan.updatedAt,
-    installments = installments.map {
-        FeeInstallmentResponse(
-            it.id, it.sequenceNumber, it.amountMinor, it.paidMinor,
-            (it.amountMinor - it.paidMinor).coerceAtLeast(0), it.dueDate, it.status.name,
-        )
-    },
-)
+fun FeePaymentPlanDetails.toResponse() =
+    FeePaymentPlanResponse(
+        id = plan.id,
+        organizationId = plan.organizationId,
+        feeAssignmentId = plan.feeAssignmentId,
+        householdId = plan.householdId,
+        status = plan.status.name,
+        totalMinor = plan.totalMinor,
+        paidMinor = paidMinor,
+        remainingMinor = remainingMinor,
+        currency = plan.currency,
+        note = plan.note,
+        cancelReason = plan.cancelReason,
+        createdAt = plan.createdAt,
+        updatedAt = plan.updatedAt,
+        installments =
+            installments.map {
+                FeeInstallmentResponse(
+                    it.id,
+                    it.sequenceNumber,
+                    it.amountMinor,
+                    it.paidMinor,
+                    (it.amountMinor - it.paidMinor).coerceAtLeast(0),
+                    it.dueDate,
+                    it.status.name,
+                )
+            },
+    )

@@ -19,43 +19,68 @@ class ReconciliationService(
     private val auditService: AuditService,
 ) {
     @Transactional
-    fun run(organizationId: UUID, currentUser: CurrentUser): ReconciliationResult {
+    fun run(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): ReconciliationResult {
         membershipService.requireManagerRole(organizationId, currentUser)
         val run = repository.insertRun(organizationId, currentUser.userId)
         val detected = repository.detectIssues(organizationId)
         val issues = detected.map { repository.insertIssue(run.id, organizationId, it) }
-        val completed = repository.completeRun(
-            run.id, organizationId,
-            issues.count { it.severity == ReconciliationSeverity.HIGH },
-            issues.count { it.severity == ReconciliationSeverity.MEDIUM },
-            issues.count { it.severity == ReconciliationSeverity.LOW },
-        )
+        val completed =
+            repository.completeRun(
+                run.id,
+                organizationId,
+                issues.count { it.severity == ReconciliationSeverity.HIGH },
+                issues.count { it.severity == ReconciliationSeverity.MEDIUM },
+                issues.count { it.severity == ReconciliationSeverity.LOW },
+            )
         auditService.record(
-            currentUser.userId, organizationId, "reconciliation.completed", "reconciliation_run", completed.id,
+            currentUser.userId,
+            organizationId,
+            "reconciliation.completed",
+            "reconciliation_run",
+            completed.id,
             "{\"issueCount\":${completed.issueCount},\"highCount\":${completed.highCount}}",
         )
         return ReconciliationResult(completed, issues)
     }
 
-    fun latest(organizationId: UUID, currentUser: CurrentUser): ReconciliationResult? {
+    fun latest(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): ReconciliationResult? {
         membershipService.requireManagerRole(organizationId, currentUser)
         val run = repository.latestRun(organizationId) ?: return null
         return ReconciliationResult(run, repository.listIssues(organizationId, run.id))
     }
 
-    fun get(organizationId: UUID, runId: UUID, currentUser: CurrentUser): ReconciliationResult {
+    fun get(
+        organizationId: UUID,
+        runId: UUID,
+        currentUser: CurrentUser,
+    ): ReconciliationResult {
         membershipService.requireManagerRole(organizationId, currentUser)
-        val run = repository.findRun(organizationId, runId)
-            ?: throw NotFoundException("RECONCILIATION_RUN_NOT_FOUND", "The reconciliation run could not be found.")
+        val run =
+            repository.findRun(organizationId, runId)
+                ?: throw NotFoundException("RECONCILIATION_RUN_NOT_FOUND", "The reconciliation run could not be found.")
         return ReconciliationResult(run, repository.listIssues(organizationId, run.id))
     }
 
-    fun list(organizationId: UUID, offset: Int, limit: Int, currentUser: CurrentUser): List<ReconciliationRun> {
+    fun list(
+        organizationId: UUID,
+        offset: Int,
+        limit: Int,
+        currentUser: CurrentUser,
+    ): List<ReconciliationRun> {
         membershipService.requireManagerRole(organizationId, currentUser)
         return repository.listRuns(organizationId, offset.coerceAtLeast(0), limit.coerceIn(1, 100))
     }
 
-    fun count(organizationId: UUID, currentUser: CurrentUser): Long {
+    fun count(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): Long {
         membershipService.requireManagerRole(organizationId, currentUser)
         return repository.countRuns(organizationId)
     }

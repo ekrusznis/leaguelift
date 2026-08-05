@@ -23,7 +23,9 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/announcements")
-class AnnouncementController(private val service: AnnouncementService) {
+class AnnouncementController(
+    private val service: AnnouncementService,
+) {
     @GetMapping
     fun list(
         @PathVariable organizationId: UUID,
@@ -43,12 +45,22 @@ class AnnouncementController(private val service: AnnouncementService) {
         @PathVariable organizationId: UUID,
         @Valid @RequestBody request: SaveAnnouncementRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): ResponseEntity<AnnouncementResponse> = ResponseEntity.status(HttpStatus.CREATED).body(
-        service.createDraft(
-            organizationId, request.scopeType, request.scopeId, request.idempotencyKey, request.title, request.body,
-            request.audience, request.emailEnabled, request.smsEnabled, currentUser,
-        ).toResponse(),
-    )
+    ): ResponseEntity<AnnouncementResponse> =
+        ResponseEntity.status(HttpStatus.CREATED).body(
+            service
+                .createDraft(
+                    organizationId,
+                    request.scopeType,
+                    request.scopeId,
+                    request.idempotencyKey,
+                    request.title,
+                    request.body,
+                    request.audience,
+                    request.emailEnabled,
+                    request.smsEnabled,
+                    currentUser,
+                ).toResponse(),
+        )
 
     @GetMapping("/{announcementId}")
     fun get(
@@ -63,10 +75,17 @@ class AnnouncementController(private val service: AnnouncementService) {
         @PathVariable announcementId: UUID,
         @Valid @RequestBody request: UpdateAnnouncementRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ) = service.updateDraft(
-        organizationId, announcementId, request.title, request.body, request.audience,
-        request.emailEnabled, request.smsEnabled, currentUser,
-    ).toResponse()
+    ) = service
+        .updateDraft(
+            organizationId,
+            announcementId,
+            request.title,
+            request.body,
+            request.audience,
+            request.emailEnabled,
+            request.smsEnabled,
+            currentUser,
+        ).toResponse()
 
     @PostMapping("/{announcementId}/publish")
     fun publish(
@@ -85,7 +104,9 @@ class AnnouncementController(private val service: AnnouncementService) {
 
 @RestController
 @RequestMapping("/api/v1/me/announcements")
-class MyAnnouncementController(private val service: AnnouncementService) {
+class MyAnnouncementController(
+    private val service: AnnouncementService,
+) {
     @GetMapping
     fun list(
         @RequestParam(defaultValue = "0") page: Int,
@@ -97,7 +118,10 @@ class MyAnnouncementController(private val service: AnnouncementService) {
     }
 
     @PostMapping("/{announcementId}/read")
-    fun markRead(@PathVariable announcementId: UUID, @AuthenticationPrincipal currentUser: CurrentUser): ResponseEntity<Void> {
+    fun markRead(
+        @PathVariable announcementId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): ResponseEntity<Void> {
         service.markRead(currentUser, announcementId)
         return ResponseEntity.noContent().build()
     }
@@ -105,16 +129,25 @@ class MyAnnouncementController(private val service: AnnouncementService) {
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/reminders")
-class ReminderController(private val service: ReminderService) {
+class ReminderController(
+    private val service: ReminderService,
+) {
     @PostMapping
     fun send(
         @PathVariable organizationId: UUID,
         @Valid @RequestBody request: SendReminderRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): ResponseEntity<AnnouncementResponse> = ResponseEntity.status(HttpStatus.CREATED).body(
-        service.send(
-            organizationId, request.resourceType, request.resourceId, request.idempotencyKey,
-            request.emailEnabled, request.smsEnabled, currentUser,
-        ).toResponse(),
-    )
+    ): ResponseEntity<AnnouncementResponse> =
+        ResponseEntity.status(HttpStatus.CREATED).body(
+            service
+                .send(
+                    organizationId,
+                    request.resourceType,
+                    request.resourceId,
+                    request.idempotencyKey,
+                    request.emailEnabled,
+                    request.smsEnabled,
+                    currentUser,
+                ).toResponse(),
+        )
 }

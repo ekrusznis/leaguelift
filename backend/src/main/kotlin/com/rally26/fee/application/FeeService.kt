@@ -16,10 +16,10 @@ import com.rally26.fee.domain.FeeTemplate
 import com.rally26.fee.domain.PaymentMethod
 import com.rally26.fee.domain.computeFeeBalance
 import com.rally26.fee.domain.resolveStatusAfterBalanceChange
+import com.rally26.fee.paymentplan.persistence.FeePaymentPlanRepository
 import com.rally26.fee.persistence.FeeAdjustmentRepository
 import com.rally26.fee.persistence.FeePaymentRepository
 import com.rally26.fee.persistence.FeeRepository
-import com.rally26.fee.paymentplan.persistence.FeePaymentPlanRepository
 import com.rally26.household.persistence.HouseholdRepository
 import com.rally26.membership.application.MembershipService
 import org.springframework.stereotype.Service
@@ -37,20 +37,31 @@ class FeeService(
     private val membershipService: MembershipService,
     private val auditService: AuditService,
 ) {
-
     // --- Fee Templates ---
 
-    fun listTemplates(organizationId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<FeeTemplate> {
+    fun listTemplates(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<FeeTemplate> {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return feeRepository.findAllTemplates(organizationId, offset, limit)
     }
 
-    fun countTemplates(organizationId: UUID, currentUser: CurrentUser): Long {
+    fun countTemplates(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): Long {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return feeRepository.countAllTemplates(organizationId)
     }
 
-    fun getTemplate(organizationId: UUID, templateId: UUID, currentUser: CurrentUser): FeeTemplate {
+    fun getTemplate(
+        organizationId: UUID,
+        templateId: UUID,
+        currentUser: CurrentUser,
+    ): FeeTemplate {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return feeRepository.findTemplateById(templateId, organizationId)
             ?: throw NotFoundException("FEE_TEMPLATE_NOT_FOUND", "The fee template could not be found.")
@@ -89,7 +100,11 @@ class FeeService(
     }
 
     @Transactional
-    fun archiveTemplate(organizationId: UUID, templateId: UUID, currentUser: CurrentUser) {
+    fun archiveTemplate(
+        organizationId: UUID,
+        templateId: UUID,
+        currentUser: CurrentUser,
+    ) {
         membershipService.requireManagerRole(organizationId, currentUser)
         val rows = feeRepository.archiveTemplate(templateId, organizationId)
         if (rows == 0) throw NotFoundException("FEE_TEMPLATE_NOT_FOUND", "The fee template could not be found.")
@@ -98,24 +113,39 @@ class FeeService(
 
     // --- Fee Assignments ---
 
-    fun listForHousehold(organizationId: UUID, householdId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<FeeAssignmentWithBalance> {
+    fun listForHousehold(
+        organizationId: UUID,
+        householdId: UUID,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<FeeAssignmentWithBalance> {
         membershipService.requireActiveMembership(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
         return feeRepository.findByHousehold(householdId, organizationId, offset, limit).map(::withBalance)
     }
 
-    fun countForHousehold(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): Long {
+    fun countForHousehold(
+        organizationId: UUID,
+        householdId: UUID,
+        currentUser: CurrentUser,
+    ): Long {
         membershipService.requireActiveMembership(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
         return feeRepository.countByHousehold(householdId, organizationId)
     }
 
-    fun getAssignment(organizationId: UUID, assignmentId: UUID, currentUser: CurrentUser): FeeAssignmentWithBalance {
+    fun getAssignment(
+        organizationId: UUID,
+        assignmentId: UUID,
+        currentUser: CurrentUser,
+    ): FeeAssignmentWithBalance {
         membershipService.requireActiveMembership(organizationId, currentUser)
-        val assignment = feeRepository.findAssignmentById(assignmentId, organizationId)
-            ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
+        val assignment =
+            feeRepository.findAssignmentById(assignmentId, organizationId)
+                ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
         return withBalance(assignment)
     }
 
@@ -134,7 +164,17 @@ class FeeService(
         membershipService.requireManagerRole(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
-        val assignment = feeRepository.insertAssignment(organizationId, householdId, participantId, feeTemplateId, description, originalAmountMinor, currency, dueDate)
+        val assignment =
+            feeRepository.insertAssignment(
+                organizationId,
+                householdId,
+                participantId,
+                feeTemplateId,
+                description,
+                originalAmountMinor,
+                currency,
+                dueDate,
+            )
         auditService.record(currentUser.userId, organizationId, "fee_assignment.created", "fee_assignment", assignment.id)
         return withBalance(assignment)
     }
@@ -172,9 +212,22 @@ class FeeService(
         val currentAdjusted = feeAdjustmentRepository.sumActiveByAssignment(assignment.id, organizationId)
         val currentBalance = (assignment.originalAmountMinor - currentPaid - currentAdjusted).coerceAtLeast(0)
         if (amountMinor <= 0 || amountMinor > currentBalance) {
-            throw ValidationException("Payment amount must be between 1 and the current outstanding balance of $currentBalance minor units.")
+            throw ValidationException(
+                "Payment amount must be between 1 and the current outstanding balance of $currentBalance minor units.",
+            )
         }
-        val payment = feePaymentRepository.insert(organizationId, assignmentId, assignment.householdId, amountMinor, assignment.currency, method, paidAt, note, currentUser.userId)
+        val payment =
+            feePaymentRepository.insert(
+                organizationId,
+                assignmentId,
+                assignment.householdId,
+                amountMinor,
+                assignment.currency,
+                method,
+                paidAt,
+                note,
+                currentUser.userId,
+            )
         allocateToActivePlan(organizationId, assignmentId, payment.id, amountMinor)
         val result = recomputeStatus(organizationId, assignment)
         auditService.record(currentUser.userId, organizationId, "fee_assignment.payment_recorded", "fee_assignment", assignmentId)
@@ -182,13 +235,22 @@ class FeeService(
     }
 
     @Transactional
-    fun voidPayment(organizationId: UUID, assignmentId: UUID, paymentId: UUID, voidReason: String, currentUser: CurrentUser): FeeAssignmentWithBalance {
+    fun voidPayment(
+        organizationId: UUID,
+        assignmentId: UUID,
+        paymentId: UUID,
+        voidReason: String,
+        currentUser: CurrentUser,
+    ): FeeAssignmentWithBalance {
         membershipService.requireManagerRole(organizationId, currentUser)
-        val assignment = feeRepository.findAssignmentById(assignmentId, organizationId)
-            ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
-        val payment = feePaymentRepository.findById(paymentId, organizationId)
-            ?.takeIf { it.feeAssignmentId == assignmentId }
-            ?: throw NotFoundException("FEE_PAYMENT_NOT_FOUND", "The payment could not be found.")
+        val assignment =
+            feeRepository.findAssignmentById(assignmentId, organizationId)
+                ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
+        val payment =
+            feePaymentRepository
+                .findById(paymentId, organizationId)
+                ?.takeIf { it.feeAssignmentId == assignmentId }
+                ?: throw NotFoundException("FEE_PAYMENT_NOT_FOUND", "The payment could not be found.")
         if (payment.isVoided) throw ValidationException("This payment has already been voided.")
         feePaymentRepository.void(paymentId, organizationId, currentUser.userId, voidReason)
         feePaymentPlanRepository.findLatestByAssignment(organizationId, assignmentId)?.let {
@@ -199,7 +261,11 @@ class FeeService(
         return result
     }
 
-    fun listPayments(organizationId: UUID, assignmentId: UUID, currentUser: CurrentUser): List<FeePayment> {
+    fun listPayments(
+        organizationId: UUID,
+        assignmentId: UUID,
+        currentUser: CurrentUser,
+    ): List<FeePayment> {
         membershipService.requireActiveMembership(organizationId, currentUser)
         feeRepository.findAssignmentById(assignmentId, organizationId)
             ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
@@ -222,20 +288,38 @@ class FeeService(
         if (feePaymentPlanRepository.findActiveByAssignment(organizationId, assignmentId) != null) {
             throw ValidationException("Cancel and recreate the active payment plan before applying an adjustment.")
         }
-        feeAdjustmentRepository.insert(organizationId, assignmentId, assignment.householdId, adjustmentType, amountMinor, assignment.currency, reason, currentUser.userId)
+        feeAdjustmentRepository.insert(
+            organizationId,
+            assignmentId,
+            assignment.householdId,
+            adjustmentType,
+            amountMinor,
+            assignment.currency,
+            reason,
+            currentUser.userId,
+        )
         val result = recomputeStatus(organizationId, assignment)
         auditService.record(currentUser.userId, organizationId, "fee_assignment.adjustment_applied", "fee_assignment", assignmentId)
         return result
     }
 
     @Transactional
-    fun voidAdjustment(organizationId: UUID, assignmentId: UUID, adjustmentId: UUID, voidReason: String, currentUser: CurrentUser): FeeAssignmentWithBalance {
+    fun voidAdjustment(
+        organizationId: UUID,
+        assignmentId: UUID,
+        adjustmentId: UUID,
+        voidReason: String,
+        currentUser: CurrentUser,
+    ): FeeAssignmentWithBalance {
         membershipService.requireManagerRole(organizationId, currentUser)
-        val assignment = feeRepository.findAssignmentById(assignmentId, organizationId)
-            ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
-        val adjustment = feeAdjustmentRepository.findById(adjustmentId, organizationId)
-            ?.takeIf { it.feeAssignmentId == assignmentId }
-            ?: throw NotFoundException("FEE_ADJUSTMENT_NOT_FOUND", "The adjustment could not be found.")
+        val assignment =
+            feeRepository.findAssignmentById(assignmentId, organizationId)
+                ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
+        val adjustment =
+            feeAdjustmentRepository
+                .findById(adjustmentId, organizationId)
+                ?.takeIf { it.feeAssignmentId == assignmentId }
+                ?: throw NotFoundException("FEE_ADJUSTMENT_NOT_FOUND", "The adjustment could not be found.")
         if (adjustment.isVoided) throw ValidationException("This adjustment has already been voided.")
         if (feePaymentPlanRepository.findActiveByAssignment(organizationId, assignmentId) != null) {
             throw ValidationException("Cancel and recreate the active payment plan before voiding an adjustment.")
@@ -246,7 +330,11 @@ class FeeService(
         return result
     }
 
-    fun listAdjustments(organizationId: UUID, assignmentId: UUID, currentUser: CurrentUser): List<FeeAdjustment> {
+    fun listAdjustments(
+        organizationId: UUID,
+        assignmentId: UUID,
+        currentUser: CurrentUser,
+    ): List<FeeAdjustment> {
         membershipService.requireActiveMembership(organizationId, currentUser)
         feeRepository.findAssignmentById(assignmentId, organizationId)
             ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
@@ -267,13 +355,23 @@ class FeeService(
         return feeRepository.findAllForOrganization(organizationId, status, overdueOnly, offset, limit)
     }
 
-    fun countForOrganization(organizationId: UUID, status: FeeAssignmentStatus?, overdueOnly: Boolean, currentUser: CurrentUser): Long {
+    fun countForOrganization(
+        organizationId: UUID,
+        status: FeeAssignmentStatus?,
+        overdueOnly: Boolean,
+        currentUser: CurrentUser,
+    ): Long {
         membershipService.requireManagerRole(organizationId, currentUser)
         return feeRepository.countAllForOrganization(organizationId, status, overdueOnly)
     }
 
     /** Capped at 5000 rows — a hard export size ceiling, not pagination; revisit if a real org ever needs more. */
-    fun exportCollectionsCsv(organizationId: UUID, status: FeeAssignmentStatus?, overdueOnly: Boolean, currentUser: CurrentUser): String {
+    fun exportCollectionsCsv(
+        organizationId: UUID,
+        status: FeeAssignmentStatus?,
+        overdueOnly: Boolean,
+        currentUser: CurrentUser,
+    ): String {
         membershipService.requireManagerRole(organizationId, currentUser)
         val rows = feeRepository.findAllForOrganization(organizationId, status, overdueOnly, 0, 5000)
         return buildCsv(rows)
@@ -281,9 +379,13 @@ class FeeService(
 
     // --- Internal helpers ---
 
-    private fun requireOpenAssignment(organizationId: UUID, assignmentId: UUID): FeeAssignment {
-        val assignment = feeRepository.findAssignmentById(assignmentId, organizationId)
-            ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
+    private fun requireOpenAssignment(
+        organizationId: UUID,
+        assignmentId: UUID,
+    ): FeeAssignment {
+        val assignment =
+            feeRepository.findAssignmentById(assignmentId, organizationId)
+                ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
         if (assignment.status == FeeAssignmentStatus.WAIVED || assignment.status == FeeAssignmentStatus.CANCELLED) {
             throw ValidationException("Cannot record a payment or adjustment against a ${assignment.status} fee.")
         }
@@ -296,7 +398,10 @@ class FeeService(
         return FeeAssignmentWithBalance(assignment, computeFeeBalance(assignment.originalAmountMinor, paid, adjusted))
     }
 
-    private fun recomputeStatus(organizationId: UUID, assignment: FeeAssignment): FeeAssignmentWithBalance {
+    private fun recomputeStatus(
+        organizationId: UUID,
+        assignment: FeeAssignment,
+    ): FeeAssignmentWithBalance {
         val paid = feePaymentRepository.sumActiveByAssignment(assignment.id, organizationId)
         val adjusted = feeAdjustmentRepository.sumActiveByAssignment(assignment.id, organizationId)
         val balance = computeFeeBalance(assignment.originalAmountMinor, paid, adjusted)
@@ -308,7 +413,12 @@ class FeeService(
         return FeeAssignmentWithBalance(finalAssignment, balance)
     }
 
-    private fun allocateToActivePlan(organizationId: UUID, assignmentId: UUID, paymentId: UUID, amountMinor: Long) {
+    private fun allocateToActivePlan(
+        organizationId: UUID,
+        assignmentId: UUID,
+        paymentId: UUID,
+        amountMinor: Long,
+    ) {
         val plan = feePaymentPlanRepository.findActiveByAssignment(organizationId, assignmentId) ?: return
         var remaining = amountMinor
         for (installment in feePaymentPlanRepository.listInstallments(organizationId, plan.id)) {
@@ -326,21 +436,23 @@ class FeeService(
     }
 
     private fun buildCsv(rows: List<FeeAssignmentSummary>): String {
-        val header = listOf("Household", "Participant", "Description", "Original", "Paid", "Adjusted", "Balance", "Currency", "Due Date", "Status")
+        val header =
+            listOf("Household", "Participant", "Description", "Original", "Paid", "Adjusted", "Balance", "Currency", "Due Date", "Status")
         val lines = mutableListOf(header.joinToString(",") { CsvUtil.escape(it) })
         for (row in rows) {
-            lines += listOf(
-                row.householdName,
-                row.participantName ?: "",
-                row.description,
-                CsvUtil.formatMinor(row.originalAmountMinor),
-                CsvUtil.formatMinor(row.paidMinor),
-                CsvUtil.formatMinor(row.adjustedMinor),
-                CsvUtil.formatMinor(row.balance.balanceMinor),
-                row.currency,
-                row.dueDate?.toString() ?: "",
-                row.status.name,
-            ).joinToString(",") { CsvUtil.escape(it) }
+            lines +=
+                listOf(
+                    row.householdName,
+                    row.participantName ?: "",
+                    row.description,
+                    CsvUtil.formatMinor(row.originalAmountMinor),
+                    CsvUtil.formatMinor(row.paidMinor),
+                    CsvUtil.formatMinor(row.adjustedMinor),
+                    CsvUtil.formatMinor(row.balance.balanceMinor),
+                    row.currency,
+                    row.dueDate?.toString() ?: "",
+                    row.status.name,
+                ).joinToString(",") { CsvUtil.escape(it) }
         }
         return lines.joinToString("\r\n")
     }

@@ -32,187 +32,232 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}")
 class SponsorshipPackageController(
-	private val sponsorshipPackageService: SponsorshipPackageService,
-	private val sponsorshipService: SponsorshipService,
-	private val mediaReadService: MediaReadService,
+    private val sponsorshipPackageService: SponsorshipPackageService,
+    private val sponsorshipService: SponsorshipService,
+    private val mediaReadService: MediaReadService,
 ) {
+    @GetMapping("/sponsorship-packages")
+    fun list(
+        @PathVariable organizationId: UUID,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PageResponse<SponsorshipPackageResponse> {
+        val offset = page * size
+        val items =
+            sponsorshipPackageService
+                .list(organizationId, currentUser, offset, size)
+                .map { it.toResponse(sponsorshipService.getConfirmedCount(it.id)) }
+        val total = sponsorshipPackageService.count(organizationId, currentUser)
+        return PageResponse(items, page, size, total)
+    }
 
-	@GetMapping("/sponsorship-packages")
-	fun list(
-		@PathVariable organizationId: UUID,
-		@RequestParam(defaultValue = "0") page: Int,
-		@RequestParam(defaultValue = "20") size: Int,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): PageResponse<SponsorshipPackageResponse> {
-		val offset = page * size
-		val items = sponsorshipPackageService.list(organizationId, currentUser, offset, size)
-			.map { it.toResponse(sponsorshipService.getConfirmedCount(it.id)) }
-		val total = sponsorshipPackageService.count(organizationId, currentUser)
-		return PageResponse(items, page, size, total)
-	}
+    @PostMapping("/sponsorship-packages")
+    fun create(
+        @PathVariable organizationId: UUID,
+        @Valid @RequestBody request: CreateSponsorshipPackageRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): ResponseEntity<SponsorshipPackageResponse> {
+        val sponsorshipPackage =
+            sponsorshipPackageService.create(
+                organizationId,
+                request.name,
+                request.description,
+                request.priceMinor,
+                request.currency,
+                request.maxQuantity,
+                request.exclusive,
+                request.placementStartDate,
+                request.placementEndDate,
+                currentUser,
+            )
+        return ResponseEntity.status(HttpStatus.CREATED).body(sponsorshipPackage.toResponse(confirmedCount = 0))
+    }
 
-	@PostMapping("/sponsorship-packages")
-	fun create(
-		@PathVariable organizationId: UUID,
-		@Valid @RequestBody request: CreateSponsorshipPackageRequest,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): ResponseEntity<SponsorshipPackageResponse> {
-		val sponsorshipPackage = sponsorshipPackageService.create(
-			organizationId, request.name, request.description, request.priceMinor, request.currency,
-			request.maxQuantity, request.exclusive, request.placementStartDate, request.placementEndDate, currentUser,
-		)
-		return ResponseEntity.status(HttpStatus.CREATED).body(sponsorshipPackage.toResponse(confirmedCount = 0))
-	}
+    @GetMapping("/sponsorship-packages/{packageId}")
+    fun get(
+        @PathVariable organizationId: UUID,
+        @PathVariable packageId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): SponsorshipPackageResponse {
+        val sponsorshipPackage = sponsorshipPackageService.get(organizationId, packageId, currentUser)
+        return sponsorshipPackage.toResponse(sponsorshipService.getConfirmedCount(sponsorshipPackage.id))
+    }
 
-	@GetMapping("/sponsorship-packages/{packageId}")
-	fun get(
-		@PathVariable organizationId: UUID,
-		@PathVariable packageId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): SponsorshipPackageResponse {
-		val sponsorshipPackage = sponsorshipPackageService.get(organizationId, packageId, currentUser)
-		return sponsorshipPackage.toResponse(sponsorshipService.getConfirmedCount(sponsorshipPackage.id))
-	}
+    @PatchMapping("/sponsorship-packages/{packageId}")
+    fun update(
+        @PathVariable organizationId: UUID,
+        @PathVariable packageId: UUID,
+        @Valid @RequestBody request: UpdateSponsorshipPackageRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): SponsorshipPackageResponse {
+        val sponsorshipPackage =
+            sponsorshipPackageService.update(
+                organizationId,
+                packageId,
+                request.name,
+                request.description,
+                request.priceMinor,
+                request.maxQuantity,
+                request.exclusive,
+                request.placementStartDate,
+                request.placementEndDate,
+                currentUser,
+            )
+        return sponsorshipPackage.toResponse(sponsorshipService.getConfirmedCount(sponsorshipPackage.id))
+    }
 
-	@PatchMapping("/sponsorship-packages/{packageId}")
-	fun update(
-		@PathVariable organizationId: UUID,
-		@PathVariable packageId: UUID,
-		@Valid @RequestBody request: UpdateSponsorshipPackageRequest,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): SponsorshipPackageResponse {
-		val sponsorshipPackage = sponsorshipPackageService.update(
-			organizationId, packageId, request.name, request.description, request.priceMinor,
-			request.maxQuantity, request.exclusive, request.placementStartDate, request.placementEndDate, currentUser,
-		)
-		return sponsorshipPackage.toResponse(sponsorshipService.getConfirmedCount(sponsorshipPackage.id))
-	}
+    @PostMapping("/sponsorship-packages/{packageId}/publish")
+    fun publish(
+        @PathVariable organizationId: UUID,
+        @PathVariable packageId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): SponsorshipPackageResponse {
+        val sponsorshipPackage = sponsorshipPackageService.publish(organizationId, packageId, currentUser)
+        return sponsorshipPackage.toResponse(sponsorshipService.getConfirmedCount(sponsorshipPackage.id))
+    }
 
-	@PostMapping("/sponsorship-packages/{packageId}/publish")
-	fun publish(
-		@PathVariable organizationId: UUID,
-		@PathVariable packageId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): SponsorshipPackageResponse {
-		val sponsorshipPackage = sponsorshipPackageService.publish(organizationId, packageId, currentUser)
-		return sponsorshipPackage.toResponse(sponsorshipService.getConfirmedCount(sponsorshipPackage.id))
-	}
+    @PatchMapping("/sponsorship-packages/{packageId}/status")
+    fun updateStatus(
+        @PathVariable organizationId: UUID,
+        @PathVariable packageId: UUID,
+        @Valid @RequestBody request: UpdateSponsorshipPackageStatusRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): SponsorshipPackageResponse {
+        val sponsorshipPackage = sponsorshipPackageService.updateStatus(organizationId, packageId, request.status, currentUser)
+        return sponsorshipPackage.toResponse(sponsorshipService.getConfirmedCount(sponsorshipPackage.id))
+    }
 
-	@PatchMapping("/sponsorship-packages/{packageId}/status")
-	fun updateStatus(
-		@PathVariable organizationId: UUID,
-		@PathVariable packageId: UUID,
-		@Valid @RequestBody request: UpdateSponsorshipPackageStatusRequest,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): SponsorshipPackageResponse {
-		val sponsorshipPackage = sponsorshipPackageService.updateStatus(organizationId, packageId, request.status, currentUser)
-		return sponsorshipPackage.toResponse(sponsorshipService.getConfirmedCount(sponsorshipPackage.id))
-	}
+    @GetMapping("/sponsorship-packages/{packageId}/sponsorships")
+    fun listSponsorships(
+        @PathVariable organizationId: UUID,
+        @PathVariable packageId: UUID,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PageResponse<SponsorshipResponse> {
+        val offset = page * size
+        val items = sponsorshipService.listConfirmed(organizationId, packageId, currentUser, offset, size).map { it.toResponse() }
+        val total = sponsorshipService.getConfirmedCount(packageId)
+        return PageResponse(items, page, size, total)
+    }
 
-	@GetMapping("/sponsorship-packages/{packageId}/sponsorships")
-	fun listSponsorships(
-		@PathVariable organizationId: UUID,
-		@PathVariable packageId: UUID,
-		@RequestParam(defaultValue = "0") page: Int,
-		@RequestParam(defaultValue = "20") size: Int,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): PageResponse<SponsorshipResponse> {
-		val offset = page * size
-		val items = sponsorshipService.listConfirmed(organizationId, packageId, currentUser, offset, size).map { it.toResponse() }
-		val total = sponsorshipService.getConfirmedCount(packageId)
-		return PageResponse(items, page, size, total)
-	}
+    @PutMapping("/sponsors/{sponsorId}/logo")
+    fun assignSponsorLogo(
+        @PathVariable organizationId: UUID,
+        @PathVariable sponsorId: UUID,
+        @Valid @RequestBody request: AssignSponsorLogoRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): MediaAssignmentResponse {
+        val assignment =
+            sponsorshipPackageService.assignSponsorLogo(
+                organizationId,
+                sponsorId,
+                request.assetId,
+                request.altText,
+                currentUser,
+            )
+        val descriptor =
+            mediaReadService.describe(assignment)
+                ?: error("Newly assigned sponsor logo asset ${assignment.assetId} must exist.")
+        return descriptor.toResponse()
+    }
 
-	@PutMapping("/sponsors/{sponsorId}/logo")
-	fun assignSponsorLogo(
-		@PathVariable organizationId: UUID,
-		@PathVariable sponsorId: UUID,
-		@Valid @RequestBody request: AssignSponsorLogoRequest,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): MediaAssignmentResponse {
-		val assignment = sponsorshipPackageService.assignSponsorLogo(organizationId, sponsorId, request.assetId, request.altText, currentUser)
-		val descriptor = mediaReadService.describe(assignment)
-			?: error("Newly assigned sponsor logo asset ${assignment.assetId} must exist.")
-		return descriptor.toResponse()
-	}
+    // ---- Sponsor-contact CRM (Phase 6 remainder, ADR-019) ----
 
-	// ---- Sponsor-contact CRM (Phase 6 remainder, ADR-019) ----
+    @GetMapping("/sponsors/{sponsorId}")
+    fun getSponsor(
+        @PathVariable organizationId: UUID,
+        @PathVariable sponsorId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): SponsorResponse = sponsorshipPackageService.getSponsor(organizationId, sponsorId, currentUser).toResponse()
 
-	@GetMapping("/sponsors/{sponsorId}")
-	fun getSponsor(
-		@PathVariable organizationId: UUID,
-		@PathVariable sponsorId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): SponsorResponse = sponsorshipPackageService.getSponsor(organizationId, sponsorId, currentUser).toResponse()
+    @PatchMapping("/sponsors/{sponsorId}")
+    fun updateSponsor(
+        @PathVariable organizationId: UUID,
+        @PathVariable sponsorId: UUID,
+        @Valid @RequestBody request: UpdateSponsorRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): SponsorResponse =
+        sponsorshipPackageService
+            .updateSponsor(
+                organizationId,
+                sponsorId,
+                request.name,
+                request.contactEmail,
+                request.phone,
+                request.companyName,
+                request.notes,
+                currentUser,
+            ).toResponse()
 
-	@PatchMapping("/sponsors/{sponsorId}")
-	fun updateSponsor(
-		@PathVariable organizationId: UUID,
-		@PathVariable sponsorId: UUID,
-		@Valid @RequestBody request: UpdateSponsorRequest,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): SponsorResponse = sponsorshipPackageService.updateSponsor(
-		organizationId, sponsorId, request.name, request.contactEmail, request.phone, request.companyName, request.notes, currentUser,
-	).toResponse()
+    // ---- Approval workflow, refunds, invoices (Phase 6 remainder, ADR-019) ----
 
-	// ---- Approval workflow, refunds, invoices (Phase 6 remainder, ADR-019) ----
+    @GetMapping("/sponsorships/pending-review")
+    fun listPendingReview(
+        @PathVariable organizationId: UUID,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PageResponse<SponsorshipResponse> {
+        val offset = page * size
+        val items = sponsorshipService.listPendingReview(organizationId, currentUser, offset, size).map { it.toResponse() }
+        val total = sponsorshipService.countPendingReview(organizationId, currentUser)
+        return PageResponse(items, page, size, total)
+    }
 
-	@GetMapping("/sponsorships/pending-review")
-	fun listPendingReview(
-		@PathVariable organizationId: UUID,
-		@RequestParam(defaultValue = "0") page: Int,
-		@RequestParam(defaultValue = "20") size: Int,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): PageResponse<SponsorshipResponse> {
-		val offset = page * size
-		val items = sponsorshipService.listPendingReview(organizationId, currentUser, offset, size).map { it.toResponse() }
-		val total = sponsorshipService.countPendingReview(organizationId, currentUser)
-		return PageResponse(items, page, size, total)
-	}
+    @PostMapping("/sponsorships/{sponsorshipId}/approve")
+    fun approveSponsorship(
+        @PathVariable organizationId: UUID,
+        @PathVariable sponsorshipId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): SponsorshipResponse {
+        val sponsorship = sponsorshipService.approve(organizationId, sponsorshipId, currentUser)
+        return SponsorshipWithSponsor(
+            sponsorship,
+            sponsorshipPackageService.getSponsor(organizationId, sponsorship.sponsorId, currentUser),
+        ).toResponse()
+    }
 
-	@PostMapping("/sponsorships/{sponsorshipId}/approve")
-	fun approveSponsorship(
-		@PathVariable organizationId: UUID,
-		@PathVariable sponsorshipId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): SponsorshipResponse {
-		val sponsorship = sponsorshipService.approve(organizationId, sponsorshipId, currentUser)
-		return SponsorshipWithSponsor(sponsorship, sponsorshipPackageService.getSponsor(organizationId, sponsorship.sponsorId, currentUser)).toResponse()
-	}
+    @PostMapping("/sponsorships/{sponsorshipId}/reject")
+    fun rejectSponsorship(
+        @PathVariable organizationId: UUID,
+        @PathVariable sponsorshipId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): SponsorshipResponse {
+        val sponsorship = sponsorshipService.reject(organizationId, sponsorshipId, currentUser)
+        return SponsorshipWithSponsor(
+            sponsorship,
+            sponsorshipPackageService.getSponsor(organizationId, sponsorship.sponsorId, currentUser),
+        ).toResponse()
+    }
 
-	@PostMapping("/sponsorships/{sponsorshipId}/reject")
-	fun rejectSponsorship(
-		@PathVariable organizationId: UUID,
-		@PathVariable sponsorshipId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): SponsorshipResponse {
-		val sponsorship = sponsorshipService.reject(organizationId, sponsorshipId, currentUser)
-		return SponsorshipWithSponsor(sponsorship, sponsorshipPackageService.getSponsor(organizationId, sponsorship.sponsorId, currentUser)).toResponse()
-	}
+    @PostMapping("/sponsorships/{sponsorshipId}/refund")
+    fun refundSponsorship(
+        @PathVariable organizationId: UUID,
+        @PathVariable sponsorshipId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): SponsorshipResponse {
+        val sponsorship = sponsorshipService.refund(organizationId, sponsorshipId, currentUser)
+        return SponsorshipWithSponsor(
+            sponsorship,
+            sponsorshipPackageService.getSponsor(organizationId, sponsorship.sponsorId, currentUser),
+        ).toResponse()
+    }
 
-	@PostMapping("/sponsorships/{sponsorshipId}/refund")
-	fun refundSponsorship(
-		@PathVariable organizationId: UUID,
-		@PathVariable sponsorshipId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): SponsorshipResponse {
-		val sponsorship = sponsorshipService.refund(organizationId, sponsorshipId, currentUser)
-		return SponsorshipWithSponsor(sponsorship, sponsorshipPackageService.getSponsor(organizationId, sponsorship.sponsorId, currentUser)).toResponse()
-	}
+    @GetMapping("/sponsorships/{sponsorshipId}/invoice")
+    fun getInvoice(
+        @PathVariable organizationId: UUID,
+        @PathVariable sponsorshipId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): SponsorshipInvoiceResponse = sponsorshipService.getInvoice(organizationId, sponsorshipId, currentUser).toResponse()
 
-	@GetMapping("/sponsorships/{sponsorshipId}/invoice")
-	fun getInvoice(
-		@PathVariable organizationId: UUID,
-		@PathVariable sponsorshipId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): SponsorshipInvoiceResponse = sponsorshipService.getInvoice(organizationId, sponsorshipId, currentUser).toResponse()
+    // ---- QR/link sharing (Phase 6 remainder, ADR-019 — no click-through tracking) ----
 
-	// ---- QR/link sharing (Phase 6 remainder, ADR-019 — no click-through tracking) ----
-
-	@GetMapping("/sponsorship-packages/qr-code")
-	fun getShareLinkQrCode(
-		@PathVariable organizationId: UUID,
-		@RequestParam url: String,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): ShareLinkResponse = ShareLinkResponse(url, sponsorshipPackageService.buildShareLink(organizationId, url, currentUser))
+    @GetMapping("/sponsorship-packages/qr-code")
+    fun getShareLinkQrCode(
+        @PathVariable organizationId: UUID,
+        @RequestParam url: String,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): ShareLinkResponse = ShareLinkResponse(url, sponsorshipPackageService.buildShareLink(organizationId, url, currentUser))
 }

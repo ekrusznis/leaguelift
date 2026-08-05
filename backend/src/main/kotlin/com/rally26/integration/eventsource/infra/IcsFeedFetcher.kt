@@ -12,13 +12,13 @@ import org.springframework.web.client.RestClient
  */
 @Component
 class IcsFeedFetcher {
+    private val restClient = RestClient.create()
 
-	private val restClient = RestClient.create()
-
-	fun fetch(feedUrl: String): String =
-		restClient.get()
-			.uri(feedUrl)
-			.retrieve()
-			.body(String::class.java)
-			?: throw IllegalStateException("The feed returned an empty response.")
+    fun fetch(feedUrl: String): String =
+        restClient
+            .get()
+            .uri(feedUrl)
+            .retrieve()
+            .body(String::class.java)
+            ?: throw IllegalStateException("The feed returned an empty response.")
 }

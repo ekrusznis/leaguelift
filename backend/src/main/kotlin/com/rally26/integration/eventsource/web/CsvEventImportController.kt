@@ -15,14 +15,13 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/events")
 class CsvEventImportController(
-	private val csvEventImportService: CsvEventImportService,
+    private val csvEventImportService: CsvEventImportService,
 ) {
-
-	@PostMapping("/csv-import")
-	fun importCsv(
-		@PathVariable organizationId: UUID,
-		@Valid @RequestBody request: CsvImportRequest,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): CsvImportResponse =
-		csvEventImportService.import(organizationId, request.teamId, request.timezone, request.csvContent, currentUser).toResponse()
+    @PostMapping("/csv-import")
+    fun importCsv(
+        @PathVariable organizationId: UUID,
+        @Valid @RequestBody request: CsvImportRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): CsvImportResponse =
+        csvEventImportService.import(organizationId, request.teamId, request.timezone, request.csvContent, currentUser).toResponse()
 }

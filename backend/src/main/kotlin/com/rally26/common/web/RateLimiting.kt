@@ -22,25 +22,33 @@ import java.util.concurrent.ConcurrentHashMap
  * is ever horizontally scaled beyond the single droplet ADR-008 describes. Acceptable at
  * this stage; revisit (e.g. move to Redis) if that changes.
  */
-class SlidingWindowRateLimiter(private val windowSeconds: Long, private val maxRequests: Int) {
+class SlidingWindowRateLimiter(
+    private val windowSeconds: Long,
+    private val maxRequests: Int,
+) {
+    private class Window(
+        @Volatile var windowStart: Instant,
+        @Volatile var count: Int,
+    )
 
-	private class Window(@Volatile var windowStart: Instant, @Volatile var count: Int)
+    private val hits = ConcurrentHashMap<String, Window>()
 
-	private val hits = ConcurrentHashMap<String, Window>()
-
-	/** Records one request against [key] and returns true if [key] is still within the allowed rate. */
-	fun tryAcquire(key: String): Boolean {
-		val now = Instant.now()
-		val count = hits.compute(key) { _, existing ->
-			if (existing == null || existing.windowStart.plusSeconds(windowSeconds).isBefore(now)) {
-				Window(now, 1)
-			} else {
-				existing.count += 1
-				existing
-			}
-		}!!.count
-		return count <= maxRequests
-	}
+    /** Records one request against [key] and returns true if [key] is still within the allowed rate. */
+    fun tryAcquire(key: String): Boolean {
+        val now = Instant.now()
+        val count =
+            hits
+                .compute(key) { _, existing ->
+                    if (existing == null || existing.windowStart.plusSeconds(windowSeconds).isBefore(now)) {
+                        Window(now, 1)
+                    } else {
+                        existing.count += 1
+                        existing
+                    }
+                }!!
+                .count
+        return count <= maxRequests
+    }
 }
 
 /**
@@ -50,18 +58,29 @@ class SlidingWindowRateLimiter(private val windowSeconds: Long, private val maxR
  * Caddy's own container IP on the compose network, making IP-keyed rate limiting useless.
  */
 fun resolveClientIp(request: HttpServletRequest): String =
-	request.getHeader("X-Forwarded-For")?.split(",")?.firstOrNull()?.trim()?.takeIf { it.isNotBlank() }
-		?: request.remoteAddr
+    request
+        .getHeader("X-Forwarded-For")
+        ?.split(",")
+        ?.firstOrNull()
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+        ?: request.remoteAddr
 
 /** Writes the standard 429 error envelope, matching [com.rally26.common.error.GlobalExceptionHandler]'s shape even though this runs in a filter, outside that advice's reach. */
-fun writeRateLimitedResponse(response: HttpServletResponse, objectMapper: ObjectMapper, requestIdProvider: RequestIdProvider, message: String) {
-	response.status = HttpStatus.TOO_MANY_REQUESTS.value()
-	response.contentType = MediaType.APPLICATION_JSON_VALUE
-	response.characterEncoding = "UTF-8"
-	val body = ErrorResponse(
-		code = "RATE_LIMITED",
-		message = message,
-		requestId = requestIdProvider.currentRequestId(),
-	)
-	response.writer.write(objectMapper.writeValueAsString(body))
+fun writeRateLimitedResponse(
+    response: HttpServletResponse,
+    objectMapper: ObjectMapper,
+    requestIdProvider: RequestIdProvider,
+    message: String,
+) {
+    response.status = HttpStatus.TOO_MANY_REQUESTS.value()
+    response.contentType = MediaType.APPLICATION_JSON_VALUE
+    response.characterEncoding = "UTF-8"
+    val body =
+        ErrorResponse(
+            code = "RATE_LIMITED",
+            message = message,
+            requestId = requestIdProvider.currentRequestId(),
+        )
+    response.writer.write(objectMapper.writeValueAsString(body))
 }

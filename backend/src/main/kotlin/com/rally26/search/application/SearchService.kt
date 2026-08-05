@@ -22,23 +22,29 @@ private const val RESULTS_PER_CATEGORY = 8
  */
 @Service
 class SearchService(
-	private val searchRepository: SearchRepository,
-	private val membershipService: MembershipService,
+    private val searchRepository: SearchRepository,
+    private val membershipService: MembershipService,
 ) {
+    fun searchOrganization(
+        organizationId: UUID,
+        query: String,
+        currentUser: CurrentUser,
+    ): List<SearchHit> {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        if (query.trim().length < MIN_QUERY_LENGTH) return emptyList()
+        return searchRepository.searchTeams(organizationId, query, RESULTS_PER_CATEGORY) +
+            searchRepository.searchParticipants(organizationId, query, RESULTS_PER_CATEGORY) +
+            searchRepository.searchHouseholds(organizationId, query, RESULTS_PER_CATEGORY)
+    }
 
-	fun searchOrganization(organizationId: UUID, query: String, currentUser: CurrentUser): List<SearchHit> {
-		membershipService.requireActiveMembership(organizationId, currentUser)
-		if (query.trim().length < MIN_QUERY_LENGTH) return emptyList()
-		return searchRepository.searchTeams(organizationId, query, RESULTS_PER_CATEGORY) +
-			searchRepository.searchParticipants(organizationId, query, RESULTS_PER_CATEGORY) +
-			searchRepository.searchHouseholds(organizationId, query, RESULTS_PER_CATEGORY)
-	}
-
-	fun searchPlatform(query: String, currentUser: CurrentUser): List<SearchHit> {
-		if (!currentUser.platformAdministrator) {
-			throw ForbiddenException("PLATFORM_ACCESS_DENIED", "Only a platform administrator can search across organizations.")
-		}
-		if (query.trim().length < MIN_QUERY_LENGTH) return emptyList()
-		return searchRepository.searchOrganizations(query, RESULTS_PER_CATEGORY)
-	}
+    fun searchPlatform(
+        query: String,
+        currentUser: CurrentUser,
+    ): List<SearchHit> {
+        if (!currentUser.platformAdministrator) {
+            throw ForbiddenException("PLATFORM_ACCESS_DENIED", "Only a platform administrator can search across organizations.")
+        }
+        if (query.trim().length < MIN_QUERY_LENGTH) return emptyList()
+        return searchRepository.searchOrganizations(query, RESULTS_PER_CATEGORY)
+    }
 }

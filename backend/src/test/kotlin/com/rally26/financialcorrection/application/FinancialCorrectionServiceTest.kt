@@ -49,10 +49,21 @@ class FinancialCorrectionServiceTest {
     private val ledger = mockk<LedgerService>()
     private val membership = mockk<MembershipService>()
     private val audit = mockk<AuditService>()
-    private val service = FinancialCorrectionService(
-        repository, contributions, sponsorships, orders, orderItems, offlineRecords,
-        contributionStripe, sponsorshipStripe, orderStripe, ledger, membership, audit,
-    )
+    private val service =
+        FinancialCorrectionService(
+            repository,
+            contributions,
+            sponsorships,
+            orders,
+            orderItems,
+            offlineRecords,
+            contributionStripe,
+            sponsorshipStripe,
+            orderStripe,
+            ledger,
+            membership,
+            audit,
+        )
 
     private val organizationId = UUID.randomUUID()
     private val user = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")
@@ -65,10 +76,15 @@ class FinancialCorrectionServiceTest {
         every { contributions.findById(contributionId) } returns contribution()
         every { repository.sumByTarget(organizationId, FinancialCorrectionTargetType.CONTRIBUTION, contributionId) } returns 2000
 
-        val result = service.preview(
-            organizationId, FinancialCorrectionTargetType.CONTRIBUTION, contributionId,
-            3000, "Partial supporter refund", user,
-        )
+        val result =
+            service.preview(
+                organizationId,
+                FinancialCorrectionTargetType.CONTRIBUTION,
+                contributionId,
+                3000,
+                "Partial supporter refund",
+                user,
+            )
 
         assertEquals(2000, result.previouslyCorrectedMinor)
         assertEquals(3000, result.requestedAmountMinor)
@@ -84,42 +100,75 @@ class FinancialCorrectionServiceTest {
         every { repository.findByIdempotencyKey(organizationId, "correction-key-123") } returns null
         every { repository.lockTarget(organizationId, FinancialCorrectionTargetType.CONTRIBUTION, contributionId) } just runs
         every { repository.sumByTarget(organizationId, FinancialCorrectionTargetType.CONTRIBUTION, contributionId) } returns 0
-        val preview = service.preview(
-            organizationId, FinancialCorrectionTargetType.CONTRIBUTION, contributionId,
-            null, previewReason, user,
-        )
+        val preview =
+            service.preview(
+                organizationId,
+                FinancialCorrectionTargetType.CONTRIBUTION,
+                contributionId,
+                null,
+                previewReason,
+                user,
+            )
         every {
             contributionStripe.createRefund(
-                "pi_test_123", 10_000,
+                "pi_test_123",
+                10_000,
                 "financial-correction:$organizationId:correction-key-123",
             )
         } returns "re_test_123"
-        val correction = FinancialCorrection(
-            UUID.randomUUID(), organizationId, FinancialCorrectionType.REFUND,
-            FinancialCorrectionTargetType.CONTRIBUTION, contributionId, 10_000, "USD",
-            previewReason, "re_test_123", preview.confirmationHash, "correction-key-123", user.userId, Instant.now(),
-        )
+        val correction =
+            FinancialCorrection(
+                UUID.randomUUID(),
+                organizationId,
+                FinancialCorrectionType.REFUND,
+                FinancialCorrectionTargetType.CONTRIBUTION,
+                contributionId,
+                10_000,
+                "USD",
+                previewReason,
+                "re_test_123",
+                preview.confirmationHash,
+                "correction-key-123",
+                user.userId,
+                Instant.now(),
+            )
         every {
             repository.insert(
-                organizationId, FinancialCorrectionType.REFUND, FinancialCorrectionTargetType.CONTRIBUTION,
-                contributionId, 10_000, "USD", previewReason, "re_test_123",
-                preview.confirmationHash, "correction-key-123", user.userId,
+                organizationId,
+                FinancialCorrectionType.REFUND,
+                FinancialCorrectionTargetType.CONTRIBUTION,
+                contributionId,
+                10_000,
+                "USD",
+                previewReason,
+                "re_test_123",
+                preview.confirmationHash,
+                "correction-key-123",
+                user.userId,
             )
         } returns correction
         every { ledger.recordCorrectionRefund(organizationId, correction.id, 10_000, "USD", "re_test_123") } just runs
         every { contributions.markRefunded(contributionId) } returns 1
         every { audit.record(any(), any(), any(), any(), any(), any()) } just runs
 
-        val result = service.execute(
-            organizationId, FinancialCorrectionTargetType.CONTRIBUTION, contributionId, null,
-            previewReason, preview.confirmationHash, "correction-key-123", user,
-        )
+        val result =
+            service.execute(
+                organizationId,
+                FinancialCorrectionTargetType.CONTRIBUTION,
+                contributionId,
+                null,
+                previewReason,
+                preview.confirmationHash,
+                "correction-key-123",
+                user,
+            )
 
         assertEquals(correction.id, result.id)
         verify(exactly = 1) { repository.lockTarget(organizationId, FinancialCorrectionTargetType.CONTRIBUTION, contributionId) }
         verify(exactly = 1) {
             contributionStripe.createRefund(
-                "pi_test_123", 10_000,
+                "pi_test_123",
+                10_000,
                 "financial-correction:$organizationId:correction-key-123",
             )
         }
@@ -136,52 +185,58 @@ class FinancialCorrectionServiceTest {
 
         assertFailsWith<ValidationException> {
             service.preview(
-                organizationId, FinancialCorrectionTargetType.OFFLINE_FINANCIAL_RECORD, offlineId,
-                5000, "Incorrect offline receipt", user,
+                organizationId,
+                FinancialCorrectionTargetType.OFFLINE_FINANCIAL_RECORD,
+                offlineId,
+                5000,
+                "Incorrect offline receipt",
+                user,
             )
         }
     }
 
-    private fun contribution() = Contribution(
-        id = contributionId,
-        organizationId = organizationId,
-        campaignId = UUID.randomUUID(),
-        amountMinor = 10_000,
-        currency = "USD",
-        supporterName = "Supporter",
-        isAnonymous = false,
-        supporterEmail = "supporter@example.com",
-        status = ContributionStatus.CONFIRMED,
-        stripeCheckoutSessionId = "cs_test_123",
-        stripePaymentIntentId = "pi_test_123",
-        confirmedAt = confirmedAt,
-        refundedAt = null,
-        createdAt = confirmedAt.minusSeconds(60),
-        paymentSource = PaymentSource.STRIPE,
-    )
+    private fun contribution() =
+        Contribution(
+            id = contributionId,
+            organizationId = organizationId,
+            campaignId = UUID.randomUUID(),
+            amountMinor = 10_000,
+            currency = "USD",
+            supporterName = "Supporter",
+            isAnonymous = false,
+            supporterEmail = "supporter@example.com",
+            status = ContributionStatus.CONFIRMED,
+            stripeCheckoutSessionId = "cs_test_123",
+            stripePaymentIntentId = "pi_test_123",
+            confirmedAt = confirmedAt,
+            refundedAt = null,
+            createdAt = confirmedAt.minusSeconds(60),
+            paymentSource = PaymentSource.STRIPE,
+        )
 
-    private fun offlineRecord(id: UUID) = OfflineFinancialRecord(
-        id = id,
-        organizationId = organizationId,
-        recordType = OfflineFinancialRecordType.CONTRIBUTION,
-        recordId = UUID.randomUUID(),
-        displayLabel = "Offline contribution",
-        paymentMethod = OfflinePaymentMethod.CHECK,
-        verificationStatus = OfflineVerificationStatus.VERIFIED,
-        amountMinor = 10_000,
-        currency = "USD",
-        payerName = "Supporter",
-        payerEmail = null,
-        paymentReference = "check-100",
-        receivedAt = confirmedAt,
-        internalNotes = null,
-        idempotencyKey = "offline-key",
-        duplicateFingerprint = "a".repeat(64),
-        sendAcknowledgement = false,
-        recordedByUserId = user.userId,
-        verifiedByUserId = user.userId,
-        verifiedAt = confirmedAt,
-        createdAt = confirmedAt,
-        updatedAt = confirmedAt,
-    )
+    private fun offlineRecord(id: UUID) =
+        OfflineFinancialRecord(
+            id = id,
+            organizationId = organizationId,
+            recordType = OfflineFinancialRecordType.CONTRIBUTION,
+            recordId = UUID.randomUUID(),
+            displayLabel = "Offline contribution",
+            paymentMethod = OfflinePaymentMethod.CHECK,
+            verificationStatus = OfflineVerificationStatus.VERIFIED,
+            amountMinor = 10_000,
+            currency = "USD",
+            payerName = "Supporter",
+            payerEmail = null,
+            paymentReference = "check-100",
+            receivedAt = confirmedAt,
+            internalNotes = null,
+            idempotencyKey = "offline-key",
+            duplicateFingerprint = "a".repeat(64),
+            sendAcknowledgement = false,
+            recordedByUserId = user.userId,
+            verifiedByUserId = user.userId,
+            verifiedAt = confirmedAt,
+            createdAt = confirmedAt,
+            updatedAt = confirmedAt,
+        )
 }

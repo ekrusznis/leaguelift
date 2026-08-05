@@ -15,10 +15,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.email.resend.templates")
 data class ResendTemplateProperties(
-	val verifyEmailId: String = "",
-	val passwordResetId: String = "",
-	val invitationId: String = "",
-	val welcomeId: String = "",
-	/** ADR-059 — sent when a Platform Admin changes a support case's status (not on creation, which goes through SMTP instead — see SupportCaseCreatedEmailHandler). */
-	val supportCaseUpdateId: String = "",
+    val verifyEmailId: String = "",
+    val passwordResetId: String = "",
+    val invitationId: String = "",
+    val welcomeId: String = "",
+    /** ADR-059 — sent when a Platform Admin changes a support case's status (not on creation, which goes through SMTP instead — see SupportCaseCreatedEmailHandler). */
+    val supportCaseUpdateId: String = "",
 )

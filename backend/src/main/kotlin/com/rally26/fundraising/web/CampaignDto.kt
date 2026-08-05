@@ -73,10 +73,40 @@ data class PublicCampaignResponse(
     val raisedMinor: Long,
 )
 
-fun Campaign.toResponse(raisedMinor: Long) = CampaignResponse(
-    id, organizationId, teamId, name, slug, description, campaignType.name, goalAmountMinor, currency, startDate, endDate, status.name, publishedAt, createdAt, updatedAt, raisedMinor,
-)
+fun Campaign.toResponse(raisedMinor: Long) =
+    CampaignResponse(
+        id,
+        organizationId,
+        teamId,
+        name,
+        slug,
+        description,
+        campaignType.name,
+        goalAmountMinor,
+        currency,
+        startDate,
+        endDate,
+        status.name,
+        publishedAt,
+        createdAt,
+        updatedAt,
+        raisedMinor,
+    )
 
-fun Campaign.toPublicResponse(raisedMinor: Long) = PublicCampaignResponse(
-    id, organizationId, teamId, name, slug, description, campaignType.name, goalAmountMinor, currency, startDate, endDate, status.name, publishedAt, raisedMinor,
-)
+fun Campaign.toPublicResponse(raisedMinor: Long) =
+    PublicCampaignResponse(
+        id,
+        organizationId,
+        teamId,
+        name,
+        slug,
+        description,
+        campaignType.name,
+        goalAmountMinor,
+        currency,
+        startDate,
+        endDate,
+        status.name,
+        publishedAt,
+        raisedMinor,
+    )

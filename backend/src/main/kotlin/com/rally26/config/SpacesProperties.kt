@@ -10,9 +10,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.spaces")
 data class SpacesProperties(
-	val endpoint: String,
-	val accessKey: String,
-	val secretKey: String,
-	val bucket: String,
-	val region: String,
+    val endpoint: String,
+    val accessKey: String,
+    val secretKey: String,
+    val bucket: String,
+    val region: String,
 )

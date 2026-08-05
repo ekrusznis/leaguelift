@@ -350,3 +350,10 @@ Additional, unreserved decisions:
   authority (refunds, offline records, reconciliation), which Administrator already
   had; migration V43 converts existing rows before narrowing the role check constraints
   (2026-08-04)
+- ADR-061: Deferred a dedicated staging environment to a later, post-release phase —
+  the existing production droplet (ADR-008) serves as the sole environment through
+  initial launch. Reconciles `DESIGN-DOC.md`'s Phase 21/§19.1/§19.2/§14.4 sections,
+  which still described the original dual-DigitalOcean-stack target, against ADR-008's
+  already-accepted single-droplet decision; a real staging environment (its own
+  droplet, its own self-hosted Postgres) remains the plan, just sequenced after launch
+  (2026-08-04)

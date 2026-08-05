@@ -20,6 +20,7 @@ data class PlatformProviderProbeResult(
  */
 interface PlatformProviderHealthAdapter {
     fun supports(provider: IntegrationProvider): Boolean
+
     fun probe(): PlatformProviderProbeResult
 }
 
@@ -46,8 +47,13 @@ data class PlatformSubscriptionReference(
  * organizations never enter Stripe credentials or see an integration connection. */
 interface PlatformSubscriptionBillingProvider {
     fun createCustomer(request: PlatformSubscriptionCustomerRequest): PlatformSubscriptionReference
+
     fun createSubscription(request: PlatformSubscriptionRequest): PlatformSubscriptionReference
-    fun cancelAtPeriodEnd(externalSubscriptionId: String, idempotencyKey: String): PlatformSubscriptionReference
+
+    fun cancelAtPeriodEnd(
+        externalSubscriptionId: String,
+        idempotencyKey: String,
+    ): PlatformSubscriptionReference
 }
 
 /**
@@ -59,11 +65,17 @@ interface PlatformSubscriptionBillingProvider {
 @ConditionalOnMissingBean(PlatformSubscriptionBillingProvider::class)
 class DisabledPlatformSubscriptionBillingProvider : PlatformSubscriptionBillingProvider {
     override fun createCustomer(request: PlatformSubscriptionCustomerRequest): PlatformSubscriptionReference = unavailable()
-    override fun createSubscription(request: PlatformSubscriptionRequest): PlatformSubscriptionReference = unavailable()
-    override fun cancelAtPeriodEnd(externalSubscriptionId: String, idempotencyKey: String): PlatformSubscriptionReference = unavailable()
 
-    private fun unavailable(): Nothing = throw ServiceUnavailableException(
-        "PLATFORM_SUBSCRIPTION_BILLING_NOT_ACTIVATED",
-        "Rally26 subscription billing is scaffolded but has not been activated against verified Stripe products and webhook contracts.",
-    )
+    override fun createSubscription(request: PlatformSubscriptionRequest): PlatformSubscriptionReference = unavailable()
+
+    override fun cancelAtPeriodEnd(
+        externalSubscriptionId: String,
+        idempotencyKey: String,
+    ): PlatformSubscriptionReference = unavailable()
+
+    private fun unavailable(): Nothing =
+        throw ServiceUnavailableException(
+            "PLATFORM_SUBSCRIPTION_BILLING_NOT_ACTIVATED",
+            "Rally26 subscription billing is scaffolded but has not been activated against verified Stripe products and webhook contracts.",
+        )
 }

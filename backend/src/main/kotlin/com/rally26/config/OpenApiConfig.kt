@@ -14,25 +14,24 @@ import org.springframework.context.annotation.Configuration
  */
 @Configuration
 class OpenApiConfig {
-
-	@Bean
-	fun rally26OpenApi(): OpenAPI =
-		OpenAPI()
-			.info(
-				Info()
-					.title("Rally26 API")
-					.version("0.1.0")
-					.description("See docs/openapi.yaml in the repository for the authoritative contract."),
-			)
-			.addSecurityItem(SecurityRequirement().addList("bearerAuth"))
-			.components(
-				io.swagger.v3.oas.models.Components()
-					.addSecuritySchemes(
-						"bearerAuth",
-						SecurityScheme()
-							.type(SecurityScheme.Type.HTTP)
-							.scheme("bearer")
-							.bearerFormat("JWT"),
-					),
-			)
+    @Bean
+    fun rally26OpenApi(): OpenAPI =
+        OpenAPI()
+            .info(
+                Info()
+                    .title("Rally26 API")
+                    .version("0.1.0")
+                    .description("See docs/openapi.yaml in the repository for the authoritative contract."),
+            ).addSecurityItem(SecurityRequirement().addList("bearerAuth"))
+            .components(
+                io.swagger.v3.oas.models
+                    .Components()
+                    .addSecuritySchemes(
+                        "bearerAuth",
+                        SecurityScheme()
+                            .type(SecurityScheme.Type.HTTP)
+                            .scheme("bearer")
+                            .bearerFormat("JWT"),
+                    ),
+            )
 }

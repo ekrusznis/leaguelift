@@ -31,217 +31,231 @@ import java.util.UUID
  */
 @Service
 class MediaAssignmentService(
-	private val mediaAssignmentRepository: MediaAssignmentRepository,
-	private val mediaAssetRepository: MediaAssetRepository,
-	private val publicPageRepository: PublicPageRepository,
-	private val membershipService: MembershipService,
-	private val mediaEntityAccessService: MediaEntityAccessService,
-	private val auditService: AuditService,
-	private val outboxWriter: OutboxWriter,
+    private val mediaAssignmentRepository: MediaAssignmentRepository,
+    private val mediaAssetRepository: MediaAssetRepository,
+    private val publicPageRepository: PublicPageRepository,
+    private val membershipService: MembershipService,
+    private val mediaEntityAccessService: MediaEntityAccessService,
+    private val auditService: AuditService,
+    private val outboxWriter: OutboxWriter,
 ) {
+    @Transactional
+    fun assign(
+        organizationId: UUID,
+        entityType: MediaEntityType,
+        entityId: UUID,
+        usageSlot: MediaUsageSlot,
+        assetId: UUID,
+        altText: String?,
+        currentUser: CurrentUser,
+        visibilityOf: () -> Visibility,
+    ): MediaAssignment {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        return assignInternal(
+            organizationId,
+            entityType,
+            entityId,
+            usageSlot,
+            assetId,
+            altText,
+            currentUser,
+            visibilityOf,
+        )
+    }
 
-	@Transactional
-	fun assign(
-		organizationId: UUID,
-		entityType: MediaEntityType,
-		entityId: UUID,
-		usageSlot: MediaUsageSlot,
-		assetId: UUID,
-		altText: String?,
-		currentUser: CurrentUser,
-		visibilityOf: () -> Visibility,
-	): MediaAssignment {
-		membershipService.requireManagerRole(organizationId, currentUser)
-		return assignInternal(
-			organizationId,
-			entityType,
-			entityId,
-			usageSlot,
-			assetId,
-			altText,
-			currentUser,
-			visibilityOf,
-		)
-	}
+    @Transactional
+    fun assignEntityMedia(
+        organizationId: UUID,
+        entityType: MediaEntityType,
+        entityId: UUID,
+        usageSlot: MediaUsageSlot,
+        assetId: UUID,
+        altText: String?,
+        currentUser: CurrentUser,
+    ): MediaAssignment {
+        val target = mediaEntityAccessService.resolveForManage(organizationId, entityType, entityId, currentUser)
+        mediaEntityAccessService.requireAllowedSlot(target, usageSlot)
+        return assignInternal(
+            organizationId,
+            entityType,
+            entityId,
+            usageSlot,
+            assetId,
+            altText,
+            currentUser,
+        ) { target.visibility }
+    }
 
-	@Transactional
-	fun assignEntityMedia(
-		organizationId: UUID,
-		entityType: MediaEntityType,
-		entityId: UUID,
-		usageSlot: MediaUsageSlot,
-		assetId: UUID,
-		altText: String?,
-		currentUser: CurrentUser,
-	): MediaAssignment {
-		val target = mediaEntityAccessService.resolveForManage(organizationId, entityType, entityId, currentUser)
-		mediaEntityAccessService.requireAllowedSlot(target, usageSlot)
-		return assignInternal(
-			organizationId,
-			entityType,
-			entityId,
-			usageSlot,
-			assetId,
-			altText,
-			currentUser,
-		) { target.visibility }
-	}
+    private fun assignInternal(
+        organizationId: UUID,
+        entityType: MediaEntityType,
+        entityId: UUID,
+        usageSlot: MediaUsageSlot,
+        assetId: UUID,
+        altText: String?,
+        currentUser: CurrentUser,
+        visibilityOf: () -> Visibility,
+    ): MediaAssignment {
+        val asset =
+            mediaAssetRepository.findById(assetId, organizationId)
+                ?: throw NotFoundException("MEDIA_ASSET_NOT_FOUND", "The media asset could not be found.")
+        if (asset.status != MediaAssetStatus.READY) {
+            throw ValidationException("Only a successfully uploaded asset can be assigned.")
+        }
+        if (asset.intendedUsageSlot != usageSlot) {
+            throw ValidationException("The uploaded asset was requested for ${asset.intendedUsageSlot.name}, not ${usageSlot.name}.")
+        }
+        if (asset.uploadedByUserId != currentUser.userId && !membershipService.hasManagerRole(organizationId, currentUser)) {
+            throw ForbiddenException("MEDIA_ASSET_ACCESS_DENIED", "You cannot assign this media asset.")
+        }
 
-	private fun assignInternal(
-		organizationId: UUID,
-		entityType: MediaEntityType,
-		entityId: UUID,
-		usageSlot: MediaUsageSlot,
-		assetId: UUID,
-		altText: String?,
-		currentUser: CurrentUser,
-		visibilityOf: () -> Visibility,
-	): MediaAssignment {
-		val asset = mediaAssetRepository.findById(assetId, organizationId)
-			?: throw NotFoundException("MEDIA_ASSET_NOT_FOUND", "The media asset could not be found.")
-		if (asset.status != MediaAssetStatus.READY) {
-			throw ValidationException("Only a successfully uploaded asset can be assigned.")
-		}
-		if (asset.intendedUsageSlot != usageSlot) {
-			throw ValidationException("The uploaded asset was requested for ${asset.intendedUsageSlot.name}, not ${usageSlot.name}.")
-		}
-		if (asset.uploadedByUserId != currentUser.userId && !membershipService.hasManagerRole(organizationId, currentUser)) {
-			throw ForbiddenException("MEDIA_ASSET_ACCESS_DENIED", "You cannot assign this media asset.")
-		}
+        val visibility = visibilityOf()
+        val publicationStatus = if (visibility == Visibility.PUBLIC) PublicationStatus.PUBLISHED else PublicationStatus.PRIVATE
 
-		val visibility = visibilityOf()
-		val publicationStatus = if (visibility == Visibility.PUBLIC) PublicationStatus.PUBLISHED else PublicationStatus.PRIVATE
+        val previous = mediaAssignmentRepository.findActiveBySlot(entityType, entityId, usageSlot)
+        if (previous != null) {
+            mediaAssignmentRepository.retire(previous.id, organizationId)
+            mediaAssetRepository.archive(previous.assetId, organizationId)
+        }
 
-		val previous = mediaAssignmentRepository.findActiveBySlot(entityType, entityId, usageSlot)
-		if (previous != null) {
-			mediaAssignmentRepository.retire(previous.id, organizationId)
-			mediaAssetRepository.archive(previous.assetId, organizationId)
-		}
+        val assignment =
+            mediaAssignmentRepository.insert(
+                organizationId = organizationId,
+                assetId = assetId,
+                entityType = entityType,
+                entityId = entityId,
+                usageSlot = usageSlot,
+                publicationStatus = publicationStatus,
+                visibility = visibility,
+                altText = altText,
+            )
+        auditService.record(
+            actorUserId = currentUser.userId,
+            organizationId = organizationId,
+            action = "media.assigned",
+            entityType = "media_assignment",
+            entityId = assignment.id,
+        )
+        if (visibility == Visibility.PUBLIC) {
+            outboxWriter.write(
+                aggregateType = "media_assignment",
+                aggregateId = assignment.id,
+                organizationId = organizationId,
+                eventType = "media.assignment.published",
+                payloadJson = """{"assignmentId":"${assignment.id}","usageSlot":"${usageSlot.name}"}""",
+            )
+        }
+        return assignment
+    }
 
-		val assignment = mediaAssignmentRepository.insert(
-			organizationId = organizationId,
-			assetId = assetId,
-			entityType = entityType,
-			entityId = entityId,
-			usageSlot = usageSlot,
-			publicationStatus = publicationStatus,
-			visibility = visibility,
-			altText = altText,
-		)
-		auditService.record(
-			actorUserId = currentUser.userId,
-			organizationId = organizationId,
-			action = "media.assigned",
-			entityType = "media_assignment",
-			entityId = assignment.id,
-		)
-		if (visibility == Visibility.PUBLIC) {
-			outboxWriter.write(
-				aggregateType = "media_assignment",
-				aggregateId = assignment.id,
-				organizationId = organizationId,
-				eventType = "media.assignment.published",
-				payloadJson = """{"assignmentId":"${assignment.id}","usageSlot":"${usageSlot.name}"}""",
-			)
-		}
-		return assignment
-	}
+    @Transactional
+    fun remove(
+        organizationId: UUID,
+        entityType: MediaEntityType,
+        entityId: UUID,
+        usageSlot: MediaUsageSlot,
+        currentUser: CurrentUser,
+    ) {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        removeInternal(organizationId, entityType, entityId, usageSlot, currentUser)
+    }
 
-	@Transactional
-	fun remove(
-		organizationId: UUID,
-		entityType: MediaEntityType,
-		entityId: UUID,
-		usageSlot: MediaUsageSlot,
-		currentUser: CurrentUser,
-	) {
-		membershipService.requireManagerRole(organizationId, currentUser)
-		removeInternal(organizationId, entityType, entityId, usageSlot, currentUser)
-	}
+    @Transactional
+    fun removeEntityMedia(
+        organizationId: UUID,
+        entityType: MediaEntityType,
+        entityId: UUID,
+        usageSlot: MediaUsageSlot,
+        currentUser: CurrentUser,
+    ) {
+        val target = mediaEntityAccessService.resolveForManage(organizationId, entityType, entityId, currentUser)
+        mediaEntityAccessService.requireAllowedSlot(target, usageSlot)
+        removeInternal(organizationId, entityType, entityId, usageSlot, currentUser)
+    }
 
-	@Transactional
-	fun removeEntityMedia(
-		organizationId: UUID,
-		entityType: MediaEntityType,
-		entityId: UUID,
-		usageSlot: MediaUsageSlot,
-		currentUser: CurrentUser,
-	) {
-		val target = mediaEntityAccessService.resolveForManage(organizationId, entityType, entityId, currentUser)
-		mediaEntityAccessService.requireAllowedSlot(target, usageSlot)
-		removeInternal(organizationId, entityType, entityId, usageSlot, currentUser)
-	}
+    private fun removeInternal(
+        organizationId: UUID,
+        entityType: MediaEntityType,
+        entityId: UUID,
+        usageSlot: MediaUsageSlot,
+        currentUser: CurrentUser,
+    ) {
+        val active =
+            mediaAssignmentRepository.findActiveBySlot(entityType, entityId, usageSlot)
+                ?: throw NotFoundException("MEDIA_ASSIGNMENT_NOT_FOUND", "No active assignment for this slot.")
+        mediaAssignmentRepository.retire(active.id, organizationId)
+        auditService.record(
+            actorUserId = currentUser.userId,
+            organizationId = organizationId,
+            action = "media.retired",
+            entityType = "media_assignment",
+            entityId = active.id,
+        )
+    }
 
-	private fun removeInternal(
-		organizationId: UUID,
-		entityType: MediaEntityType,
-		entityId: UUID,
-		usageSlot: MediaUsageSlot,
-		currentUser: CurrentUser,
-	) {
-		val active = mediaAssignmentRepository.findActiveBySlot(entityType, entityId, usageSlot)
-			?: throw NotFoundException("MEDIA_ASSIGNMENT_NOT_FOUND", "No active assignment for this slot.")
-		mediaAssignmentRepository.retire(active.id, organizationId)
-		auditService.record(
-			actorUserId = currentUser.userId,
-			organizationId = organizationId,
-			action = "media.retired",
-			entityType = "media_assignment",
-			entityId = active.id,
-		)
-	}
+    fun listActive(
+        organizationId: UUID,
+        entityType: MediaEntityType,
+        entityId: UUID,
+        currentUser: CurrentUser,
+    ): List<MediaAssignment> {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        return mediaAssignmentRepository.listActive(entityType, entityId)
+    }
 
-	fun listActive(
-		organizationId: UUID,
-		entityType: MediaEntityType,
-		entityId: UUID,
-		currentUser: CurrentUser,
-	): List<MediaAssignment> {
-		membershipService.requireActiveMembership(organizationId, currentUser)
-		return mediaAssignmentRepository.listActive(entityType, entityId)
-	}
+    fun listEntityMedia(
+        organizationId: UUID,
+        entityType: MediaEntityType,
+        entityId: UUID,
+        currentUser: CurrentUser,
+    ): List<MediaAssignment> {
+        mediaEntityAccessService.resolveForRead(organizationId, entityType, entityId, currentUser)
+        return mediaAssignmentRepository.listActive(entityType, entityId)
+    }
 
-	fun listEntityMedia(
-		organizationId: UUID,
-		entityType: MediaEntityType,
-		entityId: UUID,
-		currentUser: CurrentUser,
-	): List<MediaAssignment> {
-		mediaEntityAccessService.resolveForRead(organizationId, entityType, entityId, currentUser)
-		return mediaAssignmentRepository.listActive(entityType, entityId)
-	}
+    /** The only PUBLIC-visibility assignment a fully unauthenticated caller may see. */
+    fun getPublicAssignment(
+        entityType: MediaEntityType,
+        entityId: UUID,
+        usageSlot: MediaUsageSlot,
+    ): MediaAssignment? =
+        mediaAssignmentRepository.findActiveBySlot(entityType, entityId, usageSlot)?.takeIf { it.visibility == Visibility.PUBLIC }
 
-	/** The only PUBLIC-visibility assignment a fully unauthenticated caller may see. */
-	fun getPublicAssignment(entityType: MediaEntityType, entityId: UUID, usageSlot: MediaUsageSlot): MediaAssignment? =
-		mediaAssignmentRepository.findActiveBySlot(entityType, entityId, usageSlot)?.takeIf { it.visibility == Visibility.PUBLIC }
+    /** Internal/public-page composition read. Callers must establish their own visibility boundary first. */
+    fun getActiveAssignment(
+        entityType: MediaEntityType,
+        entityId: UUID,
+        usageSlot: MediaUsageSlot,
+    ): MediaAssignment? = mediaAssignmentRepository.findActiveBySlot(entityType, entityId, usageSlot)
 
-	/** Internal/public-page composition read. Callers must establish their own visibility boundary first. */
-	fun getActiveAssignment(entityType: MediaEntityType, entityId: UUID, usageSlot: MediaUsageSlot): MediaAssignment? =
-		mediaAssignmentRepository.findActiveBySlot(entityType, entityId, usageSlot)
+    fun assignOrganizationMedia(
+        organizationId: UUID,
+        usageSlot: MediaUsageSlot,
+        assetId: UUID,
+        altText: String?,
+        currentUser: CurrentUser,
+    ): MediaAssignment =
+        assign(organizationId, MediaEntityType.ORGANIZATION, organizationId, usageSlot, assetId, altText, currentUser) {
+            computeOrganizationVisibility(organizationId)
+        }
 
-	fun assignOrganizationMedia(
-		organizationId: UUID,
-		usageSlot: MediaUsageSlot,
-		assetId: UUID,
-		altText: String?,
-		currentUser: CurrentUser,
-	): MediaAssignment =
-		assign(organizationId, MediaEntityType.ORGANIZATION, organizationId, usageSlot, assetId, altText, currentUser) {
-			computeOrganizationVisibility(organizationId)
-		}
+    fun removeOrganizationMedia(
+        organizationId: UUID,
+        usageSlot: MediaUsageSlot,
+        currentUser: CurrentUser,
+    ) = remove(organizationId, MediaEntityType.ORGANIZATION, organizationId, usageSlot, currentUser)
 
-	fun removeOrganizationMedia(organizationId: UUID, usageSlot: MediaUsageSlot, currentUser: CurrentUser) =
-		remove(organizationId, MediaEntityType.ORGANIZATION, organizationId, usageSlot, currentUser)
+    fun listActiveOrganizationMedia(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): List<MediaAssignment> = listActive(organizationId, MediaEntityType.ORGANIZATION, organizationId, currentUser)
 
-	fun listActiveOrganizationMedia(organizationId: UUID, currentUser: CurrentUser): List<MediaAssignment> =
-		listActive(organizationId, MediaEntityType.ORGANIZATION, organizationId, currentUser)
-
-	private fun computeOrganizationVisibility(organizationId: UUID): Visibility {
-		val page = publicPageRepository.findByEntityId(organizationId) ?: return Visibility.ORGANIZATION_PRIVATE
-		return if (page.pageType == PageType.ORGANIZATION && page.status == PageStatus.PUBLISHED) {
-			Visibility.PUBLIC
-		} else {
-			Visibility.ORGANIZATION_PRIVATE
-		}
-	}
+    private fun computeOrganizationVisibility(organizationId: UUID): Visibility {
+        val page = publicPageRepository.findByEntityId(organizationId) ?: return Visibility.ORGANIZATION_PRIVATE
+        return if (page.pageType == PageType.ORGANIZATION && page.status == PageStatus.PUBLISHED) {
+            Visibility.PUBLIC
+        } else {
+            Visibility.ORGANIZATION_PRIVATE
+        }
+    }
 }

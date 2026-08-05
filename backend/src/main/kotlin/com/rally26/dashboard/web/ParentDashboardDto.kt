@@ -8,10 +8,16 @@ import java.util.UUID
 // @get:JsonProperty — otherwise Jackson's standard JavaBean introspection strips the
 // "is" prefix and silently serializes e.g. isDemoData as "demoData".
 
-data class HouseholdOverviewResponse(val householdName: String)
+data class HouseholdOverviewResponse(
+    val householdName: String,
+)
 
 /** Real: from participant + participant_team + team. */
-data class AthleteSummary(val participantId: UUID, val name: String, val teamNames: List<String>)
+data class AthleteSummary(
+    val participantId: UUID,
+    val name: String,
+    val teamNames: List<String>,
+)
 
 /**
  * Real: summed from each outstanding fee assignment's computed balance (original
@@ -20,30 +26,40 @@ data class AthleteSummary(val participantId: UUID, val name: String, val teamNam
  * real payment/adjustment ledger exists to net against.
  */
 data class OutstandingBalance(
-	val totalOutstandingMinor: Long,
-	val currency: String,
-	val lineItems: List<FeeLineItem>,
+    val totalOutstandingMinor: Long,
+    val currency: String,
+    val lineItems: List<FeeLineItem>,
 )
 
-data class FeeLineItem(val description: String, val balanceMinor: Long, val status: String, val dueDate: LocalDate?)
+data class FeeLineItem(
+    val description: String,
+    val balanceMinor: Long,
+    val status: String,
+    val dueDate: LocalDate?,
+)
 
 /** Demo: no credit_event/credit_application tables exist yet. */
 data class FamilyCredits(
-	@get:JsonProperty("isDemoData") val isDemoData: Boolean,
-	val currency: String,
-	val pendingMinor: Long,
-	val availableMinor: Long,
-	val appliedThisSeasonMinor: Long,
+    @get:JsonProperty("isDemoData") val isDemoData: Boolean,
+    val currency: String,
+    val pendingMinor: Long,
+    val availableMinor: Long,
+    val appliedThisSeasonMinor: Long,
 )
 
 /** Real: the organization's active campaigns. Contribution totals are demo. */
 data class FundraiserSummary(
-	val campaignId: UUID,
-	val name: String,
-	@get:JsonProperty("isRaisedDemoData") val isRaisedDemoData: Boolean,
-	val raisedMinor: Long,
-	val goalMinor: Long,
-	val currency: String,
+    val campaignId: UUID,
+    val name: String,
+    @get:JsonProperty("isRaisedDemoData") val isRaisedDemoData: Boolean,
+    val raisedMinor: Long,
+    val goalMinor: Long,
+    val currency: String,
 )
 
-data class UpdateItem(val id: String, val title: String, val body: String, val postedLabel: String)
+data class UpdateItem(
+    val id: String,
+    val title: String,
+    val body: String,
+    val postedLabel: String,
+)

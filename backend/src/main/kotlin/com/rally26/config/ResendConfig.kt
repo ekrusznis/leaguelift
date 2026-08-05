@@ -15,12 +15,15 @@ import org.springframework.web.client.RestClient
  * than propagating a raw provider error.
  */
 @Configuration
-class ResendConfig(private val resendProperties: ResendProperties) {
-
-	@Bean
-	fun resendRestClient(): RestClient = RestClient.builder()
-		.baseUrl("https://api.resend.com")
-		.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer ${resendProperties.apiKey}")
-		.defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-		.build()
+class ResendConfig(
+    private val resendProperties: ResendProperties,
+) {
+    @Bean
+    fun resendRestClient(): RestClient =
+        RestClient
+            .builder()
+            .baseUrl("https://api.resend.com")
+            .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer ${resendProperties.apiKey}")
+            .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+            .build()
 }

@@ -25,7 +25,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class TeamServiceTest {
-
     private val teamRepository = mockk<TeamRepository>()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
@@ -120,25 +119,27 @@ class TeamServiceTest {
         }
     }
 
-    private fun sampleTeam() = Team(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        name = "Riverside U12 Blue",
-        sport = "Soccer",
-        season = "Fall 2026",
-        status = TeamStatus.ACTIVE,
-        contactEmail = "coach@riverside.org",
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun sampleTeam() =
+        Team(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            name = "Riverside U12 Blue",
+            sport = "Soccer",
+            season = "Fall 2026",
+            status = TeamStatus.ACTIVE,
+            contactEmail = "coach@riverside.org",
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
-    private fun managerMembership() = OrganizationMembership(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        userId = currentUser.userId,
-        role = MembershipRole.ADMINISTRATOR,
-        status = MembershipStatus.ACTIVE,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun managerMembership() =
+        OrganizationMembership(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            userId = currentUser.userId,
+            role = MembershipRole.ADMINISTRATOR,
+            status = MembershipStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 }

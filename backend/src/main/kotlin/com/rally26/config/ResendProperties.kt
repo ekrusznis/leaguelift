@@ -16,7 +16,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.email.resend")
 data class ResendProperties(
-	val apiKey: String = "",
-	val fromAddress: String = "",
-	val webhookSecret: String = "",
+    val apiKey: String = "",
+    val fromAddress: String = "",
+    val webhookSecret: String = "",
 )

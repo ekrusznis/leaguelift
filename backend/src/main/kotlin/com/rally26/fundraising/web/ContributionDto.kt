@@ -19,7 +19,10 @@ data class CreateContributionCheckoutRequest(
     @field:NotBlank val cancelUrl: String,
 )
 
-data class ContributionCheckoutResponse(val contributionId: UUID, val checkoutUrl: String)
+data class ContributionCheckoutResponse(
+    val contributionId: UUID,
+    val checkoutUrl: String,
+)
 
 fun ContributionCheckout.toResponse() = ContributionCheckoutResponse(contributionId, checkoutUrl)
 
@@ -49,4 +52,17 @@ data class ContributionResponse(
     val createdAt: Instant,
 )
 
-fun Contribution.toResponse() = ContributionResponse(id, status.name, paymentSource.name, amountMinor, currency, supporterName, isAnonymous, supporterEmail, confirmedAt, refundedAt, createdAt)
+fun Contribution.toResponse() =
+    ContributionResponse(
+        id,
+        status.name,
+        paymentSource.name,
+        amountMinor,
+        currency,
+        supporterName,
+        isAnonymous,
+        supporterEmail,
+        confirmedAt,
+        refundedAt,
+        createdAt,
+    )

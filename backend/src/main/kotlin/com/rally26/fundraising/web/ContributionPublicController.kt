@@ -18,17 +18,24 @@ import java.util.UUID
  */
 @RestController
 @RequestMapping("/api/v1/public/campaigns/{slug}/contributions")
-class ContributionPublicController(private val contributionService: ContributionService) {
-
+class ContributionPublicController(
+    private val contributionService: ContributionService,
+) {
     @PostMapping
     fun createCheckoutSession(
         @PathVariable slug: String,
         @Valid @RequestBody request: CreateContributionCheckoutRequest,
     ): ContributionCheckoutResponse =
-        contributionService.createCheckoutSession(
-            slug, request.amountMinor, request.supporterName, request.isAnonymous,
-            request.supporterEmail, request.successUrl, request.cancelUrl,
-        ).toResponse()
+        contributionService
+            .createCheckoutSession(
+                slug,
+                request.amountMinor,
+                request.supporterName,
+                request.isAnonymous,
+                request.supporterEmail,
+                request.successUrl,
+                request.cancelUrl,
+            ).toResponse()
 
     @GetMapping("/{contributionId}")
     fun getStatus(

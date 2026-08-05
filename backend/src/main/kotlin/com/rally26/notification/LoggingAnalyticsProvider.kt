@@ -17,7 +17,20 @@ private val log = LoggerFactory.getLogger(LoggingAnalyticsProvider::class.java)
  */
 @Component
 class LoggingAnalyticsProvider : AnalyticsProvider {
-	override fun track(event: AnalyticsEvent) {
-		log.debug("Analytics event '{}' (org={}, user={}, {} propert{})", event.name, event.organizationId, event.userId, event.properties.size, if (event.properties.size == 1) "y" else "ies")
-	}
+    override fun track(event: AnalyticsEvent) {
+        log.debug(
+            "Analytics event '{}' (org={}, user={}, {} propert{})",
+            event.name,
+            event.organizationId,
+            event.userId,
+            event.properties.size,
+            if (event.properties.size ==
+                1
+            ) {
+                "y"
+            } else {
+                "ies"
+            },
+        )
+    }
 }

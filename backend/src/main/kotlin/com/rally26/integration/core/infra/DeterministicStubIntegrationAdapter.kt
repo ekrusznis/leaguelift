@@ -1,5 +1,7 @@
 package com.rally26.integration.core.infra
 
+import com.rally26.common.error.ServiceUnavailableException
+import com.rally26.common.error.ValidationException
 import com.rally26.integration.core.application.IntegrationAuthorizationAdapter
 import com.rally26.integration.core.application.OAuthAuthorizationRequest
 import com.rally26.integration.core.application.OAuthCodeExchangeRequest
@@ -7,8 +9,6 @@ import com.rally26.integration.core.application.OAuthRefreshRequest
 import com.rally26.integration.core.application.OAuthRevokeRequest
 import com.rally26.integration.core.application.ProviderHealthResult
 import com.rally26.integration.core.application.ProviderTokenSet
-import com.rally26.common.error.ServiceUnavailableException
-import com.rally26.common.error.ValidationException
 import com.rally26.integration.core.domain.IntegrationProvider
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
@@ -24,16 +24,18 @@ import java.time.Instant
 @Component
 @ConditionalOnProperty(prefix = "rally26.integrations", name = ["stub-mode"], havingValue = "true")
 class DeterministicStubIntegrationAdapter : IntegrationAuthorizationAdapter {
-    private val supported = setOf(
-        IntegrationProvider.GOOGLE_CALENDAR,
-        IntegrationProvider.QUICKBOOKS_ONLINE,
-        IntegrationProvider.SPORTSENGINE,
-    )
+    private val supported =
+        setOf(
+            IntegrationProvider.GOOGLE_CALENDAR,
+            IntegrationProvider.QUICKBOOKS_ONLINE,
+            IntegrationProvider.SPORTSENGINE,
+        )
 
     override fun supports(provider: IntegrationProvider): Boolean = provider in supported
 
     override fun buildAuthorizationUrl(request: OAuthAuthorizationRequest): String =
-        UriComponentsBuilder.fromUriString("https://integration-stub.invalid/authorize")
+        UriComponentsBuilder
+            .fromUriString("https://integration-stub.invalid/authorize")
             .queryParam("provider", request.provider.name)
             .queryParam("client_id", request.clientId)
             .queryParam("redirect_uri", request.redirectUri)
@@ -84,7 +86,10 @@ class DeterministicStubIntegrationAdapter : IntegrationAuthorizationAdapter {
 
     override fun revoke(request: OAuthRevokeRequest) = Unit
 
-    override fun checkHealth(provider: IntegrationProvider, accessToken: String): ProviderHealthResult =
+    override fun checkHealth(
+        provider: IntegrationProvider,
+        accessToken: String,
+    ): ProviderHealthResult =
         if (accessToken.startsWith("stub-access-")) {
             ProviderHealthResult(healthy = true, latencyMs = 1)
         } else if (accessToken.startsWith("stub-expired-")) {
@@ -94,7 +99,8 @@ class DeterministicStubIntegrationAdapter : IntegrationAuthorizationAdapter {
         }
 
     private fun digest(value: String): String =
-        MessageDigest.getInstance("SHA-256")
+        MessageDigest
+            .getInstance("SHA-256")
             .digest(value.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
             .take(24)

@@ -19,73 +19,113 @@ import java.time.Instant
  * directly — storage provider stays swappable without touching business logic
  * (DESIGN-DOC.md section 11.1, ADR-012).
  */
-data class PresignedUpload(val url: String, val expiresAt: Instant)
+data class PresignedUpload(
+    val url: String,
+    val expiresAt: Instant,
+)
 
-data class ObjectHead(val exists: Boolean, val contentLength: Long?)
+data class ObjectHead(
+    val exists: Boolean,
+    val contentLength: Long?,
+)
 
 @Component
 class SpacesClient(
-	private val s3Client: S3Client,
-	private val s3Presigner: S3Presigner,
-	private val spacesProperties: SpacesProperties,
+    private val s3Client: S3Client,
+    private val s3Presigner: S3Presigner,
+    private val spacesProperties: SpacesProperties,
 ) {
+    fun presignedPutUrl(
+        key: String,
+        contentType: String,
+        ttl: Duration = Duration.ofMinutes(15),
+    ): PresignedUpload {
+        val request =
+            PutObjectRequest
+                .builder()
+                .bucket(spacesProperties.bucket)
+                .key(key)
+                .contentType(contentType)
+                .build()
+        val presigned =
+            s3Presigner.presignPutObject(
+                PutObjectPresignRequest
+                    .builder()
+                    .signatureDuration(ttl)
+                    .putObjectRequest(request)
+                    .build(),
+            )
+        return PresignedUpload(presigned.url().toString(), Instant.now().plus(ttl))
+    }
 
-	fun presignedPutUrl(key: String, contentType: String, ttl: Duration = Duration.ofMinutes(15)): PresignedUpload {
-		val request = PutObjectRequest.builder()
-			.bucket(spacesProperties.bucket)
-			.key(key)
-			.contentType(contentType)
-			.build()
-		val presigned = s3Presigner.presignPutObject(
-			PutObjectPresignRequest.builder()
-				.signatureDuration(ttl)
-				.putObjectRequest(request)
-				.build(),
-		)
-		return PresignedUpload(presigned.url().toString(), Instant.now().plus(ttl))
-	}
+    fun presignedGetUrl(
+        key: String,
+        ttl: Duration = Duration.ofMinutes(15),
+    ): String {
+        val request =
+            GetObjectRequest
+                .builder()
+                .bucket(spacesProperties.bucket)
+                .key(key)
+                .build()
+        val presigned =
+            s3Presigner.presignGetObject(
+                GetObjectPresignRequest
+                    .builder()
+                    .signatureDuration(ttl)
+                    .getObjectRequest(request)
+                    .build(),
+            )
+        return presigned.url().toString()
+    }
 
-	fun presignedGetUrl(key: String, ttl: Duration = Duration.ofMinutes(15)): String {
-		val request = GetObjectRequest.builder()
-			.bucket(spacesProperties.bucket)
-			.key(key)
-			.build()
-		val presigned = s3Presigner.presignGetObject(
-			GetObjectPresignRequest.builder()
-				.signatureDuration(ttl)
-				.getObjectRequest(request)
-				.build(),
-		)
-		return presigned.url().toString()
-	}
+    fun headObject(key: String): ObjectHead =
+        try {
+            val response =
+                s3Client.headObject(
+                    HeadObjectRequest
+                        .builder()
+                        .bucket(spacesProperties.bucket)
+                        .key(key)
+                        .build(),
+                )
+            ObjectHead(exists = true, contentLength = response.contentLength())
+        } catch (e: NoSuchKeyException) {
+            ObjectHead(exists = false, contentLength = null)
+        }
 
-	fun headObject(key: String): ObjectHead = try {
-		val response = s3Client.headObject(
-			HeadObjectRequest.builder().bucket(spacesProperties.bucket).key(key).build(),
-		)
-		ObjectHead(exists = true, contentLength = response.contentLength())
-	} catch (e: NoSuchKeyException) {
-		ObjectHead(exists = false, contentLength = null)
-	}
+    /**
+     * Reads up to [maxBytes] + 1 bytes so callers can detect (and reject) an
+     * over-limit object without risking an unbounded read into JVM heap.
+     */
+    fun getObjectBytesCapped(
+        key: String,
+        maxBytes: Long,
+    ): ByteArray {
+        val request =
+            GetObjectRequest
+                .builder()
+                .bucket(spacesProperties.bucket)
+                .key(key)
+                .range("bytes=0-$maxBytes")
+                .build()
+        s3Client.getObject(request).use { stream -> return stream.readAllBytes() }
+    }
 
-	/**
-	 * Reads up to [maxBytes] + 1 bytes so callers can detect (and reject) an
-	 * over-limit object without risking an unbounded read into JVM heap.
-	 */
-	fun getObjectBytesCapped(key: String, maxBytes: Long): ByteArray {
-		val request = GetObjectRequest.builder()
-			.bucket(spacesProperties.bucket)
-			.key(key)
-			.range("bytes=0-$maxBytes")
-			.build()
-		s3Client.getObject(request).use { stream -> return stream.readAllBytes() }
-	}
-
-	/** Test/manual-verification helper — not used by the upload flow (browser uploads directly). */
-	fun putObject(key: String, contentType: String, bytes: ByteArray) {
-		s3Client.putObject(
-			PutObjectRequest.builder().bucket(spacesProperties.bucket).key(key).contentType(contentType).build(),
-			RequestBody.fromBytes(bytes),
-		)
-	}
+    /** Test/manual-verification helper — not used by the upload flow (browser uploads directly). */
+    fun putObject(
+        key: String,
+        contentType: String,
+        bytes: ByteArray,
+    ) {
+        s3Client.putObject(
+            PutObjectRequest
+                .builder()
+                .bucket(spacesProperties.bucket)
+                .key(key)
+                .contentType(contentType)
+                .build(),
+            RequestBody.fromBytes(bytes),
+        )
+    }
 }

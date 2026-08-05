@@ -26,105 +26,156 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class EventSourceConnectionServiceTest {
+    private val eventSourceConnectionRepository = mockk<EventSourceConnectionRepository>()
+    private val membershipService = mockk<MembershipService>()
+    private val auditService = mockk<AuditService>()
+    private val teamRepository = mockk<TeamRepository>()
+    private val service = EventSourceConnectionService(eventSourceConnectionRepository, membershipService, auditService, teamRepository)
 
-	private val eventSourceConnectionRepository = mockk<EventSourceConnectionRepository>()
-	private val membershipService = mockk<MembershipService>()
-	private val auditService = mockk<AuditService>()
-	private val teamRepository = mockk<TeamRepository>()
-	private val service = EventSourceConnectionService(eventSourceConnectionRepository, membershipService, auditService, teamRepository)
+    private val orgId = UUID.randomUUID()
+    private val currentUser = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")
 
-	private val orgId = UUID.randomUUID()
-	private val currentUser = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")
+    private fun managerMembership() =
+        OrganizationMembership(
+            UUID.randomUUID(),
+            orgId,
+            currentUser.userId,
+            MembershipRole.OWNER,
+            MembershipStatus.ACTIVE,
+            Instant.now(),
+            Instant.now(),
+        )
 
-	private fun managerMembership() = OrganizationMembership(UUID.randomUUID(), orgId, currentUser.userId, MembershipRole.OWNER, MembershipStatus.ACTIVE, Instant.now(), Instant.now())
+    private fun connection(id: UUID = UUID.randomUUID()) =
+        EventSourceConnection(
+            id,
+            orgId,
+            EventSourceProvider.ICS_FEED,
+            "Varsity Schedule",
+            "https://example.com/feed.ics",
+            "America/New_York",
+            null,
+            EventSourceConnectionStatus.ACTIVE,
+            null,
+            null,
+            null,
+            currentUser.userId,
+            Instant.now(),
+            Instant.now(),
+        )
 
-	private fun connection(id: UUID = UUID.randomUUID()) = EventSourceConnection(
-		id, orgId, EventSourceProvider.ICS_FEED, "Varsity Schedule", "https://example.com/feed.ics", "America/New_York", null,
-		EventSourceConnectionStatus.ACTIVE, null, null, null, currentUser.userId, Instant.now(), Instant.now(),
-	)
+    @Test
+    fun `connectIcsFeed requires manager role`() {
+        every { membershipService.requireManagerRole(orgId, currentUser) } throws ForbiddenException("DENIED", "no")
 
-	@Test
-	fun `connectIcsFeed requires manager role`() {
-		every { membershipService.requireManagerRole(orgId, currentUser) } throws ForbiddenException("DENIED", "no")
+        assertFailsWith<ForbiddenException> {
+            service.connectIcsFeed(orgId, "Varsity Schedule", "https://example.com/feed.ics", "America/New_York", null, currentUser)
+        }
+    }
 
-		assertFailsWith<ForbiddenException> {
-			service.connectIcsFeed(orgId, "Varsity Schedule", "https://example.com/feed.ics", "America/New_York", null, currentUser)
-		}
-	}
+    @Test
+    fun `connectIcsFeed rejects a non-http url`() {
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
 
-	@Test
-	fun `connectIcsFeed rejects a non-http url`() {
-		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        assertFailsWith<ValidationException> {
+            service.connectIcsFeed(orgId, "Varsity Schedule", "ftp://example.com/feed.ics", "America/New_York", null, currentUser)
+        }
+    }
 
-		assertFailsWith<ValidationException> {
-			service.connectIcsFeed(orgId, "Varsity Schedule", "ftp://example.com/feed.ics", "America/New_York", null, currentUser)
-		}
-	}
+    @Test
+    fun `connectIcsFeed rejects a blank label`() {
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
 
-	@Test
-	fun `connectIcsFeed rejects a blank label`() {
-		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        assertFailsWith<ValidationException> {
+            service.connectIcsFeed(orgId, "  ", "https://example.com/feed.ics", "America/New_York", null, currentUser)
+        }
+    }
 
-		assertFailsWith<ValidationException> {
-			service.connectIcsFeed(orgId, "  ", "https://example.com/feed.ics", "America/New_York", null, currentUser)
-		}
-	}
+    @Test
+    fun `connectIcsFeed rejects an invalid timezone`() {
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
 
-	@Test
-	fun `connectIcsFeed rejects an invalid timezone`() {
-		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        assertFailsWith<ValidationException> {
+            service.connectIcsFeed(orgId, "Varsity Schedule", "https://example.com/feed.ics", "Not/AZone", null, currentUser)
+        }
+    }
 
-		assertFailsWith<ValidationException> {
-			service.connectIcsFeed(orgId, "Varsity Schedule", "https://example.com/feed.ics", "Not/AZone", null, currentUser)
-		}
-	}
+    @Test
+    fun `connectIcsFeed inserts and records an audit event`() {
+        val created = connection()
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every {
+            eventSourceConnectionRepository.insert(
+                orgId,
+                EventSourceProvider.ICS_FEED,
+                "Varsity Schedule",
+                "https://example.com/feed.ics",
+                "America/New_York",
+                null,
+                currentUser.userId,
+            )
+        } returns created
+        every {
+            auditService.record(
+                currentUser.userId,
+                orgId,
+                "event_source_connection.connected",
+                "event_source_connection",
+                created.id,
+            )
+        } just
+            runs
 
-	@Test
-	fun `connectIcsFeed inserts and records an audit event`() {
-		val created = connection()
-		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
-		every {
-			eventSourceConnectionRepository.insert(orgId, EventSourceProvider.ICS_FEED, "Varsity Schedule", "https://example.com/feed.ics", "America/New_York", null, currentUser.userId)
-		} returns created
-		every { auditService.record(currentUser.userId, orgId, "event_source_connection.connected", "event_source_connection", created.id) } just runs
+        val result =
+            service.connectIcsFeed(
+                orgId,
+                "Varsity Schedule",
+                "https://example.com/feed.ics",
+                "America/New_York",
+                null,
+                currentUser,
+            )
 
-		val result = service.connectIcsFeed(orgId, "Varsity Schedule", "https://example.com/feed.ics", "America/New_York", null, currentUser)
+        assertEquals(created.id, result.id)
+        verify(exactly = 1) {
+            auditService.record(currentUser.userId, orgId, "event_source_connection.connected", "event_source_connection", created.id)
+        }
+    }
 
-		assertEquals(created.id, result.id)
-		verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "event_source_connection.connected", "event_source_connection", created.id) }
-	}
+    @Test
+    fun `disconnect throws NotFoundException for a connection in another organization`() {
+        val connectionId = UUID.randomUUID()
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { eventSourceConnectionRepository.findById(connectionId, orgId) } returns null
 
-	@Test
-	fun `disconnect throws NotFoundException for a connection in another organization`() {
-		val connectionId = UUID.randomUUID()
-		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
-		every { eventSourceConnectionRepository.findById(connectionId, orgId) } returns null
+        assertFailsWith<NotFoundException> {
+            service.disconnect(orgId, connectionId, currentUser)
+        }
+    }
 
-		assertFailsWith<NotFoundException> {
-			service.disconnect(orgId, connectionId, currentUser)
-		}
-	}
+    @Test
+    fun `disconnect updates status and records an audit event`() {
+        val existing = connection()
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { eventSourceConnectionRepository.findById(existing.id, orgId) } returns existing
+        every { eventSourceConnectionRepository.disconnect(existing.id, orgId) } returns 1
+        every {
+            auditService.record(currentUser.userId, orgId, "event_source_connection.disconnected", "event_source_connection", existing.id)
+        } just
+            runs
 
-	@Test
-	fun `disconnect updates status and records an audit event`() {
-		val existing = connection()
-		every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
-		every { eventSourceConnectionRepository.findById(existing.id, orgId) } returns existing
-		every { eventSourceConnectionRepository.disconnect(existing.id, orgId) } returns 1
-		every { auditService.record(currentUser.userId, orgId, "event_source_connection.disconnected", "event_source_connection", existing.id) } just runs
+        service.disconnect(orgId, existing.id, currentUser)
 
-		service.disconnect(orgId, existing.id, currentUser)
+        verify(exactly = 1) { eventSourceConnectionRepository.disconnect(existing.id, orgId) }
+    }
 
-		verify(exactly = 1) { eventSourceConnectionRepository.disconnect(existing.id, orgId) }
-	}
+    @Test
+    fun `list requires active membership`() {
+        every { membershipService.requireActiveMembership(orgId, currentUser) } returns managerMembership()
+        every { eventSourceConnectionRepository.listForOrganization(orgId) } returns listOf(connection())
 
-	@Test
-	fun `list requires active membership`() {
-		every { membershipService.requireActiveMembership(orgId, currentUser) } returns managerMembership()
-		every { eventSourceConnectionRepository.listForOrganization(orgId) } returns listOf(connection())
+        val result = service.list(orgId, currentUser)
 
-		val result = service.list(orgId, currentUser)
-
-		assertEquals(1, result.size)
-	}
+        assertEquals(1, result.size)
+    }
 }

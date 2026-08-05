@@ -27,9 +27,10 @@ class IntegrationRuntimeGuardTest {
 
     @Test
     fun `enabled provider requires a configured encryption key`() {
-        val properties = IntegrationProperties(
-            providers = mapOf("google-calendar" to IntegrationProviderRuntimeProperties(enabled = true)),
-        )
+        val properties =
+            IntegrationProperties(
+                providers = mapOf("google-calendar" to IntegrationProviderRuntimeProperties(enabled = true)),
+            )
 
         assertFailsWith<IllegalStateException> {
             IntegrationRuntimeGuard(properties, CredentialCipher(properties), MockEnvironment()).afterPropertiesSet()
@@ -38,11 +39,12 @@ class IntegrationRuntimeGuardTest {
 
     @Test
     fun `local stub accepts a valid encryption key without real provider endpoints`() {
-        val properties = IntegrationProperties(
-            encryptionKey = Base64.getEncoder().encodeToString(ByteArray(32) { 7 }),
-            stubMode = true,
-            providers = mapOf("google-calendar" to IntegrationProviderRuntimeProperties(enabled = true)),
-        )
+        val properties =
+            IntegrationProperties(
+                encryptionKey = Base64.getEncoder().encodeToString(ByteArray(32) { 7 }),
+                stubMode = true,
+                providers = mapOf("google-calendar" to IntegrationProviderRuntimeProperties(enabled = true)),
+            )
         IntegrationRuntimeGuard(properties, CredentialCipher(properties), MockEnvironment()).afterPropertiesSet()
     }
 }

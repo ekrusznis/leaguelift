@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.fee.payment-reminder")
 data class FeePaymentReminderProperties(
-	val enabled: Boolean = true,
-	val daysBefore: Long = 3,
-	val cron: String = "0 0 8 * * *",
+    val enabled: Boolean = true,
+    val daysBefore: Long = 3,
+    val cron: String = "0 0 8 * * *",
 )

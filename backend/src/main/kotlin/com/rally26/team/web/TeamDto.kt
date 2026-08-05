@@ -44,16 +44,17 @@ data class TeamResponse(
     val updatedAt: Instant,
 )
 
-fun Team.toResponse() = TeamResponse(
-    id = id,
-    organizationId = organizationId,
-    name = name,
-    sport = sport,
-    season = season,
-    status = status.name,
-    contactEmail = contactEmail,
-    createdAt = createdAt,
-    updatedAt = updatedAt,
-)
+fun Team.toResponse() =
+    TeamResponse(
+        id = id,
+        organizationId = organizationId,
+        name = name,
+        sport = sport,
+        season = season,
+        status = status.name,
+        contactEmail = contactEmail,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )
 
 typealias TeamPageResponse = PageResponse<TeamResponse>

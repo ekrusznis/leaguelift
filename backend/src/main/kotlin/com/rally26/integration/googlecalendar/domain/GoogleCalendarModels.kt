@@ -4,6 +4,7 @@ import java.time.Instant
 import java.util.UUID
 
 enum class GoogleCalendarSyncDirection { RALLY26_TO_GOOGLE }
+
 enum class GoogleCalendarMappingStatus { PENDING, SYNCED, FAILED, DELETED }
 
 data class GoogleCalendarDescriptor(

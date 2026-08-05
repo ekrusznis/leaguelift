@@ -30,20 +30,29 @@ class IntegrationCatalogService(
     private val properties: IntegrationProperties,
     private val adapterRegistry: IntegrationAdapterRegistry,
 ) {
-    fun listForOrganization(organizationId: UUID, currentUser: CurrentUser): List<IntegrationCatalogItem> {
+    fun listForOrganization(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): List<IntegrationCatalogItem> {
         membershipService.requireManagerRole(organizationId, currentUser)
-        val connections = connectionRepository.listForOrganization(organizationId)
-            .groupBy { it.provider }
-            .mapValues { (_, values) -> values.maxBy { it.updatedAt } }
-        return providerRepository.list(IntegrationOwnerType.ORGANIZATION)
+        val connections =
+            connectionRepository
+                .listForOrganization(organizationId)
+                .groupBy { it.provider }
+                .mapValues { (_, values) -> values.maxBy { it.updatedAt } }
+        return providerRepository
+            .list(IntegrationOwnerType.ORGANIZATION)
             .map { definition -> item(definition, connections[definition.provider]) }
     }
 
     fun listForUser(currentUser: CurrentUser): List<IntegrationCatalogItem> {
-        val connections = connectionRepository.listForUser(currentUser.userId)
-            .groupBy { it.provider }
-            .mapValues { (_, values) -> values.maxBy { it.updatedAt } }
-        return providerRepository.list(IntegrationOwnerType.USER)
+        val connections =
+            connectionRepository
+                .listForUser(currentUser.userId)
+                .groupBy { it.provider }
+                .mapValues { (_, values) -> values.maxBy { it.updatedAt } }
+        return providerRepository
+            .list(IntegrationOwnerType.USER)
             .map { definition -> item(definition, connections[definition.provider]) }
     }
 
@@ -51,33 +60,43 @@ class IntegrationCatalogService(
         providerRepository.find(provider)
             ?: throw NotFoundException("INTEGRATION_PROVIDER_NOT_FOUND", "The integration provider could not be found.")
 
-    fun readiness(definition: IntegrationProviderDefinition): IntegrationReadiness = when {
-        definition.baselineReadiness == IntegrationReadiness.PARTNER_PENDING -> IntegrationReadiness.PARTNER_PENDING
-        definition.baselineReadiness == IntegrationReadiness.UNSUPPORTED -> IntegrationReadiness.UNSUPPORTED
-        definition.baselineReadiness == IntegrationReadiness.PLATFORM_MANAGED -> IntegrationReadiness.PLATFORM_MANAGED
-        definition.adapterMode == IntegrationAdapterMode.EXISTING -> IntegrationReadiness.AVAILABLE
-        definition.adapterMode == IntegrationAdapterMode.FILE_IMPORT -> IntegrationReadiness.AVAILABLE
-        else -> {
-            val runtime = properties.provider(definition.provider)
-            if (!runtime.enabled) {
-                IntegrationReadiness.NOT_CONFIGURED
-            } else {
-                val adapterReady = adapterRegistry.find(definition.provider) != null
-                val oauthConfigured = properties.stubMode || (
-                    runtime.clientId.isNotBlank() && runtime.clientSecret.isNotBlank() &&
-                        runtime.authorizationUri.isNotBlank() && runtime.tokenUri.isNotBlank()
-                    )
-                if (adapterReady && oauthConfigured) IntegrationReadiness.AVAILABLE
-                else IntegrationReadiness.NOT_CONFIGURED
+    fun readiness(definition: IntegrationProviderDefinition): IntegrationReadiness =
+        when {
+            definition.baselineReadiness == IntegrationReadiness.PARTNER_PENDING -> IntegrationReadiness.PARTNER_PENDING
+            definition.baselineReadiness == IntegrationReadiness.UNSUPPORTED -> IntegrationReadiness.UNSUPPORTED
+            definition.baselineReadiness == IntegrationReadiness.PLATFORM_MANAGED -> IntegrationReadiness.PLATFORM_MANAGED
+            definition.adapterMode == IntegrationAdapterMode.EXISTING -> IntegrationReadiness.AVAILABLE
+            definition.adapterMode == IntegrationAdapterMode.FILE_IMPORT -> IntegrationReadiness.AVAILABLE
+            else -> {
+                val runtime = properties.provider(definition.provider)
+                if (!runtime.enabled) {
+                    IntegrationReadiness.NOT_CONFIGURED
+                } else {
+                    val adapterReady = adapterRegistry.find(definition.provider) != null
+                    val oauthConfigured =
+                        properties.stubMode ||
+                            (
+                                runtime.clientId.isNotBlank() &&
+                                    runtime.clientSecret.isNotBlank() &&
+                                    runtime.authorizationUri.isNotBlank() &&
+                                    runtime.tokenUri.isNotBlank()
+                            )
+                    if (adapterReady && oauthConfigured) {
+                        IntegrationReadiness.AVAILABLE
+                    } else {
+                        IntegrationReadiness.NOT_CONFIGURED
+                    }
+                }
             }
         }
-    }
 
-    private fun item(definition: IntegrationProviderDefinition, connection: IntegrationConnection?) =
-        IntegrationCatalogItem(
-            definition = definition,
-            readiness = readiness(definition),
-            connection = connection,
-            stub = properties.stubMode && adapterRegistry.find(definition.provider) != null,
-        )
+    private fun item(
+        definition: IntegrationProviderDefinition,
+        connection: IntegrationConnection?,
+    ) = IntegrationCatalogItem(
+        definition = definition,
+        readiness = readiness(definition),
+        connection = connection,
+        stub = properties.stubMode && adapterRegistry.find(definition.provider) != null,
+    )
 }

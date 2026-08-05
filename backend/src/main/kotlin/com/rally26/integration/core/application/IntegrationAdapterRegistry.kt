@@ -7,6 +7,5 @@ import org.springframework.stereotype.Component
 class IntegrationAdapterRegistry(
     private val adapters: List<IntegrationAuthorizationAdapter>,
 ) {
-    fun find(provider: IntegrationProvider): IntegrationAuthorizationAdapter? =
-        adapters.firstOrNull { it.supports(provider) }
+    fun find(provider: IntegrationProvider): IntegrationAuthorizationAdapter? = adapters.firstOrNull { it.supports(provider) }
 }

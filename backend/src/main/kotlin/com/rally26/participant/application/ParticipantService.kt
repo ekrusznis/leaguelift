@@ -22,7 +22,6 @@ class ParticipantService(
     private val membershipService: MembershipService,
     private val auditService: AuditService,
 ) {
-
     fun listForOrganization(
         organizationId: UUID,
         currentUser: CurrentUser,
@@ -33,12 +32,19 @@ class ParticipantService(
         return participantRepository.findAllForOrganization(organizationId, offset, limit)
     }
 
-    fun countForOrganization(organizationId: UUID, currentUser: CurrentUser): Long {
+    fun countForOrganization(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): Long {
         membershipService.requireManagerRole(organizationId, currentUser)
         return participantRepository.countAllForOrganization(organizationId)
     }
 
-    fun listForHousehold(organizationId: UUID, householdId: UUID, currentUser: CurrentUser): List<Participant> {
+    fun listForHousehold(
+        organizationId: UUID,
+        householdId: UUID,
+        currentUser: CurrentUser,
+    ): List<Participant> {
         membershipService.requireActiveMembership(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
@@ -58,7 +64,15 @@ class ParticipantService(
         membershipService.requireManagerRole(organizationId, currentUser)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
-        val participant = participantRepository.insert(organizationId = organizationId, householdId = householdId, firstName = firstName, lastName = lastName, dateOfBirth = dateOfBirth, notes = notes)
+        val participant =
+            participantRepository.insert(
+                organizationId = organizationId,
+                householdId = householdId,
+                firstName = firstName,
+                lastName = lastName,
+                dateOfBirth = dateOfBirth,
+                notes = notes,
+            )
         auditService.record(currentUser.userId, organizationId, "participant.created", "participant", participant.id)
         return participant
     }
@@ -81,7 +95,11 @@ class ParticipantService(
         return participantRepository.findById(participantId, organizationId)!!
     }
 
-    fun listTeams(organizationId: UUID, participantId: UUID, currentUser: CurrentUser): List<ParticipantTeamAssignment> {
+    fun listTeams(
+        organizationId: UUID,
+        participantId: UUID,
+        currentUser: CurrentUser,
+    ): List<ParticipantTeamAssignment> {
         membershipService.requireActiveMembership(organizationId, currentUser)
         participantRepository.findById(participantId, organizationId)
             ?: throw NotFoundException("PARTICIPANT_NOT_FOUND", "The participant could not be found.")
@@ -109,7 +127,12 @@ class ParticipantService(
     }
 
     @Transactional
-    fun removeFromTeam(organizationId: UUID, participantId: UUID, teamId: UUID, currentUser: CurrentUser) {
+    fun removeFromTeam(
+        organizationId: UUID,
+        participantId: UUID,
+        teamId: UUID,
+        currentUser: CurrentUser,
+    ) {
         membershipService.requireManagerRole(organizationId, currentUser)
         val rows = participantRepository.removeFromTeam(participantId, teamId, organizationId)
         if (rows == 0) throw NotFoundException("ASSIGNMENT_NOT_FOUND", "The participant is not assigned to this team.")

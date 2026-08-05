@@ -15,8 +15,8 @@ enum class DashboardRole { OWNER, COACH, PARENT, ATHLETE, TOURNAMENT_ADMIN, PLAT
  * that means a user who holds multiple contexts sees today.
  */
 data class DashboardContext(
-	val role: DashboardRole,
-	val organizationId: UUID?,
-	val householdId: UUID?,
-	val tournamentId: UUID? = null,
+    val role: DashboardRole,
+    val organizationId: UUID?,
+    val householdId: UUID?,
+    val tournamentId: UUID? = null,
 )

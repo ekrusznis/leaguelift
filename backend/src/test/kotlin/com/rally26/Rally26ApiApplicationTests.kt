@@ -9,9 +9,8 @@ import org.junit.jupiter.api.Test
  * AbstractIntegrationTest.
  */
 class Rally26ApiApplicationTests : AbstractIntegrationTest() {
-
-	@Test
-	fun `application context loads`() {
-		// Intentionally empty: failure to load the context fails this test.
-	}
+    @Test
+    fun `application context loads`() {
+        // Intentionally empty: failure to load the context fails this test.
+    }
 }

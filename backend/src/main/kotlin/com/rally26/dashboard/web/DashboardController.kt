@@ -26,216 +26,264 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1")
 class DashboardController(
-	private val dashboardContextService: DashboardContextService,
-	private val ownerDashboardService: OwnerDashboardService,
-	private val coachDashboardService: CoachDashboardService,
-	private val parentDashboardService: ParentDashboardService,
-	private val athleteDashboardService: AthleteDashboardService,
-	private val tournamentDashboardService: TournamentDashboardService,
-	private val platformAdminDashboardService: PlatformAdminDashboardService,
+    private val dashboardContextService: DashboardContextService,
+    private val ownerDashboardService: OwnerDashboardService,
+    private val coachDashboardService: CoachDashboardService,
+    private val parentDashboardService: ParentDashboardService,
+    private val athleteDashboardService: AthleteDashboardService,
+    private val tournamentDashboardService: TournamentDashboardService,
+    private val platformAdminDashboardService: PlatformAdminDashboardService,
 ) {
+    @GetMapping("/me/dashboard-context")
+    fun dashboardContext(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): DashboardContextResponse = dashboardContextService.resolve(currentUser).toResponse()
 
-	@GetMapping("/me/dashboard-context")
-	fun dashboardContext(@AuthenticationPrincipal currentUser: CurrentUser): DashboardContextResponse =
-		dashboardContextService.resolve(currentUser).toResponse()
+    // --- Athlete ---
 
-	// --- Athlete ---
+    @GetMapping("/me/dashboard/athlete/overview")
+    fun athleteOverview(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = athleteDashboardService.getOverview(currentUser)
 
-	@GetMapping("/me/dashboard/athlete/overview")
-	fun athleteOverview(@AuthenticationPrincipal currentUser: CurrentUser) = athleteDashboardService.getOverview(currentUser)
+    @GetMapping("/me/dashboard/athlete/teams")
+    fun athleteTeams(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = athleteDashboardService.getTeams(currentUser)
 
-	@GetMapping("/me/dashboard/athlete/teams")
-	fun athleteTeams(@AuthenticationPrincipal currentUser: CurrentUser) = athleteDashboardService.getTeams(currentUser)
+    @GetMapping("/me/dashboard/athlete/week-events")
+    fun athleteWeekEvents(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = athleteDashboardService.getWeekEvents(currentUser)
 
-	@GetMapping("/me/dashboard/athlete/week-events")
-	fun athleteWeekEvents(@AuthenticationPrincipal currentUser: CurrentUser) = athleteDashboardService.getWeekEvents(currentUser)
+    @GetMapping("/me/dashboard/athlete/recent-history")
+    fun athleteRecentHistory(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = athleteDashboardService.getRecentHistory(currentUser)
 
-	@GetMapping("/me/dashboard/athlete/recent-history")
-	fun athleteRecentHistory(@AuthenticationPrincipal currentUser: CurrentUser) = athleteDashboardService.getRecentHistory(currentUser)
+    @GetMapping("/me/dashboard/athlete/guardians")
+    fun athleteGuardians(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = athleteDashboardService.getGuardians(currentUser)
 
-	@GetMapping("/me/dashboard/athlete/guardians")
-	fun athleteGuardians(@AuthenticationPrincipal currentUser: CurrentUser) = athleteDashboardService.getGuardians(currentUser)
+    @GetMapping("/me/dashboard/athlete/orders")
+    fun athleteOrders(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = athleteDashboardService.getOrders(currentUser)
 
-	@GetMapping("/me/dashboard/athlete/orders")
-	fun athleteOrders(@AuthenticationPrincipal currentUser: CurrentUser) = athleteDashboardService.getOrders(currentUser)
+    // --- Owner ---
 
-	// --- Owner ---
+    @GetMapping("/organizations/{organizationId}/dashboard/owner/summary")
+    fun ownerSummary(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = ownerDashboardService.getSummary(organizationId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/owner/summary")
-	fun ownerSummary(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		ownerDashboardService.getSummary(organizationId, currentUser)
+    @GetMapping("/organizations/{organizationId}/dashboard/owner/financial-overview")
+    fun ownerFinancialOverview(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = ownerDashboardService.getFinancialOverview(organizationId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/owner/financial-overview")
-	fun ownerFinancialOverview(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		ownerDashboardService.getFinancialOverview(organizationId, currentUser)
+    @GetMapping("/organizations/{organizationId}/dashboard/owner/attention-required")
+    fun ownerAttentionRequired(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = ownerDashboardService.getAttentionRequired(organizationId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/owner/attention-required")
-	fun ownerAttentionRequired(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		ownerDashboardService.getAttentionRequired(organizationId, currentUser)
+    @GetMapping("/organizations/{organizationId}/dashboard/owner/team-performance")
+    fun ownerTeamPerformance(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = ownerDashboardService.getTeamPerformance(organizationId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/owner/team-performance")
-	fun ownerTeamPerformance(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		ownerDashboardService.getTeamPerformance(organizationId, currentUser)
+    @GetMapping("/organizations/{organizationId}/dashboard/owner/upcoming-events")
+    fun ownerUpcomingEvents(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = ownerDashboardService.getUpcomingEvents(organizationId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/owner/upcoming-events")
-	fun ownerUpcomingEvents(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		ownerDashboardService.getUpcomingEvents(organizationId, currentUser)
+    @GetMapping("/organizations/{organizationId}/dashboard/owner/recent-activity")
+    fun ownerRecentActivity(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = ownerDashboardService.getRecentActivity(organizationId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/owner/recent-activity")
-	fun ownerRecentActivity(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		ownerDashboardService.getRecentActivity(organizationId, currentUser)
+    @GetMapping("/organizations/{organizationId}/dashboard/owner/onboarding-progress")
+    fun ownerOnboardingProgress(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = ownerDashboardService.getOnboardingProgress(organizationId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/owner/onboarding-progress")
-	fun ownerOnboardingProgress(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		ownerDashboardService.getOnboardingProgress(organizationId, currentUser)
+    @GetMapping("/organizations/{organizationId}/dashboard/owner/reports-snapshot")
+    fun ownerReportsSnapshot(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = ownerDashboardService.getReportsSnapshot(organizationId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/owner/reports-snapshot")
-	fun ownerReportsSnapshot(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		ownerDashboardService.getReportsSnapshot(organizationId, currentUser)
+    // --- Coach ---
 
-	// --- Coach ---
+    @GetMapping("/organizations/{organizationId}/dashboard/coach/teams")
+    fun coachTeams(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = coachDashboardService.getTeams(organizationId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/coach/teams")
-	fun coachTeams(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		coachDashboardService.getTeams(organizationId, currentUser)
+    @GetMapping("/organizations/{organizationId}/dashboard/coach/team-schedule")
+    fun coachTeamSchedule(
+        @PathVariable organizationId: UUID,
+        @RequestParam(required = false) teamId: UUID?,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = coachDashboardService.getTeamSchedule(organizationId, currentUser, teamId)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/coach/team-schedule")
-	fun coachTeamSchedule(
-		@PathVariable organizationId: UUID,
-		@RequestParam(required = false) teamId: UUID?,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = coachDashboardService.getTeamSchedule(organizationId, currentUser, teamId)
+    @GetMapping("/organizations/{organizationId}/dashboard/coach/roster-summary")
+    fun coachRosterSummary(
+        @PathVariable organizationId: UUID,
+        @RequestParam(required = false) teamId: UUID?,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = coachDashboardService.getRosterSummary(organizationId, currentUser, teamId)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/coach/roster-summary")
-	fun coachRosterSummary(
-		@PathVariable organizationId: UUID,
-		@RequestParam(required = false) teamId: UUID?,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = coachDashboardService.getRosterSummary(organizationId, currentUser, teamId)
+    @GetMapping("/organizations/{organizationId}/dashboard/coach/team-page-status")
+    fun coachTeamPageStatus(
+        @PathVariable organizationId: UUID,
+        @RequestParam(required = false) teamId: UUID?,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = coachDashboardService.getTeamPageStatus(organizationId, currentUser, teamId)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/coach/team-page-status")
-	fun coachTeamPageStatus(
-		@PathVariable organizationId: UUID,
-		@RequestParam(required = false) teamId: UUID?,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = coachDashboardService.getTeamPageStatus(organizationId, currentUser, teamId)
+    @GetMapping("/organizations/{organizationId}/dashboard/coach/fundraising-progress")
+    fun coachFundraisingProgress(
+        @PathVariable organizationId: UUID,
+        @RequestParam(required = false) teamId: UUID?,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = coachDashboardService.getFundraisingProgress(organizationId, currentUser, teamId)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/coach/fundraising-progress")
-	fun coachFundraisingProgress(
-		@PathVariable organizationId: UUID,
-		@RequestParam(required = false) teamId: UUID?,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = coachDashboardService.getFundraisingProgress(organizationId, currentUser, teamId)
+    @GetMapping("/organizations/{organizationId}/dashboard/coach/announcements")
+    fun coachAnnouncements(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = coachDashboardService.getAnnouncements(organizationId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/coach/announcements")
-	fun coachAnnouncements(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		coachDashboardService.getAnnouncements(organizationId, currentUser)
+    @GetMapping("/organizations/{organizationId}/dashboard/coach/required-actions")
+    fun coachRequiredActions(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = coachDashboardService.getRequiredActions(organizationId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/coach/required-actions")
-	fun coachRequiredActions(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-		coachDashboardService.getRequiredActions(organizationId, currentUser)
+    // --- Parent ---
 
-	// --- Parent ---
+    @GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/overview")
+    fun parentOverview(
+        @PathVariable organizationId: UUID,
+        @PathVariable householdId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = parentDashboardService.getOverview(organizationId, householdId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/overview")
-	fun parentOverview(
-		@PathVariable organizationId: UUID,
-		@PathVariable householdId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = parentDashboardService.getOverview(organizationId, householdId, currentUser)
+    @GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/athletes")
+    fun parentAthletes(
+        @PathVariable organizationId: UUID,
+        @PathVariable householdId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = parentDashboardService.getAthletes(organizationId, householdId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/athletes")
-	fun parentAthletes(
-		@PathVariable organizationId: UUID,
-		@PathVariable householdId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = parentDashboardService.getAthletes(organizationId, householdId, currentUser)
+    @GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/family-schedule")
+    fun parentFamilySchedule(
+        @PathVariable organizationId: UUID,
+        @PathVariable householdId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = parentDashboardService.getFamilySchedule(organizationId, householdId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/family-schedule")
-	fun parentFamilySchedule(
-		@PathVariable organizationId: UUID,
-		@PathVariable householdId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = parentDashboardService.getFamilySchedule(organizationId, householdId, currentUser)
+    @GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/outstanding-balance")
+    fun parentOutstandingBalance(
+        @PathVariable organizationId: UUID,
+        @PathVariable householdId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = parentDashboardService.getOutstandingBalance(organizationId, householdId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/outstanding-balance")
-	fun parentOutstandingBalance(
-		@PathVariable organizationId: UUID,
-		@PathVariable householdId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = parentDashboardService.getOutstandingBalance(organizationId, householdId, currentUser)
+    @GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/family-credits")
+    fun parentFamilyCredits(
+        @PathVariable organizationId: UUID,
+        @PathVariable householdId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = parentDashboardService.getFamilyCredits(organizationId, householdId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/family-credits")
-	fun parentFamilyCredits(
-		@PathVariable organizationId: UUID,
-		@PathVariable householdId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = parentDashboardService.getFamilyCredits(organizationId, householdId, currentUser)
+    @GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/active-fundraisers")
+    fun parentActiveFundraisers(
+        @PathVariable organizationId: UUID,
+        @PathVariable householdId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = parentDashboardService.getActiveFundraisers(organizationId, householdId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/active-fundraisers")
-	fun parentActiveFundraisers(
-		@PathVariable organizationId: UUID,
-		@PathVariable householdId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = parentDashboardService.getActiveFundraisers(organizationId, householdId, currentUser)
+    @GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/recent-orders")
+    fun parentRecentOrders(
+        @PathVariable organizationId: UUID,
+        @PathVariable householdId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = parentDashboardService.getRecentOrders(organizationId, householdId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/recent-orders")
-	fun parentRecentOrders(
-		@PathVariable organizationId: UUID,
-		@PathVariable householdId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = parentDashboardService.getRecentOrders(organizationId, householdId, currentUser)
+    @GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/required-actions")
+    fun parentRequiredActions(
+        @PathVariable organizationId: UUID,
+        @PathVariable householdId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = parentDashboardService.getRequiredActions(organizationId, householdId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/required-actions")
-	fun parentRequiredActions(
-		@PathVariable organizationId: UUID,
-		@PathVariable householdId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = parentDashboardService.getRequiredActions(organizationId, householdId, currentUser)
+    @GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/organization-updates")
+    fun parentOrganizationUpdates(
+        @PathVariable organizationId: UUID,
+        @PathVariable householdId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = parentDashboardService.getOrganizationUpdates(organizationId, householdId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/households/{householdId}/dashboard/parent/organization-updates")
-	fun parentOrganizationUpdates(
-		@PathVariable organizationId: UUID,
-		@PathVariable householdId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = parentDashboardService.getOrganizationUpdates(organizationId, householdId, currentUser)
+    // --- Tournament ---
 
-	// --- Tournament ---
+    @GetMapping("/organizations/{organizationId}/dashboard/tournament/{tournamentId}/summary")
+    fun tournamentSummary(
+        @PathVariable organizationId: UUID,
+        @PathVariable tournamentId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = tournamentDashboardService.getSummary(organizationId, tournamentId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/tournament/{tournamentId}/summary")
-	fun tournamentSummary(
-		@PathVariable organizationId: UUID,
-		@PathVariable tournamentId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = tournamentDashboardService.getSummary(organizationId, tournamentId, currentUser)
+    @GetMapping("/organizations/{organizationId}/dashboard/tournament/{tournamentId}/page-status")
+    fun tournamentPageStatus(
+        @PathVariable organizationId: UUID,
+        @PathVariable tournamentId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = tournamentDashboardService.getPageStatus(organizationId, tournamentId, currentUser)
 
-	@GetMapping("/organizations/{organizationId}/dashboard/tournament/{tournamentId}/page-status")
-	fun tournamentPageStatus(
-		@PathVariable organizationId: UUID,
-		@PathVariable tournamentId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) = tournamentDashboardService.getPageStatus(organizationId, tournamentId, currentUser)
+    // --- Platform Admin ---
 
-	// --- Platform Admin ---
+    @GetMapping("/platform/dashboard/summary")
+    fun platformSummary(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = platformAdminDashboardService.getSummary(currentUser)
 
-	@GetMapping("/platform/dashboard/summary")
-	fun platformSummary(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.getSummary(currentUser)
+    @GetMapping("/platform/dashboard/organizations")
+    fun platformOrganizations(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = platformAdminDashboardService.listOrganizations(currentUser)
 
-	@GetMapping("/platform/dashboard/organizations")
-	fun platformOrganizations(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.listOrganizations(currentUser)
+    @GetMapping("/platform/dashboard/webhook-health")
+    fun platformWebhookHealth(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = platformAdminDashboardService.getWebhookHealth(currentUser)
 
-	@GetMapping("/platform/dashboard/webhook-health")
-	fun platformWebhookHealth(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.getWebhookHealth(currentUser)
+    @GetMapping("/platform/dashboard/outbox-health")
+    fun platformOutboxHealth(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = platformAdminDashboardService.getOutboxHealth(currentUser)
 
-	@GetMapping("/platform/dashboard/outbox-health")
-	fun platformOutboxHealth(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.getOutboxHealth(currentUser)
+    @GetMapping("/platform/dashboard/orders-summary")
+    fun platformOrdersSummary(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = platformAdminDashboardService.getOrdersSummary(currentUser)
 
-	@GetMapping("/platform/dashboard/orders-summary")
-	fun platformOrdersSummary(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.getOrdersSummary(currentUser)
+    @GetMapping("/platform/dashboard/payments-summary")
+    fun platformPaymentsSummary(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = platformAdminDashboardService.getPaymentsSummary(currentUser)
 
-	@GetMapping("/platform/dashboard/payments-summary")
-	fun platformPaymentsSummary(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.getPaymentsSummary(currentUser)
-
-	@GetMapping("/platform/dashboard/payouts-summary")
-	fun platformPayoutsSummary(@AuthenticationPrincipal currentUser: CurrentUser) = platformAdminDashboardService.getPayoutsSummary(currentUser)
+    @GetMapping("/platform/dashboard/payouts-summary")
+    fun platformPayoutsSummary(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = platformAdminDashboardService.getPayoutsSummary(currentUser)
 }

@@ -14,39 +14,40 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/payout-account")
-class PayoutAccountController(private val payoutAccountService: PayoutAccountService) {
+class PayoutAccountController(
+    private val payoutAccountService: PayoutAccountService,
+) {
+    @GetMapping
+    fun getStatus(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PayoutAccountResponse? = payoutAccountService.getStatus(organizationId, currentUser)?.toResponse()
 
-	@GetMapping
-	fun getStatus(
-		@PathVariable organizationId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): PayoutAccountResponse? = payoutAccountService.getStatus(organizationId, currentUser)?.toResponse()
+    @PostMapping("/onboarding-link")
+    fun startOnboarding(
+        @PathVariable organizationId: UUID,
+        @Valid @RequestBody request: StartOnboardingRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): OnboardingLinkResponse {
+        val url = payoutAccountService.startOnboarding(organizationId, request.refreshUrl, request.returnUrl, currentUser)
+        return OnboardingLinkResponse(url)
+    }
 
-	@PostMapping("/onboarding-link")
-	fun startOnboarding(
-		@PathVariable organizationId: UUID,
-		@Valid @RequestBody request: StartOnboardingRequest,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): OnboardingLinkResponse {
-		val url = payoutAccountService.startOnboarding(organizationId, request.refreshUrl, request.returnUrl, currentUser)
-		return OnboardingLinkResponse(url)
-	}
+    @PostMapping("/refresh")
+    fun refreshStatus(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PayoutAccountResponse = payoutAccountService.refreshStatus(organizationId, currentUser).toResponse()
 
-	@PostMapping("/refresh")
-	fun refreshStatus(
-		@PathVariable organizationId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): PayoutAccountResponse = payoutAccountService.refreshStatus(organizationId, currentUser).toResponse()
+    @GetMapping("/summary")
+    fun getPayoutSummary(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PayoutSummaryResponse = payoutAccountService.getPayoutSummary(organizationId, currentUser).toResponse()
 
-	@GetMapping("/summary")
-	fun getPayoutSummary(
-		@PathVariable organizationId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): PayoutSummaryResponse = payoutAccountService.getPayoutSummary(organizationId, currentUser).toResponse()
-
-	@PostMapping("/transfer")
-	fun triggerTransfer(
-		@PathVariable organizationId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): PayoutSummaryResponse = payoutAccountService.triggerTransfer(organizationId, currentUser).toResponse()
+    @PostMapping("/transfer")
+    fun triggerTransfer(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PayoutSummaryResponse = payoutAccountService.triggerTransfer(organizationId, currentUser).toResponse()
 }

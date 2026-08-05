@@ -67,9 +67,17 @@ data class ProviderHealthResult(
  */
 interface IntegrationAuthorizationAdapter {
     fun supports(provider: IntegrationProvider): Boolean
+
     fun buildAuthorizationUrl(request: OAuthAuthorizationRequest): String
+
     fun exchangeCode(request: OAuthCodeExchangeRequest): ProviderTokenSet
+
     fun refresh(request: OAuthRefreshRequest): ProviderTokenSet
+
     fun revoke(request: OAuthRevokeRequest)
-    fun checkHealth(provider: IntegrationProvider, accessToken: String): ProviderHealthResult
+
+    fun checkHealth(
+        provider: IntegrationProvider,
+        accessToken: String,
+    ): ProviderHealthResult
 }

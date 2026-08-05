@@ -18,74 +18,75 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class PlatformSupportAccessInterceptorTest {
-	private val service = mockk<PlatformAdminConsoleService>()
-	private val interceptor = PlatformSupportAccessInterceptor(service)
-	private val organizationId = UUID.randomUUID()
-	private val accessId = UUID.randomUUID()
-	private val admin = CurrentUser(UUID.randomUUID(), "employee@rally26.com", "Support Employee", platformAdministrator = true)
+    private val service = mockk<PlatformAdminConsoleService>()
+    private val interceptor = PlatformSupportAccessInterceptor(service)
+    private val organizationId = UUID.randomUUID()
+    private val accessId = UUID.randomUUID()
+    private val admin = CurrentUser(UUID.randomUUID(), "employee@rally26.com", "Support Employee", platformAdministrator = true)
 
-	@AfterTest
-	fun clearSecurityContext() {
-		SecurityContextHolder.clearContext()
-	}
+    @AfterTest
+    fun clearSecurityContext() {
+        SecurityContextHolder.clearContext()
+    }
 
-	@Test
-	fun `ordinary organization users are not subject to platform support sessions`() {
-		SecurityContextHolder.getContext().authentication = CurrentUserAuthenticationToken(
-			CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner"),
-		)
-		val request = MockHttpServletRequest("GET", "/api/v1/organizations/$organizationId/teams")
+    @Test
+    fun `ordinary organization users are not subject to platform support sessions`() {
+        SecurityContextHolder.getContext().authentication =
+            CurrentUserAuthenticationToken(
+                CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner"),
+            )
+        val request = MockHttpServletRequest("GET", "/api/v1/organizations/$organizationId/teams")
 
-		assertTrue(interceptor.preHandle(request, MockHttpServletResponse(), Any()))
-		verify(exactly = 0) { service.requireActiveSupportAccess(any(), any(), any()) }
-	}
+        assertTrue(interceptor.preHandle(request, MockHttpServletResponse(), Any()))
+        verify(exactly = 0) { service.requireActiveSupportAccess(any(), any(), any()) }
+    }
 
-	@Test
-	fun `platform admin organization request requires a support access header`() {
-		authenticateAdmin()
-		val request = MockHttpServletRequest("GET", "/api/v1/organizations/$organizationId/teams")
+    @Test
+    fun `platform admin organization request requires a support access header`() {
+        authenticateAdmin()
+        val request = MockHttpServletRequest("GET", "/api/v1/organizations/$organizationId/teams")
 
-		assertFailsWith<ForbiddenException> {
-			interceptor.preHandle(request, MockHttpServletResponse(), Any())
-		}
-	}
+        assertFailsWith<ForbiddenException> {
+            interceptor.preHandle(request, MockHttpServletResponse(), Any())
+        }
+    }
 
-	@Test
-	fun `platform admin organization request validates the reasoned session`() {
-		authenticateAdmin()
-		val request = MockHttpServletRequest("GET", "/api/v1/organizations/$organizationId/teams")
-		request.addHeader(PLATFORM_SUPPORT_ACCESS_HEADER, accessId.toString())
-		every { service.requireActiveSupportAccess(admin, accessId, organizationId) } returns mockk<PlatformSupportAccess>()
+    @Test
+    fun `platform admin organization request validates the reasoned session`() {
+        authenticateAdmin()
+        val request = MockHttpServletRequest("GET", "/api/v1/organizations/$organizationId/teams")
+        request.addHeader(PLATFORM_SUPPORT_ACCESS_HEADER, accessId.toString())
+        every { service.requireActiveSupportAccess(admin, accessId, organizationId) } returns mockk<PlatformSupportAccess>()
 
-		assertTrue(interceptor.preHandle(request, MockHttpServletResponse(), Any()))
-		verify(exactly = 1) { service.requireActiveSupportAccess(admin, accessId, organizationId) }
-	}
+        assertTrue(interceptor.preHandle(request, MockHttpServletResponse(), Any()))
+        verify(exactly = 1) { service.requireActiveSupportAccess(admin, accessId, organizationId) }
+    }
 
-	@Test
-	fun `resource-first schedule request uses its organization query scope`() {
-		authenticateAdmin()
-		val teamId = UUID.randomUUID()
-		val request = MockHttpServletRequest("GET", "/api/v1/teams/$teamId/events")
-		request.addParameter("organizationId", organizationId.toString())
-		request.addHeader(PLATFORM_SUPPORT_ACCESS_HEADER, accessId.toString())
-		every { service.requireActiveSupportAccess(admin, accessId, organizationId) } returns mockk<PlatformSupportAccess>()
+    @Test
+    fun `resource-first schedule request uses its organization query scope`() {
+        authenticateAdmin()
+        val teamId = UUID.randomUUID()
+        val request = MockHttpServletRequest("GET", "/api/v1/teams/$teamId/events")
+        request.addParameter("organizationId", organizationId.toString())
+        request.addHeader(PLATFORM_SUPPORT_ACCESS_HEADER, accessId.toString())
+        every { service.requireActiveSupportAccess(admin, accessId, organizationId) } returns mockk<PlatformSupportAccess>()
 
-		assertTrue(interceptor.preHandle(request, MockHttpServletResponse(), Any()))
-		verify(exactly = 1) { service.requireActiveSupportAccess(admin, accessId, organizationId) }
-	}
+        assertTrue(interceptor.preHandle(request, MockHttpServletResponse(), Any()))
+        verify(exactly = 1) { service.requireActiveSupportAccess(admin, accessId, organizationId) }
+    }
 
-	@Test
-	fun `resource-first request cannot omit organization scope`() {
-		authenticateAdmin()
-		val request = MockHttpServletRequest("GET", "/api/v1/events/${UUID.randomUUID()}/rsvps")
-		request.addHeader(PLATFORM_SUPPORT_ACCESS_HEADER, accessId.toString())
+    @Test
+    fun `resource-first request cannot omit organization scope`() {
+        authenticateAdmin()
+        val request = MockHttpServletRequest("GET", "/api/v1/events/${UUID.randomUUID()}/rsvps")
+        request.addHeader(PLATFORM_SUPPORT_ACCESS_HEADER, accessId.toString())
 
-		assertFailsWith<ForbiddenException> {
-			interceptor.preHandle(request, MockHttpServletResponse(), Any())
-		}
-	}
+        assertFailsWith<ForbiddenException> {
+            interceptor.preHandle(request, MockHttpServletResponse(), Any())
+        }
+    }
 
-	private fun authenticateAdmin() {
-		SecurityContextHolder.getContext().authentication = CurrentUserAuthenticationToken(admin)
-	}
+    private fun authenticateAdmin() {
+        SecurityContextHolder.getContext().authentication = CurrentUserAuthenticationToken(admin)
+    }
 }

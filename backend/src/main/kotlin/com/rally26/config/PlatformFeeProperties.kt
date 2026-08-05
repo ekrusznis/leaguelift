@@ -11,8 +11,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.platform")
 data class PlatformFeeProperties(
-	val feeBasisPoints: Int = 500,
+    val feeBasisPoints: Int = 500,
 ) {
-	/** e.g. 500 basis points -> 0.05. */
-	fun feeMinorOf(grossAmountMinor: Long): Long = Math.floorDiv(grossAmountMinor * feeBasisPoints, 10_000L)
+    /** e.g. 500 basis points -> 0.05. */
+    fun feeMinorOf(grossAmountMinor: Long): Long = Math.floorDiv(grossAmountMinor * feeBasisPoints, 10_000L)
 }

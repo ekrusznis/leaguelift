@@ -24,7 +24,6 @@ class CampaignController(
     private val campaignService: CampaignService,
     private val contributionService: ContributionService,
 ) {
-
     @GetMapping
     fun list(
         @PathVariable organizationId: UUID,
@@ -33,8 +32,10 @@ class CampaignController(
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<CampaignResponse> {
         val offset = page * size
-        val items = campaignService.list(organizationId, currentUser, offset, size)
-            .map { it.toResponse(contributionService.getConfirmedTotal(it.id)) }
+        val items =
+            campaignService
+                .list(organizationId, currentUser, offset, size)
+                .map { it.toResponse(contributionService.getConfirmedTotal(it.id)) }
         val total = campaignService.count(organizationId, currentUser)
         return PageResponse(items, page, size, total)
     }
@@ -45,11 +46,20 @@ class CampaignController(
         @Valid @RequestBody request: CreateCampaignRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): ResponseEntity<CampaignResponse> {
-        val campaign = campaignService.create(
-            organizationId, request.teamId, request.name, request.slug, request.description,
-            request.campaignType, request.goalAmountMinor, request.currency, request.startDate, request.endDate,
-            currentUser,
-        )
+        val campaign =
+            campaignService.create(
+                organizationId,
+                request.teamId,
+                request.name,
+                request.slug,
+                request.description,
+                request.campaignType,
+                request.goalAmountMinor,
+                request.currency,
+                request.startDate,
+                request.endDate,
+                currentUser,
+            )
         return ResponseEntity.status(HttpStatus.CREATED).body(campaign.toResponse(raisedMinor = 0))
     }
 
@@ -70,10 +80,17 @@ class CampaignController(
         @Valid @RequestBody request: UpdateCampaignRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): CampaignResponse {
-        val campaign = campaignService.update(
-            organizationId, campaignId, request.name, request.description, request.goalAmountMinor,
-            request.startDate, request.endDate, currentUser,
-        )
+        val campaign =
+            campaignService.update(
+                organizationId,
+                campaignId,
+                request.name,
+                request.description,
+                request.goalAmountMinor,
+                request.startDate,
+                request.endDate,
+                currentUser,
+            )
         return campaign.toResponse(contributionService.getConfirmedTotal(campaign.id))
     }
 

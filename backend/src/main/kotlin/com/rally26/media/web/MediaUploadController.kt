@@ -15,32 +15,33 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/media")
-class MediaUploadController(private val mediaUploadService: MediaUploadService) {
+class MediaUploadController(
+    private val mediaUploadService: MediaUploadService,
+) {
+    @PostMapping("/uploads")
+    fun requestUpload(
+        @PathVariable organizationId: UUID,
+        @Valid @RequestBody request: RequestUploadRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): ResponseEntity<RequestUploadResponse> {
+        val result =
+            mediaUploadService.requestUpload(
+                organizationId,
+                parseUsageSlot(request.usageSlot),
+                request.fileName,
+                request.contentType,
+                request.fileSizeBytes,
+                currentUser,
+                request.entityType?.let(::parseEntityType),
+                request.entityId,
+            )
+        return ResponseEntity.status(HttpStatus.CREATED).body(result.toResponse())
+    }
 
-	@PostMapping("/uploads")
-	fun requestUpload(
-		@PathVariable organizationId: UUID,
-		@Valid @RequestBody request: RequestUploadRequest,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): ResponseEntity<RequestUploadResponse> {
-		val result = mediaUploadService.requestUpload(
-			organizationId,
-			parseUsageSlot(request.usageSlot),
-			request.fileName,
-			request.contentType,
-			request.fileSizeBytes,
-			currentUser,
-			request.entityType?.let(::parseEntityType),
-			request.entityId,
-		)
-		return ResponseEntity.status(HttpStatus.CREATED).body(result.toResponse())
-	}
-
-	@PostMapping("/uploads/{assetId}/confirm")
-	fun confirmUpload(
-		@PathVariable organizationId: UUID,
-		@PathVariable assetId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): ConfirmUploadResponse =
-		mediaUploadService.confirmUpload(organizationId, assetId, currentUser).asset.toConfirmResponse()
+    @PostMapping("/uploads/{assetId}/confirm")
+    fun confirmUpload(
+        @PathVariable organizationId: UUID,
+        @PathVariable assetId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): ConfirmUploadResponse = mediaUploadService.confirmUpload(organizationId, assetId, currentUser).asset.toConfirmResponse()
 }

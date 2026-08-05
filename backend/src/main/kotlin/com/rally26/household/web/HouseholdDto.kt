@@ -63,12 +63,33 @@ data class HouseholdAdultResponse(
     val createdAt: Instant,
 )
 
-fun Household.toResponse() = HouseholdResponse(
-    id, organizationId, displayName, contactEmail, contactPhone, notes, emailRemindersOptOut, smsRemindersOptIn, status.name, createdAt, updatedAt,
-)
+fun Household.toResponse() =
+    HouseholdResponse(
+        id,
+        organizationId,
+        displayName,
+        contactEmail,
+        contactPhone,
+        notes,
+        emailRemindersOptOut,
+        smsRemindersOptIn,
+        status.name,
+        createdAt,
+        updatedAt,
+    )
 
-fun HouseholdAdult.toResponse() = HouseholdAdultResponse(
-    id, householdId, firstName, lastName, email, phone, relationship, isPrimary, status.name, createdAt,
-)
+fun HouseholdAdult.toResponse() =
+    HouseholdAdultResponse(
+        id,
+        householdId,
+        firstName,
+        lastName,
+        email,
+        phone,
+        relationship,
+        isPrimary,
+        status.name,
+        createdAt,
+    )
 
 typealias HouseholdPageResponse = PageResponse<HouseholdResponse>

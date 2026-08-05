@@ -24,7 +24,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class HouseholdServiceTest {
-
     private val householdRepository = mockk<HouseholdRepository>()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
@@ -68,10 +67,27 @@ class HouseholdServiceTest {
     fun `create requires manager role and records audit`() {
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
         val household = sampleHousehold()
-        every { householdRepository.insert(orgId, household.displayName, household.contactEmail, household.contactPhone, household.notes) } returns household
+        every {
+            householdRepository.insert(
+                orgId,
+                household.displayName,
+                household.contactEmail,
+                household.contactPhone,
+                household.notes,
+            )
+        } returns
+            household
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 
-        val result = service.create(orgId, household.displayName, household.contactEmail, household.contactPhone, household.notes, currentUser)
+        val result =
+            service.create(
+                orgId,
+                household.displayName,
+                household.contactEmail,
+                household.contactPhone,
+                household.notes,
+                currentUser,
+            )
 
         assertEquals(household.id, result.id)
         verify(exactly = 1) { membershipService.requireManagerRole(orgId, currentUser) }
@@ -117,10 +133,32 @@ class HouseholdServiceTest {
         val adult = sampleAdult(household.id)
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
         every { householdRepository.findById(household.id, orgId) } returns household
-        every { householdRepository.insertAdult(household.id, orgId, adult.firstName, adult.lastName, adult.email, adult.phone, adult.relationship, adult.isPrimary) } returns adult
+        every {
+            householdRepository.insertAdult(
+                household.id,
+                orgId,
+                adult.firstName,
+                adult.lastName,
+                adult.email,
+                adult.phone,
+                adult.relationship,
+                adult.isPrimary,
+            )
+        } returns adult
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 
-        val result = service.addAdult(orgId, household.id, adult.firstName, adult.lastName, adult.email, adult.phone, adult.relationship, adult.isPrimary, currentUser)
+        val result =
+            service.addAdult(
+                orgId,
+                household.id,
+                adult.firstName,
+                adult.lastName,
+                adult.email,
+                adult.phone,
+                adult.relationship,
+                adult.isPrimary,
+                currentUser,
+            )
 
         assertEquals(adult.id, result.id)
         verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "household.adult.added", "household_adult", adult.id, any()) }
@@ -149,42 +187,45 @@ class HouseholdServiceTest {
         verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "household.adult.removed", "household_adult", adultId, any()) }
     }
 
-    private fun sampleHousehold() = Household(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        displayName = "Smith Family",
-        contactEmail = "smith@example.com",
-        contactPhone = "555-0100",
-        notes = null,
-        emailRemindersOptOut = false,
-        smsRemindersOptIn = false,
-        status = HouseholdStatus.ACTIVE,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun sampleHousehold() =
+        Household(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            displayName = "Smith Family",
+            contactEmail = "smith@example.com",
+            contactPhone = "555-0100",
+            notes = null,
+            emailRemindersOptOut = false,
+            smsRemindersOptIn = false,
+            status = HouseholdStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
-    private fun sampleAdult(householdId: UUID) = HouseholdAdult(
-        id = UUID.randomUUID(),
-        householdId = householdId,
-        organizationId = orgId,
-        firstName = "Jane",
-        lastName = "Smith",
-        email = "jane@example.com",
-        phone = null,
-        relationship = "Parent",
-        isPrimary = true,
-        status = AdultStatus.ACTIVE,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun sampleAdult(householdId: UUID) =
+        HouseholdAdult(
+            id = UUID.randomUUID(),
+            householdId = householdId,
+            organizationId = orgId,
+            firstName = "Jane",
+            lastName = "Smith",
+            email = "jane@example.com",
+            phone = null,
+            relationship = "Parent",
+            isPrimary = true,
+            status = AdultStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
-    private fun managerMembership() = OrganizationMembership(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        userId = currentUser.userId,
-        role = MembershipRole.ADMINISTRATOR,
-        status = MembershipStatus.ACTIVE,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun managerMembership() =
+        OrganizationMembership(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            userId = currentUser.userId,
+            role = MembershipRole.ADMINISTRATOR,
+            status = MembershipStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 }

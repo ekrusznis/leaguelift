@@ -15,19 +15,19 @@ enum class SponsorshipPackageStatus { DRAFT, PUBLISHED, ARCHIVED }
  * "sold out once maxQuantity is reached" are explicitly deferred to a later slice.
  */
 data class SponsorshipPackage(
-	val id: UUID,
-	val organizationId: UUID,
-	val name: String,
-	val description: String?,
-	val priceMinor: Long,
-	val currency: String,
-	val maxQuantity: Int?,
-	val exclusive: Boolean,
-	val placementStartDate: LocalDate?,
-	val placementEndDate: LocalDate?,
-	val status: SponsorshipPackageStatus,
-	val createdAt: Instant,
-	val updatedAt: Instant,
+    val id: UUID,
+    val organizationId: UUID,
+    val name: String,
+    val description: String?,
+    val priceMinor: Long,
+    val currency: String,
+    val maxQuantity: Int?,
+    val exclusive: Boolean,
+    val placementStartDate: LocalDate?,
+    val placementEndDate: LocalDate?,
+    val status: SponsorshipPackageStatus,
+    val createdAt: Instant,
+    val updatedAt: Instant,
 )
 
 /**

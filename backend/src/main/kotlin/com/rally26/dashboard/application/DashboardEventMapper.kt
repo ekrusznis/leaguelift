@@ -23,35 +23,50 @@ private const val DASHBOARD_EVENT_LIMIT = 50
  * IDs that cannot open the real event-detail route.
  */
 @Component
-class DashboardEventMapper(private val teamRepository: TeamRepository) {
+class DashboardEventMapper(
+    private val teamRepository: TeamRepository,
+) {
+    fun upcoming(
+        events: List<Event>,
+        includeDrafts: Boolean = false,
+        now: Instant = Instant.now(),
+    ): List<Event> =
+        events
+            .asSequence()
+            .filter { includeDrafts || it.status != EventStatus.DRAFT }
+            .filter { it.status !in EVENT_TERMINAL_STATUSES }
+            .filter { it.startAt == null || !it.startAt.isBefore(now) }
+            .sortedBy { it.startAt ?: Instant.MAX }
+            .take(DASHBOARD_EVENT_LIMIT)
+            .toList()
 
-	fun upcoming(events: List<Event>, includeDrafts: Boolean = false, now: Instant = Instant.now()): List<Event> =
-		events.asSequence()
-			.filter { includeDrafts || it.status != EventStatus.DRAFT }
-			.filter { it.status !in EVENT_TERMINAL_STATUSES }
-			.filter { it.startAt == null || !it.startAt.isBefore(now) }
-			.sortedBy { it.startAt ?: Instant.MAX }
-			.take(DASHBOARD_EVENT_LIMIT)
-			.toList()
-
-	fun toScheduleItem(event: Event, organizationId: UUID): ScheduleItem {
-		val teamName = event.teamId?.let { teamRepository.findById(it, organizationId)?.name }
-		val opponentName = event.opponentTeamId?.let { teamRepository.findById(it, organizationId)?.name }
-		val zone = runCatching { ZoneId.of(event.timezone) }.getOrDefault(ZoneId.systemDefault())
-		val starts = event.startAt?.atZone(zone)
-		val details = listOfNotNull(
-			event.eventType.name.lowercase().replaceFirstChar { it.titlecase(Locale.US) },
-			event.venueName,
-			event.area,
-		).distinct().joinToString(" · ")
-		return ScheduleItem(
-			id = event.id.toString(),
-			day = starts?.dayOfWeek?.getDisplayName(TextStyle.SHORT, Locale.US)?.uppercase(Locale.US) ?: "TBD",
-			date = starts?.dayOfMonth?.toString() ?: "TBD",
-			title = displayTitle(event, teamName, opponentName),
-			subtitle = details,
-			time = starts?.format(DateTimeFormatter.ofPattern("h:mm a", Locale.US)) ?: "TBD",
-			tag = event.status.name.lowercase().replaceFirstChar { it.titlecase(Locale.US) },
-		)
-	}
+    fun toScheduleItem(
+        event: Event,
+        organizationId: UUID,
+    ): ScheduleItem {
+        val teamName = event.teamId?.let { teamRepository.findById(it, organizationId)?.name }
+        val opponentName = event.opponentTeamId?.let { teamRepository.findById(it, organizationId)?.name }
+        val zone = runCatching { ZoneId.of(event.timezone) }.getOrDefault(ZoneId.systemDefault())
+        val starts = event.startAt?.atZone(zone)
+        val details =
+            listOfNotNull(
+                event.eventType.name
+                    .lowercase()
+                    .replaceFirstChar { it.titlecase(Locale.US) },
+                event.venueName,
+                event.area,
+            ).distinct().joinToString(" · ")
+        return ScheduleItem(
+            id = event.id.toString(),
+            day = starts?.dayOfWeek?.getDisplayName(TextStyle.SHORT, Locale.US)?.uppercase(Locale.US) ?: "TBD",
+            date = starts?.dayOfMonth?.toString() ?: "TBD",
+            title = displayTitle(event, teamName, opponentName),
+            subtitle = details,
+            time = starts?.format(DateTimeFormatter.ofPattern("h:mm a", Locale.US)) ?: "TBD",
+            tag =
+                event.status.name
+                    .lowercase()
+                    .replaceFirstChar { it.titlecase(Locale.US) },
+        )
+    }
 }

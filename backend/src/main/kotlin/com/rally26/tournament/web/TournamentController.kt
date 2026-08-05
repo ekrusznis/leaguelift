@@ -21,8 +21,9 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/tournaments")
-class TournamentController(private val tournamentService: TournamentService) {
-
+class TournamentController(
+    private val tournamentService: TournamentService,
+) {
     @GetMapping
     fun list(
         @PathVariable organizationId: UUID,
@@ -42,16 +43,17 @@ class TournamentController(private val tournamentService: TournamentService) {
         @Valid @RequestBody request: CreateTournamentRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): ResponseEntity<TournamentResponse> {
-        val tournament = tournamentService.create(
-            organizationId,
-            request.name,
-            request.sport,
-            request.startDate,
-            request.endDate,
-            request.location,
-            request.contactEmail,
-            currentUser,
-        )
+        val tournament =
+            tournamentService.create(
+                organizationId,
+                request.name,
+                request.sport,
+                request.startDate,
+                request.endDate,
+                request.location,
+                request.contactEmail,
+                currentUser,
+            )
         return ResponseEntity.status(HttpStatus.CREATED).body(tournament.toResponse())
     }
 
@@ -68,17 +70,19 @@ class TournamentController(private val tournamentService: TournamentService) {
         @PathVariable tournamentId: UUID,
         @Valid @RequestBody request: UpdateTournamentRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): TournamentResponse = tournamentService.update(
-        organizationId,
-        tournamentId,
-        request.name,
-        request.sport,
-        request.startDate,
-        request.endDate,
-        request.location,
-        request.contactEmail,
-        currentUser,
-    ).toResponse()
+    ): TournamentResponse =
+        tournamentService
+            .update(
+                organizationId,
+                tournamentId,
+                request.name,
+                request.sport,
+                request.startDate,
+                request.endDate,
+                request.location,
+                request.contactEmail,
+                currentUser,
+            ).toResponse()
 
     @DeleteMapping("/{tournamentId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

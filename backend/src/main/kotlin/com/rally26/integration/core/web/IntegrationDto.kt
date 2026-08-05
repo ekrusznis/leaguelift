@@ -70,64 +70,69 @@ data class IntegrationHealthResponse(
     val checkedAt: Instant,
 )
 
-fun IntegrationCatalogItem.toResponse() = IntegrationCatalogResponse(
-    provider = definition.provider.name,
-    displayName = definition.displayName,
-    category = definition.category.name,
-    ownerType = definition.ownershipScope.name,
-    authMode = definition.primaryAuthMode.name,
-    supportedAuthModes = definition.supportedAuthModes.map { it.name },
-    readiness = readiness.name,
-    adapterMode = definition.adapterMode.name,
-    description = definition.description,
-    activationRequirement = definition.activationRequirement,
-    defaultScopes = definition.defaultScopes,
-    stub = stub,
-    connection = connection?.toResponse(),
-)
+fun IntegrationCatalogItem.toResponse() =
+    IntegrationCatalogResponse(
+        provider = definition.provider.name,
+        displayName = definition.displayName,
+        category = definition.category.name,
+        ownerType = definition.ownershipScope.name,
+        authMode = definition.primaryAuthMode.name,
+        supportedAuthModes = definition.supportedAuthModes.map { it.name },
+        readiness = readiness.name,
+        adapterMode = definition.adapterMode.name,
+        description = definition.description,
+        activationRequirement = definition.activationRequirement,
+        defaultScopes = definition.defaultScopes,
+        stub = stub,
+        connection = connection?.toResponse(),
+    )
 
-fun IntegrationConnection.toResponse() = IntegrationConnectionResponse(
-    id = id,
-    provider = provider.name,
-    category = category.name,
-    ownerType = ownerType.name,
-    organizationId = organizationId,
-    userId = userId,
-    authMode = authMode.name,
-    status = status.name,
-    grantedScopes = grantedScopes,
-    externalAccountId = externalAccountId,
-    externalAccountName = externalAccountName,
-    hasStoredCredential = credentialId != null &&
-        status !in setOf(IntegrationConnectionStatus.REVOKED, IntegrationConnectionStatus.DISCONNECTED),
-    accessTokenExpiresAt = accessTokenExpiresAt,
-    lastSuccessfulSyncAt = lastSuccessfulSyncAt,
-    lastHealthCheckAt = lastHealthCheckAt,
-    lastErrorCode = lastErrorCode,
-    lastErrorMessage = lastErrorMessage,
-    createdAt = createdAt,
-    updatedAt = updatedAt,
-    connectedAt = connectedAt,
-    revokedAt = revokedAt,
-    disconnectedAt = disconnectedAt,
-)
+fun IntegrationConnection.toResponse() =
+    IntegrationConnectionResponse(
+        id = id,
+        provider = provider.name,
+        category = category.name,
+        ownerType = ownerType.name,
+        organizationId = organizationId,
+        userId = userId,
+        authMode = authMode.name,
+        status = status.name,
+        grantedScopes = grantedScopes,
+        externalAccountId = externalAccountId,
+        externalAccountName = externalAccountName,
+        hasStoredCredential =
+            credentialId != null &&
+                status !in setOf(IntegrationConnectionStatus.REVOKED, IntegrationConnectionStatus.DISCONNECTED),
+        accessTokenExpiresAt = accessTokenExpiresAt,
+        lastSuccessfulSyncAt = lastSuccessfulSyncAt,
+        lastHealthCheckAt = lastHealthCheckAt,
+        lastErrorCode = lastErrorCode,
+        lastErrorMessage = lastErrorMessage,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        connectedAt = connectedAt,
+        revokedAt = revokedAt,
+        disconnectedAt = disconnectedAt,
+    )
 
-fun AuthorizationStartResult.toResponse() = AuthorizationStartResponse(
-    provider = connection.provider.name,
-    connectionId = connection.id,
-    authorizationUrl = authorizationUrl,
-    expiresAt = expiresAt,
-)
+fun AuthorizationStartResult.toResponse() =
+    AuthorizationStartResponse(
+        provider = connection.provider.name,
+        connectionId = connection.id,
+        authorizationUrl = authorizationUrl,
+        expiresAt = expiresAt,
+    )
 
-fun IntegrationHealthCheck.toResponse() = IntegrationHealthResponse(
-    id = id,
-    connectionId = connectionId,
-    status = status.name,
-    latencyMs = latencyMs,
-    errorCode = errorCode,
-    errorMessage = errorMessage,
-    checkedAt = checkedAt,
-)
+fun IntegrationHealthCheck.toResponse() =
+    IntegrationHealthResponse(
+        id = id,
+        connectionId = connectionId,
+        status = status.name,
+        latencyMs = latencyMs,
+        errorCode = errorCode,
+        errorMessage = errorMessage,
+        checkedAt = checkedAt,
+    )
 
 data class PlatformIntegrationConfigurationCheckResponse(
     val label: String,
@@ -144,15 +149,16 @@ data class PlatformIntegrationReadinessResponse(
     val checks: List<PlatformIntegrationConfigurationCheckResponse>,
 )
 
-fun com.rally26.integration.core.application.PlatformIntegrationReadiness.toResponse() = PlatformIntegrationReadinessResponse(
-    provider = provider.name,
-    displayName = displayName,
-    category = category,
-    status = status.name,
-    mode = mode,
-    summary = summary,
-    checks = checks.map { PlatformIntegrationConfigurationCheckResponse(it.label, it.configured) },
-)
+fun com.rally26.integration.core.application.PlatformIntegrationReadiness.toResponse() =
+    PlatformIntegrationReadinessResponse(
+        provider = provider.name,
+        displayName = displayName,
+        category = category,
+        status = status.name,
+        mode = mode,
+        summary = summary,
+        checks = checks.map { PlatformIntegrationConfigurationCheckResponse(it.label, it.configured) },
+    )
 
 data class ProviderContractCapabilityResponse(
     val name: String,
@@ -173,15 +179,16 @@ data class PlatformProviderContractResponse(
     val capabilities: List<ProviderContractCapabilityResponse>,
 )
 
-fun com.rally26.integration.core.application.PlatformProviderContract.toResponse() = PlatformProviderContractResponse(
-    provider = provider.name,
-    configurationStatus = configurationStatus.name,
-    credentialOwnership = credentialOwnership,
-    credentialRotation = credentialRotation,
-    healthCheckMode = healthCheckMode,
-    liveProbeEnabled = liveProbeEnabled,
-    webhookVerification = webhookVerification,
-    idempotency = idempotency,
-    productionStubBlocked = productionStubBlocked,
-    capabilities = capabilities.map { ProviderContractCapabilityResponse(it.name, it.status.name, it.summary) },
-)
+fun com.rally26.integration.core.application.PlatformProviderContract.toResponse() =
+    PlatformProviderContractResponse(
+        provider = provider.name,
+        configurationStatus = configurationStatus.name,
+        credentialOwnership = credentialOwnership,
+        credentialRotation = credentialRotation,
+        healthCheckMode = healthCheckMode,
+        liveProbeEnabled = liveProbeEnabled,
+        webhookVerification = webhookVerification,
+        idempotency = idempotency,
+        productionStubBlocked = productionStubBlocked,
+        capabilities = capabilities.map { ProviderContractCapabilityResponse(it.name, it.status.name, it.summary) },
+    )

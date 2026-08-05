@@ -26,13 +26,14 @@ class IntegrationCatalogServiceTest {
 
     @Test
     fun `oauth scaffold remains not configured without runtime activation`() {
-        val service = IntegrationCatalogService(
-            providerRepository,
-            connectionRepository,
-            membershipService,
-            IntegrationProperties(),
-            adapterRegistry,
-        )
+        val service =
+            IntegrationCatalogService(
+                providerRepository,
+                connectionRepository,
+                membershipService,
+                IntegrationProperties(),
+                adapterRegistry,
+            )
         assertEquals(IntegrationReadiness.NOT_CONFIGURED, service.readiness(quickBooksDefinition()))
         verify(exactly = 0) { adapterRegistry.find(any()) }
     }
@@ -41,52 +42,57 @@ class IntegrationCatalogServiceTest {
     fun `local configured adapter becomes available without claiming connected`() {
         val adapter = mockk<IntegrationAuthorizationAdapter>()
         every { adapterRegistry.find(IntegrationProvider.QUICKBOOKS_ONLINE) } returns adapter
-        val service = IntegrationCatalogService(
-            providerRepository,
-            connectionRepository,
-            membershipService,
-            IntegrationProperties(
-                stubMode = true,
-                providers = mapOf(
-                    "quickbooks-online" to IntegrationProviderRuntimeProperties(enabled = true, clientId = "local-client"),
+        val service =
+            IntegrationCatalogService(
+                providerRepository,
+                connectionRepository,
+                membershipService,
+                IntegrationProperties(
+                    stubMode = true,
+                    providers =
+                        mapOf(
+                            "quickbooks-online" to IntegrationProviderRuntimeProperties(enabled = true, clientId = "local-client"),
+                        ),
                 ),
-            ),
-            adapterRegistry,
-        )
+                adapterRegistry,
+            )
         assertEquals(IntegrationReadiness.AVAILABLE, service.readiness(quickBooksDefinition()))
     }
 
     @Test
     fun `partner pending baseline cannot be promoted by configuration`() {
-        val definition = quickBooksDefinition().copy(
-            provider = IntegrationProvider.GAMECHANGER,
-            primaryAuthMode = IntegrationAuthMode.FILE_IMPORT,
-            baselineReadiness = IntegrationReadiness.PARTNER_PENDING,
-            adapterMode = IntegrationAdapterMode.PARTNER_PENDING,
-        )
-        val service = IntegrationCatalogService(
-            providerRepository,
-            connectionRepository,
-            membershipService,
-            IntegrationProperties(),
-            adapterRegistry,
-        )
+        val definition =
+            quickBooksDefinition().copy(
+                provider = IntegrationProvider.GAMECHANGER,
+                primaryAuthMode = IntegrationAuthMode.FILE_IMPORT,
+                baselineReadiness = IntegrationReadiness.PARTNER_PENDING,
+                adapterMode = IntegrationAdapterMode.PARTNER_PENDING,
+            )
+        val service =
+            IntegrationCatalogService(
+                providerRepository,
+                connectionRepository,
+                membershipService,
+                IntegrationProperties(),
+                adapterRegistry,
+            )
         assertEquals(IntegrationReadiness.PARTNER_PENDING, service.readiness(definition))
     }
 
-    private fun quickBooksDefinition() = IntegrationProviderDefinition(
-        provider = IntegrationProvider.QUICKBOOKS_ONLINE,
-        displayName = "QuickBooks Online",
-        category = IntegrationCategory.ACCOUNTING,
-        ownershipScope = IntegrationOwnerType.ORGANIZATION,
-        primaryAuthMode = IntegrationAuthMode.OAUTH2,
-        supportedAuthModes = listOf(IntegrationAuthMode.OAUTH2),
-        baselineReadiness = IntegrationReadiness.NOT_CONFIGURED,
-        adapterMode = IntegrationAdapterMode.OAUTH_SCAFFOLD,
-        description = "Accounting scaffold",
-        activationRequirement = "Phase 20 credentials",
-        defaultScopes = emptyList(),
-        sortOrder = 1,
-        visibleToCustomers = true,
-    )
+    private fun quickBooksDefinition() =
+        IntegrationProviderDefinition(
+            provider = IntegrationProvider.QUICKBOOKS_ONLINE,
+            displayName = "QuickBooks Online",
+            category = IntegrationCategory.ACCOUNTING,
+            ownershipScope = IntegrationOwnerType.ORGANIZATION,
+            primaryAuthMode = IntegrationAuthMode.OAUTH2,
+            supportedAuthModes = listOf(IntegrationAuthMode.OAUTH2),
+            baselineReadiness = IntegrationReadiness.NOT_CONFIGURED,
+            adapterMode = IntegrationAdapterMode.OAUTH_SCAFFOLD,
+            description = "Accounting scaffold",
+            activationRequirement = "Phase 20 credentials",
+            defaultScopes = emptyList(),
+            sortOrder = 1,
+            visibleToCustomers = true,
+        )
 }

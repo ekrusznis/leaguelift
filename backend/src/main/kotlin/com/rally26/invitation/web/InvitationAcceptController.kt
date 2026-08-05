@@ -15,11 +15,12 @@ import org.springframework.web.bind.annotation.RestController
  */
 @RestController
 @RequestMapping("/api/v1/invitations")
-class InvitationAcceptController(private val invitationService: InvitationService) {
-
-	@PostMapping("/{token}/accept")
-	fun accept(
-		@PathVariable token: String,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): InvitationResponse = invitationService.accept(token, currentUser).toResponse()
+class InvitationAcceptController(
+    private val invitationService: InvitationService,
+) {
+    @PostMapping("/{token}/accept")
+    fun accept(
+        @PathVariable token: String,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): InvitationResponse = invitationService.accept(token, currentUser).toResponse()
 }

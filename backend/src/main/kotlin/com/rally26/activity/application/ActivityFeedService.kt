@@ -6,7 +6,6 @@ import com.rally26.common.web.CurrentUser
 import com.rally26.membership.persistence.MembershipRepository
 import com.rally26.organization.persistence.OrganizationRepository
 import org.springframework.stereotype.Service
-import java.util.UUID
 
 private const val ACTIVITY_FEED_LIMIT = 50
 
@@ -19,32 +18,35 @@ private const val ACTIVITY_FEED_LIMIT = 50
  */
 @Service
 class ActivityFeedService(
-	private val auditEventRepository: AuditEventRepository,
-	private val membershipRepository: MembershipRepository,
-	private val organizationRepository: OrganizationRepository,
+    private val auditEventRepository: AuditEventRepository,
+    private val membershipRepository: MembershipRepository,
+    private val organizationRepository: OrganizationRepository,
 ) {
+    fun getFeed(currentUser: CurrentUser): List<ActivityFeedItem> {
+        val events =
+            if (currentUser.platformAdministrator) {
+                auditEventRepository.listRecentAcrossAllOrganizations(ACTIVITY_FEED_LIMIT)
+            } else {
+                val organizationIds = membershipRepository.listActiveForUser(currentUser.userId).map { it.organizationId }.toSet()
+                auditEventRepository.listRecentForOrganizations(organizationIds, ACTIVITY_FEED_LIMIT)
+            }
 
-	fun getFeed(currentUser: CurrentUser): List<ActivityFeedItem> {
-		val events = if (currentUser.platformAdministrator) {
-			auditEventRepository.listRecentAcrossAllOrganizations(ACTIVITY_FEED_LIMIT)
-		} else {
-			val organizationIds = membershipRepository.listActiveForUser(currentUser.userId).map { it.organizationId }.toSet()
-			auditEventRepository.listRecentForOrganizations(organizationIds, ACTIVITY_FEED_LIMIT)
-		}
+        val organizationNames =
+            events
+                .mapNotNull { it.organizationId }
+                .toSet()
+                .associateWith { organizationRepository.findById(it)?.name }
 
-		val organizationNames = events.mapNotNull { it.organizationId }.toSet()
-			.associateWith { organizationRepository.findById(it)?.name }
-
-		return events.map {
-			ActivityFeedItem(
-				id = it.id,
-				organizationId = it.organizationId,
-				organizationName = it.organizationId?.let { orgId -> organizationNames[orgId] },
-				action = it.action,
-				entityType = it.entityType,
-				entityId = it.entityId,
-				occurredAt = it.createdAt,
-			)
-		}
-	}
+        return events.map {
+            ActivityFeedItem(
+                id = it.id,
+                organizationId = it.organizationId,
+                organizationName = it.organizationId?.let { orgId -> organizationNames[orgId] },
+                action = it.action,
+                entityType = it.entityType,
+                entityId = it.entityId,
+                occurredAt = it.createdAt,
+            )
+        }
+    }
 }

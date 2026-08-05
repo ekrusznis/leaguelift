@@ -18,19 +18,25 @@ class PublicController(
     private val mediaAssignmentService: MediaAssignmentService,
     private val mediaReadService: MediaReadService,
 ) {
-
     @GetMapping("/pages/{slug}")
-    fun getPage(@PathVariable slug: String): PublicPageResponse {
+    fun getPage(
+        @PathVariable slug: String,
+    ): PublicPageResponse {
         val page = publicPageService.getPublic(slug)
-        val entityType = when (page.pageType) {
-            PageType.ORGANIZATION -> MediaEntityType.ORGANIZATION
-            PageType.TEAM -> MediaEntityType.TEAM
-            PageType.TOURNAMENT -> MediaEntityType.TOURNAMENT
-        }
-        val logo = mediaAssignmentService.getActiveAssignment(entityType, page.entityId, MediaUsageSlot.LOGO)
-            ?.let(mediaReadService::describe)
-        val cover = mediaAssignmentService.getActiveAssignment(entityType, page.entityId, MediaUsageSlot.COVER)
-            ?.let(mediaReadService::describe)
+        val entityType =
+            when (page.pageType) {
+                PageType.ORGANIZATION -> MediaEntityType.ORGANIZATION
+                PageType.TEAM -> MediaEntityType.TEAM
+                PageType.TOURNAMENT -> MediaEntityType.TOURNAMENT
+            }
+        val logo =
+            mediaAssignmentService
+                .getActiveAssignment(entityType, page.entityId, MediaUsageSlot.LOGO)
+                ?.let(mediaReadService::describe)
+        val cover =
+            mediaAssignmentService
+                .getActiveAssignment(entityType, page.entityId, MediaUsageSlot.COVER)
+                ?.let(mediaReadService::describe)
         return page.toResponse(logo, cover)
     }
 }

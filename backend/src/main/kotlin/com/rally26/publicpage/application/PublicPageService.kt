@@ -23,33 +23,49 @@ class PublicPageService(
     private val membershipService: MembershipService,
     private val auditService: AuditService,
 ) {
-
-    fun list(organizationId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<PublicPage> {
+    fun list(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<PublicPage> {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return publicPageRepository.findAllForOrg(organizationId, offset, limit)
     }
 
-    fun count(organizationId: UUID, currentUser: CurrentUser): Long {
+    fun count(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): Long {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return publicPageRepository.countForOrg(organizationId)
     }
 
-    fun get(organizationId: UUID, pageId: UUID, currentUser: CurrentUser): PublicPage {
+    fun get(
+        organizationId: UUID,
+        pageId: UUID,
+        currentUser: CurrentUser,
+    ): PublicPage {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return publicPageRepository.findById(pageId, organizationId)
             ?: throw NotFoundException("PAGE_NOT_FOUND", "The page could not be found.")
     }
 
     fun getPublic(slug: String): PublicPage {
-        val page = publicPageRepository.findBySlug(slug)
-            ?: throw NotFoundException("PAGE_NOT_FOUND", "The page could not be found.")
+        val page =
+            publicPageRepository.findBySlug(slug)
+                ?: throw NotFoundException("PAGE_NOT_FOUND", "The page could not be found.")
         if (page.status != PageStatus.PUBLISHED) {
             throw NotFoundException("PAGE_NOT_FOUND", "The page could not be found.")
         }
         return page
     }
 
-    fun getForEntity(organizationId: UUID, entityId: UUID, currentUser: CurrentUser): PublicPage? {
+    fun getForEntity(
+        organizationId: UUID,
+        entityId: UUID,
+        currentUser: CurrentUser,
+    ): PublicPage? {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return publicPageRepository.findByEntityId(entityId)
     }
@@ -113,10 +129,15 @@ class PublicPageService(
     }
 
     @Transactional
-    fun publish(organizationId: UUID, pageId: UUID, currentUser: CurrentUser): PublicPage {
+    fun publish(
+        organizationId: UUID,
+        pageId: UUID,
+        currentUser: CurrentUser,
+    ): PublicPage {
         membershipService.requireManagerRole(organizationId, currentUser)
-        val page = publicPageRepository.findById(pageId, organizationId)
-            ?: throw NotFoundException("PAGE_NOT_FOUND", "The page could not be found.")
+        val page =
+            publicPageRepository.findById(pageId, organizationId)
+                ?: throw NotFoundException("PAGE_NOT_FOUND", "The page could not be found.")
         if (page.status == PageStatus.PUBLISHED) return page
         if (page.status == PageStatus.ARCHIVED) {
             throw ValidationException("An archived page cannot be published.")
@@ -133,10 +154,15 @@ class PublicPageService(
     }
 
     @Transactional
-    fun unpublish(organizationId: UUID, pageId: UUID, currentUser: CurrentUser): PublicPage {
+    fun unpublish(
+        organizationId: UUID,
+        pageId: UUID,
+        currentUser: CurrentUser,
+    ): PublicPage {
         membershipService.requireManagerRole(organizationId, currentUser)
-        val page = publicPageRepository.findById(pageId, organizationId)
-            ?: throw NotFoundException("PAGE_NOT_FOUND", "The page could not be found.")
+        val page =
+            publicPageRepository.findById(pageId, organizationId)
+                ?: throw NotFoundException("PAGE_NOT_FOUND", "The page could not be found.")
         if (page.status == PageStatus.DRAFT) return page
         if (page.status == PageStatus.ARCHIVED) {
             throw ValidationException("An archived page cannot be unpublished.")
@@ -156,7 +182,10 @@ class PublicPageService(
         if (!isValidPageSlug(slug)) {
             throw ValidationException(
                 "Slug must be lowercase alphanumeric with optional hyphens.",
-                listOf(com.rally26.common.error.FieldError("slug", "Invalid slug format.")),
+                listOf(
+                    com.rally26.common.error
+                        .FieldError("slug", "Invalid slug format."),
+                ),
             )
         }
     }

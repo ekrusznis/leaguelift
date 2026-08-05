@@ -12,11 +12,11 @@ import org.springframework.stereotype.Component
 private val log = LoggerFactory.getLogger(SponsorshipRenewalScanner::class.java)
 
 private data class RenewalReminderPayload(
-	val sponsorshipId: String,
-	val sponsorName: String,
-	val sponsorContactEmail: String?,
-	val packageName: String,
-	val placementEndDate: String,
+    val sponsorshipId: String,
+    val sponsorName: String,
+    val sponsorContactEmail: String?,
+    val packageName: String,
+    val placementEndDate: String,
 )
 
 /**
@@ -39,36 +39,36 @@ private data class RenewalReminderPayload(
  */
 @Component
 class SponsorshipRenewalScanner(
-	private val sponsorshipRepository: SponsorshipRepository,
-	private val outboxWriter: OutboxWriter,
-	private val properties: SponsorshipRenewalReminderProperties,
-	private val objectMapper: ObjectMapper,
+    private val sponsorshipRepository: SponsorshipRepository,
+    private val outboxWriter: OutboxWriter,
+    private val properties: SponsorshipRenewalReminderProperties,
+    private val objectMapper: ObjectMapper,
 ) {
+    @Scheduled(cron = "\${rally26.sponsorship.renewal-reminder.cron:0 0 8 * * *}")
+    fun scanAndEnqueue() {
+        if (!properties.enabled) return
+        val candidates = sponsorshipRepository.findNeedingRenewalReminder(properties.daysBefore)
+        if (candidates.isEmpty()) return
+        log.info("Enqueueing {} sponsorship renewal reminder(s)", candidates.size)
+        candidates.forEach(::enqueueOne)
+    }
 
-	@Scheduled(cron = "\${rally26.sponsorship.renewal-reminder.cron:0 0 8 * * *}")
-	fun scanAndEnqueue() {
-		if (!properties.enabled) return
-		val candidates = sponsorshipRepository.findNeedingRenewalReminder(properties.daysBefore)
-		if (candidates.isEmpty()) return
-		log.info("Enqueueing {} sponsorship renewal reminder(s)", candidates.size)
-		candidates.forEach(::enqueueOne)
-	}
-
-	private fun enqueueOne(candidate: SponsorshipRenewalCandidate) {
-		val payload = RenewalReminderPayload(
-			sponsorshipId = candidate.sponsorshipId.toString(),
-			sponsorName = candidate.sponsorName,
-			sponsorContactEmail = candidate.sponsorContactEmail,
-			packageName = candidate.packageName,
-			placementEndDate = candidate.placementEndDate.toString(),
-		)
-		outboxWriter.write(
-			aggregateType = "sponsorship",
-			aggregateId = candidate.sponsorshipId,
-			organizationId = candidate.organizationId,
-			eventType = "sponsorship.renewal_reminder_due",
-			payloadJson = objectMapper.writeValueAsString(payload),
-		)
-		sponsorshipRepository.markRenewalReminderSent(candidate.sponsorshipId)
-	}
+    private fun enqueueOne(candidate: SponsorshipRenewalCandidate) {
+        val payload =
+            RenewalReminderPayload(
+                sponsorshipId = candidate.sponsorshipId.toString(),
+                sponsorName = candidate.sponsorName,
+                sponsorContactEmail = candidate.sponsorContactEmail,
+                packageName = candidate.packageName,
+                placementEndDate = candidate.placementEndDate.toString(),
+            )
+        outboxWriter.write(
+            aggregateType = "sponsorship",
+            aggregateId = candidate.sponsorshipId,
+            organizationId = candidate.organizationId,
+            eventType = "sponsorship.renewal_reminder_due",
+            payloadJson = objectMapper.writeValueAsString(payload),
+        )
+        sponsorshipRepository.markRenewalReminderSent(candidate.sponsorshipId)
+    }
 }

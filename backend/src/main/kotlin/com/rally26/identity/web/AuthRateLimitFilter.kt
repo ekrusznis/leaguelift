@@ -35,36 +35,45 @@ import org.springframework.web.filter.OncePerRequestFilter
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 class AuthRateLimitFilter(
-	private val requestIdProvider: RequestIdProvider,
-	private val objectMapper: ObjectMapper,
+    private val requestIdProvider: RequestIdProvider,
+    private val objectMapper: ObjectMapper,
 ) : OncePerRequestFilter() {
+    private val limiter = SlidingWindowRateLimiter(windowSeconds = WINDOW_SECONDS, maxRequests = MAX_ATTEMPTS)
 
-	private val limiter = SlidingWindowRateLimiter(windowSeconds = WINDOW_SECONDS, maxRequests = MAX_ATTEMPTS)
+    override fun doFilterInternal(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        filterChain: FilterChain,
+    ) {
+        if (request.requestURI !in RATE_LIMITED_PATHS) {
+            filterChain.doFilter(request, response)
+            return
+        }
 
-	override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain) {
-		if (request.requestURI !in RATE_LIMITED_PATHS) {
-			filterChain.doFilter(request, response)
-			return
-		}
+        val key = "${resolveClientIp(request)}:${request.requestURI}"
+        if (!limiter.tryAcquire(key)) {
+            writeRateLimitedResponse(
+                response,
+                objectMapper,
+                requestIdProvider,
+                "Too many attempts. Please wait a few minutes and try again.",
+            )
+            return
+        }
 
-		val key = "${resolveClientIp(request)}:${request.requestURI}"
-		if (!limiter.tryAcquire(key)) {
-			writeRateLimitedResponse(response, objectMapper, requestIdProvider, "Too many attempts. Please wait a few minutes and try again.")
-			return
-		}
+        filterChain.doFilter(request, response)
+    }
 
-		filterChain.doFilter(request, response)
-	}
-
-	companion object {
-		private const val WINDOW_SECONDS = 15L * 60
-		private const val MAX_ATTEMPTS = 10
-		private val RATE_LIMITED_PATHS = setOf(
-			"/api/v1/auth/register",
-			"/api/v1/auth/register-owner",
-			"/api/v1/auth/login",
-			"/api/v1/auth/verify-email/resend",
-			"/api/v1/auth/password-reset/request",
-		)
-	}
+    companion object {
+        private const val WINDOW_SECONDS = 15L * 60
+        private const val MAX_ATTEMPTS = 10
+        private val RATE_LIMITED_PATHS =
+            setOf(
+                "/api/v1/auth/register",
+                "/api/v1/auth/register-owner",
+                "/api/v1/auth/login",
+                "/api/v1/auth/verify-email/resend",
+                "/api/v1/auth/password-reset/request",
+            )
+    }
 }

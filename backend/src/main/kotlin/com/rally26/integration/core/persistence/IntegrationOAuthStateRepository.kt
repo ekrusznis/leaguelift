@@ -32,19 +32,19 @@ class IntegrationOAuthStateRepository(
     ): IntegrationOAuthState {
         val id = UUID.randomUUID()
         val now = Instant.now()
-        jdbcClient.sql(
-            """
-            insert into integration_oauth_state
-                (id, provider, connection_id, owner_type, organization_id, user_id,
-                 state_hash, code_verifier_ciphertext, key_version, aad_context,
-                 redirect_uri, requested_scopes, expires_at, created_by_user_id, created_at)
-            values
-                (:id, :provider, :connectionId, :ownerType, :organizationId, :userId,
-                 :stateHash, :codeVerifierCiphertext, :keyVersion, :aadContext,
-                 :redirectUri, cast(:requestedScopes as jsonb), :expiresAt, :createdByUserId, :createdAt)
-            """.trimIndent(),
-        )
-            .param("id", id)
+        jdbcClient
+            .sql(
+                """
+                insert into integration_oauth_state
+                    (id, provider, connection_id, owner_type, organization_id, user_id,
+                     state_hash, code_verifier_ciphertext, key_version, aad_context,
+                     redirect_uri, requested_scopes, expires_at, created_by_user_id, created_at)
+                values
+                    (:id, :provider, :connectionId, :ownerType, :organizationId, :userId,
+                     :stateHash, :codeVerifierCiphertext, :keyVersion, :aadContext,
+                     :redirectUri, cast(:requestedScopes as jsonb), :expiresAt, :createdByUserId, :createdAt)
+                """.trimIndent(),
+            ).param("id", id)
             .param("provider", provider.name)
             .param("connectionId", connectionId)
             .param("ownerType", ownerType.name)
@@ -61,30 +61,46 @@ class IntegrationOAuthStateRepository(
             .param("createdAt", java.sql.Timestamp.from(now))
             .update()
         return IntegrationOAuthState(
-            id, provider, connectionId, ownerType, organizationId, userId, stateHash,
-            codeVerifierCiphertext, keyVersion, aadContext, redirectUri, requestedScopes,
-            expiresAt, null, createdByUserId, now,
+            id,
+            provider,
+            connectionId,
+            ownerType,
+            organizationId,
+            userId,
+            stateHash,
+            codeVerifierCiphertext,
+            keyVersion,
+            aadContext,
+            redirectUri,
+            requestedScopes,
+            expiresAt,
+            null,
+            createdByUserId,
+            now,
         )
     }
 
     /** Atomic single-use consume; an expired, replayed, or unknown state returns null. */
     fun consume(stateHash: String): IntegrationOAuthState? =
-        jdbcClient.sql(
-            """
-            update integration_oauth_state
-            set consumed_at = now()
-            where state_hash = :stateHash
-              and consumed_at is null
-              and expires_at > now()
-            returning $COLUMNS
-            """.trimIndent(),
-        )
-            .param("stateHash", stateHash)
+        jdbcClient
+            .sql(
+                """
+                update integration_oauth_state
+                set consumed_at = now()
+                where state_hash = :stateHash
+                  and consumed_at is null
+                  and expires_at > now()
+                returning $COLUMNS
+                """.trimIndent(),
+            ).param("stateHash", stateHash)
             .query(::mapRow)
             .optional()
             .orElse(null)
 
-    private fun mapRow(rs: java.sql.ResultSet, rowNum: Int) = IntegrationOAuthState(
+    private fun mapRow(
+        rs: java.sql.ResultSet,
+        rowNum: Int,
+    ) = IntegrationOAuthState(
         id = rs.getObject("id", UUID::class.java),
         provider = IntegrationProvider.valueOf(rs.getString("provider")),
         connectionId = rs.getObject("connection_id", UUID::class.java),
@@ -104,6 +120,8 @@ class IntegrationOAuthStateRepository(
     )
 
     private companion object {
-        const val COLUMNS = "id, provider, connection_id, owner_type, organization_id, user_id, state_hash, code_verifier_ciphertext, key_version, aad_context, redirect_uri, requested_scopes, expires_at, consumed_at, created_by_user_id, created_at"
+        const val COLUMNS =
+            "id, provider, connection_id, owner_type, organization_id, user_id, state_hash, code_verifier_ciphertext, key_version, " +
+                "aad_context, redirect_uri, requested_scopes, expires_at, consumed_at, created_by_user_id, created_at"
     }
 }

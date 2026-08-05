@@ -43,17 +43,27 @@ class AnnouncementService(
     private val clock: Clock,
 ) {
     fun listForManagement(
-        organizationId: UUID, scopeType: AnnouncementScopeType?, scopeId: UUID?, status: AnnouncementStatus?, page: PageRequest,
+        organizationId: UUID,
+        scopeType: AnnouncementScopeType?,
+        scopeId: UUID?,
+        status: AnnouncementStatus?,
+        page: PageRequest,
         currentUser: CurrentUser,
     ): PageResponse<Announcement> {
         requireListAccess(organizationId, scopeType, scopeId, currentUser)
         return PageResponse(
-            repository.listForManagement(organizationId, scopeType, scopeId, status, page), page.page, page.size,
+            repository.listForManagement(organizationId, scopeType, scopeId, status, page),
+            page.page,
+            page.size,
             repository.countForManagement(organizationId, scopeType, scopeId, status),
         )
     }
 
-    fun get(organizationId: UUID, announcementId: UUID, currentUser: CurrentUser): Announcement {
+    fun get(
+        organizationId: UUID,
+        announcementId: UUID,
+        currentUser: CurrentUser,
+    ): Announcement {
         val announcement = requireAnnouncement(organizationId, announcementId)
         requireManage(announcement.organizationId, announcement.scopeType, announcement.scopeId, currentUser)
         return announcement
@@ -61,8 +71,15 @@ class AnnouncementService(
 
     @Transactional
     fun createDraft(
-        organizationId: UUID, scopeType: AnnouncementScopeType, scopeId: UUID?, idempotencyKey: String,
-        title: String, body: String, audience: AnnouncementAudience, emailEnabled: Boolean, smsEnabled: Boolean,
+        organizationId: UUID,
+        scopeType: AnnouncementScopeType,
+        scopeId: UUID?,
+        idempotencyKey: String,
+        title: String,
+        body: String,
+        audience: AnnouncementAudience,
+        emailEnabled: Boolean,
+        smsEnabled: Boolean,
         currentUser: CurrentUser,
     ): Announcement {
         val resolvedScopeId = resolveScope(organizationId, scopeType, scopeId)
@@ -71,16 +88,36 @@ class AnnouncementService(
         val input = validate(title, body, idempotencyKey)
         val sourceKey = "GENERAL:${input.idempotencyKey}"
         repository.findBySourceKey(organizationId, sourceKey)?.let { existing ->
-            if (existing.scopeType != scopeType || existing.scopeId != resolvedScopeId || existing.title != input.title || existing.body != input.body) {
-                throw ConflictException("ANNOUNCEMENT_IDEMPOTENCY_CONFLICT", "This idempotency key was already used for a different announcement.")
+            if (existing.scopeType != scopeType ||
+                existing.scopeId != resolvedScopeId ||
+                existing.title != input.title ||
+                existing.body != input.body
+            ) {
+                throw ConflictException(
+                    "ANNOUNCEMENT_IDEMPOTENCY_CONFLICT",
+                    "This idempotency key was already used for a different announcement.",
+                )
             }
             return existing
         }
         return try {
-            val announcement = repository.insert(
-                organizationId, scopeType, resolvedScopeId, AnnouncementKind.GENERAL, null, null, null,
-                sourceKey, input.title, input.body, audience, emailEnabled, smsEnabled, currentUser.userId,
-            )
+            val announcement =
+                repository.insert(
+                    organizationId,
+                    scopeType,
+                    resolvedScopeId,
+                    AnnouncementKind.GENERAL,
+                    null,
+                    null,
+                    null,
+                    sourceKey,
+                    input.title,
+                    input.body,
+                    audience,
+                    emailEnabled,
+                    smsEnabled,
+                    currentUser.userId,
+                )
             audit(currentUser, announcement, "announcement.created")
             announcement
         } catch (_: DuplicateKeyException) {
@@ -91,14 +128,24 @@ class AnnouncementService(
 
     @Transactional
     fun updateDraft(
-        organizationId: UUID, announcementId: UUID, title: String, body: String, audience: AnnouncementAudience,
-        emailEnabled: Boolean, smsEnabled: Boolean, currentUser: CurrentUser,
+        organizationId: UUID,
+        announcementId: UUID,
+        title: String,
+        body: String,
+        audience: AnnouncementAudience,
+        emailEnabled: Boolean,
+        smsEnabled: Boolean,
+        currentUser: CurrentUser,
     ): Announcement {
         val existing = requireAnnouncement(organizationId, announcementId)
         requireManage(organizationId, existing.scopeType, existing.scopeId, currentUser)
         validateAudience(existing.scopeType, audience)
         val input = validate(title, body, existing.sourceKey ?: "existing-key")
-        if (existing.status != AnnouncementStatus.DRAFT) throw ConflictException("ANNOUNCEMENT_NOT_DRAFT", "Only draft announcements can be edited.")
+        if (existing.status !=
+            AnnouncementStatus.DRAFT
+        ) {
+            throw ConflictException("ANNOUNCEMENT_NOT_DRAFT", "Only draft announcements can be edited.")
+        }
         if (repository.updateDraft(announcementId, organizationId, input.title, input.body, audience, emailEnabled, smsEnabled) == 0) {
             throw ConflictException("ANNOUNCEMENT_NOT_DRAFT", "The announcement is no longer editable.")
         }
@@ -108,16 +155,28 @@ class AnnouncementService(
     }
 
     @Transactional
-    fun publish(organizationId: UUID, announcementId: UUID, currentUser: CurrentUser): Announcement {
+    fun publish(
+        organizationId: UUID,
+        announcementId: UUID,
+        currentUser: CurrentUser,
+    ): Announcement {
         val existing = requireAnnouncement(organizationId, announcementId)
         requireManage(organizationId, existing.scopeType, existing.scopeId, currentUser)
         if (existing.status == AnnouncementStatus.PUBLISHED) return existing
-        if (existing.status == AnnouncementStatus.ARCHIVED) throw ConflictException("ANNOUNCEMENT_ARCHIVED", "Archived announcements cannot be published.")
+        if (existing.status ==
+            AnnouncementStatus.ARCHIVED
+        ) {
+            throw ConflictException("ANNOUNCEMENT_ARCHIVED", "Archived announcements cannot be published.")
+        }
         return publishInternal(existing, currentUser)
     }
 
     @Transactional
-    fun archive(organizationId: UUID, announcementId: UUID, currentUser: CurrentUser): Announcement {
+    fun archive(
+        organizationId: UUID,
+        announcementId: UUID,
+        currentUser: CurrentUser,
+    ): Announcement {
         val existing = requireAnnouncement(organizationId, announcementId)
         requireManage(organizationId, existing.scopeType, existing.scopeId, currentUser)
         if (existing.status == AnnouncementStatus.ARCHIVED) return existing
@@ -127,11 +186,21 @@ class AnnouncementService(
         return archived
     }
 
-    fun listMine(currentUser: CurrentUser, page: PageRequest): PageResponse<MyAnnouncement> = PageResponse(
-        repository.listMineSafe(currentUser.userId, page), page.page, page.size, repository.countMine(currentUser.userId),
-    )
+    fun listMine(
+        currentUser: CurrentUser,
+        page: PageRequest,
+    ): PageResponse<MyAnnouncement> =
+        PageResponse(
+            repository.listMineSafe(currentUser.userId, page),
+            page.page,
+            page.size,
+            repository.countMine(currentUser.userId),
+        )
 
-    fun markRead(currentUser: CurrentUser, announcementId: UUID) {
+    fun markRead(
+        currentUser: CurrentUser,
+        announcementId: UUID,
+    ) {
         if (repository.markRead(announcementId, currentUser.userId, Instant.now(clock)) == 0) {
             throw NotFoundException("ANNOUNCEMENT_NOT_FOUND", "The announcement could not be found.")
         }
@@ -139,48 +208,95 @@ class AnnouncementService(
 
     @Transactional
     fun createSystemAndPublish(
-        organizationId: UUID, scopeType: AnnouncementScopeType, scopeId: UUID, kind: AnnouncementKind,
-        relatedEntityType: String, relatedEntityId: UUID, targetHouseholdId: UUID?, sourceKey: String,
-        title: String, body: String, audience: AnnouncementAudience, emailEnabled: Boolean, smsEnabled: Boolean,
+        organizationId: UUID,
+        scopeType: AnnouncementScopeType,
+        scopeId: UUID,
+        kind: AnnouncementKind,
+        relatedEntityType: String,
+        relatedEntityId: UUID,
+        targetHouseholdId: UUID?,
+        sourceKey: String,
+        title: String,
+        body: String,
+        audience: AnnouncementAudience,
+        emailEnabled: Boolean,
+        smsEnabled: Boolean,
         currentUser: CurrentUser,
     ): Announcement {
         requireManage(organizationId, scopeType, scopeId, currentUser)
         validateAudience(scopeType, audience)
         val input = validate(title, body, sourceKey)
         repository.findBySourceKey(organizationId, sourceKey)?.let { return it }
-        val created = try {
-            repository.insert(
-                organizationId, scopeType, scopeId, kind, relatedEntityType, relatedEntityId, targetHouseholdId,
-                sourceKey, input.title, input.body, audience, emailEnabled, smsEnabled, currentUser.userId,
-            )
-        } catch (_: DuplicateKeyException) {
-            repository.findBySourceKey(organizationId, sourceKey)
-                ?: throw ConflictException("REMINDER_IDEMPOTENCY_CONFLICT", "The reminder could not be created safely.")
-        }
+        val created =
+            try {
+                repository.insert(
+                    organizationId,
+                    scopeType,
+                    scopeId,
+                    kind,
+                    relatedEntityType,
+                    relatedEntityId,
+                    targetHouseholdId,
+                    sourceKey,
+                    input.title,
+                    input.body,
+                    audience,
+                    emailEnabled,
+                    smsEnabled,
+                    currentUser.userId,
+                )
+            } catch (_: DuplicateKeyException) {
+                repository.findBySourceKey(organizationId, sourceKey)
+                    ?: throw ConflictException("REMINDER_IDEMPOTENCY_CONFLICT", "The reminder could not be created safely.")
+            }
         audit(currentUser, created, "announcement.created")
         return publishInternal(created, currentUser)
     }
 
-    private fun publishInternal(announcement: Announcement, currentUser: CurrentUser): Announcement {
+    private fun publishInternal(
+        announcement: Announcement,
+        currentUser: CurrentUser,
+    ): Announcement {
         val candidates = resolveRecipients(announcement)
         val merged = mergeRecipients(candidates)
         var inserted = 0
         for ((key, candidate) in merged) {
             val inApp = candidate.userId != null
-            val emailStatus = if (announcement.emailEnabled && !candidate.email.isNullOrBlank()) DeliveryStatus.PENDING else DeliveryStatus.NONE
+            val emailStatus =
+                if (announcement.emailEnabled &&
+                    !candidate.email.isNullOrBlank()
+                ) {
+                    DeliveryStatus.PENDING
+                } else {
+                    DeliveryStatus.NONE
+                }
             val smsStatus = if (announcement.smsEnabled && !candidate.phone.isNullOrBlank()) DeliveryStatus.PENDING else DeliveryStatus.NONE
             if (!inApp && emailStatus == DeliveryStatus.NONE && smsStatus == DeliveryStatus.NONE) continue
             repository.insertRecipient(announcement.id, announcement.organizationId, key, candidate, inApp, emailStatus, smsStatus)
             inserted++
         }
-        if (inserted == 0) throw ValidationException("No eligible recipients have an in-app, email, or opted-in SMS destination for this announcement.")
+        if (inserted ==
+            0
+        ) {
+            throw ValidationException(
+                "No eligible recipients have an in-app, email, or opted-in SMS destination for this announcement.",
+            )
+        }
         val now = Instant.now(clock)
         if (repository.publish(announcement.id, announcement.organizationId, currentUser.userId, now) == 0) {
             return requireAnnouncement(announcement.organizationId, announcement.id)
         }
         outboxWriter.write(
-            aggregateType = "announcement", aggregateId = announcement.id, organizationId = announcement.organizationId,
-            eventType = "announcement.published", payloadJson = objectMapper.writeValueAsString(mapOf("announcementId" to announcement.id.toString())),
+            aggregateType = "announcement",
+            aggregateId = announcement.id,
+            organizationId = announcement.organizationId,
+            eventType = "announcement.published",
+            payloadJson =
+                objectMapper.writeValueAsString(
+                    mapOf(
+                        "announcementId" to announcement.id.toString(),
+                    ),
+                ),
         )
         val published = requireAnnouncement(announcement.organizationId, announcement.id)
         audit(currentUser, published, "announcement.published", mapOf("recipientCount" to inserted))
@@ -191,27 +307,32 @@ class AnnouncementService(
         if (announcement.targetHouseholdId != null) {
             return if (announcement.kind == AnnouncementKind.DOCUMENT_REMINDER && announcement.relatedEntityId != null) {
                 repository.listUnacknowledgedDocumentGuardians(
-                    announcement.organizationId, announcement.targetHouseholdId, announcement.relatedEntityId,
+                    announcement.organizationId,
+                    announcement.targetHouseholdId,
+                    announcement.relatedEntityId,
                 )
             } else {
                 repository.listHouseholdGuardians(announcement.organizationId, announcement.targetHouseholdId)
             }
         }
-        val staff = when (announcement.scopeType) {
-            AnnouncementScopeType.ORGANIZATION -> repository.listOrganizationStaff(announcement.organizationId)
-            AnnouncementScopeType.TEAM -> repository.listTeamStaff(announcement.organizationId, announcement.scopeId)
-            AnnouncementScopeType.TOURNAMENT -> repository.listTournamentStaff(announcement.organizationId, announcement.scopeId)
-        }
-        val guardians = when (announcement.scopeType) {
-            AnnouncementScopeType.ORGANIZATION -> repository.listOrganizationGuardians(announcement.organizationId)
-            AnnouncementScopeType.TEAM -> repository.listTeamGuardians(announcement.organizationId, announcement.scopeId)
-            AnnouncementScopeType.TOURNAMENT -> emptyList()
-        }
-        val athletes = when (announcement.scopeType) {
-            AnnouncementScopeType.ORGANIZATION -> repository.listOrganizationAthletes(announcement.organizationId)
-            AnnouncementScopeType.TEAM -> repository.listTeamAthletes(announcement.organizationId, announcement.scopeId)
-            AnnouncementScopeType.TOURNAMENT -> emptyList()
-        }
+        val staff =
+            when (announcement.scopeType) {
+                AnnouncementScopeType.ORGANIZATION -> repository.listOrganizationStaff(announcement.organizationId)
+                AnnouncementScopeType.TEAM -> repository.listTeamStaff(announcement.organizationId, announcement.scopeId)
+                AnnouncementScopeType.TOURNAMENT -> repository.listTournamentStaff(announcement.organizationId, announcement.scopeId)
+            }
+        val guardians =
+            when (announcement.scopeType) {
+                AnnouncementScopeType.ORGANIZATION -> repository.listOrganizationGuardians(announcement.organizationId)
+                AnnouncementScopeType.TEAM -> repository.listTeamGuardians(announcement.organizationId, announcement.scopeId)
+                AnnouncementScopeType.TOURNAMENT -> emptyList()
+            }
+        val athletes =
+            when (announcement.scopeType) {
+                AnnouncementScopeType.ORGANIZATION -> repository.listOrganizationAthletes(announcement.organizationId)
+                AnnouncementScopeType.TEAM -> repository.listTeamAthletes(announcement.organizationId, announcement.scopeId)
+                AnnouncementScopeType.TOURNAMENT -> emptyList()
+            }
         return when (announcement.audience) {
             AnnouncementAudience.ALL -> staff + guardians + athletes
             AnnouncementAudience.STAFF -> staff
@@ -223,56 +344,107 @@ class AnnouncementService(
     private fun mergeRecipients(candidates: List<AnnouncementRecipientCandidate>): Map<String, AnnouncementRecipientCandidate> {
         val merged = linkedMapOf<String, AnnouncementRecipientCandidate>()
         for (candidate in candidates) {
-            val key = when {
-                candidate.userId != null -> "user:${candidate.userId}"
-                !candidate.email.isNullOrBlank() -> "email:${candidate.email.trim().lowercase()}"
-                !candidate.phone.isNullOrBlank() -> "phone:${candidate.phone.trim()}"
-                else -> continue
-            }
+            val key =
+                when {
+                    candidate.userId != null -> "user:${candidate.userId}"
+                    !candidate.email.isNullOrBlank() -> "email:${candidate.email.trim().lowercase()}"
+                    !candidate.phone.isNullOrBlank() -> "phone:${candidate.phone.trim()}"
+                    else -> continue
+                }
             val prior = merged[key]
-            merged[key] = if (prior == null) candidate else prior.copy(
-                userId = prior.userId ?: candidate.userId,
-                householdId = prior.householdId ?: candidate.householdId,
-                email = prior.email ?: candidate.email,
-                phone = prior.phone ?: candidate.phone,
-            )
+            merged[key] =
+                if (prior == null) {
+                    candidate
+                } else {
+                    prior.copy(
+                        userId = prior.userId ?: candidate.userId,
+                        householdId = prior.householdId ?: candidate.householdId,
+                        email = prior.email ?: candidate.email,
+                        phone = prior.phone ?: candidate.phone,
+                    )
+                }
         }
         return merged
     }
 
-    private fun requireListAccess(organizationId: UUID, scopeType: AnnouncementScopeType?, scopeId: UUID?, currentUser: CurrentUser) {
-        if (scopeType == null || scopeId == null) membershipService.requireManagerRole(organizationId, currentUser)
-        else requireManage(organizationId, scopeType, scopeId, currentUser)
+    private fun requireListAccess(
+        organizationId: UUID,
+        scopeType: AnnouncementScopeType?,
+        scopeId: UUID?,
+        currentUser: CurrentUser,
+    ) {
+        if (scopeType == null || scopeId == null) {
+            membershipService.requireManagerRole(organizationId, currentUser)
+        } else {
+            requireManage(organizationId, scopeType, scopeId, currentUser)
+        }
     }
 
-    private fun requireManage(organizationId: UUID, scopeType: AnnouncementScopeType, scopeId: UUID, currentUser: CurrentUser) {
+    private fun requireManage(
+        organizationId: UUID,
+        scopeType: AnnouncementScopeType,
+        scopeId: UUID,
+        currentUser: CurrentUser,
+    ) {
         when (scopeType) {
             AnnouncementScopeType.ORGANIZATION -> membershipService.requireManagerRole(organizationId, currentUser)
-            AnnouncementScopeType.TEAM -> authorizationService.requireTeamCapability(organizationId, scopeId, currentUser, Capabilities.TEAM_COMMUNICATION_MANAGE)
-            AnnouncementScopeType.TOURNAMENT -> authorizationService.requireTournamentCapability(organizationId, scopeId, currentUser, Capabilities.TOURNAMENT_COMMUNICATION_MANAGE)
+            AnnouncementScopeType.TEAM ->
+                authorizationService.requireTeamCapability(
+                    organizationId,
+                    scopeId,
+                    currentUser,
+                    Capabilities.TEAM_COMMUNICATION_MANAGE,
+                )
+            AnnouncementScopeType.TOURNAMENT ->
+                authorizationService.requireTournamentCapability(
+                    organizationId,
+                    scopeId,
+                    currentUser,
+                    Capabilities.TOURNAMENT_COMMUNICATION_MANAGE,
+                )
         }
     }
 
-    private fun resolveScope(organizationId: UUID, scopeType: AnnouncementScopeType, scopeId: UUID?): UUID = when (scopeType) {
-        AnnouncementScopeType.ORGANIZATION -> organizationId
-        AnnouncementScopeType.TEAM -> scopeId?.also {
-            teamRepository.findById(it, organizationId) ?: throw NotFoundException("TEAM_NOT_FOUND", "The team could not be found.")
-        } ?: throw ValidationException("A team scope requires scopeId.")
-        AnnouncementScopeType.TOURNAMENT -> scopeId?.also {
-            tournamentRepository.findById(it, organizationId) ?: throw NotFoundException("TOURNAMENT_NOT_FOUND", "The tournament could not be found.")
-        } ?: throw ValidationException("A tournament scope requires scopeId.")
-    }
+    private fun resolveScope(
+        organizationId: UUID,
+        scopeType: AnnouncementScopeType,
+        scopeId: UUID?,
+    ): UUID =
+        when (scopeType) {
+            AnnouncementScopeType.ORGANIZATION -> organizationId
+            AnnouncementScopeType.TEAM ->
+                scopeId?.also {
+                    teamRepository.findById(it, organizationId) ?: throw NotFoundException("TEAM_NOT_FOUND", "The team could not be found.")
+                } ?: throw ValidationException("A team scope requires scopeId.")
+            AnnouncementScopeType.TOURNAMENT ->
+                scopeId?.also {
+                    tournamentRepository.findById(it, organizationId)
+                        ?: throw NotFoundException("TOURNAMENT_NOT_FOUND", "The tournament could not be found.")
+                } ?: throw ValidationException("A tournament scope requires scopeId.")
+        }
 
-    private fun requireAnnouncement(organizationId: UUID, id: UUID) = repository.findById(id, organizationId)
+    private fun requireAnnouncement(
+        organizationId: UUID,
+        id: UUID,
+    ) = repository.findById(id, organizationId)
         ?: throw NotFoundException("ANNOUNCEMENT_NOT_FOUND", "The announcement could not be found.")
 
-    private fun validateAudience(scopeType: AnnouncementScopeType, audience: AnnouncementAudience) {
+    private fun validateAudience(
+        scopeType: AnnouncementScopeType,
+        audience: AnnouncementAudience,
+    ) {
         if (scopeType == AnnouncementScopeType.TOURNAMENT && audience != AnnouncementAudience.STAFF) {
-            throw ValidationException("Tournament announcements currently support STAFF only because participating-team relationships are not modeled.")
+            throw ValidationException(
+                "Tournament announcements currently support STAFF only because participating-team relationships are not modeled.",
+            )
         }
     }
 
-    private fun validate(title: String, body: String, idempotencyKey: String): Input {
+    private fun validate(
+        title: String,
+        body: String,
+        idempotencyKey: String,
+    ): Input {
         val normalizedTitle = title.trim()
         val normalizedBody = body.trim()
         val normalizedKey = idempotencyKey.trim()
@@ -282,16 +454,31 @@ class AnnouncementService(
         return Input(normalizedTitle, normalizedBody, normalizedKey)
     }
 
-    private fun audit(currentUser: CurrentUser, announcement: Announcement, action: String, extra: Map<String, Any?> = emptyMap()) = auditService.record(
-        currentUser.userId, announcement.organizationId, action, "ANNOUNCEMENT", announcement.id,
+    private fun audit(
+        currentUser: CurrentUser,
+        announcement: Announcement,
+        action: String,
+        extra: Map<String, Any?> = emptyMap(),
+    ) = auditService.record(
+        currentUser.userId,
+        announcement.organizationId,
+        action,
+        "ANNOUNCEMENT",
+        announcement.id,
         objectMapper.writeValueAsString(
             mapOf(
-                "scopeType" to announcement.scopeType.name, "scopeId" to announcement.scopeId.toString(),
-                "kind" to announcement.kind.name, "audience" to announcement.audience.name,
+                "scopeType" to announcement.scopeType.name,
+                "scopeId" to announcement.scopeId.toString(),
+                "kind" to announcement.kind.name,
+                "audience" to announcement.audience.name,
                 "status" to announcement.status.name,
             ) + extra,
         ),
     )
 
-    private data class Input(val title: String, val body: String, val idempotencyKey: String)
+    private data class Input(
+        val title: String,
+        val body: String,
+        val idempotencyKey: String,
+    )
 }

@@ -60,14 +60,15 @@ data class PublicPageResponse(
     val cover: PublicPageMediaResponse? = null,
 )
 
-fun MediaDescriptor.toPublicPageMediaResponse() = PublicPageMediaResponse(
-    assetId = assignment.assetId,
-    url = url,
-    altText = assignment.altText,
-    contentType = contentType,
-    widthPx = widthPx,
-    heightPx = heightPx,
-)
+fun MediaDescriptor.toPublicPageMediaResponse() =
+    PublicPageMediaResponse(
+        assetId = assignment.assetId,
+        url = url,
+        altText = assignment.altText,
+        contentType = contentType,
+        widthPx = widthPx,
+        heightPx = heightPx,
+    )
 
 fun PublicPage.toResponse(
     logo: MediaDescriptor? = null,

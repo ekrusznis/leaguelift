@@ -12,14 +12,14 @@ import org.springframework.stereotype.Component
 private val log = LoggerFactory.getLogger(FeePaymentReminderScanner::class.java)
 
 private data class FeePaymentReminderPayload(
-	val feeAssignmentId: String,
-	val householdContactEmail: String?,
-	val householdContactPhone: String?,
-	val participantName: String?,
-	val description: String,
-	val currency: String,
-	val dueDate: String,
-	val balanceMinor: Long,
+    val feeAssignmentId: String,
+    val householdContactEmail: String?,
+    val householdContactPhone: String?,
+    val participantName: String?,
+    val description: String,
+    val currency: String,
+    val dueDate: String,
+    val balanceMinor: Long,
 )
 
 /**
@@ -33,39 +33,39 @@ private data class FeePaymentReminderPayload(
  */
 @Component
 class FeePaymentReminderScanner(
-	private val feeRepository: FeeRepository,
-	private val outboxWriter: OutboxWriter,
-	private val properties: FeePaymentReminderProperties,
-	private val objectMapper: ObjectMapper,
+    private val feeRepository: FeeRepository,
+    private val outboxWriter: OutboxWriter,
+    private val properties: FeePaymentReminderProperties,
+    private val objectMapper: ObjectMapper,
 ) {
+    @Scheduled(cron = "\${rally26.fee.payment-reminder.cron:0 0 8 * * *}")
+    fun scanAndEnqueue() {
+        if (!properties.enabled) return
+        val candidates = feeRepository.findNeedingPaymentReminder(properties.daysBefore)
+        if (candidates.isEmpty()) return
+        log.info("Enqueueing {} fee payment reminder(s)", candidates.size)
+        candidates.forEach(::enqueueOne)
+    }
 
-	@Scheduled(cron = "\${rally26.fee.payment-reminder.cron:0 0 8 * * *}")
-	fun scanAndEnqueue() {
-		if (!properties.enabled) return
-		val candidates = feeRepository.findNeedingPaymentReminder(properties.daysBefore)
-		if (candidates.isEmpty()) return
-		log.info("Enqueueing {} fee payment reminder(s)", candidates.size)
-		candidates.forEach(::enqueueOne)
-	}
-
-	private fun enqueueOne(candidate: FeePaymentReminderCandidate) {
-		val payload = FeePaymentReminderPayload(
-			feeAssignmentId = candidate.feeAssignmentId.toString(),
-			householdContactEmail = candidate.householdContactEmail,
-			householdContactPhone = candidate.householdContactPhone,
-			participantName = candidate.participantName,
-			description = candidate.description,
-			currency = candidate.currency,
-			dueDate = candidate.dueDate.toString(),
-			balanceMinor = candidate.balanceMinor,
-		)
-		outboxWriter.write(
-			aggregateType = "fee_assignment",
-			aggregateId = candidate.feeAssignmentId,
-			organizationId = candidate.organizationId,
-			eventType = "fee.payment_reminder_due",
-			payloadJson = objectMapper.writeValueAsString(payload),
-		)
-		feeRepository.markPaymentReminderSent(candidate.feeAssignmentId)
-	}
+    private fun enqueueOne(candidate: FeePaymentReminderCandidate) {
+        val payload =
+            FeePaymentReminderPayload(
+                feeAssignmentId = candidate.feeAssignmentId.toString(),
+                householdContactEmail = candidate.householdContactEmail,
+                householdContactPhone = candidate.householdContactPhone,
+                participantName = candidate.participantName,
+                description = candidate.description,
+                currency = candidate.currency,
+                dueDate = candidate.dueDate.toString(),
+                balanceMinor = candidate.balanceMinor,
+            )
+        outboxWriter.write(
+            aggregateType = "fee_assignment",
+            aggregateId = candidate.feeAssignmentId,
+            organizationId = candidate.organizationId,
+            eventType = "fee.payment_reminder_due",
+            payloadJson = objectMapper.writeValueAsString(payload),
+        )
+        feeRepository.markPaymentReminderSent(candidate.feeAssignmentId)
+    }
 }

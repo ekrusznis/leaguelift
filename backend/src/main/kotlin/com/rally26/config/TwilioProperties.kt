@@ -12,7 +12,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.sms.twilio")
 data class TwilioProperties(
-	val accountSid: String = "",
-	val authToken: String = "",
-	val fromNumber: String = "",
+    val accountSid: String = "",
+    val authToken: String = "",
+    val fromNumber: String = "",
 )

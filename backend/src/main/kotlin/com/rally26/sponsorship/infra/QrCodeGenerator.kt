@@ -17,12 +17,14 @@ import java.util.Base64
  */
 @Component
 class QrCodeGenerator {
-
-	fun generatePngDataUri(text: String, sizePx: Int = 320): String {
-		val bitMatrix = MultiFormatWriter().encode(text, BarcodeFormat.QR_CODE, sizePx, sizePx)
-		val image = MatrixToImageWriter.toBufferedImage(bitMatrix)
-		val output = ByteArrayOutputStream()
-		javax.imageio.ImageIO.write(image, "png", output)
-		return "data:image/png;base64," + Base64.getEncoder().encodeToString(output.toByteArray())
-	}
+    fun generatePngDataUri(
+        text: String,
+        sizePx: Int = 320,
+    ): String {
+        val bitMatrix = MultiFormatWriter().encode(text, BarcodeFormat.QR_CODE, sizePx, sizePx)
+        val image = MatrixToImageWriter.toBufferedImage(bitMatrix)
+        val output = ByteArrayOutputStream()
+        javax.imageio.ImageIO.write(image, "png", output)
+        return "data:image/png;base64," + Base64.getEncoder().encodeToString(output.toByteArray())
+    }
 }

@@ -21,8 +21,9 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/fee-templates")
-class FeeTemplateController(private val feeService: FeeService) {
-
+class FeeTemplateController(
+    private val feeService: FeeService,
+) {
     @GetMapping
     fun list(
         @PathVariable organizationId: UUID,
@@ -42,9 +43,15 @@ class FeeTemplateController(private val feeService: FeeService) {
         @Valid @RequestBody request: CreateFeeTemplateRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): ResponseEntity<FeeTemplateResponse> {
-        val template = feeService.createTemplate(
-            organizationId, request.name, request.description, request.amountMinor, request.currency, currentUser,
-        )
+        val template =
+            feeService.createTemplate(
+                organizationId,
+                request.name,
+                request.description,
+                request.amountMinor,
+                request.currency,
+                currentUser,
+            )
         return ResponseEntity.status(HttpStatus.CREATED).body(template.toResponse())
     }
 
@@ -61,9 +68,16 @@ class FeeTemplateController(private val feeService: FeeService) {
         @PathVariable templateId: UUID,
         @Valid @RequestBody request: UpdateFeeTemplateRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): FeeTemplateResponse = feeService.updateTemplate(
-        organizationId, templateId, request.name, request.description, request.amountMinor, currentUser,
-    ).toResponse()
+    ): FeeTemplateResponse =
+        feeService
+            .updateTemplate(
+                organizationId,
+                templateId,
+                request.name,
+                request.description,
+                request.amountMinor,
+                currentUser,
+            ).toResponse()
 
     @DeleteMapping("/{templateId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -5,7 +5,9 @@ import java.util.UUID
 
 enum class ProfileCorrectionTargetType { HOUSEHOLD_ADULT, PARTICIPANT }
 
-enum class ProfileCorrectionField(val targetType: ProfileCorrectionTargetType) {
+enum class ProfileCorrectionField(
+    val targetType: ProfileCorrectionTargetType,
+) {
     ADULT_FIRST_NAME(ProfileCorrectionTargetType.HOUSEHOLD_ADULT),
     ADULT_LAST_NAME(ProfileCorrectionTargetType.HOUSEHOLD_ADULT),
     ADULT_EMAIL(ProfileCorrectionTargetType.HOUSEHOLD_ADULT),

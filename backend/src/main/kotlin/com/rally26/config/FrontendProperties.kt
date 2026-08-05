@@ -11,5 +11,5 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.frontend")
 data class FrontendProperties(
-	val baseUrl: String = "http://localhost:5173",
+    val baseUrl: String = "http://localhost:5173",
 )

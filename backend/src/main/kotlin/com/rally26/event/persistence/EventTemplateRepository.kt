@@ -18,8 +18,9 @@ private const val EVENT_TEMPLATE_COLUMNS = """
 """
 
 @Repository
-class EventTemplateRepository(private val jdbcClient: JdbcClient) {
-
+class EventTemplateRepository(
+    private val jdbcClient: JdbcClient,
+) {
     fun insert(
         organizationId: UUID,
         name: String,
@@ -40,22 +41,22 @@ class EventTemplateRepository(private val jdbcClient: JdbcClient) {
     ): EventTemplate {
         val id = UUID.randomUUID()
         val now = Instant.now()
-        jdbcClient.sql(
-            """
-            insert into event_template (
-                id, organization_id, name, event_type, title, description,
-                duration_minutes, arrival_offset_minutes, meeting_offset_minutes,
-                timezone, venue_name, address, area, meeting_point, directions_notes,
-                visibility, status, created_by_user_id, updated_by_user_id, created_at, updated_at
-            ) values (
-                :id, :organizationId, :name, :eventType, :title, :description,
-                :durationMinutes, :arrivalOffsetMinutes, :meetingOffsetMinutes,
-                :timezone, :venueName, :address, :area, :meetingPoint, :directionsNotes,
-                :visibility, 'ACTIVE', :userId, :userId, :now, :now
-            )
-            """.trimIndent(),
-        )
-            .param("id", id)
+        jdbcClient
+            .sql(
+                """
+                insert into event_template (
+                    id, organization_id, name, event_type, title, description,
+                    duration_minutes, arrival_offset_minutes, meeting_offset_minutes,
+                    timezone, venue_name, address, area, meeting_point, directions_notes,
+                    visibility, status, created_by_user_id, updated_by_user_id, created_at, updated_at
+                ) values (
+                    :id, :organizationId, :name, :eventType, :title, :description,
+                    :durationMinutes, :arrivalOffsetMinutes, :meetingOffsetMinutes,
+                    :timezone, :venueName, :address, :area, :meetingPoint, :directionsNotes,
+                    :visibility, 'ACTIVE', :userId, :userId, :now, :now
+                )
+                """.trimIndent(),
+            ).param("id", id)
             .param("organizationId", organizationId)
             .param("name", name)
             .param("eventType", eventType.name)
@@ -77,31 +78,37 @@ class EventTemplateRepository(private val jdbcClient: JdbcClient) {
         return findById(id, organizationId)!!
     }
 
-    fun findById(id: UUID, organizationId: UUID): EventTemplate? =
-        jdbcClient.sql(
-            """
-            select $EVENT_TEMPLATE_COLUMNS
-            from event_template
-            where id = :id and organization_id = :organizationId
-            """.trimIndent(),
-        )
-            .param("id", id)
+    fun findById(
+        id: UUID,
+        organizationId: UUID,
+    ): EventTemplate? =
+        jdbcClient
+            .sql(
+                """
+                select $EVENT_TEMPLATE_COLUMNS
+                from event_template
+                where id = :id and organization_id = :organizationId
+                """.trimIndent(),
+            ).param("id", id)
             .param("organizationId", organizationId)
             .query(::mapRow)
             .optional()
             .orElse(null)
 
-    fun listForOrganization(organizationId: UUID, includeArchived: Boolean): List<EventTemplate> =
-        jdbcClient.sql(
-            """
-            select $EVENT_TEMPLATE_COLUMNS
-            from event_template
-            where organization_id = :organizationId
-              and (:includeArchived or status = 'ACTIVE')
-            order by case when status = 'ACTIVE' then 0 else 1 end, lower(name), created_at
-            """.trimIndent(),
-        )
-            .param("organizationId", organizationId)
+    fun listForOrganization(
+        organizationId: UUID,
+        includeArchived: Boolean,
+    ): List<EventTemplate> =
+        jdbcClient
+            .sql(
+                """
+                select $EVENT_TEMPLATE_COLUMNS
+                from event_template
+                where organization_id = :organizationId
+                  and (:includeArchived or status = 'ACTIVE')
+                order by case when status = 'ACTIVE' then 0 else 1 end, lower(name), created_at
+                """.trimIndent(),
+            ).param("organizationId", organizationId)
             .param("includeArchived", includeArchived)
             .query(::mapRow)
             .list()
@@ -126,29 +133,29 @@ class EventTemplateRepository(private val jdbcClient: JdbcClient) {
         userId: UUID,
     ): Int {
         val now = Instant.now()
-        return jdbcClient.sql(
-            """
-            update event_template
-            set name = :name,
-                event_type = :eventType,
-                title = :title,
-                description = :description,
-                duration_minutes = :durationMinutes,
-                arrival_offset_minutes = :arrivalOffsetMinutes,
-                meeting_offset_minutes = :meetingOffsetMinutes,
-                timezone = :timezone,
-                venue_name = :venueName,
-                address = :address,
-                area = :area,
-                meeting_point = :meetingPoint,
-                directions_notes = :directionsNotes,
-                visibility = :visibility,
-                updated_by_user_id = :userId,
-                updated_at = :now
-            where id = :id and organization_id = :organizationId and status = 'ACTIVE'
-            """.trimIndent(),
-        )
-            .param("name", name)
+        return jdbcClient
+            .sql(
+                """
+                update event_template
+                set name = :name,
+                    event_type = :eventType,
+                    title = :title,
+                    description = :description,
+                    duration_minutes = :durationMinutes,
+                    arrival_offset_minutes = :arrivalOffsetMinutes,
+                    meeting_offset_minutes = :meetingOffsetMinutes,
+                    timezone = :timezone,
+                    venue_name = :venueName,
+                    address = :address,
+                    area = :area,
+                    meeting_point = :meetingPoint,
+                    directions_notes = :directionsNotes,
+                    visibility = :visibility,
+                    updated_by_user_id = :userId,
+                    updated_at = :now
+                where id = :id and organization_id = :organizationId and status = 'ACTIVE'
+                """.trimIndent(),
+            ).param("name", name)
             .param("eventType", eventType.name)
             .param("title", title)
             .param("description", description)
@@ -169,23 +176,30 @@ class EventTemplateRepository(private val jdbcClient: JdbcClient) {
             .update()
     }
 
-    fun archive(id: UUID, organizationId: UUID, userId: UUID): Int {
+    fun archive(
+        id: UUID,
+        organizationId: UUID,
+        userId: UUID,
+    ): Int {
         val now = Instant.now()
-        return jdbcClient.sql(
-            """
-            update event_template
-            set status = 'ARCHIVED', updated_by_user_id = :userId, updated_at = :now
-            where id = :id and organization_id = :organizationId and status = 'ACTIVE'
-            """.trimIndent(),
-        )
-            .param("userId", userId)
+        return jdbcClient
+            .sql(
+                """
+                update event_template
+                set status = 'ARCHIVED', updated_by_user_id = :userId, updated_at = :now
+                where id = :id and organization_id = :organizationId and status = 'ACTIVE'
+                """.trimIndent(),
+            ).param("userId", userId)
             .param("now", Timestamp.from(now))
             .param("id", id)
             .param("organizationId", organizationId)
             .update()
     }
 
-    private fun mapRow(rs: java.sql.ResultSet, row: Int): EventTemplate =
+    private fun mapRow(
+        rs: java.sql.ResultSet,
+        row: Int,
+    ): EventTemplate =
         EventTemplate(
             id = rs.getObject("id", UUID::class.java),
             organizationId = rs.getObject("organization_id", UUID::class.java),

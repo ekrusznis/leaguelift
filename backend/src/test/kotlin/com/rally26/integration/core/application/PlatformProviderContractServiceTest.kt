@@ -18,15 +18,25 @@ class PlatformProviderContractServiceTest {
 
     @Test
     fun `contract readiness never claims a live probe in phase 19`() {
-        every { readiness.list(currentUser) } returns listOf(
-            PlatformIntegrationReadiness(IntegrationProvider.STRIPE, "Stripe", "PAYMENTS", PlatformIntegrationConfigurationStatus.CONFIGURED, "secret", "configured", emptyList()),
-        )
-        val service = PlatformProviderContractService(
-            readiness,
-            IntegrationProperties(stubMode = false),
-            PrintifyProperties("token", "shop"),
-            ResendProperties(),
-        )
+        every { readiness.list(currentUser) } returns
+            listOf(
+                PlatformIntegrationReadiness(
+                    IntegrationProvider.STRIPE,
+                    "Stripe",
+                    "PAYMENTS",
+                    PlatformIntegrationConfigurationStatus.CONFIGURED,
+                    "secret",
+                    "configured",
+                    emptyList(),
+                ),
+            )
+        val service =
+            PlatformProviderContractService(
+                readiness,
+                IntegrationProperties(stubMode = false),
+                PrintifyProperties("token", "shop"),
+                ResendProperties(),
+            )
 
         val stripe = service.list(currentUser).first { it.provider == IntegrationProvider.STRIPE }
 

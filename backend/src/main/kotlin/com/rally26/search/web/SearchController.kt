@@ -12,16 +12,19 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1")
-class SearchController(private val searchService: SearchService) {
+class SearchController(
+    private val searchService: SearchService,
+) {
+    @GetMapping("/organizations/{organizationId}/search")
+    fun searchOrganization(
+        @PathVariable organizationId: UUID,
+        @RequestParam q: String,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): SearchResponse = SearchResponse(searchService.searchOrganization(organizationId, q, currentUser).map { it.toResponse() })
 
-	@GetMapping("/organizations/{organizationId}/search")
-	fun searchOrganization(
-		@PathVariable organizationId: UUID,
-		@RequestParam q: String,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): SearchResponse = SearchResponse(searchService.searchOrganization(organizationId, q, currentUser).map { it.toResponse() })
-
-	@GetMapping("/platform/search")
-	fun searchPlatform(@RequestParam q: String, @AuthenticationPrincipal currentUser: CurrentUser): SearchResponse =
-		SearchResponse(searchService.searchPlatform(q, currentUser).map { it.toResponse() })
+    @GetMapping("/platform/search")
+    fun searchPlatform(
+        @RequestParam q: String,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): SearchResponse = SearchResponse(searchService.searchPlatform(q, currentUser).map { it.toResponse() })
 }

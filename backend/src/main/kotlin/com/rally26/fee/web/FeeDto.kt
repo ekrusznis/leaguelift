@@ -149,54 +149,86 @@ data class FeeAdjustmentResponse(
 
 // --- Mappers ---
 
-fun FeeTemplate.toResponse() = FeeTemplateResponse(
-    id, organizationId, name, description, amountMinor, currency, status.name, createdAt, updatedAt,
-)
+fun FeeTemplate.toResponse() =
+    FeeTemplateResponse(
+        id,
+        organizationId,
+        name,
+        description,
+        amountMinor,
+        currency,
+        status.name,
+        createdAt,
+        updatedAt,
+    )
 
-fun FeeAssignmentWithBalance.toResponse() = FeeAssignmentResponse(
-    id = assignment.id,
-    organizationId = assignment.organizationId,
-    householdId = assignment.householdId,
-    participantId = assignment.participantId,
-    feeTemplateId = assignment.feeTemplateId,
-    description = assignment.description,
-    originalAmountMinor = assignment.originalAmountMinor,
-    currency = assignment.currency,
-    dueDate = assignment.dueDate,
-    status = assignment.status.name,
-    paidMinor = balance.paidMinor,
-    adjustedMinor = balance.adjustedMinor,
-    balanceMinor = balance.balanceMinor,
-    createdAt = assignment.createdAt,
-    updatedAt = assignment.updatedAt,
-)
+fun FeeAssignmentWithBalance.toResponse() =
+    FeeAssignmentResponse(
+        id = assignment.id,
+        organizationId = assignment.organizationId,
+        householdId = assignment.householdId,
+        participantId = assignment.participantId,
+        feeTemplateId = assignment.feeTemplateId,
+        description = assignment.description,
+        originalAmountMinor = assignment.originalAmountMinor,
+        currency = assignment.currency,
+        dueDate = assignment.dueDate,
+        status = assignment.status.name,
+        paidMinor = balance.paidMinor,
+        adjustedMinor = balance.adjustedMinor,
+        balanceMinor = balance.balanceMinor,
+        createdAt = assignment.createdAt,
+        updatedAt = assignment.updatedAt,
+    )
 
-fun FeeAssignmentSummary.toResponse() = FeeAssignmentSummaryResponse(
-    id = id,
-    organizationId = organizationId,
-    householdId = householdId,
-    householdName = householdName,
-    participantId = participantId,
-    participantName = participantName,
-    feeTemplateId = feeTemplateId,
-    description = description,
-    originalAmountMinor = originalAmountMinor,
-    currency = currency,
-    dueDate = dueDate,
-    status = status.name,
-    paidMinor = balance.paidMinor,
-    adjustedMinor = balance.adjustedMinor,
-    balanceMinor = balance.balanceMinor,
-    createdAt = createdAt,
-    updatedAt = updatedAt,
-)
+fun FeeAssignmentSummary.toResponse() =
+    FeeAssignmentSummaryResponse(
+        id = id,
+        organizationId = organizationId,
+        householdId = householdId,
+        householdName = householdName,
+        participantId = participantId,
+        participantName = participantName,
+        feeTemplateId = feeTemplateId,
+        description = description,
+        originalAmountMinor = originalAmountMinor,
+        currency = currency,
+        dueDate = dueDate,
+        status = status.name,
+        paidMinor = balance.paidMinor,
+        adjustedMinor = balance.adjustedMinor,
+        balanceMinor = balance.balanceMinor,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )
 
 fun OrganizationFeeFinancialSummary.toResponse() = FinancialSummaryResponse(feesAssignedMinor, feesCollectedMinor, outstandingMinor)
 
-fun FeePayment.toResponse() = FeePaymentResponse(
-    id, feeAssignmentId, amountMinor, currency, method.name, paidAt, note, recordedByUserId, voidedAt, voidReason, createdAt,
-)
+fun FeePayment.toResponse() =
+    FeePaymentResponse(
+        id,
+        feeAssignmentId,
+        amountMinor,
+        currency,
+        method.name,
+        paidAt,
+        note,
+        recordedByUserId,
+        voidedAt,
+        voidReason,
+        createdAt,
+    )
 
-fun FeeAdjustment.toResponse() = FeeAdjustmentResponse(
-    id, feeAssignmentId, adjustmentType.name, amountMinor, currency, reason, createdByUserId, voidedAt, voidReason, createdAt,
-)
+fun FeeAdjustment.toResponse() =
+    FeeAdjustmentResponse(
+        id,
+        feeAssignmentId,
+        adjustmentType.name,
+        amountMinor,
+        currency,
+        reason,
+        createdByUserId,
+        voidedAt,
+        voidReason,
+        createdAt,
+    )

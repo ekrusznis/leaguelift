@@ -56,12 +56,34 @@ data class FinancialCorrectionResponse(
     val createdAt: Instant,
 )
 
-fun FinancialCorrectionPreview.toResponse() = FinancialCorrectionPreviewResponse(
-    correctionType.name, targetType.name, targetId, targetLabel, paymentSource, originalAmountMinor,
-    previouslyCorrectedMinor, requestedAmountMinor, remainingAfterMinor, currency, willFullyCorrect, warnings, confirmationHash,
-)
+fun FinancialCorrectionPreview.toResponse() =
+    FinancialCorrectionPreviewResponse(
+        correctionType.name,
+        targetType.name,
+        targetId,
+        targetLabel,
+        paymentSource,
+        originalAmountMinor,
+        previouslyCorrectedMinor,
+        requestedAmountMinor,
+        remainingAfterMinor,
+        currency,
+        willFullyCorrect,
+        warnings,
+        confirmationHash,
+    )
 
-fun FinancialCorrection.toResponse() = FinancialCorrectionResponse(
-    id, organizationId, correctionType.name, targetType.name, targetId, amountMinor,
-    currency, reason, providerReference, createdByUserId, createdAt,
-)
+fun FinancialCorrection.toResponse() =
+    FinancialCorrectionResponse(
+        id,
+        organizationId,
+        correctionType.name,
+        targetType.name,
+        targetId,
+        amountMinor,
+        currency,
+        reason,
+        providerReference,
+        createdByUserId,
+        createdAt,
+    )

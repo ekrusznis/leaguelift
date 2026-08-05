@@ -26,37 +26,39 @@ import org.springframework.stereotype.Component
  * blank-means-inactive convention [com.rally26.config.ResendProperties.apiKey] uses.
  */
 @Component
-class SmtpEmailProvider(private val properties: SmtpMailProperties) {
-	private val logger = LoggerFactory.getLogger(SmtpEmailProvider::class.java)
+class SmtpEmailProvider(
+    private val properties: SmtpMailProperties,
+) {
+    private val logger = LoggerFactory.getLogger(SmtpEmailProvider::class.java)
 
-	private val sender: JavaMailSenderImpl by lazy {
-		JavaMailSenderImpl().apply {
-			host = properties.host
-			port = properties.port
-			username = properties.username
-			password = properties.password
-			javaMailProperties.apply {
-				setProperty("mail.smtp.auth", "true")
-				setProperty("mail.smtp.starttls.enable", "true")
-			}
-		}
-	}
+    private val sender: JavaMailSenderImpl by lazy {
+        JavaMailSenderImpl().apply {
+            host = properties.host
+            port = properties.port
+            username = properties.username
+            password = properties.password
+            javaMailProperties.apply {
+                setProperty("mail.smtp.auth", "true")
+                setProperty("mail.smtp.starttls.enable", "true")
+            }
+        }
+    }
 
-	fun send(message: EmailMessage) {
-		if (properties.username.isBlank()) {
-			logger.info(
-				"SMTP not configured (rally26.email.smtp.username blank) — skipping real send. " +
-					"Would have sent to=${message.to} cc=${message.cc} subject=\"${message.subject}\"",
-			)
-			return
-		}
-		val mail = SimpleMailMessage()
-		mail.setFrom(properties.fromAddress)
-		mail.setTo(message.to)
-		if (message.cc.isNotEmpty()) mail.setCc(*message.cc.toTypedArray())
-		message.replyTo?.let { mail.setReplyTo(it) }
-		mail.setSubject(message.subject)
-		mail.setText(message.body)
-		sender.send(mail)
-	}
+    fun send(message: EmailMessage) {
+        if (properties.username.isBlank()) {
+            logger.info(
+                "SMTP not configured (rally26.email.smtp.username blank) — skipping real send. " +
+                    "Would have sent to=${message.to} cc=${message.cc} subject=\"${message.subject}\"",
+            )
+            return
+        }
+        val mail = SimpleMailMessage()
+        mail.setFrom(properties.fromAddress)
+        mail.setTo(message.to)
+        if (message.cc.isNotEmpty()) mail.setCc(*message.cc.toTypedArray())
+        message.replyTo?.let { mail.setReplyTo(it) }
+        mail.setSubject(message.subject)
+        mail.setText(message.body)
+        sender.send(mail)
+    }
 }

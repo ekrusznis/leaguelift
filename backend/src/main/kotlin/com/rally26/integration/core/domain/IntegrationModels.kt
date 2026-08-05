@@ -3,7 +3,9 @@ package com.rally26.integration.core.domain
 import java.time.Instant
 import java.util.UUID
 
-enum class IntegrationProvider(val configKey: String) {
+enum class IntegrationProvider(
+    val configKey: String,
+) {
     GOOGLE_CALENDAR("google-calendar"),
     QUICKBOOKS_ONLINE("quickbooks-online"),
     SPORTSENGINE("sportsengine"),
@@ -20,12 +22,28 @@ enum class IntegrationProvider(val configKey: String) {
 }
 
 enum class IntegrationCategory { PAYMENTS, FULFILLMENT, COMMUNICATIONS, STORAGE, CALENDAR, ACCOUNTING, SPORTS_DATA, MAPS }
+
 enum class IntegrationOwnerType { PLATFORM, ORGANIZATION, USER }
+
 enum class IntegrationAuthMode { NONE, PLATFORM_SECRET, OAUTH2, API_TOKEN, FILE_IMPORT, URL, WEBHOOK }
+
 enum class IntegrationReadiness { AVAILABLE, NOT_CONFIGURED, PARTNER_PENDING, PLATFORM_MANAGED, UNSUPPORTED }
+
 enum class IntegrationAdapterMode { EXISTING, OAUTH_SCAFFOLD, FILE_IMPORT, PARTNER_PENDING, PLATFORM_MANAGED }
-enum class IntegrationConnectionStatus { NOT_CONFIGURED, AVAILABLE, AUTHORIZATION_PENDING, CONNECTED, DEGRADED, REVOKED, DISCONNECTED, UNSUPPORTED }
+
+enum class IntegrationConnectionStatus {
+    NOT_CONFIGURED,
+    AVAILABLE,
+    AUTHORIZATION_PENDING,
+    CONNECTED,
+    DEGRADED,
+    REVOKED,
+    DISCONNECTED,
+    UNSUPPORTED,
+}
+
 enum class IntegrationHealthStatus { HEALTHY, DEGRADED, FAILED }
+
 enum class IntegrationCredentialKind { OAUTH_TOKEN_SET, API_TOKEN, OAUTH_PKCE_VERIFIER }
 
 data class IntegrationProviderDefinition(

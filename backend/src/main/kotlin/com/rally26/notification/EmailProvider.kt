@@ -9,7 +9,7 @@ package com.rally26.notification
  * `RESEND_API_KEY` configured, which is every environment today.
  */
 interface EmailProvider {
-	fun send(message: EmailMessage)
+    fun send(message: EmailMessage)
 }
 
 /**
@@ -24,16 +24,16 @@ interface EmailProvider {
  * email yet") is treated as "no template" by callers, not sent as-is.
  */
 data class EmailTemplateRef(
-	val id: String,
-	val variables: Map<String, Any> = emptyMap(),
+    val id: String,
+    val variables: Map<String, Any> = emptyMap(),
 )
 
 data class EmailMessage(
-	val to: String,
-	val subject: String,
-	val body: String,
-	val cc: List<String> = emptyList(),
-	val replyTo: String? = null,
-	val idempotencyKey: String? = null,
-	val template: EmailTemplateRef? = null,
+    val to: String,
+    val subject: String,
+    val body: String,
+    val cc: List<String> = emptyList(),
+    val replyTo: String? = null,
+    val idempotencyKey: String? = null,
+    val template: EmailTemplateRef? = null,
 )

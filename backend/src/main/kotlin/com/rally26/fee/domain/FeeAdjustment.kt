@@ -12,19 +12,19 @@ import java.util.UUID
 enum class AdjustmentType { DISCOUNT, CREDIT, CORRECTION }
 
 data class FeeAdjustment(
-	val id: UUID,
-	val organizationId: UUID,
-	val feeAssignmentId: UUID,
-	val householdId: UUID,
-	val adjustmentType: AdjustmentType,
-	val amountMinor: Long,
-	val currency: String,
-	val reason: String?,
-	val createdByUserId: UUID,
-	val voidedAt: Instant?,
-	val voidedByUserId: UUID?,
-	val voidReason: String?,
-	val createdAt: Instant,
+    val id: UUID,
+    val organizationId: UUID,
+    val feeAssignmentId: UUID,
+    val householdId: UUID,
+    val adjustmentType: AdjustmentType,
+    val amountMinor: Long,
+    val currency: String,
+    val reason: String?,
+    val createdByUserId: UUID,
+    val voidedAt: Instant?,
+    val voidedByUserId: UUID?,
+    val voidReason: String?,
+    val createdAt: Instant,
 ) {
-	val isVoided: Boolean get() = voidedAt != null
+    val isVoided: Boolean get() = voidedAt != null
 }

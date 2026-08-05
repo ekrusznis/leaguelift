@@ -1,8 +1,8 @@
 package com.rally26
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
-import org.springframework.boot.runApplication
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
+import org.springframework.boot.runApplication
 import org.springframework.scheduling.annotation.EnableScheduling
 
 // @EnableScheduling added for SponsorshipRenewalReminderService (Phase 6 remainder,
@@ -15,5 +15,5 @@ import org.springframework.scheduling.annotation.EnableScheduling
 class Rally26ApiApplication
 
 fun main(args: Array<String>) {
-	runApplication<Rally26ApiApplication>(*args)
+    runApplication<Rally26ApiApplication>(*args)
 }

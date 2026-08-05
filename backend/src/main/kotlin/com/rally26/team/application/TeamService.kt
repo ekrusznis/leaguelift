@@ -21,18 +21,29 @@ class TeamService(
     private val membershipService: MembershipService,
     private val auditService: AuditService,
 ) {
-
-    fun list(organizationId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<Team> {
+    fun list(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<Team> {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return teamRepository.findAll(organizationId, offset, limit)
     }
 
-    fun count(organizationId: UUID, currentUser: CurrentUser): Long {
+    fun count(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): Long {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return teamRepository.countAll(organizationId)
     }
 
-    fun get(organizationId: UUID, teamId: UUID, currentUser: CurrentUser): Team {
+    fun get(
+        organizationId: UUID,
+        teamId: UUID,
+        currentUser: CurrentUser,
+    ): Team {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return teamRepository.findById(teamId, organizationId)
             ?: throw NotFoundException("TEAM_NOT_FOUND", "The team could not be found.")
@@ -94,7 +105,11 @@ class TeamService(
     }
 
     @Transactional
-    fun archive(organizationId: UUID, teamId: UUID, currentUser: CurrentUser) {
+    fun archive(
+        organizationId: UUID,
+        teamId: UUID,
+        currentUser: CurrentUser,
+    ) {
         membershipService.requireManagerRole(organizationId, currentUser)
         val rows = teamRepository.archive(teamId, organizationId)
         if (rows == 0) throw NotFoundException("TEAM_NOT_FOUND", "The team could not be found.")
@@ -111,7 +126,10 @@ class TeamService(
         if (email != null && !EMAIL_PATTERN.matches(email)) {
             throw ValidationException(
                 "Contact email is not a valid email address.",
-                listOf(com.rally26.common.error.FieldError("contactEmail", "Invalid email format.")),
+                listOf(
+                    com.rally26.common.error
+                        .FieldError("contactEmail", "Invalid email format."),
+                ),
             )
         }
     }

@@ -18,20 +18,23 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
  * and expiration/issuer validation rather than hand-rolling JWT handling.
  */
 @Configuration
-class JwtConfig(private val jwtProperties: JwtProperties) {
+class JwtConfig(
+    private val jwtProperties: JwtProperties,
+) {
+    @Bean
+    fun jwtEncoder(): JwtEncoder {
+        val jwkSource = ImmutableSecret<SecurityContext>(jwtProperties.secretKey())
+        return NimbusJwtEncoder(jwkSource)
+    }
 
-	@Bean
-	fun jwtEncoder(): JwtEncoder {
-		val jwkSource = ImmutableSecret<SecurityContext>(jwtProperties.secretKey())
-		return NimbusJwtEncoder(jwkSource)
-	}
-
-	@Bean
-	fun jwtDecoder(): JwtDecoder {
-		val decoder = NimbusJwtDecoder.withSecretKey(jwtProperties.secretKey())
-			.macAlgorithm(MacAlgorithm.HS256)
-			.build()
-		decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(jwtProperties.issuer))
-		return decoder
-	}
+    @Bean
+    fun jwtDecoder(): JwtDecoder {
+        val decoder =
+            NimbusJwtDecoder
+                .withSecretKey(jwtProperties.secretKey())
+                .macAlgorithm(MacAlgorithm.HS256)
+                .build()
+        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(jwtProperties.issuer))
+        return decoder
+    }
 }

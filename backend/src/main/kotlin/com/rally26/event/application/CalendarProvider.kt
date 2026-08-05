@@ -14,11 +14,17 @@ import com.rally26.event.domain.Event
  * still implement this same interface.
  */
 interface CalendarProvider {
-	/** A single-event `.ics` file — one VEVENT. */
-	fun buildIcs(event: Event, displayTitle: String): String
+    /** A single-event `.ics` file — one VEVENT. */
+    fun buildIcs(
+        event: Event,
+        displayTitle: String,
+    ): String
 
-	/** A combined-schedule `.ics` file — one VEVENT per event, e.g. a household's or participant's authorized schedule. */
-	fun buildIcs(events: List<EventWithDisplayTitle>): String
+    /** A combined-schedule `.ics` file — one VEVENT per event, e.g. a household's or participant's authorized schedule. */
+    fun buildIcs(events: List<EventWithDisplayTitle>): String
 }
 
-data class EventWithDisplayTitle(val event: Event, val displayTitle: String)
+data class EventWithDisplayTitle(
+    val event: Event,
+    val displayTitle: String,
+)

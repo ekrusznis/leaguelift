@@ -17,27 +17,32 @@ private val log = LoggerFactory.getLogger(EventRsvpChangeNotificationHandler::cl
  */
 @Component
 class EventRsvpChangeNotificationHandler(
-	private val emailProvider: EmailProvider,
-	private val objectMapper: ObjectMapper,
+    private val emailProvider: EmailProvider,
+    private val objectMapper: ObjectMapper,
 ) : OutboxEventHandler {
+    override val eventType: String = "event.rsvp_changed"
 
-	override val eventType: String = "event.rsvp_changed"
-
-	override fun handle(event: OutboxEvent) {
-		val payload = objectMapper.readValue(event.payload, RsvpChangeNotificationPayload::class.java)
-		if (payload.staffEmails.isEmpty()) {
-			log.info("RSVP change on event {} (\"{}\") has no team staff to notify — nothing to send.", event.aggregateId, payload.displayTitle)
-			return
-		}
-		val previous = payload.previousResponse ?: "no response"
-		for (email in payload.staffEmails) {
-			emailProvider.send(
-				EmailMessage(
-					to = email,
-					subject = "RSVP update: ${payload.displayTitle}",
-					body = "${payload.participantName}'s RSVP for \"${payload.displayTitle}\" changed from $previous to ${payload.newResponse}.\n\n— Rally26",
-				),
-			)
-		}
-	}
+    override fun handle(event: OutboxEvent) {
+        val payload = objectMapper.readValue(event.payload, RsvpChangeNotificationPayload::class.java)
+        if (payload.staffEmails.isEmpty()) {
+            log.info(
+                "RSVP change on event {} (\"{}\") has no team staff to notify — nothing to send.",
+                event.aggregateId,
+                payload.displayTitle,
+            )
+            return
+        }
+        val previous = payload.previousResponse ?: "no response"
+        for (email in payload.staffEmails) {
+            emailProvider.send(
+                EmailMessage(
+                    to = email,
+                    subject = "RSVP update: ${payload.displayTitle}",
+                    body =
+                        "${payload.participantName}'s RSVP for \"${payload.displayTitle}\" changed from $previous " +
+                            "to ${payload.newResponse}.\n\n— Rally26",
+                ),
+            )
+        }
+    }
 }

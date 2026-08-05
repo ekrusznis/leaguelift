@@ -20,22 +20,23 @@ const val REQUEST_ID_MDC_KEY = "requestId"
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
-class RequestIdFilter(private val requestIdProperties: RequestIdProperties) : OncePerRequestFilter() {
-
-	override fun doFilterInternal(
-		request: HttpServletRequest,
-		response: HttpServletResponse,
-		filterChain: FilterChain,
-	) {
-		val headerName = requestIdProperties.headerName
-		val incoming = request.getHeader(headerName)?.takeIf { it.isNotBlank() }
-		val requestId = incoming ?: "req_${UUID.randomUUID()}"
-		response.setHeader(headerName, requestId)
-		MDC.put(REQUEST_ID_MDC_KEY, requestId)
-		try {
-			filterChain.doFilter(request, response)
-		} finally {
-			MDC.remove(REQUEST_ID_MDC_KEY)
-		}
-	}
+class RequestIdFilter(
+    private val requestIdProperties: RequestIdProperties,
+) : OncePerRequestFilter() {
+    override fun doFilterInternal(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        filterChain: FilterChain,
+    ) {
+        val headerName = requestIdProperties.headerName
+        val incoming = request.getHeader(headerName)?.takeIf { it.isNotBlank() }
+        val requestId = incoming ?: "req_${UUID.randomUUID()}"
+        response.setHeader(headerName, requestId)
+        MDC.put(REQUEST_ID_MDC_KEY, requestId)
+        try {
+            filterChain.doFilter(request, response)
+        } finally {
+            MDC.remove(REQUEST_ID_MDC_KEY)
+        }
+    }
 }

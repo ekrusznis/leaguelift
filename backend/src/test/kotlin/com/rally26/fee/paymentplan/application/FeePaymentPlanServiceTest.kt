@@ -49,19 +49,34 @@ class FeePaymentPlanServiceTest {
 
         assertFailsWith<ValidationException> {
             service.create(
-                organizationId, assignmentId,
+                organizationId,
+                assignmentId,
                 listOf(NewInstallment(3000, LocalDate.parse("2026-09-01")), NewInstallment(3000, LocalDate.parse("2026-10-01"))),
-                null, user,
+                null,
+                user,
             )
         }
     }
 
     @Test
     fun `create persists an ordered plan and records audit`() {
-        val plan = FeePaymentPlan(
-            UUID.randomUUID(), organizationId, assignmentId, householdId, FeePaymentPlanStatus.ACTIVE,
-            8000, "USD", null, user.userId, null, null, null, now, now,
-        )
+        val plan =
+            FeePaymentPlan(
+                UUID.randomUUID(),
+                organizationId,
+                assignmentId,
+                householdId,
+                FeePaymentPlanStatus.ACTIVE,
+                8000,
+                "USD",
+                null,
+                user.userId,
+                null,
+                null,
+                null,
+                now,
+                now,
+            )
         every { membership.requireManagerRole(organizationId, user) } returns mockk()
         every { fees.findAssignmentById(assignmentId, organizationId) } returns assignment()
         every { plans.findActiveByAssignment(organizationId, assignmentId) } returns null
@@ -73,19 +88,33 @@ class FeePaymentPlanServiceTest {
         every { plans.listInstallments(organizationId, plan.id) } returns emptyList()
         every { audit.record(any(), any(), any(), any(), any(), any()) } just runs
 
-        val result = service.create(
-            organizationId, assignmentId,
-            listOf(NewInstallment(4000, LocalDate.parse("2026-09-01")), NewInstallment(4000, LocalDate.parse("2026-10-01"))),
-            null, user,
-        )
+        val result =
+            service.create(
+                organizationId,
+                assignmentId,
+                listOf(NewInstallment(4000, LocalDate.parse("2026-09-01")), NewInstallment(4000, LocalDate.parse("2026-10-01"))),
+                null,
+                user,
+            )
 
         assertEquals(plan.id, result.plan.id)
         verify(exactly = 2) { plans.insertInstallment(organizationId, plan.id, any(), 4000, any()) }
         verify(exactly = 1) { audit.record(user.userId, organizationId, "fee_payment_plan.created", "fee_payment_plan", plan.id, any()) }
     }
 
-    private fun assignment() = FeeAssignment(
-        assignmentId, organizationId, householdId, null, null, "Club dues", 10000, "USD",
-        LocalDate.parse("2026-09-01"), FeeAssignmentStatus.PARTIALLY_PAID, now, now,
-    )
+    private fun assignment() =
+        FeeAssignment(
+            assignmentId,
+            organizationId,
+            householdId,
+            null,
+            null,
+            "Club dues",
+            10000,
+            "USD",
+            LocalDate.parse("2026-09-01"),
+            FeeAssignmentStatus.PARTIALLY_PAID,
+            now,
+            now,
+        )
 }

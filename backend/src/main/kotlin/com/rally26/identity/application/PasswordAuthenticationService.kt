@@ -18,85 +18,97 @@ import org.springframework.transaction.annotation.Transactional
  */
 @Service
 class PasswordAuthenticationService(
-	private val appUserRepository: AppUserRepository,
-	private val emailVerificationService: EmailVerificationService,
-	private val passwordEncoder: PasswordEncoder,
+    private val appUserRepository: AppUserRepository,
+    private val emailVerificationService: EmailVerificationService,
+    private val passwordEncoder: PasswordEncoder,
 ) {
+    data class RegistrationAccepted(
+        val email: String,
+    )
 
-	data class RegistrationAccepted(
-		val email: String,
-	)
+    /**
+     * Internal helper still used by integration tests to create an already-active user
+     * directly. Public endpoints should call [registerOwner].
+     */
+    @Transactional
+    fun register(
+        email: String,
+        password: String,
+        displayName: String,
+    ): AppUser {
+        val normalizedEmail = email.trim().lowercase()
+        if (appUserRepository.findByEmail(normalizedEmail) != null) {
+            throw emailAlreadyRegistered()
+        }
+        return try {
+            appUserRepository.insert(
+                email = normalizedEmail,
+                displayName = displayName,
+                passwordHash = passwordEncoder.encode(password),
+                status = AppUserStatus.ACTIVE,
+            )
+        } catch (_: DuplicateKeyException) {
+            throw emailAlreadyRegistered()
+        }
+    }
 
-	/**
-	 * Internal helper still used by integration tests to create an already-active user
-	 * directly. Public endpoints should call [registerOwner].
-	 */
-	@Transactional
-	fun register(email: String, password: String, displayName: String): AppUser {
-		val normalizedEmail = email.trim().lowercase()
-		if (appUserRepository.findByEmail(normalizedEmail) != null) {
-			throw emailAlreadyRegistered()
-		}
-		return try {
-			appUserRepository.insert(
-				email = normalizedEmail,
-				displayName = displayName,
-				passwordHash = passwordEncoder.encode(password),
-				status = AppUserStatus.ACTIVE,
-			)
-		} catch (_: DuplicateKeyException) {
-			throw emailAlreadyRegistered()
-		}
-	}
+    @Transactional
+    fun registerOwner(
+        email: String,
+        password: String,
+        displayName: String,
+    ): RegistrationAccepted {
+        val normalizedEmail = email.trim().lowercase()
+        if (appUserRepository.findByEmail(normalizedEmail) != null) {
+            throw emailAlreadyRegistered()
+        }
+        val created =
+            try {
+                appUserRepository.insert(
+                    email = normalizedEmail,
+                    displayName = displayName,
+                    passwordHash = passwordEncoder.encode(password),
+                    status = AppUserStatus.PENDING_EMAIL_VERIFICATION,
+                )
+            } catch (_: DuplicateKeyException) {
+                throw emailAlreadyRegistered()
+            }
+        val issued = emailVerificationService.issueForUser(created.id)
+        emailVerificationService.enqueueVerificationEmail(issued)
+        return RegistrationAccepted(email = normalizedEmail)
+    }
 
-	@Transactional
-	fun registerOwner(email: String, password: String, displayName: String): RegistrationAccepted {
-		val normalizedEmail = email.trim().lowercase()
-		if (appUserRepository.findByEmail(normalizedEmail) != null) {
-			throw emailAlreadyRegistered()
-		}
-		val created = try {
-			appUserRepository.insert(
-				email = normalizedEmail,
-				displayName = displayName,
-				passwordHash = passwordEncoder.encode(password),
-				status = AppUserStatus.PENDING_EMAIL_VERIFICATION,
-			)
-		} catch (_: DuplicateKeyException) {
-			throw emailAlreadyRegistered()
-		}
-		val issued = emailVerificationService.issueForUser(created.id)
-		emailVerificationService.enqueueVerificationEmail(issued)
-		return RegistrationAccepted(email = normalizedEmail)
-	}
+    /** Generic failure message regardless of whether the email exists — never confirm account existence. */
+    fun authenticate(
+        email: String,
+        password: String,
+    ): AppUser {
+        val appUser = appUserRepository.findByEmail(email) ?: throw invalidCredentials()
+        if (appUser.status == AppUserStatus.PENDING_EMAIL_VERIFICATION) {
+            throw UnauthorizedException(
+                code = "EMAIL_NOT_VERIFIED",
+                message = "Verify your email before signing in.",
+            )
+        }
+        val hash = appUser.passwordHash ?: throw invalidCredentials()
+        if (!passwordEncoder.matches(password, hash)) {
+            throw invalidCredentials()
+        }
+        return appUser
+    }
 
-	/** Generic failure message regardless of whether the email exists — never confirm account existence. */
-	fun authenticate(email: String, password: String): AppUser {
-		val appUser = appUserRepository.findByEmail(email) ?: throw invalidCredentials()
-		if (appUser.status == AppUserStatus.PENDING_EMAIL_VERIFICATION) {
-			throw UnauthorizedException(
-				code = "EMAIL_NOT_VERIFIED",
-				message = "Verify your email before signing in.",
-			)
-		}
-		val hash = appUser.passwordHash ?: throw invalidCredentials()
-		if (!passwordEncoder.matches(password, hash)) {
-			throw invalidCredentials()
-		}
-		return appUser
-	}
+    private fun emailAlreadyRegistered() = ConflictException("EMAIL_ALREADY_REGISTERED", "An account with that email already exists.")
 
-	private fun emailAlreadyRegistered() =
-		ConflictException("EMAIL_ALREADY_REGISTERED", "An account with that email already exists.")
+    private fun invalidCredentials() = UnauthorizedException("INVALID_CREDENTIALS", "Invalid email or password.")
 
-	private fun invalidCredentials() =
-		UnauthorizedException("INVALID_CREDENTIALS", "Invalid email or password.")
-
-	fun toCurrentUser(appUser: AppUser, platformAdministrator: Boolean = false): CurrentUser =
-		CurrentUser(
-			userId = appUser.id,
-			email = appUser.email,
-			displayName = appUser.displayName,
-			platformAdministrator = platformAdministrator,
-		)
+    fun toCurrentUser(
+        appUser: AppUser,
+        platformAdministrator: Boolean = false,
+    ): CurrentUser =
+        CurrentUser(
+            userId = appUser.id,
+            email = appUser.email,
+            displayName = appUser.displayName,
+            platformAdministrator = platformAdministrator,
+        )
 }

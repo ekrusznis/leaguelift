@@ -42,9 +42,10 @@ class GoogleCalendarServiceTest {
 
     @Test
     fun `overview keeps ICS available while automatic synchronization is disabled`() {
-        every { catalogService.listForUser(currentUser) } returns listOf(
-            IntegrationCatalogItem(definition(), IntegrationReadiness.NOT_CONFIGURED, null, stub = false),
-        )
+        every { catalogService.listForUser(currentUser) } returns
+            listOf(
+                IntegrationCatalogItem(definition(), IntegrationReadiness.NOT_CONFIGURED, null, stub = false),
+            )
 
         val result = service.overview(currentUser)
 
@@ -61,19 +62,21 @@ class GoogleCalendarServiceTest {
         val writable = GoogleCalendarDescriptor("primary", "Primary", "America/New_York", primary = true, writable = true)
         val readOnly = GoogleCalendarDescriptor("readonly", "Read only", "America/New_York", primary = false, writable = false)
         val now = Instant.now()
-        val setting = GoogleCalendarConnectionSetting(
-            connectionId = connection.id,
-            selectedCalendarId = writable.id,
-            selectedCalendarName = writable.name,
-            selectedCalendarTimezone = writable.timezone,
-            syncDirection = GoogleCalendarSyncDirection.RALLY26_TO_GOOGLE,
-            automaticSyncEnabled = false,
-            lastCalendarListedAt = now,
-            createdAt = now,
-            updatedAt = now,
-        )
+        val setting =
+            GoogleCalendarConnectionSetting(
+                connectionId = connection.id,
+                selectedCalendarId = writable.id,
+                selectedCalendarName = writable.name,
+                selectedCalendarTimezone = writable.timezone,
+                syncDirection = GoogleCalendarSyncDirection.RALLY26_TO_GOOGLE,
+                automaticSyncEnabled = false,
+                lastCalendarListedAt = now,
+                createdAt = now,
+                updatedAt = now,
+            )
         every { oauthService.listUserConnections(currentUser) } returns listOf(connection)
-        every { oauthService.accessTokenForUserConnection(connection.id, currentUser) } returns IntegrationAccessToken(connection, "stub-access-token")
+        every { oauthService.accessTokenForUserConnection(connection.id, currentUser) } returns
+            IntegrationAccessToken(connection, "stub-access-token")
         every { providerClient.listCalendars("stub-access-token") } returns listOf(writable, readOnly)
         every { repository.upsertSetting(connection.id, writable.id, writable.name, writable.timezone) } returns setting
 
@@ -87,49 +90,51 @@ class GoogleCalendarServiceTest {
         verify(exactly = 0) { repository.upsertSetting(connection.id, readOnly.id, any(), any()) }
     }
 
-    private fun definition() = IntegrationProviderDefinition(
-        provider = IntegrationProvider.GOOGLE_CALENDAR,
-        displayName = "Google Calendar",
-        category = IntegrationCategory.CALENDAR,
-        ownershipScope = IntegrationOwnerType.USER,
-        primaryAuthMode = IntegrationAuthMode.OAUTH2,
-        supportedAuthModes = listOf(IntegrationAuthMode.OAUTH2),
-        baselineReadiness = IntegrationReadiness.NOT_CONFIGURED,
-        adapterMode = IntegrationAdapterMode.OAUTH_SCAFFOLD,
-        description = "Personal calendar scaffold",
-        activationRequirement = "Verified Google OAuth application",
-        defaultScopes = emptyList(),
-        sortOrder = 1,
-        visibleToCustomers = true,
-    )
+    private fun definition() =
+        IntegrationProviderDefinition(
+            provider = IntegrationProvider.GOOGLE_CALENDAR,
+            displayName = "Google Calendar",
+            category = IntegrationCategory.CALENDAR,
+            ownershipScope = IntegrationOwnerType.USER,
+            primaryAuthMode = IntegrationAuthMode.OAUTH2,
+            supportedAuthModes = listOf(IntegrationAuthMode.OAUTH2),
+            baselineReadiness = IntegrationReadiness.NOT_CONFIGURED,
+            adapterMode = IntegrationAdapterMode.OAUTH_SCAFFOLD,
+            description = "Personal calendar scaffold",
+            activationRequirement = "Verified Google OAuth application",
+            defaultScopes = emptyList(),
+            sortOrder = 1,
+            visibleToCustomers = true,
+        )
 
-    private fun connection() = IntegrationConnection(
-        id = UUID.randomUUID(),
-        provider = IntegrationProvider.GOOGLE_CALENDAR,
-        category = IntegrationCategory.CALENDAR,
-        ownerType = IntegrationOwnerType.USER,
-        organizationId = null,
-        userId = currentUser.userId,
-        authMode = IntegrationAuthMode.OAUTH2,
-        status = IntegrationConnectionStatus.CONNECTED,
-        grantedScopes = emptyList(),
-        externalAccountId = "person@example.com",
-        externalAccountName = "Person",
-        credentialId = UUID.randomUUID(),
-        accessTokenExpiresAt = Instant.now().plusSeconds(3600),
-        refreshLockedAt = null,
-        refreshLockedByUserId = null,
-        lastSuccessfulSyncAt = null,
-        lastHealthCheckAt = null,
-        lastErrorCode = null,
-        lastErrorMessage = null,
-        legacyResourceType = null,
-        legacyResourceId = null,
-        createdByUserId = currentUser.userId,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-        connectedAt = Instant.now(),
-        revokedAt = null,
-        disconnectedAt = null,
-    )
+    private fun connection() =
+        IntegrationConnection(
+            id = UUID.randomUUID(),
+            provider = IntegrationProvider.GOOGLE_CALENDAR,
+            category = IntegrationCategory.CALENDAR,
+            ownerType = IntegrationOwnerType.USER,
+            organizationId = null,
+            userId = currentUser.userId,
+            authMode = IntegrationAuthMode.OAUTH2,
+            status = IntegrationConnectionStatus.CONNECTED,
+            grantedScopes = emptyList(),
+            externalAccountId = "person@example.com",
+            externalAccountName = "Person",
+            credentialId = UUID.randomUUID(),
+            accessTokenExpiresAt = Instant.now().plusSeconds(3600),
+            refreshLockedAt = null,
+            refreshLockedByUserId = null,
+            lastSuccessfulSyncAt = null,
+            lastHealthCheckAt = null,
+            lastErrorCode = null,
+            lastErrorMessage = null,
+            legacyResourceType = null,
+            legacyResourceId = null,
+            createdByUserId = currentUser.userId,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+            connectedAt = Instant.now(),
+            revokedAt = null,
+            disconnectedAt = null,
+        )
 }

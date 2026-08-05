@@ -43,90 +43,109 @@ private const val TEST_BUCKET = "rally26-media-e2e-test"
  * started once via `.also { it.start() }`, not per-class.
  */
 class MediaUploadEndToEndIntegrationTest : AbstractIntegrationTest() {
+    companion object {
+        @JvmStatic
+        val minio: MinIOContainer =
+            MinIOContainer("minio/minio:RELEASE.2024-11-07T00-52-20Z")
+                .withUserName("rally26-test")
+                .withPassword("rally26-test-secret")
+                .also {
+                    it.start()
+                    createBucket(it)
+                }
 
-	companion object {
-		@JvmStatic
-		val minio: MinIOContainer = MinIOContainer("minio/minio:RELEASE.2024-11-07T00-52-20Z")
-			.withUserName("rally26-test")
-			.withPassword("rally26-test-secret")
-			.also {
-				it.start()
-				createBucket(it)
-			}
+        private fun createBucket(container: MinIOContainer) {
+            val client =
+                S3Client
+                    .builder()
+                    .endpointOverride(URI.create(container.s3URL))
+                    .region(Region.US_EAST_1)
+                    .credentialsProvider(
+                        StaticCredentialsProvider.create(AwsBasicCredentials.create(container.userName, container.password)),
+                    ).forcePathStyle(true)
+                    .build()
+            client.use { it.createBucket(CreateBucketRequest.builder().bucket(TEST_BUCKET).build()) }
+        }
 
-		private fun createBucket(container: MinIOContainer) {
-			val client = S3Client.builder()
-				.endpointOverride(URI.create(container.s3URL))
-				.region(Region.US_EAST_1)
-				.credentialsProvider(
-					StaticCredentialsProvider.create(AwsBasicCredentials.create(container.userName, container.password)),
-				)
-				.forcePathStyle(true)
-				.build()
-			client.use { it.createBucket(CreateBucketRequest.builder().bucket(TEST_BUCKET).build()) }
-		}
+        @DynamicPropertySource
+        @JvmStatic
+        fun registerSpacesProperties(registry: DynamicPropertyRegistry) {
+            registry.add("rally26.spaces.endpoint") { minio.s3URL }
+            registry.add("rally26.spaces.access-key") { minio.userName }
+            registry.add("rally26.spaces.secret-key") { minio.password }
+            registry.add("rally26.spaces.bucket") { TEST_BUCKET }
+            registry.add("rally26.spaces.region") { "us-east-1" }
+        }
+    }
 
-		@DynamicPropertySource
-		@JvmStatic
-		fun registerSpacesProperties(registry: DynamicPropertyRegistry) {
-			registry.add("rally26.spaces.endpoint") { minio.s3URL }
-			registry.add("rally26.spaces.access-key") { minio.userName }
-			registry.add("rally26.spaces.secret-key") { minio.password }
-			registry.add("rally26.spaces.bucket") { TEST_BUCKET }
-			registry.add("rally26.spaces.region") { "us-east-1" }
-		}
-	}
+    @Autowired
+    lateinit var organizationService: OrganizationService
 
-	@Autowired
-	lateinit var organizationService: OrganizationService
+    @Autowired
+    lateinit var passwordAuthenticationService: PasswordAuthenticationService
 
-	@Autowired
-	lateinit var passwordAuthenticationService: PasswordAuthenticationService
+    @Autowired
+    lateinit var mediaUploadService: MediaUploadService
 
-	@Autowired
-	lateinit var mediaUploadService: MediaUploadService
+    @Autowired
+    lateinit var mediaAssignmentService: MediaAssignmentService
 
-	@Autowired
-	lateinit var mediaAssignmentService: MediaAssignmentService
+    @Test
+    fun `upload confirm and assign a logo through real S3-compatible storage`() {
+        val appUser = passwordAuthenticationService.register("media-e2e-${System.nanoTime()}@example.com", "password1234", "Test User")
+        val owner = passwordAuthenticationService.toCurrentUser(appUser)
+        val organization =
+            organizationService.create(
+                "Riverside Soccer",
+                "riverside-soccer-e2e-${System.nanoTime()}",
+                OrganizationType.RECREATIONAL_LEAGUE,
+                owner,
+            )
 
-	@Test
-	fun `upload confirm and assign a logo through real S3-compatible storage`() {
-		val appUser = passwordAuthenticationService.register("media-e2e-${System.nanoTime()}@example.com", "password1234", "Test User")
-		val owner = passwordAuthenticationService.toCurrentUser(appUser)
-		val organization = organizationService.create(
-			"Riverside Soccer",
-			"riverside-soccer-e2e-${System.nanoTime()}",
-			OrganizationType.RECREATIONAL_LEAGUE,
-			owner,
-		)
+        val bytes = pngBytes()
+        val requested =
+            mediaUploadService.requestUpload(
+                organization.id,
+                MediaUsageSlot.LOGO,
+                "logo.png",
+                "image/png",
+                bytes.size.toLong(),
+                owner,
+            )
 
-		val bytes = pngBytes()
-		val requested = mediaUploadService.requestUpload(organization.id, MediaUsageSlot.LOGO, "logo.png", "image/png", bytes.size.toLong(), owner)
+        // The browser never proxies bytes through the Spring API — PUT directly to the
+        // presigned URL, mirroring what uploadToSignedUrl.ts does client-side.
+        val httpClient = HttpClient.newHttpClient()
+        val putRequest =
+            HttpRequest
+                .newBuilder(URI.create(requested.uploadUrl))
+                .header("Content-Type", "image/png")
+                .PUT(HttpRequest.BodyPublishers.ofByteArray(bytes))
+                .build()
+        val putResponse = httpClient.send(putRequest, HttpResponse.BodyHandlers.discarding())
+        assertEquals(200, putResponse.statusCode())
 
-		// The browser never proxies bytes through the Spring API — PUT directly to the
-		// presigned URL, mirroring what uploadToSignedUrl.ts does client-side.
-		val httpClient = HttpClient.newHttpClient()
-		val putRequest = HttpRequest.newBuilder(URI.create(requested.uploadUrl))
-			.header("Content-Type", "image/png")
-			.PUT(HttpRequest.BodyPublishers.ofByteArray(bytes))
-			.build()
-		val putResponse = httpClient.send(putRequest, HttpResponse.BodyHandlers.discarding())
-		assertEquals(200, putResponse.statusCode())
+        val confirmed = mediaUploadService.confirmUpload(organization.id, requested.asset.id, owner)
+        assertEquals(MediaAssetStatus.READY, confirmed.asset.status)
+        assertEquals(10, confirmed.asset.widthPx)
+        assertEquals(10, confirmed.asset.heightPx)
 
-		val confirmed = mediaUploadService.confirmUpload(organization.id, requested.asset.id, owner)
-		assertEquals(MediaAssetStatus.READY, confirmed.asset.status)
-		assertEquals(10, confirmed.asset.widthPx)
-		assertEquals(10, confirmed.asset.heightPx)
+        val assignment =
+            mediaAssignmentService.assignOrganizationMedia(
+                organization.id,
+                MediaUsageSlot.LOGO,
+                requested.asset.id,
+                "Riverside Soccer logo",
+                owner,
+            )
+        val active = mediaAssignmentService.listActiveOrganizationMedia(organization.id, owner)
+        assertTrue(active.any { it.id == assignment.id })
+    }
 
-		val assignment = mediaAssignmentService.assignOrganizationMedia(organization.id, MediaUsageSlot.LOGO, requested.asset.id, "Riverside Soccer logo", owner)
-		val active = mediaAssignmentService.listActiveOrganizationMedia(organization.id, owner)
-		assertTrue(active.any { it.id == assignment.id })
-	}
-
-	private fun pngBytes(): ByteArray {
-		val image = BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB)
-		val out = ByteArrayOutputStream()
-		ImageIO.write(image, "png", out)
-		return out.toByteArray()
-	}
+    private fun pngBytes(): ByteArray {
+        val image = BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB)
+        val out = ByteArrayOutputStream()
+        ImageIO.write(image, "png", out)
+        return out.toByteArray()
+    }
 }

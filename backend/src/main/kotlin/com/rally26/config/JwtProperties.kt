@@ -12,14 +12,14 @@ import javax.crypto.spec.SecretKeySpec
  */
 @ConfigurationProperties(prefix = "rally26.jwt")
 data class JwtProperties(
-	val secret: String,
-	val issuer: String = "rally26-api",
-	val accessTokenTtlMinutes: Long = 60,
+    val secret: String,
+    val issuer: String = "rally26-api",
+    val accessTokenTtlMinutes: Long = 60,
 ) {
-	/** HS256 requires a key of at least 256 bits (32 bytes). */
-	fun secretKey(): SecretKeySpec {
-		val bytes = secret.toByteArray()
-		require(bytes.size >= 32) { "rally26.jwt.secret must be at least 32 bytes for HS256." }
-		return SecretKeySpec(bytes, "HmacSHA256")
-	}
+    /** HS256 requires a key of at least 256 bits (32 bytes). */
+    fun secretKey(): SecretKeySpec {
+        val bytes = secret.toByteArray()
+        require(bytes.size >= 32) { "rally26.jwt.secret must be at least 32 bytes for HS256." }
+        return SecretKeySpec(bytes, "HmacSHA256")
+    }
 }

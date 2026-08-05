@@ -37,20 +37,28 @@ class IntegrationSyncService(
     ): IntegrationSyncRun {
         membershipService.requireManagerRole(organizationId, currentUser)
         if (!idempotencyKey.isNullOrBlank()) {
-            repository.findByIdempotency(provider, IntegrationOwnerType.ORGANIZATION, organizationId, null, idempotencyKey)?.let { return it }
+            repository
+                .findByIdempotency(
+                    provider,
+                    IntegrationOwnerType.ORGANIZATION,
+                    organizationId,
+                    null,
+                    idempotencyKey,
+                )?.let { return it }
         }
         return repository.markRunning(
-            repository.create(
-                connectionId,
-                provider,
-                IntegrationOwnerType.ORGANIZATION,
-                organizationId,
-                null,
-                direction,
-                trigger,
-                idempotencyKey,
-                currentUser.userId,
-            ).id,
+            repository
+                .create(
+                    connectionId,
+                    provider,
+                    IntegrationOwnerType.ORGANIZATION,
+                    organizationId,
+                    null,
+                    direction,
+                    trigger,
+                    idempotencyKey,
+                    currentUser.userId,
+                ).id,
         )
     }
 
@@ -74,19 +82,23 @@ class IntegrationSyncService(
         internalEntityType: String? = null,
         internalEntityId: UUID? = null,
         retryable: Boolean = false,
-    ): IntegrationSyncIssue = repository.addIssue(
-        runId,
-        severity,
-        code,
-        message,
-        externalEntityType,
-        externalEntityId,
-        internalEntityType,
-        internalEntityId,
-        retryable,
-    )
+    ): IntegrationSyncIssue =
+        repository.addIssue(
+            runId,
+            severity,
+            code,
+            message,
+            externalEntityType,
+            externalEntityId,
+            internalEntityType,
+            internalEntityId,
+            retryable,
+        )
 
-    fun listOrganization(organizationId: UUID, currentUser: CurrentUser): List<IntegrationSyncRun> {
+    fun listOrganization(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): List<IntegrationSyncRun> {
         membershipService.requireManagerRole(organizationId, currentUser)
         return repository.listForOrganization(organizationId, 50)
     }
@@ -98,14 +110,23 @@ class IntegrationSyncService(
         return repository.listPlatform(100)
     }
 
-    fun issues(runId: UUID, currentUser: CurrentUser): List<IntegrationSyncIssue> {
-        val run = repository.find(runId) ?: throw NotFoundException("INTEGRATION_SYNC_NOT_FOUND", "The integration sync run could not be found.")
+    fun issues(
+        runId: UUID,
+        currentUser: CurrentUser,
+    ): List<IntegrationSyncIssue> {
+        val run =
+            repository.find(runId) ?: throw NotFoundException("INTEGRATION_SYNC_NOT_FOUND", "The integration sync run could not be found.")
         when (run.ownerType) {
-            IntegrationOwnerType.PLATFORM -> authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_INTEGRATION_VIEW)
+            IntegrationOwnerType.PLATFORM ->
+                authorizationService.requirePlatformCapability(
+                    currentUser,
+                    Capabilities.PLATFORM_INTEGRATION_VIEW,
+                )
             IntegrationOwnerType.ORGANIZATION -> membershipService.requireManagerRole(requireNotNull(run.organizationId), currentUser)
-            IntegrationOwnerType.USER -> if (run.userId != currentUser.userId && !currentUser.platformAdministrator) {
-                throw NotFoundException("INTEGRATION_SYNC_NOT_FOUND", "The integration sync run could not be found.")
-            }
+            IntegrationOwnerType.USER ->
+                if (run.userId != currentUser.userId && !currentUser.platformAdministrator) {
+                    throw NotFoundException("INTEGRATION_SYNC_NOT_FOUND", "The integration sync run could not be found.")
+                }
         }
         return repository.listIssues(runId)
     }

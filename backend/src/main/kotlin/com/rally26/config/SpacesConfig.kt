@@ -17,31 +17,37 @@ import java.net.URI
  * and credentials change between local/test/staging/prod.
  */
 @Configuration
-class SpacesConfig(private val spacesProperties: SpacesProperties) {
+class SpacesConfig(
+    private val spacesProperties: SpacesProperties,
+) {
+    private fun credentialsProvider() =
+        StaticCredentialsProvider.create(
+            AwsBasicCredentials.create(spacesProperties.accessKey, spacesProperties.secretKey),
+        )
 
-	private fun credentialsProvider() = StaticCredentialsProvider.create(
-		AwsBasicCredentials.create(spacesProperties.accessKey, spacesProperties.secretKey),
-	)
+    @Bean
+    fun s3Client(): S3Client =
+        S3Client
+            .builder()
+            .endpointOverride(URI.create(spacesProperties.endpoint))
+            .region(Region.of(spacesProperties.region))
+            .credentialsProvider(credentialsProvider())
+            .forcePathStyle(true)
+            .build()
 
-	@Bean
-	fun s3Client(): S3Client = S3Client.builder()
-		.endpointOverride(URI.create(spacesProperties.endpoint))
-		.region(Region.of(spacesProperties.region))
-		.credentialsProvider(credentialsProvider())
-		.forcePathStyle(true)
-		.build()
-
-	@Bean
-	fun s3Presigner(): S3Presigner = S3Presigner.builder()
-		.endpointOverride(URI.create(spacesProperties.endpoint))
-		.region(Region.of(spacesProperties.region))
-		.credentialsProvider(credentialsProvider())
-		// S3Presigner.Builder has no forcePathStyle() shortcut (unlike S3Client.Builder) —
-		// path-style must be set via serviceConfiguration instead.
-		.serviceConfiguration(
-			S3Configuration.builder()
-				.pathStyleAccessEnabled(true)
-				.build(),
-		)
-		.build()
+    @Bean
+    fun s3Presigner(): S3Presigner =
+        S3Presigner
+            .builder()
+            .endpointOverride(URI.create(spacesProperties.endpoint))
+            .region(Region.of(spacesProperties.region))
+            .credentialsProvider(credentialsProvider())
+            // S3Presigner.Builder has no forcePathStyle() shortcut (unlike S3Client.Builder) —
+            // path-style must be set via serviceConfiguration instead.
+            .serviceConfiguration(
+                S3Configuration
+                    .builder()
+                    .pathStyleAccessEnabled(true)
+                    .build(),
+            ).build()
 }

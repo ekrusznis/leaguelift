@@ -9,7 +9,12 @@ import org.springframework.web.client.RestClientException
 
 private val log = LoggerFactory.getLogger(VendorSelectionService::class.java)
 
-data class EligiblePrintProvider(val id: Long, val title: String, val decorationMethods: List<String>?, val location: PrintifyLocation)
+data class EligiblePrintProvider(
+    val id: Long,
+    val title: String,
+    val decorationMethods: List<String>?,
+    val location: PrintifyLocation,
+)
 
 /**
  * Named and documented honestly: this is a **location filter**, not a price
@@ -22,29 +27,30 @@ data class EligiblePrintProvider(val id: Long, val title: String, val decoration
  * accepts the sole match) — never a fully invisible auto-decision.
  */
 @Service
-class VendorSelectionService(private val printifyCatalogClient: PrintifyCatalogClient) {
+class VendorSelectionService(
+    private val printifyCatalogClient: PrintifyCatalogClient,
+) {
+    fun listUsPrintProviders(blueprintId: Long): List<EligiblePrintProvider> =
+        withPrintifyErrorTranslation {
+            printifyCatalogClient.listPrintProviders(blueprintId).mapNotNull { summary ->
+                val detail = printifyCatalogClient.getPrintProviderLocation(summary.id)
+                val location = detail.location
+                if (location != null && location.country?.equals("US", ignoreCase = true) == true) {
+                    EligiblePrintProvider(summary.id, summary.title, summary.decorationMethods, location)
+                } else {
+                    null
+                }
+            }
+        }
 
-	fun listUsPrintProviders(blueprintId: Long): List<EligiblePrintProvider> =
-		withPrintifyErrorTranslation {
-			printifyCatalogClient.listPrintProviders(blueprintId).mapNotNull { summary ->
-				val detail = printifyCatalogClient.getPrintProviderLocation(summary.id)
-				val location = detail.location
-				if (location != null && location.country?.equals("US", ignoreCase = true) == true) {
-					EligiblePrintProvider(summary.id, summary.title, summary.decorationMethods, location)
-				} else {
-					null
-				}
-			}
-		}
-
-	private fun <T> withPrintifyErrorTranslation(block: () -> T): T =
-		try {
-			block()
-		} catch (e: RestClientException) {
-			log.warn("Printify catalog API call failed: {}", e.message, e)
-			throw ServiceUnavailableException(
-				"PRINTIFY_PROVIDER_UNAVAILABLE",
-				"The apparel provider is not available right now. If this is local/staging, confirm PRINTIFY_API_TOKEN is set.",
-			)
-		}
+    private fun <T> withPrintifyErrorTranslation(block: () -> T): T =
+        try {
+            block()
+        } catch (e: RestClientException) {
+            log.warn("Printify catalog API call failed: {}", e.message, e)
+            throw ServiceUnavailableException(
+                "PRINTIFY_PROVIDER_UNAVAILABLE",
+                "The apparel provider is not available right now. If this is local/staging, confirm PRINTIFY_API_TOKEN is set.",
+            )
+        }
 }

@@ -21,21 +21,21 @@ import org.testcontainers.containers.PostgreSQLContainer
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 abstract class AbstractIntegrationTest {
+    companion object {
+        @JvmStatic
+        val postgres: PostgreSQLContainer<*> =
+            PostgreSQLContainer("postgres:16-alpine")
+                .withDatabaseName("rally26_test")
+                .withUsername("rally26_test")
+                .withPassword("rally26_test")
+                .also { it.start() }
 
-	companion object {
-		@JvmStatic
-		val postgres: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:16-alpine")
-			.withDatabaseName("rally26_test")
-			.withUsername("rally26_test")
-			.withPassword("rally26_test")
-			.also { it.start() }
-
-		@DynamicPropertySource
-		@JvmStatic
-		fun registerDynamicProperties(registry: DynamicPropertyRegistry) {
-			registry.add("spring.datasource.url", postgres::getJdbcUrl)
-			registry.add("spring.datasource.username", postgres::getUsername)
-			registry.add("spring.datasource.password", postgres::getPassword)
-		}
-	}
+        @DynamicPropertySource
+        @JvmStatic
+        fun registerDynamicProperties(registry: DynamicPropertyRegistry) {
+            registry.add("spring.datasource.url", postgres::getJdbcUrl)
+            registry.add("spring.datasource.username", postgres::getUsername)
+            registry.add("spring.datasource.password", postgres::getPassword)
+        }
+    }
 }

@@ -14,11 +14,14 @@ import org.springframework.web.client.RestClient
  * call.
  */
 @Configuration
-class TwilioConfig(private val twilioProperties: TwilioProperties) {
-
-	@Bean
-	fun twilioRestClient(): RestClient = RestClient.builder()
-		.baseUrl("https://api.twilio.com/2010-04-01/Accounts/${twilioProperties.accountSid}")
-		.defaultHeaders { it.setBasicAuth(twilioProperties.accountSid, twilioProperties.authToken) }
-		.build()
+class TwilioConfig(
+    private val twilioProperties: TwilioProperties,
+) {
+    @Bean
+    fun twilioRestClient(): RestClient =
+        RestClient
+            .builder()
+            .baseUrl("https://api.twilio.com/2010-04-01/Accounts/${twilioProperties.accountSid}")
+            .defaultHeaders { it.setBasicAuth(twilioProperties.accountSid, twilioProperties.authToken) }
+            .build()
 }

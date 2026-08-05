@@ -39,17 +39,18 @@ class ProfileCorrectionServiceTest {
     private val membershipService = mockk<MembershipService>()
     private val authorizationService = mockk<AuthorizationService>()
     private val auditService = mockk<AuditService>()
-    private val service = ProfileCorrectionService(
-        repository,
-        householdRepository,
-        participantRepository,
-        householdService,
-        participantService,
-        membershipService,
-        authorizationService,
-        auditService,
-        ObjectMapper(),
-    )
+    private val service =
+        ProfileCorrectionService(
+            repository,
+            householdRepository,
+            participantRepository,
+            householdService,
+            participantService,
+            membershipService,
+            authorizationService,
+            auditService,
+            ObjectMapper(),
+        )
 
     private val organizationId = UUID.randomUUID()
     private val householdId = UUID.randomUUID()
@@ -58,11 +59,12 @@ class ProfileCorrectionServiceTest {
     @Test
     fun `guardian can request a correction for a linked participant without changing the profile`() {
         val participant = participant(firstName = "Avery")
-        val created = request(
-            participant = participant,
-            currentValue = "Avery",
-            proposedValue = "Averie",
-        )
+        val created =
+            request(
+                participant = participant,
+                currentValue = "Avery",
+                proposedValue = "Averie",
+            )
         every { participantRepository.findById(participant.id, organizationId) } returns participant
         every { membershipService.hasManagerRole(organizationId, user) } returns false
         every { authorizationService.hasGuardianRelationship(organizationId, householdId, user) } returns true
@@ -90,15 +92,16 @@ class ProfileCorrectionServiceTest {
         } returns created
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 
-        val result = service.create(
-            organizationId,
-            ProfileCorrectionTargetType.PARTICIPANT,
-            participant.id,
-            ProfileCorrectionField.PARTICIPANT_FIRST_NAME,
-            " Averie ",
-            "Name is misspelled",
-            user,
-        )
+        val result =
+            service.create(
+                organizationId,
+                ProfileCorrectionTargetType.PARTICIPANT,
+                participant.id,
+                ProfileCorrectionField.PARTICIPANT_FIRST_NAME,
+                " Averie ",
+                "Name is misspelled",
+                user,
+            )
 
         assertEquals(ProfileCorrectionStatus.PENDING, result.status)
         verify(exactly = 0) { participantService.update(any(), any(), any(), any(), any(), any(), any()) }
@@ -107,11 +110,12 @@ class ProfileCorrectionServiceTest {
     @Test
     fun `approval refuses to overwrite a profile that changed after submission`() {
         val participant = participant(firstName = "Avery")
-        val pending = request(
-            participant = participant,
-            currentValue = "Old spelling",
-            proposedValue = "Averie",
-        )
+        val pending =
+            request(
+                participant = participant,
+                currentValue = "Old spelling",
+                proposedValue = "Averie",
+            )
         every { membershipService.requireManagerRole(organizationId, user) } returns mockk<OrganizationMembership>()
         every { repository.findById(pending.id, organizationId) } returns pending
         every { participantRepository.findById(participant.id, organizationId) } returns participant
@@ -127,17 +131,19 @@ class ProfileCorrectionServiceTest {
     @Test
     fun `approval applies the typed participant change before closing the request`() {
         val participant = participant(firstName = "Avery")
-        val pending = request(
-            participant = participant,
-            currentValue = "Avery",
-            proposedValue = "Averie",
-        )
-        val approved = pending.copy(
-            status = ProfileCorrectionStatus.APPROVED,
-            reviewedBy = user.userId,
-            reviewerName = user.displayName,
-            reviewedAt = Instant.now(),
-        )
+        val pending =
+            request(
+                participant = participant,
+                currentValue = "Avery",
+                proposedValue = "Averie",
+            )
+        val approved =
+            pending.copy(
+                status = ProfileCorrectionStatus.APPROVED,
+                reviewedBy = user.userId,
+                reviewerName = user.displayName,
+                reviewedAt = Instant.now(),
+            )
         every { membershipService.requireManagerRole(organizationId, user) } returns mockk<OrganizationMembership>()
         every { repository.findById(pending.id, organizationId) } returnsMany listOf(pending, approved)
         every { participantRepository.findById(participant.id, organizationId) } returns participant
@@ -171,18 +177,19 @@ class ProfileCorrectionServiceTest {
         }
     }
 
-    private fun participant(firstName: String) = Participant(
-        id = UUID.randomUUID(),
-        householdId = householdId,
-        organizationId = organizationId,
-        firstName = firstName,
-        lastName = "Morgan",
-        dateOfBirth = LocalDate.of(2012, 9, 15),
-        notes = null,
-        status = ParticipantStatus.ACTIVE,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun participant(firstName: String) =
+        Participant(
+            id = UUID.randomUUID(),
+            householdId = householdId,
+            organizationId = organizationId,
+            firstName = firstName,
+            lastName = "Morgan",
+            dateOfBirth = LocalDate.of(2012, 9, 15),
+            notes = null,
+            status = ParticipantStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
     private fun request(
         participant: Participant,

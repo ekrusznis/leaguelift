@@ -18,19 +18,27 @@ import java.util.UUID
  */
 @RestController
 @RequestMapping("/api/v1/public/stores/{slug}/orders")
-class OrderPublicController(private val orderService: OrderService) {
+class OrderPublicController(
+    private val orderService: OrderService,
+) {
+    @PostMapping
+    fun createCheckoutSession(
+        @PathVariable slug: String,
+        @Valid @RequestBody request: CreateOrderCheckoutRequest,
+    ): OrderCheckoutResponse =
+        orderService
+            .createCheckoutSession(
+                slug,
+                request.items.map { it.toRequest() },
+                request.supporterName,
+                request.supporterEmail,
+                request.successUrl,
+                request.cancelUrl,
+            ).toResponse()
 
-	@PostMapping
-	fun createCheckoutSession(
-		@PathVariable slug: String,
-		@Valid @RequestBody request: CreateOrderCheckoutRequest,
-	): OrderCheckoutResponse =
-		orderService.createCheckoutSession(
-			slug, request.items.map { it.toRequest() }, request.supporterName,
-			request.supporterEmail, request.successUrl, request.cancelUrl,
-		).toResponse()
-
-	@GetMapping("/{orderId}")
-	fun getStatus(@PathVariable slug: String, @PathVariable orderId: UUID): OrderStatusResponse =
-		orderService.getStatus(slug, orderId).toStatusResponse()
+    @GetMapping("/{orderId}")
+    fun getStatus(
+        @PathVariable slug: String,
+        @PathVariable orderId: UUID,
+    ): OrderStatusResponse = orderService.getStatus(slug, orderId).toStatusResponse()
 }

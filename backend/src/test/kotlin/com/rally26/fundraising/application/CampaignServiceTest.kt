@@ -28,7 +28,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class CampaignServiceTest {
-
     private val campaignRepository = mockk<CampaignRepository>()
     private val teamRepository = mockk<TeamRepository>()
     private val membershipService = mockk<MembershipService>()
@@ -86,16 +85,34 @@ class CampaignServiceTest {
         val campaign = sampleCampaign(teamId = teamId)
         every {
             campaignRepository.insert(
-                orgId, teamId, campaign.name, campaign.slug, campaign.description,
-                campaign.campaignType, campaign.goalAmountMinor, campaign.currency, campaign.startDate, campaign.endDate,
+                orgId,
+                teamId,
+                campaign.name,
+                campaign.slug,
+                campaign.description,
+                campaign.campaignType,
+                campaign.goalAmountMinor,
+                campaign.currency,
+                campaign.startDate,
+                campaign.endDate,
             )
         } returns campaign
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 
-        val result = service.create(
-            orgId, teamId, campaign.name, campaign.slug, campaign.description, campaign.campaignType,
-            campaign.goalAmountMinor, campaign.currency, campaign.startDate, campaign.endDate, currentUser,
-        )
+        val result =
+            service.create(
+                orgId,
+                teamId,
+                campaign.name,
+                campaign.slug,
+                campaign.description,
+                campaign.campaignType,
+                campaign.goalAmountMinor,
+                campaign.currency,
+                campaign.startDate,
+                campaign.endDate,
+                currentUser,
+            )
 
         assertEquals(campaign.id, result.id)
         verify(exactly = 1) { membershipService.requireManagerRole(orgId, currentUser) }
@@ -109,8 +126,17 @@ class CampaignServiceTest {
 
         assertFailsWith<NotFoundException> {
             service.create(
-                orgId, teamId, "Spring Trip", "spring-trip", null, CampaignType.TRAVEL,
-                100000L, "USD", null, null, currentUser,
+                orgId,
+                teamId,
+                "Spring Trip",
+                "spring-trip",
+                null,
+                CampaignType.TRAVEL,
+                100000L,
+                "USD",
+                null,
+                null,
+                currentUser,
             )
         }
     }
@@ -121,8 +147,17 @@ class CampaignServiceTest {
 
         assertFailsWith<ValidationException> {
             service.create(
-                orgId, null, "Spring Trip", "Not A Valid Slug!", null, CampaignType.TRAVEL,
-                100000L, "USD", null, null, currentUser,
+                orgId,
+                null,
+                "Spring Trip",
+                "Not A Valid Slug!",
+                null,
+                CampaignType.TRAVEL,
+                100000L,
+                "USD",
+                null,
+                null,
+                currentUser,
             )
         }
     }
@@ -133,8 +168,17 @@ class CampaignServiceTest {
 
         assertFailsWith<ValidationException> {
             service.create(
-                orgId, null, "Spring Trip", "spring-trip", null, CampaignType.TRAVEL, 100000L, "USD",
-                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 1, 1), currentUser,
+                orgId,
+                null,
+                "Spring Trip",
+                "spring-trip",
+                null,
+                CampaignType.TRAVEL,
+                100000L,
+                "USD",
+                LocalDate.of(2026, 6, 1),
+                LocalDate.of(2026, 1, 1),
+                currentUser,
             )
         }
     }
@@ -148,8 +192,17 @@ class CampaignServiceTest {
 
         assertFailsWith<ConflictException> {
             service.create(
-                orgId, null, "Spring Trip", "spring-trip", null, CampaignType.TRAVEL,
-                100000L, "USD", null, null, currentUser,
+                orgId,
+                null,
+                "Spring Trip",
+                "spring-trip",
+                null,
+                CampaignType.TRAVEL,
+                100000L,
+                "USD",
+                null,
+                null,
+                currentUser,
             )
         }
     }
@@ -238,13 +291,14 @@ class CampaignServiceTest {
         updatedAt = Instant.now(),
     )
 
-    private fun managerMembership() = OrganizationMembership(
-        id = UUID.randomUUID(),
-        organizationId = orgId,
-        userId = currentUser.userId,
-        role = MembershipRole.ADMINISTRATOR,
-        status = MembershipStatus.ACTIVE,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    )
+    private fun managerMembership() =
+        OrganizationMembership(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            userId = currentUser.userId,
+            role = MembershipRole.ADMINISTRATOR,
+            status = MembershipStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 }

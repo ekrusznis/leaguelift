@@ -15,13 +15,19 @@ import java.security.MessageDigest
  */
 interface GoogleCalendarProviderClient {
     fun listCalendars(accessToken: String): List<GoogleCalendarDescriptor>
+
     fun upsertEvent(
         accessToken: String,
         calendarId: String,
         externalEventId: String?,
         payload: GoogleCalendarEventPayload,
     ): GoogleCalendarWriteResult
-    fun deleteEvent(accessToken: String, calendarId: String, externalEventId: String)
+
+    fun deleteEvent(
+        accessToken: String,
+        calendarId: String,
+        externalEventId: String,
+    )
 }
 
 @Component
@@ -48,7 +54,11 @@ class ScaffoldGoogleCalendarProviderClient(
         return GoogleCalendarWriteResult(id, "stub-etag-${digest(payload.toString())}")
     }
 
-    override fun deleteEvent(accessToken: String, calendarId: String, externalEventId: String) {
+    override fun deleteEvent(
+        accessToken: String,
+        calendarId: String,
+        externalEventId: String,
+    ) {
         requireStub(accessToken)
     }
 
@@ -62,7 +72,8 @@ class ScaffoldGoogleCalendarProviderClient(
     }
 
     private fun digest(value: String): String =
-        MessageDigest.getInstance("SHA-256")
+        MessageDigest
+            .getInstance("SHA-256")
             .digest(value.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
             .take(24)

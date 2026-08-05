@@ -13,5 +13,5 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.email")
 data class EmailProviderProperties(
-	val provider: String = "logging",
+    val provider: String = "logging",
 )

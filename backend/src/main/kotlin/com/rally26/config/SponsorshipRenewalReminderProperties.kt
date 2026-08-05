@@ -13,7 +13,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.sponsorship.renewal-reminder")
 data class SponsorshipRenewalReminderProperties(
-	val enabled: Boolean = true,
-	val daysBefore: Long = 14,
-	val cron: String = "0 0 8 * * *",
+    val enabled: Boolean = true,
+    val daysBefore: Long = 14,
+    val cron: String = "0 0 8 * * *",
 )

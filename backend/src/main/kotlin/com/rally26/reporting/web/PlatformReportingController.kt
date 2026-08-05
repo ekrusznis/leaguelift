@@ -13,19 +13,29 @@ import java.time.LocalDate
 /** Platform-wide report (Phase 9 slice 3, ADR-025) — platform-admin only, distinct from `ReportingController`'s org-scoped reports. */
 @RestController
 @RequestMapping("/api/v1/platform/reports")
-class PlatformReportingController(private val reportingService: ReportingService) {
-
-	@GetMapping("/overview")
-	fun overview(
-		@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) from: LocalDate?,
-		@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) to: LocalDate?,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): PlatformReportResponse {
-		val report = reportingService.getPlatformReport(from, to, currentUser)
-		return PlatformReportResponse(
-			report.from, report.to, report.newOrganizations, report.activeOrganizations, report.newCustomers,
-			report.grossTransactionVolumeMinor, report.refundedMinor, report.refundRatePercent,
-			report.webhookProcessed, report.webhookFailed, report.outboxPending, report.outboxDeadLetter,
-		)
-	}
+class PlatformReportingController(
+    private val reportingService: ReportingService,
+) {
+    @GetMapping("/overview")
+    fun overview(
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) from: LocalDate?,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) to: LocalDate?,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PlatformReportResponse {
+        val report = reportingService.getPlatformReport(from, to, currentUser)
+        return PlatformReportResponse(
+            report.from,
+            report.to,
+            report.newOrganizations,
+            report.activeOrganizations,
+            report.newCustomers,
+            report.grossTransactionVolumeMinor,
+            report.refundedMinor,
+            report.refundRatePercent,
+            report.webhookProcessed,
+            report.webhookFailed,
+            report.outboxPending,
+            report.outboxDeadLetter,
+        )
+    }
 }

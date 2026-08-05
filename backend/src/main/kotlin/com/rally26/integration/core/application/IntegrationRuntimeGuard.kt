@@ -13,7 +13,6 @@ class IntegrationRuntimeGuard(
     private val credentialCipher: CredentialCipher,
     private val environment: Environment,
 ) : InitializingBean {
-
     override fun afterPropertiesSet() {
         val productionLike = environment.activeProfiles.any { it.equals("prod", true) || it.equals("staging", true) }
         if (productionLike && properties.stubMode) {
@@ -38,8 +37,10 @@ class IntegrationRuntimeGuard(
         if (!properties.stubMode) {
             enabledProviders.forEach { (key, provider) ->
                 require(
-                    provider.clientId.isNotBlank() && provider.clientSecret.isNotBlank() &&
-                        provider.authorizationUri.isNotBlank() && provider.tokenUri.isNotBlank(),
+                    provider.clientId.isNotBlank() &&
+                        provider.clientSecret.isNotBlank() &&
+                        provider.authorizationUri.isNotBlank() &&
+                        provider.tokenUri.isNotBlank(),
                 ) {
                     "Enabled integration provider '$key' is missing its OAuth client or endpoint configuration."
                 }

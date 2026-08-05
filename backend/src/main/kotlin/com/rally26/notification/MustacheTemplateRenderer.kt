@@ -18,12 +18,15 @@ import java.io.StringWriter
  */
 @Component
 class MustacheTemplateRenderer {
-	private val factory = DefaultMustacheFactory()
+    private val factory = DefaultMustacheFactory()
 
-	fun render(templateClasspathName: String, context: Map<String, Any?>): String {
-		val mustache = factory.compile(templateClasspathName)
-		val writer = StringWriter()
-		mustache.execute(writer, context).flush()
-		return writer.toString()
-	}
+    fun render(
+        templateClasspathName: String,
+        context: Map<String, Any?>,
+    ): String {
+        val mustache = factory.compile(templateClasspathName)
+        val writer = StringWriter()
+        mustache.execute(writer, context).flush()
+        return writer.toString()
+    }
 }

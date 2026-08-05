@@ -57,40 +57,43 @@ data class GoogleCalendarEventMappingResponse(
     val updatedAt: Instant,
 )
 
-fun GoogleCalendarOverview.toResponse() = GoogleCalendarOverviewResponse(
-    catalog = catalog.toResponse(),
-    setting = setting?.toResponse(),
-    mappingCount = mappingCount,
-    icsFallbackAvailable = icsFallbackAvailable,
-    automaticSyncAvailable = automaticSyncAvailable,
-)
+fun GoogleCalendarOverview.toResponse() =
+    GoogleCalendarOverviewResponse(
+        catalog = catalog.toResponse(),
+        setting = setting?.toResponse(),
+        mappingCount = mappingCount,
+        icsFallbackAvailable = icsFallbackAvailable,
+        automaticSyncAvailable = automaticSyncAvailable,
+    )
 
 fun GoogleCalendarDescriptor.toResponse() = GoogleCalendarDescriptorResponse(id, name, timezone, primary, writable)
 
-fun GoogleCalendarConnectionSetting.toResponse() = GoogleCalendarSettingResponse(
-    connectionId,
-    selectedCalendarId,
-    selectedCalendarName,
-    selectedCalendarTimezone,
-    syncDirection.name,
-    automaticSyncEnabled,
-    lastCalendarListedAt,
-    createdAt,
-    updatedAt,
-)
+fun GoogleCalendarConnectionSetting.toResponse() =
+    GoogleCalendarSettingResponse(
+        connectionId,
+        selectedCalendarId,
+        selectedCalendarName,
+        selectedCalendarTimezone,
+        syncDirection.name,
+        automaticSyncEnabled,
+        lastCalendarListedAt,
+        createdAt,
+        updatedAt,
+    )
 
-fun GoogleCalendarEventMapping.toResponse() = GoogleCalendarEventMappingResponse(
-    id,
-    connectionId,
-    eventId,
-    externalCalendarId,
-    externalEventId,
-    externalEtag,
-    syncStatus.name,
-    lastExportHash,
-    lastSyncedAt,
-    lastErrorCode,
-    lastErrorMessage,
-    createdAt,
-    updatedAt,
-)
+fun GoogleCalendarEventMapping.toResponse() =
+    GoogleCalendarEventMappingResponse(
+        id,
+        connectionId,
+        eventId,
+        externalCalendarId,
+        externalEventId,
+        externalEtag,
+        syncStatus.name,
+        lastExportHash,
+        lastSyncedAt,
+        lastErrorCode,
+        lastErrorMessage,
+        createdAt,
+        updatedAt,
+    )

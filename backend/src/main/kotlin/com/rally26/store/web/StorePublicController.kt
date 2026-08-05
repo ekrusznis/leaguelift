@@ -16,24 +16,27 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/public/stores")
 class StorePublicController(
-	private val storeService: StoreService,
-	private val productService: ProductService,
+    private val storeService: StoreService,
+    private val productService: ProductService,
 ) {
-
-	@GetMapping("/{slug}")
-	fun getStore(@PathVariable slug: String): PublicStoreResponse {
-		val store = storeService.getPublic(slug)
-		val products = productService.listPublicProducts(store.id).map { product ->
-			PublicProductResponse(
-				id = product.id,
-				name = product.name,
-				description = product.description,
-				designUrl = productService.getPublicDesignUrl(product.id),
-				variants = productService.listPublicVariants(product.id).map {
-					PublicProductVariantResponse(it.id, it.label, it.priceMinor, it.currency)
-				},
-			)
-		}
-		return PublicStoreResponse(store.id, store.name, store.slug, products)
-	}
+    @GetMapping("/{slug}")
+    fun getStore(
+        @PathVariable slug: String,
+    ): PublicStoreResponse {
+        val store = storeService.getPublic(slug)
+        val products =
+            productService.listPublicProducts(store.id).map { product ->
+                PublicProductResponse(
+                    id = product.id,
+                    name = product.name,
+                    description = product.description,
+                    designUrl = productService.getPublicDesignUrl(product.id),
+                    variants =
+                        productService.listPublicVariants(product.id).map {
+                            PublicProductVariantResponse(it.id, it.label, it.priceMinor, it.currency)
+                        },
+                )
+            }
+        return PublicStoreResponse(store.id, store.name, store.slug, products)
+    }
 }

@@ -41,10 +41,18 @@ class AnnouncementServiceTest {
     private val outboxWriter = mockk<OutboxWriter>()
     private val auditService = mockk<AuditService>()
     private val clock = Clock.fixed(Instant.parse("2026-08-01T16:00:00Z"), ZoneOffset.UTC)
-    private val service = AnnouncementService(
-        repository, membershipService, authorizationService, teamRepository, tournamentRepository,
-        outboxWriter, auditService, ObjectMapper(), clock,
-    )
+    private val service =
+        AnnouncementService(
+            repository,
+            membershipService,
+            authorizationService,
+            teamRepository,
+            tournamentRepository,
+            outboxWriter,
+            auditService,
+            ObjectMapper(),
+            clock,
+        )
     private val organizationId = UUID.randomUUID()
     private val user = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")
     private val membership = mockk<OrganizationMembership>()
@@ -86,21 +94,39 @@ class AnnouncementServiceTest {
     @Test
     fun `publishing snapshots recipients and writes one outbox event`() {
         val draft = announcement()
-        val published = draft.copy(status = AnnouncementStatus.PUBLISHED, publishedByUserId = user.userId, publishedAt = Instant.now(clock), recipientCount = 1)
-        val candidate = AnnouncementRecipientCandidate(
-            recipientType = AnnouncementRecipientType.STAFF,
-            userId = UUID.randomUUID(),
-            householdId = null,
-            displayName = "Coach Lee",
-            email = "coach@example.com",
-            phone = null,
-        )
+        val published =
+            draft.copy(
+                status = AnnouncementStatus.PUBLISHED,
+                publishedByUserId = user.userId,
+                publishedAt = Instant.now(clock),
+                recipientCount = 1,
+            )
+        val candidate =
+            AnnouncementRecipientCandidate(
+                recipientType = AnnouncementRecipientType.STAFF,
+                userId = UUID.randomUUID(),
+                householdId = null,
+                displayName = "Coach Lee",
+                email = "coach@example.com",
+                phone = null,
+            )
         every { repository.findById(draft.id, organizationId) } returnsMany listOf(draft, published)
         every { membershipService.requireManagerRole(organizationId, user) } returns membership
         every { repository.listOrganizationStaff(organizationId) } returns listOf(candidate)
         every { repository.listOrganizationGuardians(organizationId) } returns emptyList()
         every { repository.listOrganizationAthletes(organizationId) } returns emptyList()
-        every { repository.insertRecipient(draft.id, organizationId, any(), candidate, true, DeliveryStatus.PENDING, DeliveryStatus.NONE) } just runs
+        every {
+            repository.insertRecipient(
+                draft.id,
+                organizationId,
+                any(),
+                candidate,
+                true,
+                DeliveryStatus.PENDING,
+                DeliveryStatus.NONE,
+            )
+        } just
+            runs
         every { repository.publish(draft.id, organizationId, user.userId, Instant.now(clock)) } returns 1
         every { outboxWriter.write("announcement", draft.id, organizationId, "announcement.published", any()) } just runs
         every { auditService.record(user.userId, organizationId, "announcement.published", "ANNOUNCEMENT", draft.id, any()) } just runs
@@ -108,7 +134,9 @@ class AnnouncementServiceTest {
         val result = service.publish(organizationId, draft.id, user)
 
         assertEquals(AnnouncementStatus.PUBLISHED, result.status)
-        verify(exactly = 1) { repository.insertRecipient(draft.id, organizationId, any(), candidate, true, DeliveryStatus.PENDING, DeliveryStatus.NONE) }
+        verify(exactly = 1) {
+            repository.insertRecipient(draft.id, organizationId, any(), candidate, true, DeliveryStatus.PENDING, DeliveryStatus.NONE)
+        }
         verify(exactly = 1) { outboxWriter.write("announcement", draft.id, organizationId, "announcement.published", any()) }
     }
 

@@ -34,7 +34,12 @@ data class QuickBooksConnectionSettingResponse(
     val updatedAt: Instant,
 )
 
-data class QuickBooksAccountResponse(val id: String, val name: String, val accountType: String, val active: Boolean)
+data class QuickBooksAccountResponse(
+    val id: String,
+    val name: String,
+    val accountType: String,
+    val active: Boolean,
+)
 
 data class QuickBooksAccountMappingResponse(
     val id: UUID,
@@ -45,8 +50,16 @@ data class QuickBooksAccountMappingResponse(
     val updatedAt: Instant,
 )
 
-data class UpdateQuickBooksMappingRequest(val mappingType: String, val accountId: String)
-data class QuickBooksExportPreviewRequest(val periodStart: LocalDate, val periodEnd: LocalDate, val idempotencyKey: String)
+data class UpdateQuickBooksMappingRequest(
+    val mappingType: String,
+    val accountId: String,
+)
+
+data class QuickBooksExportPreviewRequest(
+    val periodStart: LocalDate,
+    val periodEnd: LocalDate,
+    val idempotencyKey: String,
+)
 
 data class QuickBooksExportCandidateCountsResponse(
     val contributions: Int,
@@ -78,12 +91,63 @@ data class QuickBooksExportBatchResponse(
     val completedAt: Instant?,
 )
 
-fun QuickBooksOverview.toResponse() = QuickBooksOverviewResponse(
-    catalog.toResponse(), setting?.toResponse(), mappings.map { it.toResponse() },
-    recentBatches.map { it.toResponse() }, providerWritesEnabled, accountingReviewRequired,
-)
-fun QuickBooksConnectionSetting.toResponse() = QuickBooksConnectionSettingResponse(connectionId, realmId, companyName, environment.name, exportPolicy.name, accountingBasis.name, defaultCurrency, lastCompanyReadAt, lastAccountsReadAt, updatedAt)
+fun QuickBooksOverview.toResponse() =
+    QuickBooksOverviewResponse(
+        catalog.toResponse(),
+        setting?.toResponse(),
+        mappings.map { it.toResponse() },
+        recentBatches.map { it.toResponse() },
+        providerWritesEnabled,
+        accountingReviewRequired,
+    )
+
+fun QuickBooksConnectionSetting.toResponse() =
+    QuickBooksConnectionSettingResponse(
+        connectionId,
+        realmId,
+        companyName,
+        environment.name,
+        exportPolicy.name,
+        accountingBasis.name,
+        defaultCurrency,
+        lastCompanyReadAt,
+        lastAccountsReadAt,
+        updatedAt,
+    )
+
 fun QuickBooksAccount.toResponse() = QuickBooksAccountResponse(id, name, accountType, active)
-fun QuickBooksAccountMapping.toResponse() = QuickBooksAccountMappingResponse(id, mappingType.name, externalAccountId, externalAccountName, externalAccountType, updatedAt)
-fun QuickBooksExportPreview.toResponse() = QuickBooksExportPreviewResponse(periodStart, periodEnd, QuickBooksExportCandidateCountsResponse(counts.contributions, counts.sponsorships, counts.orders, counts.feePayments, counts.corrections, counts.total), missingMappings.map { it.name }, exportAllowed, reason)
-fun QuickBooksExportBatch.toResponse() = QuickBooksExportBatchResponse(id, status.name, periodStart, periodEnd, candidateCount, exportedCount, failedCount, createdAt, completedAt)
+
+fun QuickBooksAccountMapping.toResponse() =
+    QuickBooksAccountMappingResponse(id, mappingType.name, externalAccountId, externalAccountName, externalAccountType, updatedAt)
+
+fun QuickBooksExportPreview.toResponse() =
+    QuickBooksExportPreviewResponse(
+        periodStart,
+        periodEnd,
+        QuickBooksExportCandidateCountsResponse(
+            counts.contributions,
+            counts.sponsorships,
+            counts.orders,
+            counts.feePayments,
+            counts.corrections,
+            counts.total,
+        ),
+        missingMappings.map {
+            it.name
+        },
+        exportAllowed,
+        reason,
+    )
+
+fun QuickBooksExportBatch.toResponse() =
+    QuickBooksExportBatchResponse(
+        id,
+        status.name,
+        periodStart,
+        periodEnd,
+        candidateCount,
+        exportedCount,
+        failedCount,
+        createdAt,
+        completedAt,
+    )

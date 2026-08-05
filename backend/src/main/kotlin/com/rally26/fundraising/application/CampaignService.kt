@@ -27,18 +27,29 @@ class CampaignService(
     private val membershipService: MembershipService,
     private val auditService: AuditService,
 ) {
-
-    fun list(organizationId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<Campaign> {
+    fun list(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<Campaign> {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return campaignRepository.findAll(organizationId, offset, limit)
     }
 
-    fun count(organizationId: UUID, currentUser: CurrentUser): Long {
+    fun count(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): Long {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return campaignRepository.countAll(organizationId)
     }
 
-    fun get(organizationId: UUID, campaignId: UUID, currentUser: CurrentUser): Campaign {
+    fun get(
+        organizationId: UUID,
+        campaignId: UUID,
+        currentUser: CurrentUser,
+    ): Campaign {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return campaignRepository.findById(campaignId, organizationId)
             ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
@@ -46,8 +57,9 @@ class CampaignService(
 
     /** Only campaigns that have been published at least once are publicly visible (section 16.6). */
     fun getPublic(slug: String): Campaign {
-        val campaign = campaignRepository.findBySlug(slug)
-            ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
+        val campaign =
+            campaignRepository.findBySlug(slug)
+                ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
         if (campaign.status != CampaignStatus.ACTIVE && campaign.status != CampaignStatus.COMPLETED) {
             throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
         }
@@ -76,9 +88,19 @@ class CampaignService(
                 ?: throw NotFoundException("TEAM_NOT_FOUND", "The team could not be found.")
         }
         return try {
-            val campaign = campaignRepository.insert(
-                organizationId, teamId, name, slug, description, campaignType, goalAmountMinor, currency, startDate, endDate,
-            )
+            val campaign =
+                campaignRepository.insert(
+                    organizationId,
+                    teamId,
+                    name,
+                    slug,
+                    description,
+                    campaignType,
+                    goalAmountMinor,
+                    currency,
+                    startDate,
+                    endDate,
+                )
             auditService.record(currentUser.userId, organizationId, "campaign.created", "campaign", campaign.id)
             campaign
         } catch (e: DuplicateKeyException) {
@@ -98,8 +120,9 @@ class CampaignService(
         currentUser: CurrentUser,
     ): Campaign {
         membershipService.requireManagerRole(organizationId, currentUser)
-        val existing = campaignRepository.findById(campaignId, organizationId)
-            ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
+        val existing =
+            campaignRepository.findById(campaignId, organizationId)
+                ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
         validateDateRange(startDate ?: existing.startDate, endDate ?: existing.endDate)
         campaignRepository.update(campaignId, organizationId, name, description, goalAmountMinor, startDate, endDate)
         auditService.record(currentUser.userId, organizationId, "campaign.updated", "campaign", campaignId)
@@ -107,10 +130,15 @@ class CampaignService(
     }
 
     @Transactional
-    fun publish(organizationId: UUID, campaignId: UUID, currentUser: CurrentUser): Campaign {
+    fun publish(
+        organizationId: UUID,
+        campaignId: UUID,
+        currentUser: CurrentUser,
+    ): Campaign {
         membershipService.requireManagerRole(organizationId, currentUser)
-        val campaign = campaignRepository.findById(campaignId, organizationId)
-            ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
+        val campaign =
+            campaignRepository.findById(campaignId, organizationId)
+                ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
         if (campaign.status == CampaignStatus.ACTIVE || campaign.status == CampaignStatus.COMPLETED) return campaign
         if (campaign.status == CampaignStatus.ARCHIVED) {
             throw ValidationException("An archived campaign cannot be published.")
@@ -121,7 +149,12 @@ class CampaignService(
     }
 
     @Transactional
-    fun updateStatus(organizationId: UUID, campaignId: UUID, status: CampaignStatus, currentUser: CurrentUser): Campaign {
+    fun updateStatus(
+        organizationId: UUID,
+        campaignId: UUID,
+        status: CampaignStatus,
+        currentUser: CurrentUser,
+    ): Campaign {
         membershipService.requireManagerRole(organizationId, currentUser)
         campaignRepository.findById(campaignId, organizationId)
             ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
@@ -139,7 +172,10 @@ class CampaignService(
         }
     }
 
-    private fun validateDateRange(startDate: LocalDate?, endDate: LocalDate?) {
+    private fun validateDateRange(
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+    ) {
         if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
             throw ValidationException(
                 "End date must be on or after the start date.",

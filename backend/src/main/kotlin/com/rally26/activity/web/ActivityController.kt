@@ -9,9 +9,11 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/v1")
-class ActivityController(private val activityFeedService: ActivityFeedService) {
-
-	@GetMapping("/me/activity")
-	fun myActivity(@AuthenticationPrincipal currentUser: CurrentUser): ActivityFeedResponse =
-		ActivityFeedResponse(activityFeedService.getFeed(currentUser))
+class ActivityController(
+    private val activityFeedService: ActivityFeedService,
+) {
+    @GetMapping("/me/activity")
+    fun myActivity(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): ActivityFeedResponse = ActivityFeedResponse(activityFeedService.getFeed(currentUser))
 }

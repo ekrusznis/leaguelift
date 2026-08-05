@@ -30,25 +30,25 @@ enum class SponsorshipReviewStatus { PENDING_REVIEW, APPROVED, REJECTED }
  * `order_item.unit_price_minor`).
  */
 data class Sponsorship(
-	val id: UUID,
-	val organizationId: UUID,
-	val packageId: UUID,
-	val sponsorId: UUID,
-	val amountMinor: Long,
-	val currency: String,
-	val status: SponsorshipStatus,
-	val stripeCheckoutSessionId: String?,
-	val stripePaymentIntentId: String?,
-	val confirmedAt: Instant?,
-	// Defaults below keep pre-existing test call sites (LedgerServiceTest,
-	// StripeWebhookControllerTest — neither exercises the review/refund workflow)
-	// compiling without churn; every real write path (SponsorshipRepository) always
-	// sets these explicitly via named parameters.
-	val refundedAt: Instant? = null,
-	val reviewStatus: SponsorshipReviewStatus = SponsorshipReviewStatus.PENDING_REVIEW,
-	val reviewedAt: Instant? = null,
-	val reviewedById: UUID? = null,
-	val renewalReminderSentAt: Instant? = null,
-	val createdAt: Instant,
-	val paymentSource: PaymentSource = PaymentSource.STRIPE,
+    val id: UUID,
+    val organizationId: UUID,
+    val packageId: UUID,
+    val sponsorId: UUID,
+    val amountMinor: Long,
+    val currency: String,
+    val status: SponsorshipStatus,
+    val stripeCheckoutSessionId: String?,
+    val stripePaymentIntentId: String?,
+    val confirmedAt: Instant?,
+    // Defaults below keep pre-existing test call sites (LedgerServiceTest,
+    // StripeWebhookControllerTest — neither exercises the review/refund workflow)
+    // compiling without churn; every real write path (SponsorshipRepository) always
+    // sets these explicitly via named parameters.
+    val refundedAt: Instant? = null,
+    val reviewStatus: SponsorshipReviewStatus = SponsorshipReviewStatus.PENDING_REVIEW,
+    val reviewedAt: Instant? = null,
+    val reviewedById: UUID? = null,
+    val renewalReminderSentAt: Instant? = null,
+    val createdAt: Instant,
+    val paymentSource: PaymentSource = PaymentSource.STRIPE,
 )

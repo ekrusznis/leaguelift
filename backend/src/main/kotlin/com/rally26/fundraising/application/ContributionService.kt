@@ -6,10 +6,10 @@ import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
+import com.rally26.fundraising.domain.CampaignStatus
 import com.rally26.fundraising.domain.Contribution
 import com.rally26.fundraising.domain.ContributionLimits
 import com.rally26.fundraising.domain.ContributionStatus
-import com.rally26.fundraising.domain.CampaignStatus
 import com.rally26.fundraising.infra.StripeCheckoutClient
 import com.rally26.fundraising.persistence.CampaignRepository
 import com.rally26.fundraising.persistence.ContributionRepository
@@ -34,7 +34,13 @@ const val CONTRIBUTION_ID_PLACEHOLDER = "{CONTRIBUTION_ID}"
 val REFUND_WINDOW = Duration.ofDays(14)
 
 /** `contribution.confirmed` outbox payload (Phase 8 slice 2) — consumed by `ContributionThankYouEmailHandler`. */
-data class ContributionConfirmedPayload(val supporterEmail: String, val supporterName: String?, val amountMinor: Long, val currency: String, val campaignName: String)
+data class ContributionConfirmedPayload(
+    val supporterEmail: String,
+    val supporterName: String?,
+    val amountMinor: Long,
+    val currency: String,
+    val campaignName: String,
+)
 
 /**
  * Campaign contribution checkout (Phase 3 remainder). Confirmation happens only
@@ -50,136 +56,188 @@ data class ContributionConfirmedPayload(val supporterEmail: String, val supporte
  */
 @Service
 class ContributionService(
-	private val contributionRepository: ContributionRepository,
-	private val campaignRepository: CampaignRepository,
-	private val stripeCheckoutClient: StripeCheckoutClient,
-	private val membershipService: MembershipService,
-	private val auditService: AuditService,
-	private val ledgerService: LedgerService,
-	private val outboxWriter: OutboxWriter,
-	private val objectMapper: ObjectMapper,
+    private val contributionRepository: ContributionRepository,
+    private val campaignRepository: CampaignRepository,
+    private val stripeCheckoutClient: StripeCheckoutClient,
+    private val membershipService: MembershipService,
+    private val auditService: AuditService,
+    private val ledgerService: LedgerService,
+    private val outboxWriter: OutboxWriter,
+    private val objectMapper: ObjectMapper,
 ) {
+    @Transactional
+    fun createCheckoutSession(
+        slug: String,
+        amountMinor: Long,
+        supporterName: String?,
+        isAnonymous: Boolean,
+        supporterEmail: String?,
+        successUrl: String,
+        cancelUrl: String,
+    ): ContributionCheckout {
+        val campaign =
+            campaignRepository.findBySlug(slug)
+                ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
+        if (campaign.status != CampaignStatus.ACTIVE) {
+            throw ValidationException("This campaign isn't currently accepting contributions.")
+        }
+        if (!ContributionLimits.isAmountAllowed(amountMinor)) {
+            throw ValidationException(
+                "Contribution amount must be between " +
+                    "${ContributionLimits.MIN_AMOUNT_MINOR} and ${ContributionLimits.MAX_AMOUNT_MINOR} minor units.",
+            )
+        }
+        val displayName = if (isAnonymous) null else supporterName?.take(120)
+        return try {
+            // Stripe's checkout-session metadata needs our contribution id, so the
+            // contribution row is inserted (with a null session id) before Stripe is
+            // ever called, then updated with the real session id once Stripe returns it.
+            val provisional =
+                contributionRepository.insertPending(
+                    campaign.organizationId,
+                    campaign.id,
+                    amountMinor,
+                    campaign.currency,
+                    displayName,
+                    isAnonymous,
+                    supporterEmail,
+                )
+            val resolvedSuccessUrl = successUrl.replace(CONTRIBUTION_ID_PLACEHOLDER, provisional.id.toString())
+            val session =
+                stripeCheckoutClient.createContributionCheckoutSession(
+                    provisional.id,
+                    amountMinor,
+                    campaign.currency,
+                    campaign.name,
+                    resolvedSuccessUrl,
+                    cancelUrl,
+                )
+            contributionRepository.attachStripeSession(provisional.id, session.sessionId)
+            ContributionCheckout(contributionId = provisional.id, checkoutUrl = session.checkoutUrl)
+        } catch (e: StripeException) {
+            log.warn("Stripe checkout session creation failed: {}", e.message, e)
+            throw ServiceUnavailableException(
+                "CONTRIBUTION_PROVIDER_UNAVAILABLE",
+                "Payments provider is not available right now. If this is local/staging, confirm STRIPE_SECRET_KEY is set.",
+            )
+        }
+    }
 
-	@Transactional
-	fun createCheckoutSession(
-		slug: String,
-		amountMinor: Long,
-		supporterName: String?,
-		isAnonymous: Boolean,
-		supporterEmail: String?,
-		successUrl: String,
-		cancelUrl: String,
-	): ContributionCheckout {
-		val campaign = campaignRepository.findBySlug(slug)
-			?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
-		if (campaign.status != CampaignStatus.ACTIVE) {
-			throw ValidationException("This campaign isn't currently accepting contributions.")
-		}
-		if (!ContributionLimits.isAmountAllowed(amountMinor)) {
-			throw ValidationException(
-				"Contribution amount must be between " +
-					"${ContributionLimits.MIN_AMOUNT_MINOR} and ${ContributionLimits.MAX_AMOUNT_MINOR} minor units.",
-			)
-		}
-		val displayName = if (isAnonymous) null else supporterName?.take(120)
-		return try {
-			// Stripe's checkout-session metadata needs our contribution id, so the
-			// contribution row is inserted (with a null session id) before Stripe is
-			// ever called, then updated with the real session id once Stripe returns it.
-			val provisional = contributionRepository.insertPending(
-				campaign.organizationId, campaign.id, amountMinor, campaign.currency,
-				displayName, isAnonymous, supporterEmail,
-			)
-			val resolvedSuccessUrl = successUrl.replace(CONTRIBUTION_ID_PLACEHOLDER, provisional.id.toString())
-			val session = stripeCheckoutClient.createContributionCheckoutSession(
-				provisional.id, amountMinor, campaign.currency, campaign.name, resolvedSuccessUrl, cancelUrl,
-			)
-			contributionRepository.attachStripeSession(provisional.id, session.sessionId)
-			ContributionCheckout(contributionId = provisional.id, checkoutUrl = session.checkoutUrl)
-		} catch (e: StripeException) {
-			log.warn("Stripe checkout session creation failed: {}", e.message, e)
-			throw ServiceUnavailableException(
-				"CONTRIBUTION_PROVIDER_UNAVAILABLE",
-				"Payments provider is not available right now. If this is local/staging, confirm STRIPE_SECRET_KEY is set.",
-			)
-		}
-	}
+    /** Idempotent: a duplicate webhook delivery or an already-confirmed contribution is a safe no-op. */
+    @Transactional
+    fun confirmFromWebhook(
+        stripeSessionId: String,
+        stripePaymentStatus: String,
+        stripePaymentIntentId: String?,
+    ): Contribution? {
+        val contribution = contributionRepository.findByStripeCheckoutSessionId(stripeSessionId) ?: return null
+        if (stripePaymentStatus != "paid") return contribution
+        val updated = contributionRepository.markConfirmed(contribution.id, stripePaymentIntentId)
+        if (updated > 0) {
+            auditService.record(null, contribution.organizationId, "contribution.confirmed", "contribution", contribution.id)
+            ledgerService.recordConfirmedContribution(contribution.copy(status = ContributionStatus.CONFIRMED))
+            if (contribution.supporterEmail != null) {
+                val campaign = campaignRepository.findById(contribution.campaignId, contribution.organizationId)
+                outboxWriter.write(
+                    aggregateType = "contribution",
+                    aggregateId = contribution.id,
+                    organizationId = contribution.organizationId,
+                    eventType = "contribution.confirmed",
+                    payloadJson =
+                        objectMapper.writeValueAsString(
+                            ContributionConfirmedPayload(
+                                contribution.supporterEmail,
+                                contribution.supporterName,
+                                contribution.amountMinor,
+                                contribution.currency,
+                                campaign?.name ?: "your campaign",
+                            ),
+                        ),
+                )
+            }
+        }
+        return contributionRepository.findById(contribution.id)
+    }
 
-	/** Idempotent: a duplicate webhook delivery or an already-confirmed contribution is a safe no-op. */
-	@Transactional
-	fun confirmFromWebhook(stripeSessionId: String, stripePaymentStatus: String, stripePaymentIntentId: String?): Contribution? {
-		val contribution = contributionRepository.findByStripeCheckoutSessionId(stripeSessionId) ?: return null
-		if (stripePaymentStatus != "paid") return contribution
-		val updated = contributionRepository.markConfirmed(contribution.id, stripePaymentIntentId)
-		if (updated > 0) {
-			auditService.record(null, contribution.organizationId, "contribution.confirmed", "contribution", contribution.id)
-			ledgerService.recordConfirmedContribution(contribution.copy(status = ContributionStatus.CONFIRMED))
-			if (contribution.supporterEmail != null) {
-				val campaign = campaignRepository.findById(contribution.campaignId, contribution.organizationId)
-				outboxWriter.write(
-					aggregateType = "contribution",
-					aggregateId = contribution.id,
-					organizationId = contribution.organizationId,
-					eventType = "contribution.confirmed",
-					payloadJson = objectMapper.writeValueAsString(
-						ContributionConfirmedPayload(
-							contribution.supporterEmail, contribution.supporterName, contribution.amountMinor,
-							contribution.currency, campaign?.name ?: "your campaign",
-						),
-					),
-				)
-			}
-		}
-		return contributionRepository.findById(contribution.id)
-	}
+    fun getStatus(
+        slug: String,
+        contributionId: UUID,
+    ): Contribution {
+        val campaign =
+            campaignRepository.findBySlug(slug)
+                ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
+        val contribution =
+            contributionRepository
+                .findById(contributionId)
+                ?.takeIf { it.campaignId == campaign.id }
+                ?: throw NotFoundException("CONTRIBUTION_NOT_FOUND", "The contribution could not be found.")
+        return contribution
+    }
 
-	fun getStatus(slug: String, contributionId: UUID): Contribution {
-		val campaign = campaignRepository.findBySlug(slug)
-			?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
-		val contribution = contributionRepository.findById(contributionId)
-			?.takeIf { it.campaignId == campaign.id }
-			?: throw NotFoundException("CONTRIBUTION_NOT_FOUND", "The contribution could not be found.")
-		return contribution
-	}
+    fun getConfirmedTotal(campaignId: UUID): Long = contributionRepository.sumConfirmedByCampaign(campaignId)
 
-	fun getConfirmedTotal(campaignId: UUID): Long = contributionRepository.sumConfirmedByCampaign(campaignId)
+    fun getConfirmedCount(campaignId: UUID): Long = contributionRepository.countConfirmedForCampaign(campaignId)
 
-	fun getConfirmedCount(campaignId: UUID): Long = contributionRepository.countConfirmedForCampaign(campaignId)
+    fun listConfirmed(
+        organizationId: UUID,
+        campaignId: UUID,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<Contribution> {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        val campaign =
+            campaignRepository.findById(campaignId, organizationId)
+                ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
+        return contributionRepository.listConfirmedForCampaign(campaign.id, offset, limit)
+    }
 
-	fun listConfirmed(organizationId: UUID, campaignId: UUID, currentUser: CurrentUser, offset: Int, limit: Int): List<Contribution> {
-		membershipService.requireActiveMembership(organizationId, currentUser)
-		val campaign = campaignRepository.findById(campaignId, organizationId)
-			?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
-		return contributionRepository.listConfirmedForCampaign(campaign.id, offset, limit)
-	}
-
-	@Transactional
-	fun refund(organizationId: UUID, contributionId: UUID, currentUser: CurrentUser): Contribution {
-		membershipService.requireManagerRole(organizationId, currentUser)
-		val contribution = contributionRepository.findById(contributionId)
-			?.takeIf { it.organizationId == organizationId }
-			?: throw NotFoundException("CONTRIBUTION_NOT_FOUND", "The contribution could not be found.")
-		if (contribution.status != ContributionStatus.CONFIRMED || contribution.stripePaymentIntentId == null) {
-			throw ValidationException("Only a confirmed contribution with a recorded payment can be refunded.")
-		}
-		val confirmedAt = contribution.confirmedAt ?: throw ValidationException("This contribution has no confirmation date on record.")
-		if (Duration.between(confirmedAt, Instant.now()) > REFUND_WINDOW) {
-			throw ValidationException("This contribution can no longer be refunded — it was confirmed more than ${REFUND_WINDOW.toDays()} days ago.")
-		}
-		val stripeRefundId = try {
-			stripeCheckoutClient.createRefund(contribution.stripePaymentIntentId)
-		} catch (e: StripeException) {
-			log.warn("Stripe refund failed for contribution {}: {}", contributionId, e.message, e)
-			throw ServiceUnavailableException(
-				"CONTRIBUTION_PROVIDER_UNAVAILABLE",
-				"Payments provider is not available right now. If this is local/staging, confirm STRIPE_SECRET_KEY is set.",
-			)
-		}
-		contributionRepository.markRefunded(contribution.id)
-		ledgerService.recordRefund(organizationId, LedgerSourceType.CONTRIBUTION, contribution.id, contribution.amountMinor, contribution.currency, stripeRefundId)
-		auditService.record(currentUser.userId, organizationId, "contribution.refunded", "contribution", contribution.id)
-		return contributionRepository.findById(contribution.id)!!
-	}
+    @Transactional
+    fun refund(
+        organizationId: UUID,
+        contributionId: UUID,
+        currentUser: CurrentUser,
+    ): Contribution {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        val contribution =
+            contributionRepository
+                .findById(contributionId)
+                ?.takeIf { it.organizationId == organizationId }
+                ?: throw NotFoundException("CONTRIBUTION_NOT_FOUND", "The contribution could not be found.")
+        if (contribution.status != ContributionStatus.CONFIRMED || contribution.stripePaymentIntentId == null) {
+            throw ValidationException("Only a confirmed contribution with a recorded payment can be refunded.")
+        }
+        val confirmedAt = contribution.confirmedAt ?: throw ValidationException("This contribution has no confirmation date on record.")
+        if (Duration.between(confirmedAt, Instant.now()) > REFUND_WINDOW) {
+            throw ValidationException(
+                "This contribution can no longer be refunded — it was confirmed more than ${REFUND_WINDOW.toDays()} days ago.",
+            )
+        }
+        val stripeRefundId =
+            try {
+                stripeCheckoutClient.createRefund(contribution.stripePaymentIntentId)
+            } catch (e: StripeException) {
+                log.warn("Stripe refund failed for contribution {}: {}", contributionId, e.message, e)
+                throw ServiceUnavailableException(
+                    "CONTRIBUTION_PROVIDER_UNAVAILABLE",
+                    "Payments provider is not available right now. If this is local/staging, confirm STRIPE_SECRET_KEY is set.",
+                )
+            }
+        contributionRepository.markRefunded(contribution.id)
+        ledgerService.recordRefund(
+            organizationId,
+            LedgerSourceType.CONTRIBUTION,
+            contribution.id,
+            contribution.amountMinor,
+            contribution.currency,
+            stripeRefundId,
+        )
+        auditService.record(currentUser.userId, organizationId, "contribution.refunded", "contribution", contribution.id)
+        return contributionRepository.findById(contribution.id)!!
+    }
 }
 
-data class ContributionCheckout(val contributionId: UUID, val checkoutUrl: String)
+data class ContributionCheckout(
+    val contributionId: UUID,
+    val checkoutUrl: String,
+)

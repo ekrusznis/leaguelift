@@ -13,20 +13,33 @@ import org.springframework.stereotype.Component
  * are verified in Phase 20.
  */
 interface QuickBooksProviderClient {
-    fun readCompany(accessToken: String, realmId: String): QuickBooksCompany
-    fun listAccounts(accessToken: String, realmId: String): List<QuickBooksAccount>
+    fun readCompany(
+        accessToken: String,
+        realmId: String,
+    ): QuickBooksCompany
+
+    fun listAccounts(
+        accessToken: String,
+        realmId: String,
+    ): List<QuickBooksAccount>
 }
 
 @Component
 class ScaffoldQuickBooksProviderClient(
     private val properties: IntegrationProperties,
 ) : QuickBooksProviderClient {
-    override fun readCompany(accessToken: String, realmId: String): QuickBooksCompany {
+    override fun readCompany(
+        accessToken: String,
+        realmId: String,
+    ): QuickBooksCompany {
         requireStub(accessToken)
         return QuickBooksCompany(realmId, "Rally26 Sandbox Organization", "US", "USD")
     }
 
-    override fun listAccounts(accessToken: String, realmId: String): List<QuickBooksAccount> {
+    override fun listAccounts(
+        accessToken: String,
+        realmId: String,
+    ): List<QuickBooksAccount> {
         requireStub(accessToken)
         return listOf(
             QuickBooksAccount("qb-income-sales", "Merchandise Sales", "Income", true),

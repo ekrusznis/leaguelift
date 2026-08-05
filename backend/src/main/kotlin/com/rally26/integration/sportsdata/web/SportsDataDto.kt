@@ -73,15 +73,59 @@ data class SportsDataPreviewResponse(
     val message: String,
 )
 
-fun SportsDataOverview.toResponse() = SportsDataOverviewResponse(providers.map { it.toResponse() }, recentRuns.map { it.toResponse() }, directProviderImportEnabled, reviewedFileImportAvailable)
-fun SportsDataImportRun.toResponse() = SportsDataImportRunResponse(id, provider.name, sourceMode.name, status.name, commitAllowed, discoveredCount, validCount, duplicateCount, conflictCount, errorCount, previewHash, requestedAt, completedAt)
-fun SportsDataImportIssue.toResponse() = SportsDataImportIssueResponse(id, rowNumber, entityType?.name, externalEntityId, severity.name, code, message)
+fun SportsDataOverview.toResponse() =
+    SportsDataOverviewResponse(
+        providers.map {
+            it.toResponse()
+        },
+        recentRuns.map { it.toResponse() },
+        directProviderImportEnabled,
+        reviewedFileImportAvailable,
+    )
+
+fun SportsDataImportRun.toResponse() =
+    SportsDataImportRunResponse(
+        id,
+        provider.name,
+        sourceMode.name,
+        status.name,
+        commitAllowed,
+        discoveredCount,
+        validCount,
+        duplicateCount,
+        conflictCount,
+        errorCount,
+        previewHash,
+        requestedAt,
+        completedAt,
+    )
+
+fun SportsDataImportIssue.toResponse() =
+    SportsDataImportIssueResponse(id, rowNumber, entityType?.name, externalEntityId, severity.name, code, message)
+
 fun SportsDataExternalRecord.toResponse() = SportsDataExternalRecordResponse(entityType.name, externalId, externalParentId, name, payload)
-fun SportsDataPreview.toResponse() = SportsDataPreviewResponse(run.toResponse(), issues.map { it.toResponse() }, records.map { it.toResponse() }, directImportEnabled, message)
-fun SportsDataExternalRecordRequest.toDomain() = SportsDataExternalRecord(
-    runCatching { SportsDataEntityType.valueOf(entityType.uppercase()) }.getOrElse { throw com.rally26.common.error.ValidationException("Unknown sports-data entity type.") },
-    externalId,
-    externalParentId,
-    name,
-    payload,
-)
+
+fun SportsDataPreview.toResponse() =
+    SportsDataPreviewResponse(
+        run.toResponse(),
+        issues.map {
+            it.toResponse()
+        },
+        records.map { it.toResponse() },
+        directImportEnabled,
+        message,
+    )
+
+fun SportsDataExternalRecordRequest.toDomain() =
+    SportsDataExternalRecord(
+        runCatching {
+            SportsDataEntityType.valueOf(entityType.uppercase())
+        }.getOrElse {
+            throw com.rally26.common.error
+                .ValidationException("Unknown sports-data entity type.")
+        },
+        externalId,
+        externalParentId,
+        name,
+        payload,
+    )

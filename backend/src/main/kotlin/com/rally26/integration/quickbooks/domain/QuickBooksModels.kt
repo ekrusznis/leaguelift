@@ -5,8 +5,11 @@ import java.time.LocalDate
 import java.util.UUID
 
 enum class QuickBooksEnvironment { SANDBOX, PRODUCTION }
+
 enum class QuickBooksExportPolicy { READ_ONLY, EXPORT_PREVIEW_ONLY }
+
 enum class QuickBooksAccountingBasis { ACCRUAL, CASH }
+
 enum class QuickBooksMappingType {
     SALES_INCOME,
     CONTRIBUTION_INCOME,
@@ -16,6 +19,7 @@ enum class QuickBooksMappingType {
     BANK_CLEARING,
     PAYOUT_CLEARING,
 }
+
 enum class QuickBooksExportStatus { PREVIEWED, READY, BLOCKED, EXPORTED, PARTIAL, FAILED }
 
 data class QuickBooksCompany(

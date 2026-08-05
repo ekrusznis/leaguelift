@@ -21,8 +21,9 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}")
-class ParticipantController(private val participantService: ParticipantService) {
-
+class ParticipantController(
+    private val participantService: ParticipantService,
+) {
     @GetMapping("/participants")
     fun listForOrganization(
         @PathVariable organizationId: UUID,
@@ -42,8 +43,7 @@ class ParticipantController(private val participantService: ParticipantService) 
         @PathVariable organizationId: UUID,
         @PathVariable householdId: UUID,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): List<ParticipantResponse> =
-        participantService.listForHousehold(organizationId, householdId, currentUser).map { it.toResponse() }
+    ): List<ParticipantResponse> = participantService.listForHousehold(organizationId, householdId, currentUser).map { it.toResponse() }
 
     @PostMapping("/households/{householdId}/participants")
     fun create(
@@ -52,9 +52,16 @@ class ParticipantController(private val participantService: ParticipantService) 
         @Valid @RequestBody request: CreateParticipantRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): ResponseEntity<ParticipantResponse> {
-        val participant = participantService.create(
-            organizationId, householdId, request.firstName, request.lastName, request.dateOfBirth, request.notes, currentUser,
-        )
+        val participant =
+            participantService.create(
+                organizationId,
+                householdId,
+                request.firstName,
+                request.lastName,
+                request.dateOfBirth,
+                request.notes,
+                currentUser,
+            )
         return ResponseEntity.status(HttpStatus.CREATED).body(participant.toResponse())
     }
 
@@ -64,17 +71,24 @@ class ParticipantController(private val participantService: ParticipantService) 
         @PathVariable participantId: UUID,
         @Valid @RequestBody request: UpdateParticipantRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): ParticipantResponse = participantService.update(
-        organizationId, participantId, request.firstName, request.lastName, request.dateOfBirth, request.notes, currentUser,
-    ).toResponse()
+    ): ParticipantResponse =
+        participantService
+            .update(
+                organizationId,
+                participantId,
+                request.firstName,
+                request.lastName,
+                request.dateOfBirth,
+                request.notes,
+                currentUser,
+            ).toResponse()
 
     @GetMapping("/participants/{participantId}/teams")
     fun listTeams(
         @PathVariable organizationId: UUID,
         @PathVariable participantId: UUID,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): List<ParticipantTeamResponse> =
-        participantService.listTeams(organizationId, participantId, currentUser).map { it.toResponse() }
+    ): List<ParticipantTeamResponse> = participantService.listTeams(organizationId, participantId, currentUser).map { it.toResponse() }
 
     @PostMapping("/participants/{participantId}/teams")
     fun assignToTeam(
@@ -83,9 +97,14 @@ class ParticipantController(private val participantService: ParticipantService) 
         @Valid @RequestBody request: AssignTeamRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): ResponseEntity<ParticipantTeamResponse> {
-        val assignment = participantService.assignToTeam(
-            organizationId, participantId, request.teamId, request.joinedAt, currentUser,
-        )
+        val assignment =
+            participantService.assignToTeam(
+                organizationId,
+                participantId,
+                request.teamId,
+                request.joinedAt,
+                currentUser,
+            )
         return ResponseEntity.status(HttpStatus.CREATED).body(assignment.toResponse())
     }
 

@@ -39,60 +39,76 @@ import org.springframework.stereotype.Service
  */
 @Service
 class DashboardContextService(
-	private val membershipRepository: MembershipRepository,
-	private val householdRepository: HouseholdRepository,
-	private val roleAssignmentRepository: RoleAssignmentRepository,
-	private val guardianRelationshipRepository: GuardianRelationshipRepository,
+    private val membershipRepository: MembershipRepository,
+    private val householdRepository: HouseholdRepository,
+    private val roleAssignmentRepository: RoleAssignmentRepository,
+    private val guardianRelationshipRepository: GuardianRelationshipRepository,
 ) {
+    fun resolve(currentUser: CurrentUser): DashboardContext {
+        if (currentUser.platformAdministrator) {
+            return DashboardContext(DashboardRole.PLATFORM_ADMIN, organizationId = null, householdId = null)
+        }
 
-	fun resolve(currentUser: CurrentUser): DashboardContext {
-		if (currentUser.platformAdministrator) {
-			return DashboardContext(DashboardRole.PLATFORM_ADMIN, organizationId = null, householdId = null)
-		}
+        val membership = membershipRepository.findAnyActiveMembershipForUser(currentUser.userId)
+        if (membership != null) {
+            val role =
+                when (membership.role) {
+                    MembershipRole.OWNER, MembershipRole.ADMINISTRATOR, MembershipRole.VIEWER ->
+                        DashboardRole.OWNER
+                    MembershipRole.TEAM_ADMINISTRATOR -> DashboardRole.COACH
+                    MembershipRole.TOURNAMENT_ADMINISTRATOR -> DashboardRole.TOURNAMENT_ADMIN
+                }
+            val tournamentId =
+                if (role == DashboardRole.TOURNAMENT_ADMIN) {
+                    roleAssignmentRepository
+                        .findActiveForUserAndContext(currentUser.userId, RoleAssignmentContextType.TOURNAMENT)
+                        .firstOrNull { it.organizationId == membership.organizationId }
+                        ?.resourceId
+                } else {
+                    null
+                }
+            return DashboardContext(role, organizationId = membership.organizationId, householdId = null, tournamentId = tournamentId)
+        }
 
-		val membership = membershipRepository.findAnyActiveMembershipForUser(currentUser.userId)
-		if (membership != null) {
-			val role = when (membership.role) {
-				MembershipRole.OWNER, MembershipRole.ADMINISTRATOR, MembershipRole.VIEWER ->
-					DashboardRole.OWNER
-				MembershipRole.TEAM_ADMINISTRATOR -> DashboardRole.COACH
-				MembershipRole.TOURNAMENT_ADMINISTRATOR -> DashboardRole.TOURNAMENT_ADMIN
-			}
-			val tournamentId = if (role == DashboardRole.TOURNAMENT_ADMIN) {
-				roleAssignmentRepository.findActiveForUserAndContext(currentUser.userId, RoleAssignmentContextType.TOURNAMENT)
-					.firstOrNull { it.organizationId == membership.organizationId }
-					?.resourceId
-			} else {
-				null
-			}
-			return DashboardContext(role, organizationId = membership.organizationId, householdId = null, tournamentId = tournamentId)
-		}
+        val teamAssignment =
+            roleAssignmentRepository
+                .findActiveForUserAndContext(
+                    currentUser.userId,
+                    RoleAssignmentContextType.TEAM,
+                ).firstOrNull()
+        if (teamAssignment != null) {
+            return DashboardContext(DashboardRole.COACH, organizationId = teamAssignment.organizationId, householdId = null)
+        }
 
-		val teamAssignment = roleAssignmentRepository.findActiveForUserAndContext(currentUser.userId, RoleAssignmentContextType.TEAM).firstOrNull()
-		if (teamAssignment != null) {
-			return DashboardContext(DashboardRole.COACH, organizationId = teamAssignment.organizationId, householdId = null)
-		}
+        val tournamentAssignment =
+            roleAssignmentRepository
+                .findActiveForUserAndContext(
+                    currentUser.userId,
+                    RoleAssignmentContextType.TOURNAMENT,
+                ).firstOrNull()
+        if (tournamentAssignment != null) {
+            return DashboardContext(
+                DashboardRole.TOURNAMENT_ADMIN,
+                organizationId = tournamentAssignment.organizationId,
+                householdId = null,
+                tournamentId = tournamentAssignment.resourceId,
+            )
+        }
 
-		val tournamentAssignment = roleAssignmentRepository.findActiveForUserAndContext(currentUser.userId, RoleAssignmentContextType.TOURNAMENT).firstOrNull()
-		if (tournamentAssignment != null) {
-			return DashboardContext(
-				DashboardRole.TOURNAMENT_ADMIN,
-				organizationId = tournamentAssignment.organizationId,
-				householdId = null,
-				tournamentId = tournamentAssignment.resourceId,
-			)
-		}
+        val guardianRelationship = guardianRelationshipRepository.findActiveForUser(currentUser.userId).firstOrNull()
+        if (guardianRelationship != null) {
+            return DashboardContext(
+                DashboardRole.PARENT,
+                organizationId = guardianRelationship.organizationId,
+                householdId = guardianRelationship.householdId,
+            )
+        }
 
-		val guardianRelationship = guardianRelationshipRepository.findActiveForUser(currentUser.userId).firstOrNull()
-		if (guardianRelationship != null) {
-			return DashboardContext(DashboardRole.PARENT, organizationId = guardianRelationship.organizationId, householdId = guardianRelationship.householdId)
-		}
+        val adult = householdRepository.findActiveAdultByEmail(currentUser.email)
+        if (adult != null) {
+            return DashboardContext(DashboardRole.PARENT, organizationId = adult.organizationId, householdId = adult.householdId)
+        }
 
-		val adult = householdRepository.findActiveAdultByEmail(currentUser.email)
-		if (adult != null) {
-			return DashboardContext(DashboardRole.PARENT, organizationId = adult.organizationId, householdId = adult.householdId)
-		}
-
-		return DashboardContext(DashboardRole.ATHLETE, organizationId = null, householdId = null)
-	}
+        return DashboardContext(DashboardRole.ATHLETE, organizationId = null, householdId = null)
+    }
 }

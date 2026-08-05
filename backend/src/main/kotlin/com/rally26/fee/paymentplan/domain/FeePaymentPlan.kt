@@ -5,6 +5,7 @@ import java.time.LocalDate
 import java.util.UUID
 
 enum class FeePaymentPlanStatus { ACTIVE, COMPLETED, CANCELLED }
+
 enum class FeeInstallmentStatus { UPCOMING, DUE, OVERDUE, PARTIALLY_PAID, PAID, CANCELLED }
 
 data class FeePaymentPlan(
@@ -43,4 +44,7 @@ data class FeePaymentPlanDetails(
     val remainingMinor: Long,
 )
 
-data class NewInstallment(val amountMinor: Long, val dueDate: LocalDate)
+data class NewInstallment(
+    val amountMinor: Long,
+    val dueDate: LocalDate,
+)

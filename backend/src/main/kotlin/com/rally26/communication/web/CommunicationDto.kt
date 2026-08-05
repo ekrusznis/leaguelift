@@ -63,11 +63,31 @@ data class AnnouncementResponse(
     val updatedAt: Instant,
 )
 
-fun Announcement.toResponse() = AnnouncementResponse(
-    id, organizationId, scopeType.name, scopeId, scopeName, kind.name, relatedEntityType, relatedEntityId,
-    title, body, audience.name, status.name, emailEnabled, smsEnabled, publishedAt, recipientCount,
-    emailSentCount, emailFailedCount, smsSentCount, smsFailedCount, createdAt, updatedAt,
-)
+fun Announcement.toResponse() =
+    AnnouncementResponse(
+        id,
+        organizationId,
+        scopeType.name,
+        scopeId,
+        scopeName,
+        kind.name,
+        relatedEntityType,
+        relatedEntityId,
+        title,
+        body,
+        audience.name,
+        status.name,
+        emailEnabled,
+        smsEnabled,
+        publishedAt,
+        recipientCount,
+        emailSentCount,
+        emailFailedCount,
+        smsSentCount,
+        smsFailedCount,
+        createdAt,
+        updatedAt,
+    )
 
 data class MyAnnouncementResponse(
     val announcement: AnnouncementResponse,

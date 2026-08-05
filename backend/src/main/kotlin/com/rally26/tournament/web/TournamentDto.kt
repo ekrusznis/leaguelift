@@ -48,18 +48,19 @@ data class TournamentResponse(
     val updatedAt: Instant,
 )
 
-fun Tournament.toResponse() = TournamentResponse(
-    id = id,
-    organizationId = organizationId,
-    name = name,
-    sport = sport,
-    status = status.name,
-    startDate = startDate,
-    endDate = endDate,
-    location = location,
-    contactEmail = contactEmail,
-    createdAt = createdAt,
-    updatedAt = updatedAt,
-)
+fun Tournament.toResponse() =
+    TournamentResponse(
+        id = id,
+        organizationId = organizationId,
+        name = name,
+        sport = sport,
+        status = status.name,
+        startDate = startDate,
+        endDate = endDate,
+        location = location,
+        contactEmail = contactEmail,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )
 
 typealias TournamentPageResponse = PageResponse<TournamentResponse>

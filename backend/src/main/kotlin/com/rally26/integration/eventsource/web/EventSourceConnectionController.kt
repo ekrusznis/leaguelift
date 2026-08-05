@@ -19,32 +19,38 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/event-source-connections")
 class EventSourceConnectionController(
-	private val eventSourceConnectionService: EventSourceConnectionService,
+    private val eventSourceConnectionService: EventSourceConnectionService,
 ) {
+    @GetMapping
+    fun list(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): List<EventSourceConnectionResponse> = eventSourceConnectionService.list(organizationId, currentUser).map { it.toResponse() }
 
-	@GetMapping
-	fun list(
-		@PathVariable organizationId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): List<EventSourceConnectionResponse> =
-		eventSourceConnectionService.list(organizationId, currentUser).map { it.toResponse() }
+    @PostMapping("/ics-feed")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun connectIcsFeed(
+        @PathVariable organizationId: UUID,
+        @Valid @RequestBody request: ConnectIcsFeedRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): EventSourceConnectionResponse =
+        eventSourceConnectionService
+            .connectIcsFeed(
+                organizationId,
+                request.label,
+                request.feedUrl,
+                request.timezone,
+                request.teamId,
+                currentUser,
+            ).toResponse()
 
-	@PostMapping("/ics-feed")
-	@ResponseStatus(HttpStatus.CREATED)
-	fun connectIcsFeed(
-		@PathVariable organizationId: UUID,
-		@Valid @RequestBody request: ConnectIcsFeedRequest,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): EventSourceConnectionResponse =
-		eventSourceConnectionService.connectIcsFeed(organizationId, request.label, request.feedUrl, request.timezone, request.teamId, currentUser).toResponse()
-
-	@DeleteMapping("/{connectionId}")
-	@ResponseStatus(HttpStatus.NO_CONTENT)
-	fun disconnect(
-		@PathVariable organizationId: UUID,
-		@PathVariable connectionId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) {
-		eventSourceConnectionService.disconnect(organizationId, connectionId, currentUser)
-	}
+    @DeleteMapping("/{connectionId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun disconnect(
+        @PathVariable organizationId: UUID,
+        @PathVariable connectionId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) {
+        eventSourceConnectionService.disconnect(organizationId, connectionId, currentUser)
+    }
 }

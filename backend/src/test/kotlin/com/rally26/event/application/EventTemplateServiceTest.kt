@@ -25,7 +25,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class EventTemplateServiceTest {
-
     private val repository = mockk<EventTemplateRepository>()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
@@ -108,29 +107,42 @@ class EventTemplateServiceTest {
                 currentUser.userId,
             )
         } returns created
-        every { auditService.record(currentUser.userId, organizationId, "event_template.created", "event_template", created.id, any()) } just runs
+        every {
+            auditService.record(
+                currentUser.userId,
+                organizationId,
+                "event_template.created",
+                "event_template",
+                created.id,
+                any(),
+            )
+        } just
+            runs
 
-        val result = service.create(
-            organizationId = organizationId,
-            name = "  Weeknight practice  ",
-            eventType = EventType.PRACTICE,
-            title = " Team practice ",
-            description = "  ",
-            durationMinutes = 90,
-            arrivalOffsetMinutes = 15,
-            meetingOffsetMinutes = null,
-            timezone = " America/New_York ",
-            venueName = " Community Gym ",
-            address = null,
-            area = " Court 2 ",
-            meetingPoint = null,
-            directionsNotes = null,
-            visibility = EventVisibility.TEAM,
-            currentUser = currentUser,
-        )
+        val result =
+            service.create(
+                organizationId = organizationId,
+                name = "  Weeknight practice  ",
+                eventType = EventType.PRACTICE,
+                title = " Team practice ",
+                description = "  ",
+                durationMinutes = 90,
+                arrivalOffsetMinutes = 15,
+                meetingOffsetMinutes = null,
+                timezone = " America/New_York ",
+                venueName = " Community Gym ",
+                address = null,
+                area = " Court 2 ",
+                meetingPoint = null,
+                directionsNotes = null,
+                visibility = EventVisibility.TEAM,
+                currentUser = currentUser,
+            )
 
         assertEquals(created, result)
-        verify(exactly = 1) { auditService.record(currentUser.userId, organizationId, "event_template.created", "event_template", created.id, any()) }
+        verify(exactly = 1) {
+            auditService.record(currentUser.userId, organizationId, "event_template.created", "event_template", created.id, any())
+        }
     }
 
     @Test
@@ -139,24 +151,90 @@ class EventTemplateServiceTest {
 
         assertFailsWith<ValidationException> {
             service.create(
-                organizationId, "Practice", EventType.PRACTICE, null, null, 60, null, null,
-                "Mars/Olympus", null, null, null, null, null, EventVisibility.TEAM, currentUser,
+                organizationId,
+                "Practice",
+                EventType.PRACTICE,
+                null,
+                null,
+                60,
+                null,
+                null,
+                "Mars/Olympus",
+                null,
+                null,
+                null,
+                null,
+                null,
+                EventVisibility.TEAM,
+                currentUser,
             )
         }
 
-        verify(exactly = 0) { repository.insert(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) {
+            repository.insert(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+            )
+        }
     }
 
     @Test
     fun `duplicate active name becomes a typed conflict`() {
         every { membershipService.requireManagerRole(organizationId, currentUser) } returns membership
-        every { repository.insert(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } throws
+        every {
+            repository.insert(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+            )
+        } throws
             DuplicateKeyException("duplicate")
 
         assertFailsWith<ConflictException> {
             service.create(
-                organizationId, "Practice", EventType.PRACTICE, null, null, 60, null, null,
-                "America/New_York", null, null, null, null, null, EventVisibility.TEAM, currentUser,
+                organizationId,
+                "Practice",
+                EventType.PRACTICE,
+                null,
+                null,
+                60,
+                null,
+                null,
+                "America/New_York",
+                null,
+                null,
+                null,
+                null,
+                null,
+                EventVisibility.TEAM,
+                currentUser,
             )
         }
     }

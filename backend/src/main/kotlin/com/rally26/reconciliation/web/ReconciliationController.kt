@@ -16,13 +16,17 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/reconciliation-runs")
-class ReconciliationController(private val service: ReconciliationService) {
+class ReconciliationController(
+    private val service: ReconciliationService,
+) {
     @PostMapping
     fun run(
         @PathVariable organizationId: UUID,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): ResponseEntity<ReconciliationResultResponse> = ResponseEntity.status(HttpStatus.CREATED)
-        .body(service.run(organizationId, currentUser).toResponse())
+    ): ResponseEntity<ReconciliationResultResponse> =
+        ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(service.run(organizationId, currentUser).toResponse())
 
     @GetMapping("/latest")
     fun latest(
@@ -48,7 +52,14 @@ class ReconciliationController(private val service: ReconciliationService) {
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<ReconciliationRunResponse> {
         val normalizedSize = size.coerceIn(1, 100)
-        val items = service.list(organizationId, page.coerceAtLeast(0) * normalizedSize, normalizedSize, currentUser).map { it.toResponse() }
+        val items =
+            service
+                .list(
+                    organizationId,
+                    page.coerceAtLeast(0) * normalizedSize,
+                    normalizedSize,
+                    currentUser,
+                ).map { it.toResponse() }
         return PageResponse(items, page.coerceAtLeast(0), normalizedSize, service.count(organizationId, currentUser))
     }
 }

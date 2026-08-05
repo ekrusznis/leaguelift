@@ -17,12 +17,10 @@ class PlatformIntegrationController(
     @GetMapping("/providers")
     fun providers(
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): List<PlatformIntegrationReadinessResponse> =
-        readinessService.list(currentUser).map { it.toResponse() }
+    ): List<PlatformIntegrationReadinessResponse> = readinessService.list(currentUser).map { it.toResponse() }
 
     @GetMapping("/provider-contracts")
     fun providerContracts(
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): List<PlatformProviderContractResponse> =
-        contractService.list(currentUser).map { it.toResponse() }
+    ): List<PlatformProviderContractResponse> = contractService.list(currentUser).map { it.toResponse() }
 }

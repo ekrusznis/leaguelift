@@ -14,8 +14,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.printify")
 data class PrintifyProperties(
-	val apiToken: String,
-	val shopId: String,
-	val webhookSecret: String = "",
-	val webhookEnabled: Boolean = false,
+    val apiToken: String,
+    val shopId: String,
+    val webhookSecret: String = "",
+    val webhookEnabled: Boolean = false,
 )

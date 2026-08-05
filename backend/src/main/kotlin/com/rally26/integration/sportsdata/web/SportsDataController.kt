@@ -15,10 +15,14 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/integrations/sports-data")
-class SportsDataController(private val service: SportsDataService) {
+class SportsDataController(
+    private val service: SportsDataService,
+) {
     @GetMapping
-    fun overview(@PathVariable organizationId: UUID, @AuthenticationPrincipal currentUser: CurrentUser) =
-        service.overview(organizationId, currentUser).toResponse()
+    fun overview(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = service.overview(organizationId, currentUser).toResponse()
 
     @PostMapping("/connections/{connectionId}/preview")
     fun previewConnected(
@@ -32,12 +36,13 @@ class SportsDataController(private val service: SportsDataService) {
         @PathVariable organizationId: UUID,
         @RequestBody request: SportsDataFilePreviewRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ) = service.previewFile(
-        organizationId,
-        provider(request.provider),
-        request.records.map { it.toDomain() },
-        currentUser,
-    ).toResponse()
+    ) = service
+        .previewFile(
+            organizationId,
+            provider(request.provider),
+            request.records.map { it.toDomain() },
+            currentUser,
+        ).toResponse()
 
     @GetMapping("/previews/{runId}/issues")
     fun issues(

@@ -63,13 +63,15 @@ class IntegrationOAuthService(
 ) {
     private val secureRandom = SecureRandom()
 
-    fun listOrganizationConnections(organizationId: UUID, currentUser: CurrentUser): List<IntegrationConnection> {
+    fun listOrganizationConnections(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): List<IntegrationConnection> {
         membershipService.requireManagerRole(organizationId, currentUser)
         return connectionRepository.listForOrganization(organizationId)
     }
 
-    fun listUserConnections(currentUser: CurrentUser): List<IntegrationConnection> =
-        connectionRepository.listForUser(currentUser.userId)
+    fun listUserConnections(currentUser: CurrentUser): List<IntegrationConnection> = connectionRepository.listForUser(currentUser.userId)
 
     fun startOrganizationAuthorization(
         organizationId: UUID,
@@ -80,45 +82,63 @@ class IntegrationOAuthService(
         return startAuthorization(provider, IntegrationOwnerType.ORGANIZATION, organizationId, null, currentUser.userId)
     }
 
-    fun startUserAuthorization(provider: IntegrationProvider, currentUser: CurrentUser): AuthorizationStartResult =
-        startAuthorization(provider, IntegrationOwnerType.USER, null, currentUser.userId, currentUser.userId)
+    fun startUserAuthorization(
+        provider: IntegrationProvider,
+        currentUser: CurrentUser,
+    ): AuthorizationStartResult = startAuthorization(provider, IntegrationOwnerType.USER, null, currentUser.userId, currentUser.userId)
 
-    fun completeAuthorization(provider: IntegrationProvider, rawState: String, code: String): IntegrationConnection {
-        if (rawState.isBlank() || code.isBlank()) throw ValidationException("The provider callback is missing required authorization values.")
-        val state = oauthStateRepository.consume(sha256(rawState))
-            ?: throw ValidationException("The authorization state is invalid, expired, or already used.")
+    fun completeAuthorization(
+        provider: IntegrationProvider,
+        rawState: String,
+        code: String,
+    ): IntegrationConnection {
+        if (rawState.isBlank() ||
+            code.isBlank()
+        ) {
+            throw ValidationException("The provider callback is missing required authorization values.")
+        }
+        val state =
+            oauthStateRepository.consume(sha256(rawState))
+                ?: throw ValidationException("The authorization state is invalid, expired, or already used.")
         if (state.provider != provider) throw ValidationException("The authorization state does not match this provider.")
 
-        val connection = connectionRepository.findById(state.connectionId)
-            ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
+        val connection =
+            connectionRepository.findById(state.connectionId)
+                ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
         val definition = catalogService.requireDefinition(provider)
         val runtime = properties.provider(provider)
-        val adapter = adapterRegistry.find(provider)
-            ?: throw ServiceUnavailableException("INTEGRATION_ADAPTER_NOT_CONFIGURED", "This integration is not configured for authorization.")
+        val adapter =
+            adapterRegistry.find(provider)
+                ?: throw ServiceUnavailableException(
+                    "INTEGRATION_ADAPTER_NOT_CONFIGURED",
+                    "This integration is not configured for authorization.",
+                )
         val verifier = credentialCipher.decrypt(state.codeVerifierCiphertext, state.aadContext, state.keyVersion)
 
         return try {
-            val tokens = adapter.exchangeCode(
-                OAuthCodeExchangeRequest(
-                    provider = provider,
-                    clientId = runtime.clientId,
-                    clientSecret = runtime.clientSecret,
-                    tokenUri = runtime.tokenUri,
-                    redirectUri = state.redirectUri,
-                    code = code,
-                    codeVerifier = verifier,
-                    requestedScopes = state.requestedScopes,
-                ),
-            )
+            val tokens =
+                adapter.exchangeCode(
+                    OAuthCodeExchangeRequest(
+                        provider = provider,
+                        clientId = runtime.clientId,
+                        clientSecret = runtime.clientSecret,
+                        tokenUri = runtime.tokenUri,
+                        redirectUri = state.redirectUri,
+                        code = code,
+                        codeVerifier = verifier,
+                        requestedScopes = state.requestedScopes,
+                    ),
+                )
             val credential = storeTokenSet(connection, tokens, connection.credentialId, state.createdByUserId)
-            val connected = connectionRepository.markConnected(
-                id = connection.id,
-                credentialId = credential.id,
-                grantedScopes = tokens.grantedScopes,
-                externalAccountId = tokens.externalAccountId,
-                externalAccountName = tokens.externalAccountName,
-                accessTokenExpiresAt = tokens.expiresAt,
-            ) ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
+            val connected =
+                connectionRepository.markConnected(
+                    id = connection.id,
+                    credentialId = credential.id,
+                    grantedScopes = tokens.grantedScopes,
+                    externalAccountId = tokens.externalAccountId,
+                    externalAccountName = tokens.externalAccountName,
+                    accessTokenExpiresAt = tokens.expiresAt,
+                ) ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
             connection.credentialId?.takeIf { it != credential.id }?.let(credentialRepository::revoke)
             connectionRepository.insertEvent(
                 connected,
@@ -137,11 +157,12 @@ class IntegrationOAuthService(
             )
             connected
         } catch (ex: Exception) {
-            val failed = connectionRepository.markAuthorizationFailed(
-                connection.id,
-                "AUTHORIZATION_EXCHANGE_FAILED",
-                "The provider authorization could not be completed.",
-            ) ?: connection
+            val failed =
+                connectionRepository.markAuthorizationFailed(
+                    connection.id,
+                    "AUTHORIZATION_EXCHANGE_FAILED",
+                    "The provider authorization could not be completed.",
+                ) ?: connection
             connection.credentialId?.let(credentialRepository::revoke)
             connectionRepository.insertEvent(
                 failed,
@@ -156,16 +177,21 @@ class IntegrationOAuthService(
         }
     }
 
-    fun failAuthorization(provider: IntegrationProvider, rawState: String?, providerError: String): IntegrationConnection? {
+    fun failAuthorization(
+        provider: IntegrationProvider,
+        rawState: String?,
+        providerError: String,
+    ): IntegrationConnection? {
         if (rawState.isNullOrBlank()) return null
         val state = oauthStateRepository.consume(sha256(rawState)) ?: return null
         if (state.provider != provider) return null
         val connection = connectionRepository.findById(state.connectionId) ?: return null
-        val failed = connectionRepository.markAuthorizationFailed(
-            connection.id,
-            "PROVIDER_AUTHORIZATION_DENIED",
-            "The provider did not authorize the connection.",
-        ) ?: return connection
+        val failed =
+            connectionRepository.markAuthorizationFailed(
+                connection.id,
+                "PROVIDER_AUTHORIZATION_DENIED",
+                "The provider did not authorize the connection.",
+            ) ?: return connection
         connection.credentialId?.let(credentialRepository::revoke)
         connectionRepository.insertEvent(
             failed,
@@ -191,10 +217,15 @@ class IntegrationOAuthService(
         currentUser: CurrentUser,
     ): IntegrationConnection {
         membershipService.requireManagerRole(organizationId, currentUser)
-        val existing = connectionRepository.findByIdForOrganization(connectionId, organizationId)
-            ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
-        val locked = connectionRepository.acquireRefreshLock(connectionId, currentUser.userId)
-            ?: throw ConflictException("INTEGRATION_REFRESH_IN_PROGRESS", "This integration is already refreshing or is not refreshable.")
+        val existing =
+            connectionRepository.findByIdForOrganization(connectionId, organizationId)
+                ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
+        val locked =
+            connectionRepository.acquireRefreshLock(connectionId, currentUser.userId)
+                ?: throw ConflictException(
+                    "INTEGRATION_REFRESH_IN_PROGRESS",
+                    "This integration is already refreshing or is not refreshable.",
+                )
         return refreshLocked(existing, locked, currentUser.userId)
     }
 
@@ -204,8 +235,9 @@ class IntegrationOAuthService(
         currentUser: CurrentUser,
     ): IntegrationConnection {
         membershipService.requireManagerRole(organizationId, currentUser)
-        val existing = connectionRepository.findByIdForOrganization(connectionId, organizationId)
-            ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
+        val existing =
+            connectionRepository.findByIdForOrganization(connectionId, organizationId)
+                ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
         val disconnected = connectionRepository.markDisconnected(connectionId)!!
         existing.credentialId?.let(credentialRepository::revoke)
         connectionRepository.insertEvent(
@@ -225,14 +257,19 @@ class IntegrationOAuthService(
         currentUser: CurrentUser,
     ): IntegrationConnection {
         membershipService.requireManagerRole(organizationId, currentUser)
-        val existing = connectionRepository.findByIdForOrganization(connectionId, organizationId)
-            ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
+        val existing =
+            connectionRepository.findByIdForOrganization(connectionId, organizationId)
+                ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
         val runtime = properties.provider(existing.provider)
         if (runtime.revocationUri.isBlank() && !properties.stubMode) {
-            throw ServiceUnavailableException("INTEGRATION_REVOCATION_NOT_CONFIGURED", "Provider revocation is not configured for this integration.")
+            throw ServiceUnavailableException(
+                "INTEGRATION_REVOCATION_NOT_CONFIGURED",
+                "Provider revocation is not configured for this integration.",
+            )
         }
-        val adapter = adapterRegistry.find(existing.provider)
-            ?: throw ServiceUnavailableException("INTEGRATION_ADAPTER_NOT_CONFIGURED", "This integration provider is not configured.")
+        val adapter =
+            adapterRegistry.find(existing.provider)
+                ?: throw ServiceUnavailableException("INTEGRATION_ADAPTER_NOT_CONFIGURED", "This integration provider is not configured.")
         val credential = requireCredential(existing)
         val tokenSet = decryptTokenSet(credential)
         try {
@@ -268,22 +305,35 @@ class IntegrationOAuthService(
         currentUser: CurrentUser,
     ): IntegrationHealthCheck {
         membershipService.requireManagerRole(organizationId, currentUser)
-        val connection = connectionRepository.findByIdForOrganization(connectionId, organizationId)
-            ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
+        val connection =
+            connectionRepository.findByIdForOrganization(connectionId, organizationId)
+                ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
         return checkHealth(connection, currentUser.userId)
     }
 
-    fun refreshUserConnection(connectionId: UUID, currentUser: CurrentUser): IntegrationConnection {
-        val existing = connectionRepository.findByIdForUser(connectionId, currentUser.userId)
-            ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
-        val locked = connectionRepository.acquireRefreshLock(connectionId, currentUser.userId)
-            ?: throw ConflictException("INTEGRATION_REFRESH_IN_PROGRESS", "This integration is already refreshing or is not refreshable.")
+    fun refreshUserConnection(
+        connectionId: UUID,
+        currentUser: CurrentUser,
+    ): IntegrationConnection {
+        val existing =
+            connectionRepository.findByIdForUser(connectionId, currentUser.userId)
+                ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
+        val locked =
+            connectionRepository.acquireRefreshLock(connectionId, currentUser.userId)
+                ?: throw ConflictException(
+                    "INTEGRATION_REFRESH_IN_PROGRESS",
+                    "This integration is already refreshing or is not refreshable.",
+                )
         return refreshLocked(existing, locked, currentUser.userId)
     }
 
-    fun disconnectUserConnection(connectionId: UUID, currentUser: CurrentUser): IntegrationConnection {
-        val existing = connectionRepository.findByIdForUser(connectionId, currentUser.userId)
-            ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
+    fun disconnectUserConnection(
+        connectionId: UUID,
+        currentUser: CurrentUser,
+    ): IntegrationConnection {
+        val existing =
+            connectionRepository.findByIdForUser(connectionId, currentUser.userId)
+                ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
         val disconnected = connectionRepository.markDisconnected(connectionId)!!
         existing.credentialId?.let(credentialRepository::revoke)
         connectionRepository.insertEvent(
@@ -297,15 +347,23 @@ class IntegrationOAuthService(
         return disconnected
     }
 
-    fun revokeUserConnection(connectionId: UUID, currentUser: CurrentUser): IntegrationConnection {
-        val existing = connectionRepository.findByIdForUser(connectionId, currentUser.userId)
-            ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
+    fun revokeUserConnection(
+        connectionId: UUID,
+        currentUser: CurrentUser,
+    ): IntegrationConnection {
+        val existing =
+            connectionRepository.findByIdForUser(connectionId, currentUser.userId)
+                ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
         val runtime = properties.provider(existing.provider)
         if (runtime.revocationUri.isBlank()) {
-            throw ServiceUnavailableException("INTEGRATION_REVOCATION_NOT_CONFIGURED", "Provider revocation is not configured. Disconnect the integration locally instead.")
+            throw ServiceUnavailableException(
+                "INTEGRATION_REVOCATION_NOT_CONFIGURED",
+                "Provider revocation is not configured. Disconnect the integration locally instead.",
+            )
         }
-        val adapter = adapterRegistry.find(existing.provider)
-            ?: throw ServiceUnavailableException("INTEGRATION_ADAPTER_NOT_CONFIGURED", "This integration provider is not configured.")
+        val adapter =
+            adapterRegistry.find(existing.provider)
+                ?: throw ServiceUnavailableException("INTEGRATION_ADAPTER_NOT_CONFIGURED", "This integration provider is not configured.")
         val credential = requireCredential(existing)
         val tokenSet = decryptTokenSet(credential)
         try {
@@ -335,15 +393,23 @@ class IntegrationOAuthService(
         return revoked
     }
 
-    fun checkUserHealth(connectionId: UUID, currentUser: CurrentUser): IntegrationHealthCheck {
-        val connection = connectionRepository.findByIdForUser(connectionId, currentUser.userId)
-            ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
+    fun checkUserHealth(
+        connectionId: UUID,
+        currentUser: CurrentUser,
+    ): IntegrationHealthCheck {
+        val connection =
+            connectionRepository.findByIdForUser(connectionId, currentUser.userId)
+                ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
         return checkHealth(connection, currentUser.userId)
     }
 
-    fun accessTokenForUserConnection(connectionId: UUID, currentUser: CurrentUser): IntegrationAccessToken {
-        val connection = connectionRepository.findByIdForUser(connectionId, currentUser.userId)
-            ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
+    fun accessTokenForUserConnection(
+        connectionId: UUID,
+        currentUser: CurrentUser,
+    ): IntegrationAccessToken {
+        val connection =
+            connectionRepository.findByIdForUser(connectionId, currentUser.userId)
+                ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
         if (connection.status !in setOf(IntegrationConnectionStatus.CONNECTED, IntegrationConnectionStatus.DEGRADED)) {
             throw ValidationException("This integration is not connected.")
         }
@@ -356,35 +422,43 @@ class IntegrationOAuthService(
         currentUser: CurrentUser,
     ): IntegrationAccessToken {
         membershipService.requireManagerRole(organizationId, currentUser)
-        val connection = connectionRepository.findByIdForOrganization(connectionId, organizationId)
-            ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
+        val connection =
+            connectionRepository.findByIdForOrganization(connectionId, organizationId)
+                ?: throw NotFoundException("INTEGRATION_CONNECTION_NOT_FOUND", "The integration connection could not be found.")
         if (connection.status !in setOf(IntegrationConnectionStatus.CONNECTED, IntegrationConnectionStatus.DEGRADED)) {
             throw ValidationException("This integration is not connected.")
         }
         return IntegrationAccessToken(connection, decryptTokenSet(requireCredential(connection)).accessToken)
     }
 
-    private fun checkHealth(connection: IntegrationConnection, actorUserId: UUID): IntegrationHealthCheck {
-        val adapter = adapterRegistry.find(connection.provider)
-            ?: throw ServiceUnavailableException("INTEGRATION_ADAPTER_NOT_CONFIGURED", "This integration provider is not configured.")
+    private fun checkHealth(
+        connection: IntegrationConnection,
+        actorUserId: UUID,
+    ): IntegrationHealthCheck {
+        val adapter =
+            adapterRegistry.find(connection.provider)
+                ?: throw ServiceUnavailableException("INTEGRATION_ADAPTER_NOT_CONFIGURED", "This integration provider is not configured.")
         val tokenSet = decryptTokenSet(requireCredential(connection))
         val started = System.nanoTime()
-        val result = try {
-            adapter.checkHealth(connection.provider, tokenSet.accessToken)
-        } catch (_: Exception) {
-            ProviderHealthResult(false, errorCode = "HEALTH_CHECK_FAILED", errorMessage = "The provider health check failed.")
-        }
+        val result =
+            try {
+                adapter.checkHealth(connection.provider, tokenSet.accessToken)
+            } catch (_: Exception) {
+                ProviderHealthResult(false, errorCode = "HEALTH_CHECK_FAILED", errorMessage = "The provider health check failed.")
+            }
         val elapsed = (System.nanoTime() - started) / 1_000_000
-        val status = when {
-            result.healthy -> IntegrationHealthStatus.HEALTHY
-            result.degraded -> IntegrationHealthStatus.DEGRADED
-            else -> IntegrationHealthStatus.FAILED
-        }
-        val nextStatus = if (status == IntegrationHealthStatus.HEALTHY) {
-            IntegrationConnectionStatus.CONNECTED
-        } else {
-            IntegrationConnectionStatus.DEGRADED
-        }
+        val status =
+            when {
+                result.healthy -> IntegrationHealthStatus.HEALTHY
+                result.degraded -> IntegrationHealthStatus.DEGRADED
+                else -> IntegrationHealthStatus.FAILED
+            }
+        val nextStatus =
+            if (status == IntegrationHealthStatus.HEALTHY) {
+                IntegrationConnectionStatus.CONNECTED
+            } else {
+                IntegrationConnectionStatus.DEGRADED
+            }
         if (status == IntegrationHealthStatus.HEALTHY) {
             connectionRepository.markConnected(
                 connection.id,
@@ -401,14 +475,15 @@ class IntegrationOAuthService(
                 result.errorMessage ?: "The provider health check failed.",
             )
         }
-        val health = connectionRepository.insertHealthCheck(
-            connection.id,
-            status,
-            result.latencyMs ?: elapsed,
-            result.errorCode,
-            result.errorMessage,
-            actorUserId,
-        )
+        val health =
+            connectionRepository.insertHealthCheck(
+                connection.id,
+                status,
+                result.latencyMs ?: elapsed,
+                result.errorCode,
+                result.errorMessage,
+                actorUserId,
+            )
         connectionRepository.insertEvent(
             connection,
             "HEALTH_CHECKED",
@@ -435,43 +510,51 @@ class IntegrationOAuthService(
             throw ServiceUnavailableException("INTEGRATION_NOT_CONFIGURED", "This integration is not configured for authorization yet.")
         }
         val runtime = properties.provider(provider)
-        val adapter = adapterRegistry.find(provider)
-            ?: throw ServiceUnavailableException("INTEGRATION_ADAPTER_NOT_CONFIGURED", "This integration is not configured for authorization.")
-        val existing = when (ownerType) {
-            IntegrationOwnerType.ORGANIZATION -> connectionRepository.findActiveForOrganization(organizationId!!, provider)
-            IntegrationOwnerType.USER -> connectionRepository.findActiveForUser(userId!!, provider)
-            IntegrationOwnerType.PLATFORM -> null
-        }
+        val adapter =
+            adapterRegistry.find(provider)
+                ?: throw ServiceUnavailableException(
+                    "INTEGRATION_ADAPTER_NOT_CONFIGURED",
+                    "This integration is not configured for authorization.",
+                )
+        val existing =
+            when (ownerType) {
+                IntegrationOwnerType.ORGANIZATION -> connectionRepository.findActiveForOrganization(organizationId!!, provider)
+                IntegrationOwnerType.USER -> connectionRepository.findActiveForUser(userId!!, provider)
+                IntegrationOwnerType.PLATFORM -> null
+            }
         if (existing?.status == IntegrationConnectionStatus.CONNECTED) {
             throw ConflictException("INTEGRATION_ALREADY_CONNECTED", "This provider is already connected.")
         }
-        val connection = if (existing == null) {
-            connectionRepository.insertAuthorizationPending(definition, ownerType, organizationId, userId, actorUserId)
-        } else {
-            connectionRepository.markAuthorizationPending(existing.id)!!
-        }
+        val connection =
+            if (existing == null) {
+                connectionRepository.insertAuthorizationPending(definition, ownerType, organizationId, userId, actorUserId)
+            } else {
+                connectionRepository.markAuthorizationPending(existing.id)!!
+            }
 
         val state = randomUrlSafe(32)
         val verifier = randomUrlSafe(64)
-        val challenge = Base64.getUrlEncoder().withoutPadding().encodeToString(
-            MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(Charsets.US_ASCII)),
-        )
+        val challenge =
+            Base64.getUrlEncoder().withoutPadding().encodeToString(
+                MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(Charsets.US_ASCII)),
+            )
         val stateHash = sha256(state)
         val aad = "oauth-pkce:${provider.name}:${connection.id}:$stateHash"
         val encryptedVerifier = credentialCipher.encrypt(verifier, aad)
         val redirectUri = "${properties.oauthCallbackBaseUrl.trimEnd('/')}/${provider.configKey}/callback"
         val scopes = runtime.scopes.ifEmpty { definition.defaultScopes }
-        val authorizationUrl = adapter.buildAuthorizationUrl(
-            OAuthAuthorizationRequest(
-                provider = provider,
-                clientId = runtime.clientId,
-                authorizationUri = runtime.authorizationUri,
-                redirectUri = redirectUri,
-                state = state,
-                codeChallenge = challenge,
-                scopes = scopes,
-            ),
-        )
+        val authorizationUrl =
+            adapter.buildAuthorizationUrl(
+                OAuthAuthorizationRequest(
+                    provider = provider,
+                    clientId = runtime.clientId,
+                    authorizationUri = runtime.authorizationUri,
+                    redirectUri = redirectUri,
+                    state = state,
+                    codeChallenge = challenge,
+                    scopes = scopes,
+                ),
+            )
         val expiresAt = Instant.now().plus(properties.oauthStateTtlMinutes, ChronoUnit.MINUTES)
         oauthStateRepository.insert(
             provider = provider,
@@ -500,40 +583,48 @@ class IntegrationOAuthService(
         return AuthorizationStartResult(connection, authorizationUrl, expiresAt)
     }
 
-    private fun refreshLocked(existing: IntegrationConnection, locked: IntegrationConnection, actorUserId: UUID): IntegrationConnection {
+    private fun refreshLocked(
+        existing: IntegrationConnection,
+        locked: IntegrationConnection,
+        actorUserId: UUID,
+    ): IntegrationConnection {
         val runtime = properties.provider(locked.provider)
-        val adapter = adapterRegistry.find(locked.provider)
-            ?: run {
-                connectionRepository.releaseRefreshLock(locked.id)
-                throw ServiceUnavailableException("INTEGRATION_ADAPTER_NOT_CONFIGURED", "This integration provider is not configured.")
-            }
+        val adapter =
+            adapterRegistry.find(locked.provider)
+                ?: run {
+                    connectionRepository.releaseRefreshLock(locked.id)
+                    throw ServiceUnavailableException("INTEGRATION_ADAPTER_NOT_CONFIGURED", "This integration provider is not configured.")
+                }
         val credential = requireCredential(locked)
         val currentTokens = decryptTokenSet(credential)
-        val refreshToken = currentTokens.refreshToken
-            ?: run {
-                connectionRepository.releaseRefreshLock(locked.id)
-                throw ValidationException("This integration does not have a refresh token. Reauthorize it instead.")
-            }
+        val refreshToken =
+            currentTokens.refreshToken
+                ?: run {
+                    connectionRepository.releaseRefreshLock(locked.id)
+                    throw ValidationException("This integration does not have a refresh token. Reauthorize it instead.")
+                }
         return try {
-            val refreshed = adapter.refresh(
-                OAuthRefreshRequest(
-                    provider = locked.provider,
-                    clientId = runtime.clientId,
-                    clientSecret = runtime.clientSecret,
-                    tokenUri = runtime.tokenUri,
-                    refreshToken = refreshToken,
-                    currentScopes = locked.grantedScopes,
-                ),
-            )
+            val refreshed =
+                adapter.refresh(
+                    OAuthRefreshRequest(
+                        provider = locked.provider,
+                        clientId = runtime.clientId,
+                        clientSecret = runtime.clientSecret,
+                        tokenUri = runtime.tokenUri,
+                        refreshToken = refreshToken,
+                        currentScopes = locked.grantedScopes,
+                    ),
+                )
             val newCredential = storeTokenSet(locked, refreshed, credential.id, actorUserId)
-            val connected = connectionRepository.markConnected(
-                locked.id,
-                newCredential.id,
-                refreshed.grantedScopes,
-                refreshed.externalAccountId,
-                refreshed.externalAccountName,
-                refreshed.expiresAt,
-            )!!
+            val connected =
+                connectionRepository.markConnected(
+                    locked.id,
+                    newCredential.id,
+                    refreshed.grantedScopes,
+                    refreshed.externalAccountId,
+                    refreshed.externalAccountName,
+                    refreshed.expiresAt,
+                )!!
             credentialRepository.revoke(credential.id)
             connectionRepository.insertEvent(
                 connected,
@@ -542,7 +633,13 @@ class IntegrationOAuthService(
                 IntegrationConnectionStatus.CONNECTED,
                 actorUserId,
             )
-            auditService.record(actorUserId, connected.organizationId, "integration.token_refreshed", "integration_connection", connected.id)
+            auditService.record(
+                actorUserId,
+                connected.organizationId,
+                "integration.token_refreshed",
+                "integration_connection",
+                connected.id,
+            )
             connected
         } catch (ex: Exception) {
             connectionRepository.markDegraded(locked.id, "TOKEN_REFRESH_FAILED", "The provider token could not be refreshed.")
@@ -557,12 +654,13 @@ class IntegrationOAuthService(
         rotatedFromId: UUID?,
         actorUserId: UUID,
     ) = run {
-        val payload = StoredOAuthTokenSet(
-            accessToken = tokenSet.accessToken,
-            refreshToken = tokenSet.refreshToken,
-            tokenType = tokenSet.tokenType,
-            grantedScopes = tokenSet.grantedScopes,
-        )
+        val payload =
+            StoredOAuthTokenSet(
+                accessToken = tokenSet.accessToken,
+                refreshToken = tokenSet.refreshToken,
+                tokenType = tokenSet.tokenType,
+                grantedScopes = tokenSet.grantedScopes,
+            )
         val aad = credentialAad(connection)
         val encrypted = credentialCipher.encrypt(objectMapper.writeValueAsString(payload), aad)
         credentialRepository.insert(
@@ -580,9 +678,13 @@ class IntegrationOAuthService(
     }
 
     private fun requireCredential(connection: IntegrationConnection) =
-        connection.credentialId?.let(credentialRepository::findById)
+        connection.credentialId
+            ?.let(credentialRepository::findById)
             ?.takeIf { it.revokedAt == null }
-            ?: throw ServiceUnavailableException("INTEGRATION_CREDENTIAL_UNAVAILABLE", "This integration does not have an active credential.")
+            ?: throw ServiceUnavailableException(
+                "INTEGRATION_CREDENTIAL_UNAVAILABLE",
+                "This integration does not have an active credential.",
+            )
 
     private fun decryptTokenSet(credential: com.rally26.integration.core.domain.IntegrationCredentialSecret): StoredOAuthTokenSet =
         objectMapper.readValue(
@@ -599,7 +701,8 @@ class IntegrationOAuthService(
         Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(bytes).also(secureRandom::nextBytes))
 
     private fun sha256(value: String): String =
-        MessageDigest.getInstance("SHA-256")
+        MessageDigest
+            .getInstance("SHA-256")
             .digest(value.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
 }

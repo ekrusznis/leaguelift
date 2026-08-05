@@ -11,10 +11,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "rally26.outbox.worker")
 data class OutboxWorkerProperties(
-	val enabled: Boolean = true,
-	val pollIntervalMs: Long = 5000,
-	val batchSize: Int = 20,
-	val maxAttempts: Int = 5,
-	val backoffBaseSeconds: Long = 30,
-	val backoffCapSeconds: Long = 3600,
+    val enabled: Boolean = true,
+    val pollIntervalMs: Long = 5000,
+    val batchSize: Int = 20,
+    val maxAttempts: Int = 5,
+    val backoffBaseSeconds: Long = 30,
+    val backoffCapSeconds: Long = 3600,
 )

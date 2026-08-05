@@ -7,11 +7,12 @@ package com.rally26.membership.domain
  * doesn't leak into the enum the authorization layer treats as its source of truth.
  */
 object MembershipRoleLabels {
-	fun label(role: MembershipRole): String = when (role) {
-		MembershipRole.OWNER -> "Owner"
-		MembershipRole.ADMINISTRATOR -> "Administrator"
-		MembershipRole.TEAM_ADMINISTRATOR -> "Team Administrator"
-		MembershipRole.TOURNAMENT_ADMINISTRATOR -> "Tournament Administrator"
-		MembershipRole.VIEWER -> "Member"
-	}
+    fun label(role: MembershipRole): String =
+        when (role) {
+            MembershipRole.OWNER -> "Owner"
+            MembershipRole.ADMINISTRATOR -> "Administrator"
+            MembershipRole.TEAM_ADMINISTRATOR -> "Team Administrator"
+            MembershipRole.TOURNAMENT_ADMINISTRATOR -> "Tournament Administrator"
+            MembershipRole.VIEWER -> "Member"
+        }
 }

@@ -15,12 +15,15 @@ import org.springframework.web.client.RestClient
  * than propagating a raw provider error.
  */
 @Configuration
-class PrintifyConfig(private val printifyProperties: PrintifyProperties) {
-
-	@Bean
-	fun printifyRestClient(): RestClient = RestClient.builder()
-		.baseUrl("https://api.printify.com/v1")
-		.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer ${printifyProperties.apiToken}")
-		.defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-		.build()
+class PrintifyConfig(
+    private val printifyProperties: PrintifyProperties,
+) {
+    @Bean
+    fun printifyRestClient(): RestClient =
+        RestClient
+            .builder()
+            .baseUrl("https://api.printify.com/v1")
+            .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer ${printifyProperties.apiToken}")
+            .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+            .build()
 }

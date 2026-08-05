@@ -16,14 +16,14 @@ enum class RoleAssignmentStatus { ACTIVE, REVOKED }
  * 1 — every organization-owned table/row carries organization_id).
  */
 data class RoleAssignment(
-	val id: UUID,
-	val organizationId: UUID?,
-	val userId: UUID,
-	val contextType: RoleAssignmentContextType,
-	val resourceId: UUID?,
-	val role: ResourceRole,
-	val status: RoleAssignmentStatus,
-	val grantedBy: UUID?,
-	val createdAt: Instant,
-	val updatedAt: Instant,
+    val id: UUID,
+    val organizationId: UUID?,
+    val userId: UUID,
+    val contextType: RoleAssignmentContextType,
+    val resourceId: UUID?,
+    val role: ResourceRole,
+    val status: RoleAssignmentStatus,
+    val grantedBy: UUID?,
+    val createdAt: Instant,
+    val updatedAt: Instant,
 )

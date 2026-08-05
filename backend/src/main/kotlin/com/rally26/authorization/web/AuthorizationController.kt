@@ -28,84 +28,84 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v1")
 class AuthorizationController(
-	private val authorizationService: AuthorizationService,
-	private val appUserRepository: AppUserRepository,
+    private val authorizationService: AuthorizationService,
+    private val appUserRepository: AppUserRepository,
 ) {
+    @GetMapping("/me/contexts")
+    fun contexts(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): List<ContextResponse> = authorizationService.listContexts(currentUser).map { it.toResponse() }
 
-	@GetMapping("/me/contexts")
-	fun contexts(@AuthenticationPrincipal currentUser: CurrentUser): List<ContextResponse> =
-		authorizationService.listContexts(currentUser).map { it.toResponse() }
+    @GetMapping("/organizations/{organizationId}/teams/{teamId}/role-assignments")
+    fun listTeamRoleAssignments(
+        @PathVariable organizationId: UUID,
+        @PathVariable teamId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): List<RoleAssignmentResponse> =
+        authorizationService.listTeamRoleAssignments(organizationId, teamId, currentUser).map { it.toResponse() }
 
-	@GetMapping("/organizations/{organizationId}/teams/{teamId}/role-assignments")
-	fun listTeamRoleAssignments(
-		@PathVariable organizationId: UUID,
-		@PathVariable teamId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): List<RoleAssignmentResponse> =
-		authorizationService.listTeamRoleAssignments(organizationId, teamId, currentUser).map { it.toResponse() }
+    @PostMapping("/organizations/{organizationId}/teams/{teamId}/role-assignments")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun grantTeamRole(
+        @PathVariable organizationId: UUID,
+        @PathVariable teamId: UUID,
+        @RequestBody request: GrantRoleAssignmentRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): RoleAssignmentResponse {
+        val role = parseResourceRole(request.role)
+        val assignment = authorizationService.grantTeamRole(organizationId, teamId, request.userId, role, currentUser)
+        return assignment.toResponse()
+    }
 
-	@PostMapping("/organizations/{organizationId}/teams/{teamId}/role-assignments")
-	@ResponseStatus(HttpStatus.CREATED)
-	fun grantTeamRole(
-		@PathVariable organizationId: UUID,
-		@PathVariable teamId: UUID,
-		@RequestBody request: GrantRoleAssignmentRequest,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): RoleAssignmentResponse {
-		val role = parseResourceRole(request.role)
-		val assignment = authorizationService.grantTeamRole(organizationId, teamId, request.userId, role, currentUser)
-		return assignment.toResponse()
-	}
+    @DeleteMapping("/organizations/{organizationId}/teams/{teamId}/role-assignments/{assignmentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun revokeTeamRole(
+        @PathVariable organizationId: UUID,
+        @PathVariable teamId: UUID,
+        @PathVariable assignmentId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) {
+        authorizationService.revokeTeamRole(organizationId, teamId, assignmentId, currentUser)
+    }
 
-	@DeleteMapping("/organizations/{organizationId}/teams/{teamId}/role-assignments/{assignmentId}")
-	@ResponseStatus(HttpStatus.NO_CONTENT)
-	fun revokeTeamRole(
-		@PathVariable organizationId: UUID,
-		@PathVariable teamId: UUID,
-		@PathVariable assignmentId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) {
-		authorizationService.revokeTeamRole(organizationId, teamId, assignmentId, currentUser)
-	}
+    @GetMapping("/organizations/{organizationId}/tournaments/{tournamentId}/role-assignments")
+    fun listTournamentRoleAssignments(
+        @PathVariable organizationId: UUID,
+        @PathVariable tournamentId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): List<RoleAssignmentResponse> =
+        authorizationService.listTournamentRoleAssignments(organizationId, tournamentId, currentUser).map { it.toResponse() }
 
-	@GetMapping("/organizations/{organizationId}/tournaments/{tournamentId}/role-assignments")
-	fun listTournamentRoleAssignments(
-		@PathVariable organizationId: UUID,
-		@PathVariable tournamentId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): List<RoleAssignmentResponse> =
-		authorizationService.listTournamentRoleAssignments(organizationId, tournamentId, currentUser).map { it.toResponse() }
+    @PostMapping("/organizations/{organizationId}/tournaments/{tournamentId}/role-assignments")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun grantTournamentRole(
+        @PathVariable organizationId: UUID,
+        @PathVariable tournamentId: UUID,
+        @RequestBody request: GrantRoleAssignmentRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): RoleAssignmentResponse {
+        val role = parseResourceRole(request.role)
+        val assignment = authorizationService.grantTournamentRole(organizationId, tournamentId, request.userId, role, currentUser)
+        return assignment.toResponse()
+    }
 
-	@PostMapping("/organizations/{organizationId}/tournaments/{tournamentId}/role-assignments")
-	@ResponseStatus(HttpStatus.CREATED)
-	fun grantTournamentRole(
-		@PathVariable organizationId: UUID,
-		@PathVariable tournamentId: UUID,
-		@RequestBody request: GrantRoleAssignmentRequest,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	): RoleAssignmentResponse {
-		val role = parseResourceRole(request.role)
-		val assignment = authorizationService.grantTournamentRole(organizationId, tournamentId, request.userId, role, currentUser)
-		return assignment.toResponse()
-	}
+    @DeleteMapping("/organizations/{organizationId}/tournaments/{tournamentId}/role-assignments/{assignmentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun revokeTournamentRole(
+        @PathVariable organizationId: UUID,
+        @PathVariable tournamentId: UUID,
+        @PathVariable assignmentId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) {
+        authorizationService.revokeTournamentRole(organizationId, tournamentId, assignmentId, currentUser)
+    }
 
-	@DeleteMapping("/organizations/{organizationId}/tournaments/{tournamentId}/role-assignments/{assignmentId}")
-	@ResponseStatus(HttpStatus.NO_CONTENT)
-	fun revokeTournamentRole(
-		@PathVariable organizationId: UUID,
-		@PathVariable tournamentId: UUID,
-		@PathVariable assignmentId: UUID,
-		@AuthenticationPrincipal currentUser: CurrentUser,
-	) {
-		authorizationService.revokeTournamentRole(organizationId, tournamentId, assignmentId, currentUser)
-	}
+    private fun RoleAssignment.toResponse(): RoleAssignmentResponse {
+        val user = appUserRepository.findById(userId)
+        return RoleAssignmentResponse(id, userId, user?.email, user?.displayName, contextType.name, resourceId, role.name)
+    }
 
-	private fun RoleAssignment.toResponse(): RoleAssignmentResponse {
-		val user = appUserRepository.findById(userId)
-		return RoleAssignmentResponse(id, userId, user?.email, user?.displayName, contextType.name, resourceId, role.name)
-	}
-
-	private fun parseResourceRole(role: String): ResourceRole =
-		runCatching { ResourceRole.valueOf(role) }.getOrNull()
-			?: throw ValidationException("'$role' is not a recognized role.")
+    private fun parseResourceRole(role: String): ResourceRole =
+        runCatching { ResourceRole.valueOf(role) }.getOrNull()
+            ?: throw ValidationException("'$role' is not a recognized role.")
 }

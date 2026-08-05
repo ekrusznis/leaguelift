@@ -3,10 +3,20 @@ package com.rally26.integration.printify.infra
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 
-data class PrintifyUploadedImage(val id: String, val fileName: String)
+data class PrintifyUploadedImage(
+    val id: String,
+    val fileName: String,
+)
 
-private data class UploadImageRequestDto(val file_name: String, val url: String)
-private data class UploadImageResponseDto(val id: String, val file_name: String)
+private data class UploadImageRequestDto(
+    val file_name: String,
+    val url: String,
+)
+
+private data class UploadImageResponseDto(
+    val id: String,
+    val file_name: String,
+)
 
 /**
  * Printify's own image library (POST /v1/uploads/images.json) — accepts a
@@ -18,15 +28,21 @@ private data class UploadImageResponseDto(val id: String, val file_name: String)
  * (PrintifyProductClient), whose print-area schema requires a Printify image id.
  */
 @Component
-class PrintifyImageClient(private val printifyRestClient: RestClient) {
-
-	fun uploadImage(fileName: String, sourceUrl: String): PrintifyUploadedImage {
-		val dto = printifyRestClient.post()
-			.uri("/uploads/images.json")
-			.body(UploadImageRequestDto(file_name = fileName, url = sourceUrl))
-			.retrieve()
-			.body(UploadImageResponseDto::class.java)
-			?: error("Printify returned an empty response uploading image $fileName")
-		return PrintifyUploadedImage(dto.id, dto.file_name)
-	}
+class PrintifyImageClient(
+    private val printifyRestClient: RestClient,
+) {
+    fun uploadImage(
+        fileName: String,
+        sourceUrl: String,
+    ): PrintifyUploadedImage {
+        val dto =
+            printifyRestClient
+                .post()
+                .uri("/uploads/images.json")
+                .body(UploadImageRequestDto(file_name = fileName, url = sourceUrl))
+                .retrieve()
+                .body(UploadImageResponseDto::class.java)
+                ?: error("Printify returned an empty response uploading image $fileName")
+        return PrintifyUploadedImage(dto.id, dto.file_name)
+    }
 }
