@@ -163,3 +163,16 @@ export function useUpdateSupportCase() {
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["platform", "support-cases"] }),
 	});
 }
+
+export interface SendSupportCaseEmailInput {
+	caseId: string;
+	subject: string;
+	body: string;
+}
+
+/** One-way, ad-hoc email to the requester -- independent of a status change, no reply thread (see backend SupportCaseService.sendPlatformEmail doc comment). */
+export function useSendSupportCaseEmail() {
+	return useMutation({
+		mutationFn: ({ caseId, ...body }: SendSupportCaseEmailInput) => apiFetch<SupportCase>(`/platform/admin/support-cases/${caseId}/send-email`, { method: "POST", body }),
+	});
+}

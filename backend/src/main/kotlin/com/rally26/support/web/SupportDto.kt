@@ -80,6 +80,11 @@ data class UpdateSupportCaseRequest(
     @field:Size(max = 4000) val resolution: String? = null,
 )
 
+data class SendSupportCaseEmailRequest(
+    @field:NotBlank @field:Size(min = 3, max = 200) val subject: String,
+    @field:NotBlank @field:Size(min = 3, max = 5000) val body: String,
+)
+
 data class SupportCaseResponse(
     val id: UUID,
     val organizationId: UUID?,

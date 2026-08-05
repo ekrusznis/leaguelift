@@ -175,6 +175,53 @@ class SupportCaseService(
         return updated
     }
 
+    /**
+     * A one-way, ad-hoc email to the requester, independent of a status change --
+     * distinct from [updatePlatform]'s automatic status-notice email
+     * (SupportCaseStatusChangedEmailHandler). Deliberately does not create a reply
+     * thread or capture inbound replies (Phase 17 explicitly keeps support cases
+     * "one-way... no replies, chat threads" -- this is a platform admin *sending* a
+     * message, not a two-way conversation UI).
+     */
+    @Transactional
+    fun sendPlatformEmail(
+        currentUser: CurrentUser,
+        caseId: UUID,
+        subject: String,
+        body: String,
+    ): SupportCase {
+        authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_SUPPORT_CASE_MANAGE)
+        val existing =
+            repository.findById(caseId) ?: throw NotFoundException("SUPPORT_CASE_NOT_FOUND", "The support case could not be found.")
+        val normalizedSubject = subject.trim()
+        if (normalizedSubject.length !in 3..200) throw ValidationException("Subject must be between 3 and 200 characters.")
+        val normalizedBody = body.trim()
+        if (normalizedBody.length !in 3..5000) throw ValidationException("Message must be between 3 and 5,000 characters.")
+        outboxRepository.insert(
+            aggregateType = "SUPPORT_CASE",
+            aggregateId = existing.id,
+            organizationId = existing.organizationId,
+            eventType = "support.case.admin_email",
+            payloadJson =
+                objectMapper.writeValueAsString(
+                    mapOf(
+                        "caseId" to existing.id.toString(),
+                        "subject" to normalizedSubject,
+                        "body" to normalizedBody,
+                    ),
+                ),
+        )
+        auditService.record(
+            currentUser.userId,
+            existing.organizationId,
+            "support_case.admin_email_sent",
+            "SUPPORT_CASE",
+            existing.id,
+            objectMapper.writeValueAsString(mapOf("subject" to normalizedSubject)),
+        )
+        return existing
+    }
+
     private fun create(
         input: Input,
         requesterUserId: UUID?,
