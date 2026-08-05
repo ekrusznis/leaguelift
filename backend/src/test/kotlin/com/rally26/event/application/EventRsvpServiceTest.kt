@@ -267,6 +267,7 @@ class EventRsvpServiceTest {
         every { eventRepository.findById(eventId, orgId) } returns event()
         every { eventRsvpRepository.findByEvent(eventId) } returns listOf(rsvp(RsvpResponse.ATTENDING), rsvp(RsvpResponse.MAYBE))
         every { authorizationService.hasTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_RSVP_READ_TEAM) } returns true
+        every { participantRepository.findById(participantId, orgId) } returns participant()
 
         val result = service.getRsvps(orgId, eventId, currentUser)
 

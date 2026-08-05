@@ -20,6 +20,8 @@ data class Product(
     /** Set once a design is uploaded and pushed to Printify's image library — null for manual products. */
     val printifyImageId: String?,
     val printifyPrintPosition: String,
+    /** Swag Shop (DESIGN-DOC.md section 13): the team logo media assignment frozen at setup time for order-time compositing. Null unless Swag Shop personalization has been enabled for this product. */
+    val swagLogoMediaAssetId: UUID? = null,
     val status: ProductStatus,
     val createdAt: Instant,
     val updatedAt: Instant,

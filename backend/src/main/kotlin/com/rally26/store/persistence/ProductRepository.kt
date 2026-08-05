@@ -12,7 +12,8 @@ import java.util.UUID
 private const val PRODUCT_COLUMNS = """
     p.id, p.organization_id, p.store_id, p.name, p.description, p.catalog_source,
     p.manual_vendor_id, mv.name as manual_vendor_name, p.printify_blueprint_id,
-    p.printify_image_id, p.printify_print_position, p.status, p.created_at, p.updated_at
+    p.printify_image_id, p.printify_print_position, p.swag_logo_media_asset_id,
+    p.status, p.created_at, p.updated_at
 """
 
 @Repository
@@ -148,6 +149,21 @@ class ProductRepository(
             .param("organizationId", organizationId)
             .update()
 
+    /** Swag Shop (DESIGN-DOC.md section 13): freezes the team's current logo onto the product for order-time compositing. */
+    fun updateSwagLogoMediaAssetId(
+        id: UUID,
+        organizationId: UUID,
+        swagLogoMediaAssetId: UUID,
+    ): Int =
+        jdbcClient
+            .sql(
+                "update product set swag_logo_media_asset_id = :swagLogoMediaAssetId, updated_at = :now where id = :id and organization_id = :organizationId",
+            ).param("swagLogoMediaAssetId", swagLogoMediaAssetId)
+            .param("now", Timestamp.from(Instant.now()))
+            .param("id", id)
+            .param("organizationId", organizationId)
+            .update()
+
     private fun mapRow(
         rs: java.sql.ResultSet,
         _rowNum: Int,
@@ -164,6 +180,7 @@ class ProductRepository(
             printifyBlueprintId = rs.getObject("printify_blueprint_id", java.lang.Long::class.java)?.toLong(),
             printifyImageId = rs.getString("printify_image_id"),
             printifyPrintPosition = rs.getString("printify_print_position"),
+            swagLogoMediaAssetId = rs.getObject("swag_logo_media_asset_id", UUID::class.java),
             status = ProductStatus.valueOf(rs.getString("status")),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),

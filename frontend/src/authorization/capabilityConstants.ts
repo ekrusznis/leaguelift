@@ -22,6 +22,7 @@ export const Capabilities = {
 	TEAM_PAGE_EDIT: "team.page.edit",
 	TEAM_FUNDRAISING_MANAGE: "team.fundraising.manage",
 	TEAM_STORE_MANAGE: "team.store.manage",
+	TEAM_ORDER_CREATE: "team.order.create",
 	TEAM_ROSTER_MANAGE: "team.roster.manage",
 	TEAM_STAFF_MANAGE: "team.staff.manage",
 	TEAM_FEE_VIEW: "team.fee.view",
@@ -38,6 +39,7 @@ export const Capabilities = {
 	HOUSEHOLD_FEE_PAY: "household.fee.pay",
 	HOUSEHOLD_CREDIT_VIEW: "household.credit.view",
 	HOUSEHOLD_ORDER_VIEW: "household.order.view",
+	HOUSEHOLD_ORDER_CREATE: "household.order.create",
 	HOUSEHOLD_PROFILE_MANAGE: "household.profile.manage",
 
 	ATHLETE_PROFILE_VIEW: "athlete.profile.view",

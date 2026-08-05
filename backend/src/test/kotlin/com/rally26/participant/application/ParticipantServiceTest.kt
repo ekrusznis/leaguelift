@@ -1,6 +1,8 @@
 package com.rally26.participant.application
 
 import com.rally26.audit.application.AuditService
+import com.rally26.authorization.application.AuthorizationService
+import com.rally26.authorization.domain.Capabilities
 import com.rally26.common.error.ConflictException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.web.CurrentUser
@@ -13,6 +15,7 @@ import com.rally26.participant.domain.Participant
 import com.rally26.participant.domain.ParticipantStatus
 import com.rally26.participant.domain.ParticipantTeamAssignment
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.team.persistence.TeamRepository
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -29,23 +32,33 @@ import kotlin.test.assertFailsWith
 class ParticipantServiceTest {
     private val participantRepository = mockk<ParticipantRepository>()
     private val householdRepository = mockk<HouseholdRepository>()
+    private val teamRepository = mockk<TeamRepository>()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
-    private val service = ParticipantService(participantRepository, householdRepository, membershipService, auditService)
+    private val authorizationService = mockk<AuthorizationService>()
+    private val service =
+        ParticipantService(
+            participantRepository,
+            householdRepository,
+            teamRepository,
+            membershipService,
+            auditService,
+            authorizationService,
+        )
 
     private val orgId = UUID.randomUUID()
     private val householdId = UUID.randomUUID()
     private val currentUser = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
 
     @Test
-    fun `listForHousehold requires active membership`() {
-        every { membershipService.requireActiveMembership(orgId, currentUser) } returns managerMembership()
+    fun `listForHousehold requires household view capability`() {
         every { householdRepository.findById(householdId, orgId) } returns mockk()
+        every { authorizationService.hasHouseholdCapability(orgId, householdId, currentUser, Capabilities.HOUSEHOLD_VIEW) } returns true
         every { participantRepository.findByHousehold(householdId, orgId) } returns emptyList()
 
         service.listForHousehold(orgId, householdId, currentUser)
 
-        verify(exactly = 1) { membershipService.requireActiveMembership(orgId, currentUser) }
+        verify(exactly = 1) { authorizationService.hasHouseholdCapability(orgId, householdId, currentUser, Capabilities.HOUSEHOLD_VIEW) }
     }
 
     @Test

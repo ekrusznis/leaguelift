@@ -1,6 +1,8 @@
 package com.rally26.store.application
 
 import com.rally26.audit.application.AuditService
+import com.rally26.authorization.application.AuthorizationService
+import com.rally26.authorization.domain.Capabilities
 import com.rally26.common.error.ConflictException
 import com.rally26.common.error.FieldError
 import com.rally26.common.error.NotFoundException
@@ -22,8 +24,29 @@ class StoreService(
     private val storeRepository: StoreRepository,
     private val teamRepository: TeamRepository,
     private val membershipService: MembershipService,
+    private val authorizationService: AuthorizationService,
     private val auditService: AuditService,
 ) {
+    /**
+     * A team-scoped store (Swag Shop) can be created/activated by a coach holding
+     * TEAM_STORE_MANAGE, not just an org owner/administrator — AuthorizationService's
+     * team-capability check already inherits org owner/admin access (ADR-020), so this
+     * single branch covers both, matching EventService.requireCreateAccess's exact
+     * teamId-present-vs-not pattern. An org-wide store (teamId null) stays
+     * manager-role-only, since there is no team to scope a capability check to.
+     */
+    private fun requireStoreManageAccess(
+        organizationId: UUID,
+        teamId: UUID?,
+        currentUser: CurrentUser,
+    ) {
+        if (teamId != null) {
+            authorizationService.requireTeamCapability(organizationId, teamId, currentUser, Capabilities.TEAM_STORE_MANAGE)
+        } else {
+            membershipService.requireManagerRole(organizationId, currentUser)
+        }
+    }
+
     fun list(
         organizationId: UUID,
         currentUser: CurrentUser,
@@ -71,7 +94,7 @@ class StoreService(
         slug: String,
         currentUser: CurrentUser,
     ): Store {
-        membershipService.requireManagerRole(organizationId, currentUser)
+        requireStoreManageAccess(organizationId, teamId, currentUser)
         if (!isValidStoreSlug(slug)) {
             throw ValidationException(
                 "Slug must be lowercase alphanumeric with optional hyphens.",
@@ -98,9 +121,10 @@ class StoreService(
         status: StoreStatus,
         currentUser: CurrentUser,
     ): Store {
-        membershipService.requireManagerRole(organizationId, currentUser)
-        storeRepository.findById(storeId, organizationId)
-            ?: throw NotFoundException("STORE_NOT_FOUND", "The store could not be found.")
+        val store =
+            storeRepository.findById(storeId, organizationId)
+                ?: throw NotFoundException("STORE_NOT_FOUND", "The store could not be found.")
+        requireStoreManageAccess(organizationId, store.teamId, currentUser)
         storeRepository.updateStatus(storeId, organizationId, status)
         auditService.record(currentUser.userId, organizationId, "store.status_updated", "store", storeId)
         return storeRepository.findById(storeId, organizationId)!!

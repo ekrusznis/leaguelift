@@ -12,6 +12,7 @@ import com.rally26.membership.application.MembershipService
 import com.rally26.participant.domain.Participant
 import com.rally26.participant.domain.ParticipantTeamAssignment
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.team.persistence.TeamRepository
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,6 +23,7 @@ import java.util.UUID
 class ParticipantService(
     private val participantRepository: ParticipantRepository,
     private val householdRepository: HouseholdRepository,
+    private val teamRepository: TeamRepository,
     private val membershipService: MembershipService,
     private val auditService: AuditService,
     private val authorizationService: AuthorizationService,
@@ -56,6 +58,22 @@ class ParticipantService(
             throw ForbiddenException("HOUSEHOLD_ACCESS_DENIED", "You do not have access to this household.")
         }
         return participantRepository.findByHousehold(householdId, organizationId)
+    }
+
+    /**
+     * Read-only team roster listing — Swag Shop (DESIGN-DOC.md section 13) coach
+     * participant picker. TEAM_VIEW, not the routine-write TEAM_ROSTER_MANAGE,
+     * since this only ever displays who's already on the roster.
+     */
+    fun listForTeam(
+        organizationId: UUID,
+        teamId: UUID,
+        currentUser: CurrentUser,
+    ): List<Participant> {
+        teamRepository.findById(teamId, organizationId)
+            ?: throw NotFoundException("TEAM_NOT_FOUND", "The team could not be found.")
+        authorizationService.requireTeamCapability(organizationId, teamId, currentUser, Capabilities.TEAM_VIEW)
+        return participantRepository.findActiveByTeam(teamId, organizationId)
     }
 
     @Transactional

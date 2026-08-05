@@ -2,10 +2,14 @@ package com.rally26.order.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
+import com.rally26.authorization.application.AuthorizationService
+import com.rally26.authorization.domain.Capabilities
+import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
+import com.rally26.config.FrontendProperties
 import com.rally26.integration.printify.infra.PrintifyOrderClient
 import com.rally26.integration.printify.infra.PrintifyOrderLineItem
 import com.rally26.ledger.application.LedgerService
@@ -20,6 +24,7 @@ import com.rally26.order.domain.FulfillmentSource
 import com.rally26.order.domain.FulfillmentStatus
 import com.rally26.order.domain.Order
 import com.rally26.order.domain.OrderStatus
+import com.rally26.order.domain.PersonalizationPlacement
 import com.rally26.order.domain.ShippingAddress
 import com.rally26.order.infra.OrderCheckoutLineItem
 import com.rally26.order.infra.StripeOrderCheckoutClient
@@ -28,6 +33,8 @@ import com.rally26.order.persistence.FulfillmentRepository
 import com.rally26.order.persistence.OrderItemRepository
 import com.rally26.order.persistence.OrderRepository
 import com.rally26.outbox.application.OutboxWriter
+import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.store.application.SwagDesignCompositor
 import com.rally26.store.domain.CatalogSource
 import com.rally26.store.domain.ProductStatus
 import com.rally26.store.domain.StoreStatus
@@ -92,6 +99,10 @@ class OrderService(
     private val printifyOrderClient: PrintifyOrderClient,
     private val mediaAssignmentService: MediaAssignmentService,
     private val mediaReadService: MediaReadService,
+    private val swagDesignCompositor: SwagDesignCompositor,
+    private val participantRepository: ParticipantRepository,
+    private val authorizationService: AuthorizationService,
+    private val frontendProperties: FrontendProperties,
     private val membershipService: MembershipService,
     private val auditService: AuditService,
     private val ledgerService: LedgerService,
@@ -173,6 +184,119 @@ class OrderService(
                 "Payments provider is not available right now. If this is local/staging, confirm STRIPE_SECRET_KEY is set.",
             )
         }
+    }
+
+    /**
+     * Swag Shop (DESIGN-DOC.md section 13): the first authenticated (non-public)
+     * Stripe-Checkout-redirect flow in this codebase — a coach ordering for a roster
+     * athlete, or a guardian ordering for their own household's athlete, while signed
+     * in. Reuses the exact Stripe/webhook machinery createCheckoutSession already
+     * established; confirmFromWebhook doesn't care which controller created the order.
+     * One item only (Path 1/Quick scope — no multi-item cart for this flow).
+     */
+    @Transactional
+    fun createSwagShopCheckoutSession(
+        organizationId: UUID,
+        productVariantId: UUID,
+        participantId: UUID,
+        personalizationName: String?,
+        personalizationNumber: String?,
+        personalizationPlacement: PersonalizationPlacement?,
+        currentUser: CurrentUser,
+    ): OrderCheckout {
+        val participant =
+            participantRepository.findById(participantId, organizationId)
+                ?: throw NotFoundException("PARTICIPANT_NOT_FOUND", "The participant could not be found.")
+        requireSwagShopOrderAccess(organizationId, participant.householdId, participantId, currentUser)
+
+        val variant =
+            productVariantRepository
+                .findById(productVariantId, organizationId)
+                ?.takeIf { it.isActive }
+                ?: throw NotFoundException("PRODUCT_VARIANT_NOT_FOUND", "The selected apparel type could not be found.")
+        val product =
+            productRepository
+                .findById(variant.productId, organizationId)
+                ?.takeIf { it.status == ProductStatus.ACTIVE }
+                ?: throw NotFoundException("PRODUCT_NOT_FOUND", "The selected apparel type could not be found.")
+        if (product.catalogSource != CatalogSource.PRINTIFY) {
+            throw ValidationException("Only Printify-backed Swag Shop apparel can be personalized and ordered this way.")
+        }
+        val store =
+            storeRepository.findById(product.storeId, organizationId)
+                ?: throw NotFoundException("STORE_NOT_FOUND", "The Swag Shop could not be found.")
+        if (store.status != StoreStatus.ACTIVE) {
+            throw ValidationException("This Swag Shop isn't currently open for orders.")
+        }
+
+        val isPersonalized = personalizationName != null || personalizationNumber != null || personalizationPlacement != null
+        if (isPersonalized) {
+            if (product.swagLogoMediaAssetId == null) {
+                throw ValidationException("This apparel type isn't set up for personalization yet — ask staff to add the team logo.")
+            }
+            if (variant.printAreaWidthPx == null || variant.printAreaHeightPx == null) {
+                throw ValidationException("This apparel type is missing print-area dimensions — ask staff to re-create the variant.")
+            }
+        }
+
+        return try {
+            val order = orderRepository.insertPending(organizationId, store.id, variant.currency, currentUser.displayName, currentUser.email)
+            orderItemRepository.insert(
+                orderId = order.id,
+                productVariantId = variant.id,
+                quantity = 1,
+                unitPriceMinor = variant.priceMinor,
+                unitCostMinor = variant.costMinor,
+                participantId = participant.id,
+                personalizationName = personalizationName,
+                personalizationNumber = personalizationNumber,
+                personalizationPlacement = personalizationPlacement,
+            )
+            val lineItems =
+                listOf(
+                    OrderCheckoutLineItem(
+                        name = "${product.name} - ${variant.label}",
+                        quantity = 1,
+                        unitPriceMinor = variant.priceMinor,
+                        currency = variant.currency,
+                    ),
+                )
+            val successUrl = "${frontendProperties.baseUrl}/app/swag-shop/orders/${order.id}?status=success"
+            val cancelUrl = "${frontendProperties.baseUrl}/app/swag-shop?canceled=1"
+            val session = stripeOrderCheckoutClient.createOrderCheckoutSession(order.id, lineItems, successUrl, cancelUrl)
+            orderRepository.attachStripeSession(order.id, session.sessionId)
+            OrderCheckout(order.id, session.checkoutUrl)
+        } catch (e: StripeException) {
+            log.warn("Stripe Swag Shop checkout session creation failed: {}", e.message, e)
+            throw ServiceUnavailableException(
+                "ORDER_PROVIDER_UNAVAILABLE",
+                "Payments provider is not available right now. If this is local/staging, confirm STRIPE_SECRET_KEY is set.",
+            )
+        }
+    }
+
+    /**
+     * A guardian may order for their own household's participant (real relationship
+     * check, or org owner/admin acting on any household — mirrors
+     * EventRsvpService.resolveSource's deliberate avoidance of the broader
+     * hasHouseholdCapability "any active org member" branch for this same class of
+     * impersonation-risk action). A coach may order for any participant on a team
+     * they hold TEAM_ORDER_CREATE for.
+     */
+    private fun requireSwagShopOrderAccess(
+        organizationId: UUID,
+        householdId: UUID,
+        participantId: UUID,
+        currentUser: CurrentUser,
+    ) {
+        val asGuardian =
+            authorizationService.hasGuardianRelationship(organizationId, householdId, currentUser) ||
+                authorizationService.hasHouseholdCapability(organizationId, householdId, currentUser, Capabilities.HOUSEHOLD_ORDER_CREATE)
+        if (asGuardian) return
+        val participantTeamIds = participantRepository.listTeamAssignments(participantId, organizationId).map { it.teamId }
+        val asCoach = participantTeamIds.any { authorizationService.hasTeamCapability(organizationId, it, currentUser, Capabilities.TEAM_ORDER_CREATE) }
+        if (asCoach) return
+        throw ForbiddenException("SWAG_SHOP_ORDER_ACCESS_DENIED", "You do not have access to order for this athlete.")
     }
 
     /** Idempotent: a duplicate webhook delivery or an already-confirmed order is a safe no-op. */
@@ -334,19 +458,42 @@ class OrderService(
         try {
             val lineItems =
                 resolved.map { (item, product, variant) ->
-                    val designAssignment =
-                        mediaAssignmentService.getActiveAssignment(MediaEntityType.PRODUCT, product.id, MediaUsageSlot.PRODUCT_DESIGN)
-                            ?: error("product ${product.id} has no design assigned")
-                    val designUrl =
-                        mediaReadService.describe(designAssignment)?.url
-                            ?: error("product ${product.id}'s design asset could not be found")
+                    val isPersonalized =
+                        item.personalizationName != null || item.personalizationNumber != null || item.personalizationPlacement != null
+                    // Swag Shop (DESIGN-DOC.md section 13): a personalized item's print file is
+                    // composited fresh per order (logo + name/number); a non-personalized item
+                    // reuses today's unchanged static per-product design, exactly as before.
+                    val printAreaUrl =
+                        if (isPersonalized) {
+                            val swagLogoMediaAssetId =
+                                product.swagLogoMediaAssetId ?: error("product ${product.id} has no Swag Shop logo assigned")
+                            val widthPx = variant.printAreaWidthPx ?: error("product_variant ${variant.id} has no print-area width")
+                            val heightPx = variant.printAreaHeightPx ?: error("product_variant ${variant.id} has no print-area height")
+                            swagDesignCompositor.compose(
+                                organizationId = organizationId,
+                                orderId = orderId,
+                                orderItemId = item.id,
+                                swagLogoMediaAssetId = swagLogoMediaAssetId,
+                                printAreaWidthPx = widthPx,
+                                printAreaHeightPx = heightPx,
+                                personalizationName = item.personalizationName,
+                                personalizationNumber = item.personalizationNumber,
+                                personalizationPlacement = item.personalizationPlacement,
+                            )
+                        } else {
+                            val designAssignment =
+                                mediaAssignmentService.getActiveAssignment(MediaEntityType.PRODUCT, product.id, MediaUsageSlot.PRODUCT_DESIGN)
+                                    ?: error("product ${product.id} has no design assigned")
+                            mediaReadService.describe(designAssignment)?.url
+                                ?: error("product ${product.id}'s design asset could not be found")
+                        }
                     PrintifyOrderLineItem(
                         printifyBlueprintId = product.printifyBlueprintId ?: error("PRINTIFY product ${product.id} has no blueprint ID"),
                         printifyPrintProviderId =
                             variant.printifyPrintProviderId ?: error("PRINTIFY variant ${variant.id} has no provider ID"),
                         printifyVariantId = variant.printifyVariantId ?: error("PRINTIFY variant ${variant.id} has no variant ID"),
                         quantity = item.quantity,
-                        printAreaImagesByPosition = mapOf(product.printifyPrintPosition to designUrl),
+                        printAreaImagesByPosition = mapOf(product.printifyPrintPosition to printAreaUrl),
                     )
                 }
             val draftOrder = printifyOrderClient.createDraftOrder(orderId.toString(), lineItems)

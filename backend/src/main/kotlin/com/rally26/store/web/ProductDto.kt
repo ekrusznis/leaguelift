@@ -73,6 +73,8 @@ data class ProductResponse(
     val printifyBlueprintId: Long?,
     val printifyPrintPosition: String,
     val hasDesign: Boolean,
+    /** Swag Shop (DESIGN-DOC.md section 13): whether a team logo has been frozen onto this product for order-time compositing. */
+    val hasSwagLogo: Boolean,
     val status: String,
     val createdAt: Instant,
     val updatedAt: Instant,
@@ -91,6 +93,7 @@ fun Product.toResponse(hasDesign: Boolean) =
         printifyBlueprintId,
         printifyPrintPosition,
         hasDesign,
+        swagLogoMediaAssetId != null,
         status.name,
         createdAt,
         updatedAt,
@@ -110,6 +113,9 @@ data class ProductVariantResponse(
     val costMinor: Long,
     val priceMinor: Long,
     val isActive: Boolean,
+    /** Swag Shop (DESIGN-DOC.md section 13): real print-area pixel dimensions, captured at creation time — null for manual variants. */
+    val printAreaWidthPx: Int?,
+    val printAreaHeightPx: Int?,
 )
 
 fun ProductVariant.toResponse() =
@@ -127,6 +133,8 @@ fun ProductVariant.toResponse() =
         costMinor,
         priceMinor,
         isActive,
+        printAreaWidthPx,
+        printAreaHeightPx,
     )
 
 data class PrintifyBlueprintResponse(
@@ -154,10 +162,24 @@ data class EligiblePrintProviderResponse(
 fun EligiblePrintProvider.toResponse() =
     EligiblePrintProviderResponse(id, title, decorationMethods, PrintifyLocationResponse(location.country, location.region, location.city))
 
+/** Swag Shop (DESIGN-DOC.md section 13): position -> real print-area pixel dimensions, used by the Swag Shop setup UI to know each apparel type's real placement bounds. */
+data class PrintifyPlaceholderResponse(
+    val position: String,
+    val widthPx: Int,
+    val heightPx: Int,
+)
+
 data class PrintifyCatalogVariantResponse(
     val id: Long,
     val title: String,
     val options: Map<String, String>?,
+    val placeholders: List<PrintifyPlaceholderResponse>?,
 )
 
-fun PrintifyCatalogVariant.toResponse() = PrintifyCatalogVariantResponse(id, title, options)
+fun PrintifyCatalogVariant.toResponse() =
+    PrintifyCatalogVariantResponse(
+        id,
+        title,
+        options,
+        placeholders?.map { PrintifyPlaceholderResponse(it.position, it.width, it.height) },
+    )

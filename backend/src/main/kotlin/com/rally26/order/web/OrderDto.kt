@@ -8,6 +8,7 @@ import com.rally26.order.domain.FulfillmentReprint
 import com.rally26.order.domain.FulfillmentReprintStatus
 import com.rally26.order.domain.FulfillmentStatus
 import com.rally26.order.domain.Order
+import com.rally26.order.domain.PersonalizationPlacement
 import com.rally26.order.domain.ShippingAddress
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
@@ -33,6 +34,15 @@ data class CreateOrderCheckoutRequest(
     @field:Email @field:Size(max = 254) val supporterEmail: String? = null,
     @field:NotBlank val successUrl: String,
     @field:NotBlank val cancelUrl: String,
+)
+
+/** Swag Shop (DESIGN-DOC.md section 13): authenticated single-item order, Path 1/Quick — no cart, no successUrl/cancelUrl from the caller (the in-app return destination is fixed, see OrderService.createSwagShopCheckoutSession). */
+data class CreateSwagShopOrderRequest(
+    @field:NotNull val productVariantId: UUID,
+    @field:NotNull val participantId: UUID,
+    @field:Size(max = 60) val personalizationName: String? = null,
+    @field:Size(max = 20) val personalizationNumber: String? = null,
+    val personalizationPlacement: PersonalizationPlacement? = null,
 )
 
 data class OrderCheckoutResponse(

@@ -3,6 +3,7 @@ package com.rally26.store.integration
 import com.ninjasquad.springmockk.MockkBean
 import com.rally26.common.web.CurrentUser
 import com.rally26.identity.application.PasswordAuthenticationService
+import com.rally26.integration.printify.infra.PrintifyCatalogClient
 import com.rally26.integration.printify.infra.PrintifyDraftOrder
 import com.rally26.integration.printify.infra.PrintifyImageClient
 import com.rally26.integration.printify.infra.PrintifyOrderClient
@@ -73,6 +74,9 @@ class StoreOrderIntegrationTest : AbstractIntegrationTest() {
     lateinit var printifyProductClient: PrintifyProductClient
 
     @MockkBean
+    lateinit var printifyCatalogClient: PrintifyCatalogClient
+
+    @MockkBean
     lateinit var printifyOrderClient: PrintifyOrderClient
 
     @MockkBean
@@ -107,6 +111,7 @@ class StoreOrderIntegrationTest : AbstractIntegrationTest() {
 
         every { printifyProductClient.createProduct("Team Hoodie", 12L, 5L, listOf(100L), 2500L, any(), "front") } returns
             PrintifyProductResult("printify_product_1", listOf(PrintifyProductVariantCost(100L, costMinor = 1200L, priceMinor = 2500L)))
+        every { printifyCatalogClient.listVariants(12L, 5L) } returns emptyList()
 
         val variant = productService.createVariant(organization.id, product.id, 5L, 100L, "M / Navy", 2500L, owner)
         assertEquals(1200L, variant.costMinor, "cost must be Printify's real returned value, never guessed")

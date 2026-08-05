@@ -29,6 +29,8 @@ object Capabilities {
     const val TEAM_PAGE_EDIT = "team.page.edit"
     const val TEAM_FUNDRAISING_MANAGE = "team.fundraising.manage"
     const val TEAM_STORE_MANAGE = "team.store.manage"
+    /** Swag Shop (DESIGN-DOC.md section 13): a coach placing a personalized order on behalf of a roster athlete — deliberately separate from TEAM_STORE_MANAGE (catalog setup) since ordering is a lower, more routine bar. */
+    const val TEAM_ORDER_CREATE = "team.order.create"
     const val TEAM_ROSTER_MANAGE = "team.roster.manage"
     const val TEAM_STAFF_MANAGE = "team.staff.manage"
     const val TEAM_FEE_VIEW = "team.fee.view"
@@ -47,6 +49,8 @@ object Capabilities {
     const val HOUSEHOLD_FEE_PAY = "household.fee.pay"
     const val HOUSEHOLD_CREDIT_VIEW = "household.credit.view"
     const val HOUSEHOLD_ORDER_VIEW = "household.order.view"
+    /** Swag Shop (DESIGN-DOC.md section 13): a guardian placing a personalized order for their own household's participant. Checked alongside AuthorizationService.hasGuardianRelationship, not the broader hasHouseholdCapability "any active org member" branch — see EventRsvpService.resolveSource for the same pattern. */
+    const val HOUSEHOLD_ORDER_CREATE = "household.order.create"
     const val HOUSEHOLD_PROFILE_MANAGE = "household.profile.manage"
 
     // Athlete (self context — deny-by-default, deliberately excludes anything
@@ -160,6 +164,7 @@ object CapabilityRegistry {
                     Capabilities.TEAM_PAGE_EDIT,
                     Capabilities.TEAM_FUNDRAISING_MANAGE,
                     Capabilities.TEAM_STORE_MANAGE,
+                    Capabilities.TEAM_ORDER_CREATE,
                     Capabilities.EVENT_READ,
                     Capabilities.EVENT_CREATE,
                     Capabilities.EVENT_UPDATE,
@@ -174,6 +179,7 @@ object CapabilityRegistry {
                     Capabilities.TEAM_PAGE_EDIT,
                     Capabilities.TEAM_FUNDRAISING_MANAGE,
                     Capabilities.TEAM_STORE_MANAGE,
+                    Capabilities.TEAM_ORDER_CREATE,
                     Capabilities.TEAM_ROSTER_MANAGE,
                     Capabilities.TEAM_STAFF_MANAGE,
                     Capabilities.TEAM_FEE_VIEW,
@@ -237,6 +243,7 @@ object CapabilityRegistry {
             Capabilities.HOUSEHOLD_FEE_PAY,
             Capabilities.HOUSEHOLD_CREDIT_VIEW,
             Capabilities.HOUSEHOLD_ORDER_VIEW,
+            Capabilities.HOUSEHOLD_ORDER_CREATE,
             Capabilities.HOUSEHOLD_PROFILE_MANAGE,
             Capabilities.EVENT_READ,
             Capabilities.EVENT_RSVP_GUARDIAN,

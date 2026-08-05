@@ -45,6 +45,14 @@ class ParticipantController(
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): List<ParticipantResponse> = participantService.listForHousehold(organizationId, householdId, currentUser).map { it.toResponse() }
 
+    /** Swag Shop (DESIGN-DOC.md section 13): a coach's team roster picker. */
+    @GetMapping("/teams/{teamId}/participants")
+    fun listForTeam(
+        @PathVariable organizationId: UUID,
+        @PathVariable teamId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): List<ParticipantResponse> = participantService.listForTeam(organizationId, teamId, currentUser).map { it.toResponse() }
+
     @PostMapping("/households/{householdId}/participants")
     fun create(
         @PathVariable organizationId: UUID,

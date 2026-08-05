@@ -1,6 +1,8 @@
 package com.rally26.household.application
 
 import com.rally26.audit.application.AuditService
+import com.rally26.authorization.application.AuthorizationService
+import com.rally26.authorization.domain.Capabilities
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.web.CurrentUser
 import com.rally26.household.domain.AdultStatus
@@ -27,7 +29,8 @@ class HouseholdServiceTest {
     private val householdRepository = mockk<HouseholdRepository>()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
-    private val service = HouseholdService(householdRepository, membershipService, auditService)
+    private val authorizationService = mockk<AuthorizationService>()
+    private val service = HouseholdService(householdRepository, membershipService, auditService, authorizationService)
 
     private val orgId = UUID.randomUUID()
     private val currentUser = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
@@ -47,6 +50,7 @@ class HouseholdServiceTest {
         val household = sampleHousehold()
         every { membershipService.requireActiveMembership(orgId, currentUser) } returns managerMembership()
         every { householdRepository.findById(household.id, orgId) } returns household
+        every { authorizationService.hasHouseholdCapability(orgId, household.id, currentUser, Capabilities.HOUSEHOLD_VIEW) } returns true
 
         val result = service.get(orgId, household.id, currentUser)
 

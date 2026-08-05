@@ -24,6 +24,24 @@ class OrderController(
     private val orderService: OrderService,
     private val fulfillmentOperationsService: FulfillmentOperationsService,
 ) {
+    /** Swag Shop (DESIGN-DOC.md section 13): authenticated coach/guardian order, redirects to Stripe Checkout exactly like the public store flow. */
+    @PostMapping("/swag-shop/orders")
+    fun createSwagShopOrder(
+        @PathVariable organizationId: UUID,
+        @Valid @RequestBody request: CreateSwagShopOrderRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): OrderCheckoutResponse =
+        orderService
+            .createSwagShopCheckoutSession(
+                organizationId,
+                request.productVariantId,
+                request.participantId,
+                request.personalizationName,
+                request.personalizationNumber,
+                request.personalizationPlacement,
+                currentUser,
+            ).toResponse()
+
     @GetMapping("/stores/{storeId}/orders")
     fun listForStore(
         @PathVariable organizationId: UUID,

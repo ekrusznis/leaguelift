@@ -10,7 +10,7 @@ import java.util.UUID
 
 private const val VARIANT_COLUMNS =
     "id, organization_id, product_id, catalog_source, label, sku, size, color, printify_print_provider_id, printify_variant_id, " +
-        "currency, cost_minor, price_minor, is_active, created_at, updated_at"
+        "currency, cost_minor, price_minor, is_active, print_area_width_px, print_area_height_px, created_at, updated_at"
 
 @Repository
 class ProductVariantRepository(
@@ -51,6 +51,8 @@ class ProductVariantRepository(
         currency: String,
         costMinor: Long,
         priceMinor: Long,
+        printAreaWidthPx: Int? = null,
+        printAreaHeightPx: Int? = null,
     ): ProductVariant =
         insert(
             organizationId,
@@ -65,6 +67,8 @@ class ProductVariantRepository(
             currency,
             costMinor,
             priceMinor,
+            printAreaWidthPx,
+            printAreaHeightPx,
         )
 
     fun insertManual(
@@ -91,6 +95,8 @@ class ProductVariantRepository(
             currency,
             costMinor,
             priceMinor,
+            null,
+            null,
         )
 
     private fun insert(
@@ -106,6 +112,8 @@ class ProductVariantRepository(
         currency: String,
         costMinor: Long,
         priceMinor: Long,
+        printAreaWidthPx: Int? = null,
+        printAreaHeightPx: Int? = null,
     ): ProductVariant {
         val id = UUID.randomUUID()
         val now = Instant.now()
@@ -115,11 +123,11 @@ class ProductVariantRepository(
                 insert into product_variant
                 	(id, organization_id, product_id, catalog_source, label, sku, size, color,
                 	 printify_print_provider_id, printify_variant_id, currency, cost_minor, price_minor,
-                	 is_active, created_at, updated_at)
+                	 print_area_width_px, print_area_height_px, is_active, created_at, updated_at)
                 values
                 	(:id, :organizationId, :productId, :catalogSource, :label, :sku, :size, :color,
                 	 :printifyPrintProviderId, :printifyVariantId, :currency, :costMinor, :priceMinor,
-                	 true, :now, :now)
+                	 :printAreaWidthPx, :printAreaHeightPx, true, :now, :now)
                 """.trimIndent(),
             ).param("id", id)
             .param("organizationId", organizationId)
@@ -134,6 +142,8 @@ class ProductVariantRepository(
             .param("currency", currency)
             .param("costMinor", costMinor)
             .param("priceMinor", priceMinor)
+            .param("printAreaWidthPx", printAreaWidthPx)
+            .param("printAreaHeightPx", printAreaHeightPx)
             .param("now", Timestamp.from(now))
             .update()
         return findById(id, organizationId)!!
@@ -205,6 +215,8 @@ class ProductVariantRepository(
             costMinor = rs.getLong("cost_minor"),
             priceMinor = rs.getLong("price_minor"),
             isActive = rs.getBoolean("is_active"),
+            printAreaWidthPx = rs.getObject("print_area_width_px", java.lang.Integer::class.java)?.toInt(),
+            printAreaHeightPx = rs.getObject("print_area_height_px", java.lang.Integer::class.java)?.toInt(),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
         )

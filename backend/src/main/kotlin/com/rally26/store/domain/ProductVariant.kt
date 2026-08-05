@@ -19,6 +19,9 @@ data class ProductVariant(
     val costMinor: Long,
     val priceMinor: Long,
     val isActive: Boolean,
+    /** Swag Shop (DESIGN-DOC.md section 13): real Printify print-area pixel dimensions for this variant's print position, captured from the same catalog call that learns costMinor/priceMinor. Null for manual variants or variants created before Swag Shop personalization. */
+    val printAreaWidthPx: Int? = null,
+    val printAreaHeightPx: Int? = null,
     val createdAt: Instant,
     val updatedAt: Instant,
 )

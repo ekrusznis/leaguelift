@@ -2,9 +2,11 @@ package com.rally26.order.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
+import com.rally26.authorization.application.AuthorizationService
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
+import com.rally26.config.FrontendProperties
 import com.rally26.integration.printify.infra.PrintifyDraftOrder
 import com.rally26.integration.printify.infra.PrintifyOrderClient
 import com.rally26.ledger.application.LedgerService
@@ -29,6 +31,8 @@ import com.rally26.order.persistence.FulfillmentRepository
 import com.rally26.order.persistence.OrderItemRepository
 import com.rally26.order.persistence.OrderRepository
 import com.rally26.outbox.application.OutboxWriter
+import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.store.application.SwagDesignCompositor
 import com.rally26.store.domain.CatalogSource
 import com.rally26.store.domain.Product
 import com.rally26.store.domain.ProductStatus
@@ -63,6 +67,10 @@ class OrderServiceTest {
     private val printifyOrderClient = mockk<PrintifyOrderClient>()
     private val mediaAssignmentService = mockk<MediaAssignmentService>()
     private val mediaReadService = mockk<MediaReadService>()
+    private val swagDesignCompositor = mockk<SwagDesignCompositor>()
+    private val participantRepository = mockk<ParticipantRepository>()
+    private val authorizationService = mockk<AuthorizationService>()
+    private val frontendProperties = FrontendProperties()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
     private val ledgerService = mockk<LedgerService>()
@@ -80,6 +88,10 @@ class OrderServiceTest {
             printifyOrderClient,
             mediaAssignmentService,
             mediaReadService,
+            swagDesignCompositor,
+            participantRepository,
+            authorizationService,
+            frontendProperties,
             membershipService,
             auditService,
             ledgerService,

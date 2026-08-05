@@ -1,6 +1,8 @@
 package com.rally26.store.application
 
 import com.rally26.audit.application.AuditService
+import com.rally26.authorization.application.AuthorizationService
+import com.rally26.authorization.domain.Capabilities
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.common.error.ValidationException
@@ -18,11 +20,13 @@ import com.rally26.media.domain.MediaAssignment
 import com.rally26.media.domain.MediaEntityType
 import com.rally26.media.domain.MediaUsageSlot
 import com.rally26.media.domain.Visibility
+import com.rally26.media.persistence.MediaAssetRepository
 import com.rally26.membership.application.MembershipService
 import com.rally26.store.domain.CatalogSource
 import com.rally26.store.domain.Product
 import com.rally26.store.domain.ProductStatus
 import com.rally26.store.domain.ProductVariant
+import com.rally26.store.domain.Store
 import com.rally26.store.persistence.ProductRepository
 import com.rally26.store.persistence.ProductVariantRepository
 import com.rally26.store.persistence.StoreRepository
@@ -49,9 +53,11 @@ class ProductService(
     private val storeRepository: StoreRepository,
     private val manualVendorService: ManualVendorService,
     private val membershipService: MembershipService,
+    private val authorizationService: AuthorizationService,
     private val auditService: AuditService,
     private val mediaAssignmentService: MediaAssignmentService,
     private val mediaReadService: MediaReadService,
+    private val mediaAssetRepository: MediaAssetRepository,
     private val printifyCatalogClient: PrintifyCatalogClient,
     private val printifyImageClient: PrintifyImageClient,
     private val printifyProductClient: PrintifyProductClient,
@@ -152,8 +158,8 @@ class ProductService(
         printifyPrintPosition: String,
         currentUser: CurrentUser,
     ): Product {
-        membershipService.requireManagerRole(organizationId, currentUser)
-        requireStore(organizationId, storeId)
+        val store = requireStore(organizationId, storeId)
+        requireStoreScopedManageAccess(organizationId, store.teamId, currentUser)
         when (catalogSource) {
             CatalogSource.PRINTIFY -> {
                 if (printifyBlueprintId == null || printifyBlueprintId <= 0) throw ValidationException("Choose a Printify product type.")
@@ -188,8 +194,7 @@ class ProductService(
         manualVendorId: UUID?,
         currentUser: CurrentUser,
     ): Product {
-        membershipService.requireManagerRole(organizationId, currentUser)
-        val product = findProduct(organizationId, productId)
+        val product = requireProductManageAccess(organizationId, productId, currentUser)
         if (product.catalogSource !=
             CatalogSource.MANUAL
         ) {
@@ -223,6 +228,38 @@ class ProductService(
         }
     }
 
+    /**
+     * Swag Shop (DESIGN-DOC.md section 13): freezes the owning team's current logo
+     * onto the product for order-time compositing (SwagDesignCompositor). A copy
+     * reference, not a new upload — deliberately bypasses the generic
+     * mediaAssignmentService.assign()/org-manager-only path so a coach who can
+     * manage their own team's store can complete Swag Shop setup without an org
+     * manager's involvement, matching requireStoreScopedManageAccess above.
+     */
+    @Transactional
+    fun useTeamLogo(
+        organizationId: UUID,
+        productId: UUID,
+        currentUser: CurrentUser,
+    ): Product {
+        val product = requireProductManageAccess(organizationId, productId, currentUser)
+        val store = requireStore(organizationId, product.storeId)
+        val teamId = store.teamId ?: throw ValidationException("Only a team-scoped store's products can use the team logo.")
+        val logoAssignment =
+            mediaAssignmentService.getActiveAssignment(MediaEntityType.TEAM, teamId, MediaUsageSlot.LOGO)
+                ?: throw ValidationException("Upload a team logo before enabling the Swag Shop for this apparel type.")
+        val logoAsset =
+            mediaAssetRepository.findById(logoAssignment.assetId, organizationId)
+                ?: throw ValidationException("The team's logo image could not be found.")
+        val contentType = logoAsset.detectedContentType ?: logoAsset.declaredContentType
+        if (contentType.contains("svg")) {
+            throw ValidationException("Upload a PNG/JPEG team logo to enable the Swag Shop — SVG logos aren't supported for print yet.")
+        }
+        productRepository.updateSwagLogoMediaAssetId(productId, organizationId, logoAssignment.assetId)
+        auditService.record(currentUser.userId, organizationId, "product.swag_logo_assigned", "product", productId)
+        return findProduct(organizationId, productId)
+    }
+
     @Transactional
     fun createVariant(
         organizationId: UUID,
@@ -233,8 +270,7 @@ class ProductService(
         priceMinor: Long,
         currentUser: CurrentUser,
     ): ProductVariant {
-        membershipService.requireManagerRole(organizationId, currentUser)
-        val product = findProduct(organizationId, productId)
+        val product = requireProductManageAccess(organizationId, productId, currentUser)
         if (product.catalogSource !=
             CatalogSource.PRINTIFY
         ) {
@@ -262,6 +298,15 @@ class ProductService(
                     "Printify did not return pricing for the selected variant.",
                 )
 
+        // Swag Shop (DESIGN-DOC.md section 13): captured once here, at setup time, so
+        // order-time compositing never needs an extra live Printify call inside the
+        // payment-confirmation transaction (see OrderService.createInitialFulfillment).
+        val placeholder =
+            withPrintifyErrorTranslation { printifyCatalogClient.listVariants(blueprintId, printifyPrintProviderId) }
+                .firstOrNull { it.id == printifyVariantId }
+                ?.placeholders
+                ?.firstOrNull { it.position == product.printifyPrintPosition }
+
         val variant =
             productVariantRepository.insertPrintify(
                 organizationId,
@@ -272,6 +317,8 @@ class ProductService(
                 currency = "USD",
                 costMinor = variantCost.costMinor,
                 priceMinor = variantCost.priceMinor,
+                printAreaWidthPx = placeholder?.width,
+                printAreaHeightPx = placeholder?.height,
             )
         auditService.record(currentUser.userId, organizationId, "product_variant.created", "product_variant", variant.id)
         return variant
@@ -290,8 +337,7 @@ class ProductService(
         priceMinor: Long,
         currentUser: CurrentUser,
     ): ProductVariant {
-        membershipService.requireManagerRole(organizationId, currentUser)
-        val product = findProduct(organizationId, productId)
+        val product = requireProductManageAccess(organizationId, productId, currentUser)
         if (product.catalogSource !=
             CatalogSource.MANUAL
         ) {
@@ -329,8 +375,7 @@ class ProductService(
         isActive: Boolean,
         currentUser: CurrentUser,
     ): ProductVariant {
-        membershipService.requireManagerRole(organizationId, currentUser)
-        val product = findProduct(organizationId, productId)
+        val product = requireProductManageAccess(organizationId, productId, currentUser)
         if (product.catalogSource !=
             CatalogSource.MANUAL
         ) {
@@ -367,7 +412,7 @@ class ProductService(
         isActive: Boolean,
         currentUser: CurrentUser,
     ): ProductVariant {
-        membershipService.requireManagerRole(organizationId, currentUser)
+        requireProductManageAccess(organizationId, productId, currentUser)
         requireVariant(organizationId, productId, variantId)
         productVariantRepository.updateActive(variantId, organizationId, isActive)
         auditService.record(currentUser.userId, organizationId, "product_variant.status_updated", "product_variant", variantId)
@@ -381,8 +426,7 @@ class ProductService(
         status: ProductStatus,
         currentUser: CurrentUser,
     ): Product {
-        membershipService.requireManagerRole(organizationId, currentUser)
-        val product = findProduct(organizationId, productId)
+        val product = requireProductManageAccess(organizationId, productId, currentUser)
         if (status == ProductStatus.ACTIVE) {
             if (!hasAssignedDesign(productId)) throw ValidationException("Assign a product image before activating this product.")
             if (productVariantRepository
@@ -441,9 +485,38 @@ class ProductService(
     private fun requireStore(
         organizationId: UUID,
         storeId: UUID,
-    ) {
+    ): Store =
         storeRepository.findById(storeId, organizationId)
             ?: throw NotFoundException("STORE_NOT_FOUND", "The store could not be found.")
+
+    /**
+     * A team-scoped store's products/variants can be managed by a coach holding
+     * TEAM_STORE_MANAGE, not just an org owner/administrator — mirrors
+     * StoreService.requireStoreManageAccess exactly (AuthorizationService's
+     * team-capability check already inherits org owner/admin access, ADR-020).
+     */
+    private fun requireStoreScopedManageAccess(
+        organizationId: UUID,
+        teamId: UUID?,
+        currentUser: CurrentUser,
+    ) {
+        if (teamId != null) {
+            authorizationService.requireTeamCapability(organizationId, teamId, currentUser, Capabilities.TEAM_STORE_MANAGE)
+        } else {
+            membershipService.requireManagerRole(organizationId, currentUser)
+        }
+    }
+
+    /** Resolves the product's owning store to determine team-scoped vs org-wide manage access, then returns the product. */
+    private fun requireProductManageAccess(
+        organizationId: UUID,
+        productId: UUID,
+        currentUser: CurrentUser,
+    ): Product {
+        val product = findProduct(organizationId, productId)
+        val store = requireStore(organizationId, product.storeId)
+        requireStoreScopedManageAccess(organizationId, store.teamId, currentUser)
+        return product
     }
 
     private fun validateMoney(

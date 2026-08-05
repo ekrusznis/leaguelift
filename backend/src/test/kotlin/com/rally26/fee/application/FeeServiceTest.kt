@@ -1,6 +1,7 @@
 package com.rally26.fee.application
 
 import com.rally26.audit.application.AuditService
+import com.rally26.authorization.application.AuthorizationService
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
@@ -41,6 +42,7 @@ class FeeServiceTest {
     private val householdRepository = mockk<HouseholdRepository>()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
+    private val authorizationService = mockk<AuthorizationService>()
     private val service =
         FeeService(
             feeRepository,
@@ -50,6 +52,7 @@ class FeeServiceTest {
             householdRepository,
             membershipService,
             auditService,
+            authorizationService,
         )
 
     private val orgId = UUID.randomUUID()

@@ -145,6 +145,17 @@ class ProductController(
         return descriptor.toResponse()
     }
 
+    /** Swag Shop (DESIGN-DOC.md section 13): freezes the owning team's current logo onto this product for order-time compositing. */
+    @PostMapping("/products/{productId}/use-team-logo")
+    fun useTeamLogo(
+        @PathVariable organizationId: UUID,
+        @PathVariable productId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): ProductResponse {
+        val product = productService.useTeamLogo(organizationId, productId, currentUser)
+        return product.toResponse(productService.hasAssignedDesign(product.id))
+    }
+
     @GetMapping("/products/{productId}/variants")
     fun listVariants(
         @PathVariable organizationId: UUID,
