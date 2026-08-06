@@ -2,7 +2,10 @@ package com.rally26.order.domain
 
 import java.util.UUID
 
-enum class PersonalizationPlacement { LEFT_CHEST, RIGHT_CHEST, BACK }
+enum class PersonalizationPlacement { LEFT_CHEST, RIGHT_CHEST, CENTER_FRONT, BACK }
+
+/** Swag Shop Path 2 (DESIGN-DOC.md section 14.1G, 24.2): a curated logo-size preset, never a freeform scale value. */
+enum class SwagLogoSize { SMALL, STANDARD, LARGE }
 
 data class OrderItem(
     val id: UUID,
@@ -17,4 +20,6 @@ data class OrderItem(
     val personalizationName: String? = null,
     val personalizationNumber: String? = null,
     val personalizationPlacement: PersonalizationPlacement? = null,
+    /** Path 2 (24.2): defaults to STANDARD when personalized but unset. */
+    val personalizationLogoSize: SwagLogoSize? = null,
 )

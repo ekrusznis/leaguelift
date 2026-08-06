@@ -8,12 +8,20 @@ import { LoadingState } from "../../components/states/LoadingState";
 import { formatMoneyMinorUnits } from "../../lib/money";
 import { useParticipants } from "../households/api";
 import { useCreateSwagShopOrder, useSwagShopApparelTypes, useTeamRoster } from "../store/api";
-import type { PersonalizationPlacement } from "../store/types";
+import type { PersonalizationPlacement, SwagLogoSize } from "../store/types";
+import { SwagPersonalizationPreview } from "./SwagPersonalizationPreview";
 
 const PLACEMENT_OPTIONS: { value: PersonalizationPlacement; label: string }[] = [
 	{ value: "LEFT_CHEST", label: "Left chest" },
 	{ value: "RIGHT_CHEST", label: "Right chest" },
+	{ value: "CENTER_FRONT", label: "Center front" },
 	{ value: "BACK", label: "Back" },
+];
+
+const LOGO_SIZE_OPTIONS: { value: SwagLogoSize; label: string }[] = [
+	{ value: "SMALL", label: "Small" },
+	{ value: "STANDARD", label: "Standard" },
+	{ value: "LARGE", label: "Large" },
 ];
 
 export function SwagShopOrderFlow() {
@@ -40,6 +48,7 @@ export function SwagShopOrderFlow() {
 	const [name, setName] = useState("");
 	const [number, setNumber] = useState("");
 	const [placement, setPlacement] = useState<PersonalizationPlacement>("BACK");
+	const [logoSize, setLogoSize] = useState<SwagLogoSize>("STANDARD");
 	const [submitError, setSubmitError] = useState<string | null>(null);
 
 	if (!organizationId) return <ErrorState message="No organization selected." />;
@@ -72,6 +81,7 @@ export function SwagShopOrderFlow() {
 				personalizationName: wantsPersonalization && name.trim() ? name.trim() : null,
 				personalizationNumber: wantsPersonalization && number.trim() ? number.trim() : null,
 				personalizationPlacement: wantsPersonalization ? placement : null,
+				personalizationLogoSize: wantsPersonalization ? logoSize : null,
 			});
 			window.location.href = result.checkoutUrl;
 		} catch {
@@ -159,20 +169,16 @@ export function SwagShopOrderFlow() {
 					)}
 
 					{selectedVariant && (selectedVariant.mockupFrontUrl || selectedVariant.mockupBackUrl) && (
-						<div className="flex gap-3">
-							{selectedVariant.mockupFrontUrl && (
-								<div className="flex flex-col items-center gap-1">
-									<img src={selectedVariant.mockupFrontUrl} alt={`${selectedProduct?.productName} — front`} className="h-40 w-40 rounded-lg border border-slate-gray/20 object-cover" />
-									<span className="text-xs text-slate-gray">Front</span>
-								</div>
-							)}
-							{wantsPersonalization && placement === "BACK" && selectedVariant.mockupBackUrl && (
-								<div className="flex flex-col items-center gap-1">
-									<img src={selectedVariant.mockupBackUrl} alt={`${selectedProduct?.productName} — back`} className="h-40 w-40 rounded-lg border border-slate-gray/20 object-cover" />
-									<span className="text-xs text-slate-gray">Back — your name/number prints here</span>
-								</div>
-							)}
-						</div>
+						<SwagPersonalizationPreview
+							mockupFrontUrl={selectedVariant.mockupFrontUrl}
+							mockupBackUrl={selectedVariant.mockupBackUrl}
+							logoPreviewUrl={selectedProduct?.logoPreviewUrl ?? null}
+							productName={selectedProduct?.productName}
+							placement={wantsPersonalization ? placement : null}
+							logoSize={logoSize}
+							name={wantsPersonalization ? name : ""}
+							number={wantsPersonalization ? number : ""}
+						/>
 					)}
 
 					{combinedParticipants.length > 0 && (
@@ -216,6 +222,14 @@ export function SwagShopOrderFlow() {
 										<label htmlFor="swagshop-placement" className="text-sm font-medium text-navy">Placement</label>
 										<select id="swagshop-placement" value={placement} onChange={(e) => setPlacement(e.target.value as PersonalizationPlacement)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 											{PLACEMENT_OPTIONS.map((opt) => (
+												<option key={opt.value} value={opt.value}>{opt.label}</option>
+											))}
+										</select>
+									</div>
+									<div className="flex flex-col gap-1">
+										<label htmlFor="swagshop-logo-size" className="text-sm font-medium text-navy">Logo size</label>
+										<select id="swagshop-logo-size" value={logoSize} onChange={(e) => setLogoSize(e.target.value as SwagLogoSize)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
+											{LOGO_SIZE_OPTIONS.map((opt) => (
 												<option key={opt.value} value={opt.value}>{opt.label}</option>
 											))}
 										</select>

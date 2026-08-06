@@ -25,4 +25,6 @@ data class Product(
     val status: ProductStatus,
     val createdAt: Instant,
     val updatedAt: Instant,
+    /** Phase 24.1: provenance of the reusable library asset whose media was snapshotted above. */
+    val swagBrandAssetId: UUID? = null,
 )

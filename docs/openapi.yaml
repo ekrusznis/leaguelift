@@ -88,8 +88,10 @@ info:
     APIs, OAuth authorization/callback/refresh/revoke/disconnect/health seams, encrypted
     credential references, hashed single-use state, PKCE, deterministic local stubs,
     and production fail-closed guards (ADR-054). No provider-specific production client
-    or credential activation is claimed in this slice.
-  version: "0.26.2"
+    or credential activation is claimed in this slice. Phase 24 slice 1 adds reusable
+    organization/team Swag Brand Assets, product snapshot assignment, and a restore-to-draft
+    archival lifecycle that hides archived products by default (ADR-067).
+  version: "0.28.0"
 servers:
 - url: /api/v1
 tags:
@@ -111,6 +113,7 @@ tags:
 - name: webhooks
 - name: printify
 - name: stores
+- name: swag-brand-assets
 - name: orders
 - name: sponsorships
 - name: dashboard
@@ -3939,6 +3942,96 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /organizations/{organizationId}/swag-brand-assets:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [swag-brand-assets]
+      summary: List reusable Swag Brand Assets available to an organization or team workspace
+      operationId: listSwagBrandAssets
+      parameters:
+      - name: teamId
+        in: query
+        required: false
+        schema: {type: string, format: uuid}
+        description: When present, returns organization-wide assets plus assets scoped to this team.
+      - name: includeArchived
+        in: query
+        required: false
+        schema: {type: boolean, default: false}
+      responses:
+        "200":
+          description: Reusable brand assets with short-lived signed preview URLs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/SwagBrandAssetResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    post:
+      tags: [swag-brand-assets]
+      summary: Add a confirmed raster image to the Swag Brand Asset Library
+      operationId: createSwagBrandAsset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/CreateSwagBrandAssetRequest"}
+      responses:
+        "201":
+          description: Brand asset created
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SwagBrandAssetResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /organizations/{organizationId}/swag-brand-assets/{assetId}/archive:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - name: assetId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    patch:
+      tags: [swag-brand-assets]
+      summary: Archive a reusable Swag Brand Asset without changing product or order snapshots
+      operationId: archiveSwagBrandAsset
+      responses:
+        "200":
+          description: Archived brand asset
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SwagBrandAssetResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /organizations/{organizationId}/swag-brand-assets/{assetId}/restore:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - name: assetId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    patch:
+      tags: [swag-brand-assets]
+      summary: Restore an archived Swag Brand Asset
+      operationId: restoreSwagBrandAsset
+      responses:
+        "200":
+          description: Restored brand asset
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SwagBrandAssetResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
   /organizations/{organizationId}/stores/{storeId}/products:
     parameters:
     - $ref: "#/components/parameters/OrganizationIdParam"
@@ -3950,6 +4043,11 @@ paths:
       parameters:
       - $ref: "#/components/parameters/PageParam"
       - $ref: "#/components/parameters/SizeParam"
+      - name: includeArchived
+        in: query
+        required: false
+        schema: {type: boolean, default: false}
+        description: Include archived products in the management list; requires store-management access.
       responses:
         "200":
           description: Paginated list of products
@@ -4011,6 +4109,17 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [stores]
+      summary: Delete an unused draft product
+      description: Only DRAFT products with no order history may be deleted; use archive otherwise.
+      operationId: deleteProduct
+      responses:
+        "204": {description: Product deleted}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
 
   /organizations/{organizationId}/products/{productId}/manual-details:
     parameters:
@@ -4071,6 +4180,31 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/products/{productId}/use-brand-asset:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/ProductIdParam"
+    post:
+      tags: [swag-brand-assets]
+      summary: Snapshot an active reusable brand asset onto a Printify product
+      description: The product stores both library provenance and the exact media asset used for future fulfillment.
+      operationId: assignProductSwagBrandAsset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/AssignSwagBrandAssetRequest"}
+      responses:
+        "200":
+          description: Product with the selected brand snapshot
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ProductResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
 
   /organizations/{organizationId}/products/{productId}/design:
     parameters:
@@ -4291,6 +4425,52 @@ paths:
           $ref: "#/components/responses/NotFound"
 
   # --- Orders and checkout (Phase 4 slice 1) ---
+
+  /organizations/{organizationId}/swag-shop/apparel-types:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [orders]
+      summary: List active Printify-backed apparel types across an organization's active Swag Shops, for the buyer order flow
+      description: Any signed-in user, no organization-membership gate — a pure guardian or coach relationship (no
+        organization_membership row) must be able to browse this, and the same data is already public via
+        GET /public/stores/{slug}.
+      operationId: listSwagShopApparelTypes
+      responses:
+        "200":
+          description: One row per active apparel type, combining store/product/variant data
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/SwagShopApparelTypeResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /organizations/{organizationId}/swag-shop/orders:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [orders]
+      summary: Start Stripe Checkout for a coach-for-roster or guardian-for-household Swag Shop order (Path 1/Quick and Path 2/Custom)
+      description: Single item only. Personalization (name/number/placement/logo size) is optional; when present, a print-ready file
+        is composited fresh at payment confirmation — see SwagDesignCompositor.
+      operationId: createSwagShopOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/CreateSwagShopOrderRequest"}
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OrderCheckoutResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
 
   /organizations/{organizationId}/stores/{storeId}/orders:
     parameters:
@@ -10831,6 +11011,7 @@ components:
     ProductStatus:
       type: string
       enum: [DRAFT, ACTIVE, ARCHIVED]
+      description: Archived products are hidden by default and must be restored to DRAFT before activation.
 
     CreateProductRequest:
       type: object
@@ -10896,9 +11077,61 @@ components:
           maxLength: 255
           nullable: true
 
+    SwagBrandAssetCategory:
+      type: string
+      enum: [PRIMARY, ALTERNATE, LIGHT, DARK, WORDMARK, MASCOT, SMALL_PRINT, WIDE, SEASONAL, COMMEMORATIVE]
+
+    SwagBrandAssetStatus:
+      type: string
+      enum: [ACTIVE, ARCHIVED]
+
+    CreateSwagBrandAssetRequest:
+      type: object
+      required: [mediaAssetId, name, category]
+      properties:
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+        mediaAssetId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        category:
+          $ref: "#/components/schemas/SwagBrandAssetCategory"
+
+    AssignSwagBrandAssetRequest:
+      type: object
+      required: [brandAssetId]
+      properties:
+        brandAssetId:
+          type: string
+          format: uuid
+
+    SwagBrandAssetResponse:
+      type: object
+      required: [id, organizationId, mediaAssetId, name, category, status, previewUrl, contentType, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        teamId: {type: string, format: uuid, nullable: true}
+        mediaAssetId: {type: string, format: uuid}
+        name: {type: string}
+        category: {$ref: "#/components/schemas/SwagBrandAssetCategory"}
+        status: {$ref: "#/components/schemas/SwagBrandAssetStatus"}
+        previewUrl: {type: string, format: uri}
+        contentType: {type: string}
+        widthPx: {type: integer, nullable: true}
+        heightPx: {type: integer, nullable: true}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+
     ProductResponse:
       type: object
-      required: [id, organizationId, storeId, name, catalogSource, printifyPrintPosition, hasDesign, status, createdAt, updatedAt]
+      required: [id, organizationId, storeId, name, catalogSource, printifyPrintPosition, hasDesign, hasSwagLogo, hasSwagBrandAsset, status, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -10933,6 +11166,16 @@ components:
           type: boolean
           description: True when Rally26 has a current product design assignment. Printify activation additionally requires the design to
             have been uploaded to Printify through variant creation.
+        hasSwagLogo:
+          type: boolean
+          description: True when an exact media asset has been frozen onto the product for order-time compositing.
+        swagBrandAssetId:
+          type: string
+          format: uuid
+          nullable: true
+        hasSwagBrandAsset:
+          type: boolean
+          description: True when the product snapshot records reusable-library provenance.
         status:
           $ref: "#/components/schemas/ProductStatus"
         createdAt:
@@ -11061,6 +11304,28 @@ components:
           format: int64
         isActive:
           type: boolean
+        printAreaWidthPx:
+          type: integer
+          nullable: true
+          description: Real Printify print-area pixel width, captured at variant-creation time. Null for manual variants.
+        printAreaHeightPx:
+          type: integer
+          nullable: true
+        backPrintAreaWidthPx:
+          type: integer
+          nullable: true
+          description: Real Printify "back" placeholder width, so BACK-placed personalization prints on the garment's actual back. Null if
+            the blueprint has no back placeholder or the variant predates this capability.
+        backPrintAreaHeightPx:
+          type: integer
+          nullable: true
+        mockupFrontUrl:
+          type: string
+          nullable: true
+          description: Real photorealistic Printify garment mockup (stable CDN URL), captured free at variant-creation time.
+        mockupBackUrl:
+          type: string
+          nullable: true
 
     PublicProductVariantResponse:
       type: object
@@ -11113,6 +11378,55 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PublicProductResponse"
+
+    PersonalizationPlacement:
+      type: string
+      enum: [LEFT_CHEST, RIGHT_CHEST, CENTER_FRONT, BACK]
+      description: Curated placement presets only — never a freeform coordinate. CENTER_FRONT (Path 2, 24.2) is the front-only
+        counterpart to LEFT_CHEST/RIGHT_CHEST; BACK is a real second physical print on the garment's back.
+
+    SwagLogoSize:
+      type: string
+      enum: [SMALL, STANDARD, LARGE]
+      description: Path 2 (24.2) curated logo-size preset. Defaults to STANDARD when personalized but unset.
+
+    SwagShopApparelTypeResponse:
+      type: object
+      required: [storeId, storeName, productId, productName, hasSwagLogo, variants]
+      description: Buyer picker — one row per active apparel type, combining store/product/variant data.
+      properties:
+        storeId: {type: string, format: uuid}
+        storeName: {type: string}
+        productId: {type: string, format: uuid}
+        productName: {type: string}
+        description: {type: string, nullable: true}
+        hasSwagLogo:
+          type: boolean
+          description: True when a logo has been frozen onto the product for order-time compositing.
+        logoPreviewUrl:
+          type: string
+          nullable: true
+          description: Short-lived signed preview of the snapshotted logo, for the buyer's live-preview overlay. Null when no logo is
+            assigned.
+        variants:
+          type: array
+          items: {$ref: "#/components/schemas/ProductVariantResponse"}
+
+    CreateSwagShopOrderRequest:
+      type: object
+      required: [productVariantId, participantId]
+      description: Authenticated single-item order (Path 1/Quick and Path 2/Custom) — no cart, no successUrl/cancelUrl from the caller.
+      properties:
+        productVariantId: {type: string, format: uuid}
+        participantId: {type: string, format: uuid}
+        personalizationName: {type: string, maxLength: 60, nullable: true}
+        personalizationNumber: {type: string, maxLength: 20, nullable: true}
+        personalizationPlacement:
+          allOf: [{$ref: "#/components/schemas/PersonalizationPlacement"}]
+          nullable: true
+        personalizationLogoSize:
+          allOf: [{$ref: "#/components/schemas/SwagLogoSize"}]
+          nullable: true
 
     OrderStatus:
       type: string

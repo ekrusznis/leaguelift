@@ -47,6 +47,7 @@ class ProductController(
                 productName = product.name,
                 description = product.description,
                 hasSwagLogo = product.swagLogoMediaAssetId != null,
+                logoPreviewUrl = productService.getSwagLogoPreviewUrl(organizationId, product),
                 variants = variants.map { it.toResponse() },
             )
         }
@@ -78,14 +79,15 @@ class ProductController(
         @PathVariable storeId: UUID,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
+        @RequestParam(defaultValue = "false") includeArchived: Boolean,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<ProductResponse> {
         val offset = page * size
         val items =
             productService
-                .listForStore(organizationId, storeId, currentUser, offset, size)
+                .listForStore(organizationId, storeId, currentUser, offset, size, includeArchived)
                 .map { it.toResponse(productService.hasAssignedDesign(it.id)) }
-        val total = productService.countForStore(organizationId, storeId, currentUser)
+        val total = productService.countForStore(organizationId, storeId, currentUser, includeArchived)
         return PageResponse(items, page, size, total)
     }
 
@@ -171,6 +173,18 @@ class ProductController(
         val assignment = productService.assignDesign(organizationId, productId, request.assetId, request.altText, currentUser)
         val descriptor = mediaReadService.describe(assignment) ?: error("Newly assigned design asset ${assignment.assetId} must exist.")
         return descriptor.toResponse()
+    }
+
+    /** Phase 24.1: selects an approved reusable Swag Brand Asset and snapshots its media onto this product. */
+    @PostMapping("/products/{productId}/use-brand-asset")
+    fun useBrandAsset(
+        @PathVariable organizationId: UUID,
+        @PathVariable productId: UUID,
+        @Valid @RequestBody request: AssignSwagBrandAssetRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): ProductResponse {
+        val product = productService.useBrandAsset(organizationId, productId, request.brandAssetId, currentUser)
+        return product.toResponse(productService.hasAssignedDesign(product.id))
     }
 
     /** Swag Shop (DESIGN-DOC.md section 13): freezes the owning team's current logo onto this product for order-time compositing. */

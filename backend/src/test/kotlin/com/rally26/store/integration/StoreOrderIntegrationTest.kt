@@ -16,6 +16,7 @@ import com.rally26.media.domain.MediaEntityType
 import com.rally26.media.domain.MediaUsageSlot
 import com.rally26.media.domain.PublicationStatus
 import com.rally26.media.domain.Visibility
+import com.rally26.media.infra.SpacesClient
 import com.rally26.media.persistence.MediaAssetRepository
 import com.rally26.media.persistence.MediaAssignmentRepository
 import com.rally26.order.application.OrderLineItemRequest
@@ -81,6 +82,9 @@ class StoreOrderIntegrationTest : AbstractIntegrationTest() {
 
     @MockkBean
     lateinit var stripeOrderCheckoutClient: StripeOrderCheckoutClient
+
+    @MockkBean
+    lateinit var spacesClient: SpacesClient
 
     @Test
     fun `a confirmed order snapshots real Printify cost, transitions PENDING to CONFIRMED once, and submits a draft fulfillment`() {
@@ -178,6 +182,9 @@ class StoreOrderIntegrationTest : AbstractIntegrationTest() {
             visibility = Visibility.PUBLIC,
             altText = null,
         )
+        every { spacesClient.getObjectBytesCapped("organizations/$organizationId/media/$assetId/original.png", any()) } returns
+            byteArrayOf(1, 2, 3)
+        every { spacesClient.presignedGetUrl(any(), any()) } returns "https://signed.example.com/design.png"
         every { printifyImageClient.uploadImage(any(), any()) } returns PrintifyUploadedImage("printify_img_1", "design.png")
     }
 

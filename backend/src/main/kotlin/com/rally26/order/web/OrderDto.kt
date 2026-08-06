@@ -10,6 +10,7 @@ import com.rally26.order.domain.FulfillmentStatus
 import com.rally26.order.domain.Order
 import com.rally26.order.domain.PersonalizationPlacement
 import com.rally26.order.domain.ShippingAddress
+import com.rally26.order.domain.SwagLogoSize
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.Min
@@ -43,6 +44,7 @@ data class CreateSwagShopOrderRequest(
     @field:Size(max = 60) val personalizationName: String? = null,
     @field:Size(max = 20) val personalizationNumber: String? = null,
     val personalizationPlacement: PersonalizationPlacement? = null,
+    val personalizationLogoSize: SwagLogoSize? = null,
 )
 
 data class OrderCheckoutResponse(

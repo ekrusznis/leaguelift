@@ -20,6 +20,7 @@ import com.rally26.media.domain.MediaAssignment
 import com.rally26.media.domain.MediaEntityType
 import com.rally26.media.domain.MediaUsageSlot
 import com.rally26.media.domain.Visibility
+import com.rally26.media.infra.SpacesClient
 import com.rally26.media.persistence.MediaAssetRepository
 import com.rally26.membership.application.MembershipService
 import com.rally26.store.domain.CatalogSource
@@ -34,11 +35,14 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.client.RestClientException
+import java.time.Duration
+import java.util.Base64
 import java.util.Currency
 import java.util.UUID
 
 private val log = LoggerFactory.getLogger(ProductService::class.java)
 private const val PUBLIC_STORE_PRODUCT_LIMIT = 100
+private const val MAX_DESIGN_IMAGE_BYTES = 10L * 1024 * 1024
 
 /**
  * One catalog supports two honest sources. PRINTIFY preserves real provider IDs
@@ -63,6 +67,8 @@ class ProductService(
     private val printifyProductClient: PrintifyProductClient,
     private val vendorSelectionService: VendorSelectionService,
     private val markupRuleService: MarkupRuleService,
+    private val spacesClient: SpacesClient,
+    private val swagBrandAssetService: SwagBrandAssetService? = null,
 ) {
     fun listBlueprints(
         organizationId: UUID,
@@ -97,20 +103,24 @@ class ProductService(
         currentUser: CurrentUser,
         offset: Int,
         limit: Int,
+        includeArchived: Boolean = false,
     ): List<Product> {
         membershipService.requireActiveMembership(organizationId, currentUser)
-        requireStore(organizationId, storeId)
-        return productRepository.findByStore(storeId, offset, limit)
+        val store = requireStore(organizationId, storeId)
+        if (includeArchived) requireStoreScopedManageAccess(organizationId, store.teamId, currentUser)
+        return productRepository.findByStore(storeId, offset, limit, includeArchived)
     }
 
     fun countForStore(
         organizationId: UUID,
         storeId: UUID,
         currentUser: CurrentUser,
+        includeArchived: Boolean = false,
     ): Long {
         membershipService.requireActiveMembership(organizationId, currentUser)
-        requireStore(organizationId, storeId)
-        return productRepository.countByStore(storeId)
+        val store = requireStore(organizationId, storeId)
+        if (includeArchived) requireStoreScopedManageAccess(organizationId, store.teamId, currentUser)
+        return productRepository.countByStore(storeId, includeArchived)
     }
 
     fun get(
@@ -158,6 +168,24 @@ class ProductService(
         val assignment =
             mediaAssignmentService.getPublicAssignment(MediaEntityType.PRODUCT, productId, MediaUsageSlot.PRODUCT_DESIGN) ?: return null
         return mediaReadService.describe(assignment)?.url
+    }
+
+    /**
+     * Swag Shop Path 2 (DESIGN-DOC.md section 14.1G 24.2) buyer-facing live preview:
+     * a short-lived signed URL for the product's snapshotted logo, mirroring
+     * SwagBrandAssetService.describe()'s raw-asset-id signing (product.swagLogoMediaAssetId
+     * is a bare media asset id, not a MediaAssignment, so getPublicDesignUrl's
+     * assignment-based path doesn't apply here). Same no-membership-gate reasoning
+     * as listSwagShopApparelTypes — the mockup images this sits alongside are
+     * already exposed the same way.
+     */
+    fun getSwagLogoPreviewUrl(
+        organizationId: UUID,
+        product: Product,
+    ): String? {
+        val logoMediaAssetId = product.swagLogoMediaAssetId ?: return null
+        val media = mediaAssetRepository.findById(logoMediaAssetId, organizationId) ?: return null
+        return spacesClient.presignedGetUrl(media.storageKey, Duration.ofMinutes(15))
     }
 
     fun listVariants(
@@ -251,6 +279,27 @@ class ProductService(
         ) {
             if (product.status == ProductStatus.ACTIVE) Visibility.PUBLIC else Visibility.ORGANIZATION_PRIVATE
         }
+    }
+
+    /** Phase 24.1: selects an approved reusable asset and freezes its current media reference onto the product. */
+    @Transactional
+    fun useBrandAsset(
+        organizationId: UUID,
+        productId: UUID,
+        brandAssetId: UUID,
+        currentUser: CurrentUser,
+    ): Product {
+        val product = requireProductManageAccess(organizationId, productId, currentUser)
+        if (product.catalogSource != CatalogSource.PRINTIFY) {
+            throw ValidationException("Swag Brand Assets can only be assigned to Printify products.")
+        }
+        val store = requireStore(organizationId, product.storeId)
+        val brandAsset =
+            requireNotNull(swagBrandAssetService) { "Swag Brand Asset service is unavailable." }
+                .requireActiveForProduct(organizationId, brandAssetId, store.teamId)
+        productRepository.updateSwagBrandAssetSnapshot(productId, organizationId, brandAsset.id, brandAsset.mediaAssetId)
+        auditService.record(currentUser.userId, organizationId, "product.swag_brand_asset_assigned", "product", productId)
+        return findProduct(organizationId, productId)
     }
 
     /**
@@ -476,6 +525,8 @@ class ProductService(
         currentUser: CurrentUser,
     ): Product {
         val product = requireProductManageAccess(organizationId, productId, currentUser)
+        ProductLifecycle.requireTransition(product.status, status)
+        if (product.status == status) return product
         if (status == ProductStatus.ACTIVE) {
             if (!hasAssignedDesign(productId)) throw ValidationException("Assign a product image before activating this product.")
             if (productVariantRepository
@@ -490,7 +541,13 @@ class ProductService(
             }
         }
         productRepository.updateStatus(productId, organizationId, status)
-        auditService.record(currentUser.userId, organizationId, "product.status_updated", "product", productId)
+        val eventType =
+            when {
+                status == ProductStatus.ARCHIVED -> "product.archived"
+                product.status == ProductStatus.ARCHIVED && status == ProductStatus.DRAFT -> "product.restored_to_draft"
+                else -> "product.status_updated"
+            }
+        auditService.record(currentUser.userId, organizationId, eventType, "product", productId)
         return findProduct(organizationId, productId)
     }
 
@@ -529,13 +586,21 @@ class ProductService(
                 .listActive(organizationId, MediaEntityType.PRODUCT, product.id, currentUser)
                 .firstOrNull { it.usageSlot == MediaUsageSlot.PRODUCT_DESIGN }
                 ?: throw ValidationException("Upload a design image for this product before creating a variant.")
-        val descriptor =
-            mediaReadService.describe(designAssignment)
+        val media =
+            mediaAssetRepository.findById(designAssignment.assetId, organizationId)
                 ?: throw ValidationException("The product's design image could not be found.")
-        val extension = descriptor.contentType?.substringAfter('/') ?: "png"
+        val extension = (media.detectedContentType ?: media.declaredContentType).substringAfter('/').ifBlank { "png" }
+        // Sent as base64 `contents`, not a fetchable `url` — Printify's servers would
+        // otherwise need to reach our storage over the public internet, which a
+        // local/self-hosted deployment or a short-lived signed URL may not satisfy.
+        // The backend already holds the bytes locally, so it just forwards them.
+        val bytes = spacesClient.getObjectBytesCapped(media.storageKey, MAX_DESIGN_IMAGE_BYTES)
         val uploaded =
             withPrintifyErrorTranslation {
-                printifyImageClient.uploadImage(fileName = "product-design.$extension", sourceUrl = descriptor.url)
+                printifyImageClient.uploadImage(
+                    fileName = "product-design.$extension",
+                    contentsBase64 = Base64.getEncoder().encodeToString(bytes),
+                )
             }
         productRepository.updatePrintifyImageId(product.id, organizationId, uploaded.id)
         return uploaded.id

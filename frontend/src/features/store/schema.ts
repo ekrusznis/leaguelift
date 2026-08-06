@@ -39,10 +39,14 @@ export const createProductVariantSchema = z.object({
 	printifyPrintProviderId: z.coerce.number().int("Choose a print provider."),
 	printifyVariantId: z.coerce.number().int("Choose a size/color."),
 	label: z.string().trim().min(1, "Label is required.").max(120),
-	/** Blank means "compute from the organization's markup rule" (MarkupRuleService). */
+	/** Blank means "compute from the organization's markup rule" (MarkupRuleService). Entered in dollars, stored in minor units. */
 	priceMinor: z.preprocess(
 		(value) => (value === "" || value === null || value === undefined ? undefined : value),
-		z.coerce.number().int("Price must be a whole number of cents.").min(0, "Price must be 0 or greater.").optional(),
+		z.coerce
+			.number()
+			.min(0, "Price must be 0 or greater.")
+			.optional()
+			.transform((dollars) => (dollars === undefined ? undefined : Math.round(dollars * 100))),
 	),
 });
 export type CreateProductVariantFormValues = z.infer<typeof createProductVariantSchema>;
@@ -53,8 +57,9 @@ export const manualProductVariantSchema = z.object({
 	size: z.string().trim().max(80).optional().or(z.literal("")),
 	color: z.string().trim().max(80).optional().or(z.literal("")),
 	currency: z.string().trim().length(3, "Use a three-letter currency code.").default("USD"),
-	costMinor: z.coerce.number().int().min(0, "Cost must be 0 or greater."),
-	priceMinor: z.coerce.number().int().min(0, "Price must be 0 or greater."),
+	/** Entered in dollars, stored in minor units. */
+	costMinor: z.coerce.number().min(0, "Cost must be 0 or greater.").transform((dollars) => Math.round(dollars * 100)),
+	priceMinor: z.coerce.number().min(0, "Price must be 0 or greater.").transform((dollars) => Math.round(dollars * 100)),
 	isActive: z.boolean().default(true),
 }).refine((value) => value.priceMinor >= value.costMinor, { path: ["priceMinor"], message: "Price cannot be below cost." });
 export type ManualProductVariantFormValues = z.infer<typeof manualProductVariantSchema>;

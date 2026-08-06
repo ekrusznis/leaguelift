@@ -39,6 +39,7 @@ class OrderController(
                 request.personalizationName,
                 request.personalizationNumber,
                 request.personalizationPlacement,
+                request.personalizationLogoSize,
                 currentUser,
             ).toResponse()
 

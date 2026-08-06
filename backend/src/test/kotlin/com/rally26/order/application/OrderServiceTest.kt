@@ -28,6 +28,7 @@ import com.rally26.order.domain.Order
 import com.rally26.order.domain.OrderItem
 import com.rally26.order.domain.OrderStatus
 import com.rally26.order.domain.PersonalizationPlacement
+import com.rally26.order.domain.SwagLogoSize
 import com.rally26.order.infra.OrderCheckoutSession
 import com.rally26.order.infra.StripeOrderCheckoutClient
 import com.rally26.order.persistence.FulfillmentHistoryRepository
@@ -643,6 +644,7 @@ class OrderServiceTest {
                 "Johnson",
                 "7",
                 PersonalizationPlacement.BACK,
+                SwagLogoSize.LARGE,
             )
         } returns mockk(relaxed = true)
         every { stripeOrderCheckoutClient.createOrderCheckoutSession(any(), any(), any(), any()) } returns
@@ -657,6 +659,55 @@ class OrderServiceTest {
                 "Johnson",
                 "7",
                 PersonalizationPlacement.BACK,
+                SwagLogoSize.LARGE,
+                currentUser,
+            )
+
+        assertEquals("https://checkout.stripe.com/test", result.checkoutUrl)
+    }
+
+    @Test
+    fun `createSwagShopCheckoutSession succeeds with CENTER_FRONT placement`() {
+        val currentUser = CurrentUser(UUID.randomUUID(), "guardian@example.com", "Sarah Johnson")
+        val householdId = UUID.randomUUID()
+        val participant = participant(householdId)
+        val storeEntity = store()
+        val product = product(storeEntity.id)
+        val variant = productVariant(product.id).copy(printAreaWidthPx = 1000, printAreaHeightPx = 1000)
+        every { participantRepository.findById(participant.id, orgId) } returns participant
+        every { authorizationService.hasGuardianRelationship(orgId, householdId, currentUser) } returns true
+        every { productVariantRepository.findById(variant.id, orgId) } returns variant
+        every { productRepository.findById(product.id, orgId) } returns product.copy(swagLogoMediaAssetId = UUID.randomUUID())
+        every { storeRepository.findById(product.storeId, orgId) } returns storeEntity
+        every { orderRepository.insertPending(orgId, storeEntity.id, "USD", currentUser.displayName, currentUser.email) } returns
+            pendingOrder(storeEntity)
+        every {
+            orderItemRepository.insert(
+                any(),
+                variant.id,
+                1,
+                variant.priceMinor,
+                variant.costMinor,
+                participant.id,
+                "Johnson",
+                "7",
+                PersonalizationPlacement.CENTER_FRONT,
+                SwagLogoSize.STANDARD,
+            )
+        } returns mockk(relaxed = true)
+        every { stripeOrderCheckoutClient.createOrderCheckoutSession(any(), any(), any(), any()) } returns
+            OrderCheckoutSession("cs_test_2", "https://checkout.stripe.com/test")
+        every { orderRepository.attachStripeSession(any(), "cs_test_2") } returns 1
+
+        val result =
+            service.createSwagShopCheckoutSession(
+                orgId,
+                variant.id,
+                participant.id,
+                "Johnson",
+                "7",
+                PersonalizationPlacement.CENTER_FRONT,
+                SwagLogoSize.STANDARD,
                 currentUser,
             )
 
@@ -685,6 +736,7 @@ class OrderServiceTest {
                 "Johnson",
                 "7",
                 PersonalizationPlacement.BACK,
+                null,
                 currentUser,
             )
         }
@@ -702,7 +754,7 @@ class OrderServiceTest {
         every { participantRepository.listTeamAssignments(participant.id, orgId) } returns emptyList()
 
         assertFailsWith<ForbiddenException> {
-            service.createSwagShopCheckoutSession(orgId, UUID.randomUUID(), participant.id, null, null, null, currentUser)
+            service.createSwagShopCheckoutSession(orgId, UUID.randomUUID(), participant.id, null, null, null, null, currentUser)
         }
     }
 }

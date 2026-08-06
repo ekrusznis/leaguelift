@@ -279,7 +279,11 @@ class PlatformAdminConsoleRepository(
         if (!query.isNullOrBlank()) {
             where += "(lower(p.name) like :query or lower(s.name) like :query or lower(o.name) like :query)"
         }
-        if (!status.isNullOrBlank()) where += "p.status = :status"
+        if (!status.isNullOrBlank()) {
+            where += "p.status = :status"
+        } else {
+            where += "p.status <> 'ARCHIVED'"
+        }
         if (organizationId != null) where += "p.organization_id = :organizationId"
         val whereSql = if (where.isEmpty()) "" else "where ${where.joinToString(" and ")}"
         var spec =
@@ -334,7 +338,11 @@ class PlatformAdminConsoleRepository(
         if (!query.isNullOrBlank()) {
             where += "(lower(p.name) like :query or lower(s.name) like :query or lower(o.name) like :query)"
         }
-        if (!status.isNullOrBlank()) where += "p.status = :status"
+        if (!status.isNullOrBlank()) {
+            where += "p.status = :status"
+        } else {
+            where += "p.status <> 'ARCHIVED'"
+        }
         if (organizationId != null) where += "p.organization_id = :organizationId"
         val whereSql = if (where.isEmpty()) "" else "where ${where.joinToString(" and ")}"
         var spec =

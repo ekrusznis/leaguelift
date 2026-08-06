@@ -26,6 +26,7 @@ import com.rally26.order.domain.Order
 import com.rally26.order.domain.OrderStatus
 import com.rally26.order.domain.PersonalizationPlacement
 import com.rally26.order.domain.ShippingAddress
+import com.rally26.order.domain.SwagLogoSize
 import com.rally26.order.infra.OrderCheckoutLineItem
 import com.rally26.order.infra.StripeOrderCheckoutClient
 import com.rally26.order.persistence.FulfillmentHistoryRepository
@@ -202,6 +203,7 @@ class OrderService(
         personalizationName: String?,
         personalizationNumber: String?,
         personalizationPlacement: PersonalizationPlacement?,
+        personalizationLogoSize: SwagLogoSize?,
         currentUser: CurrentUser,
     ): OrderCheckout {
         val participant =
@@ -266,6 +268,7 @@ class OrderService(
                 personalizationName = personalizationName,
                 personalizationNumber = personalizationNumber,
                 personalizationPlacement = personalizationPlacement,
+                personalizationLogoSize = personalizationLogoSize,
             )
             val lineItems =
                 listOf(
@@ -509,6 +512,7 @@ class OrderService(
                                     personalizationName = item.personalizationName,
                                     personalizationNumber = item.personalizationNumber,
                                     personalizationPlacement = item.personalizationPlacement,
+                                    personalizationLogoSize = item.personalizationLogoSize,
                                 )
                             buildMap {
                                 put(product.printifyPrintPosition, result.frontUrl)

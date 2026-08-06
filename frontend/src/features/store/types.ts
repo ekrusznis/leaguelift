@@ -268,7 +268,10 @@ export interface CartLine {
 	quantity: number;
 }
 
-export type PersonalizationPlacement = "LEFT_CHEST" | "RIGHT_CHEST" | "BACK";
+export type PersonalizationPlacement = "LEFT_CHEST" | "RIGHT_CHEST" | "CENTER_FRONT" | "BACK";
+
+/** Path 2 (24.2) curated logo-size preset — defaults to "STANDARD" when personalized but unset. */
+export type SwagLogoSize = "SMALL" | "STANDARD" | "LARGE";
 
 export interface SwagShopApparelType {
 	storeId: string;
@@ -277,6 +280,8 @@ export interface SwagShopApparelType {
 	productName: string;
 	description: string | null;
 	hasSwagLogo: boolean;
+	/** Short-lived signed preview of the snapshotted logo, for the buyer's live-preview overlay. Null when no logo is assigned. */
+	logoPreviewUrl: string | null;
 	variants: ProductVariant[];
 }
 
@@ -286,4 +291,5 @@ export interface CreateSwagShopOrderRequest {
 	personalizationName?: string | null;
 	personalizationNumber?: string | null;
 	personalizationPlacement?: PersonalizationPlacement | null;
+	personalizationLogoSize?: SwagLogoSize | null;
 }

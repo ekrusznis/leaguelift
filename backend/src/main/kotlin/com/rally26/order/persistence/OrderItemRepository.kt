@@ -2,13 +2,15 @@ package com.rally26.order.persistence
 
 import com.rally26.order.domain.OrderItem
 import com.rally26.order.domain.PersonalizationPlacement
+import com.rally26.order.domain.SwagLogoSize
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import java.util.UUID
 
 private const val COLUMNS =
     "id, order_id, product_variant_id, quantity, unit_price_minor, unit_cost_minor, " +
-        "participant_id, personalization_name, personalization_number, personalization_placement"
+        "participant_id, personalization_name, personalization_number, personalization_placement, " +
+        "personalization_logo_size"
 
 @Repository
 class OrderItemRepository(
@@ -31,6 +33,7 @@ class OrderItemRepository(
         personalizationName: String? = null,
         personalizationNumber: String? = null,
         personalizationPlacement: PersonalizationPlacement? = null,
+        personalizationLogoSize: SwagLogoSize? = null,
     ): OrderItem {
         val id = UUID.randomUUID()
         jdbcClient
@@ -38,10 +41,12 @@ class OrderItemRepository(
                 """
                 insert into order_item
                 	(id, order_id, product_variant_id, quantity, unit_price_minor, unit_cost_minor,
-                	 participant_id, personalization_name, personalization_number, personalization_placement)
+                	 participant_id, personalization_name, personalization_number, personalization_placement,
+                	 personalization_logo_size)
                 values
                 	(:id, :orderId, :productVariantId, :quantity, :unitPriceMinor, :unitCostMinor,
-                	 :participantId, :personalizationName, :personalizationNumber, :personalizationPlacement)
+                	 :participantId, :personalizationName, :personalizationNumber, :personalizationPlacement,
+                	 :personalizationLogoSize)
                 """.trimIndent(),
             ).param("id", id)
             .param("orderId", orderId)
@@ -53,6 +58,7 @@ class OrderItemRepository(
             .param("personalizationName", personalizationName)
             .param("personalizationNumber", personalizationNumber)
             .param("personalizationPlacement", personalizationPlacement?.name)
+            .param("personalizationLogoSize", personalizationLogoSize?.name)
             .update()
         return OrderItem(
             id,
@@ -65,6 +71,7 @@ class OrderItemRepository(
             personalizationName,
             personalizationNumber,
             personalizationPlacement,
+            personalizationLogoSize,
         )
     }
 
@@ -83,5 +90,6 @@ class OrderItemRepository(
             personalizationName = rs.getString("personalization_name"),
             personalizationNumber = rs.getString("personalization_number"),
             personalizationPlacement = rs.getString("personalization_placement")?.let { PersonalizationPlacement.valueOf(it) },
+            personalizationLogoSize = rs.getString("personalization_logo_size")?.let { SwagLogoSize.valueOf(it) },
         )
 }

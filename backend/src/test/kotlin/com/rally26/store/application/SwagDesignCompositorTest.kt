@@ -6,6 +6,7 @@ import com.rally26.media.domain.MediaUsageSlot
 import com.rally26.media.infra.SpacesClient
 import com.rally26.media.persistence.MediaAssetRepository
 import com.rally26.order.domain.PersonalizationPlacement
+import com.rally26.order.domain.SwagLogoSize
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -154,6 +155,83 @@ class SwagDesignCompositorTest {
         assertEquals(1000, composited.width)
         assertEquals(1000, composited.height)
         assertTrue(hasOpaquePixel(composited), "composited image should not be fully transparent")
+    }
+
+    @Test
+    fun `CENTER_FRONT placement composites a single front print file with logo and text`() {
+        val uploaded = stubUploads()
+
+        val result =
+            compositor.compose(
+                organizationId = orgId,
+                orderId = UUID.randomUUID(),
+                orderItemId = UUID.randomUUID(),
+                swagLogoMediaAssetId = logoAssetId,
+                printAreaWidthPx = 3909,
+                printAreaHeightPx = 4431,
+                backPrintAreaWidthPx = null,
+                backPrintAreaHeightPx = null,
+                personalizationName = "Johnson",
+                personalizationNumber = "7",
+                personalizationPlacement = PersonalizationPlacement.CENTER_FRONT,
+            )
+
+        assertNull(result.backUrl)
+        assertEquals(1, uploaded.size)
+        verify(exactly = 0) { spacesClient.putObject(match { it.contains("-back") }, any(), any()) }
+        assertTrue(
+            hasOpaquePixel(ImageIO.read(ByteArrayInputStream(uploaded.single()))),
+            "front canvas should have the logo and text drawn on it",
+        )
+    }
+
+    @Test
+    fun `LARGE logo size preset draws a measurably bigger logo than SMALL at the same placement`() {
+        fun opaquePixelCount(image: BufferedImage): Int {
+            var count = 0
+            for (x in 0 until image.width step 11) {
+                for (y in 0 until image.height step 11) {
+                    if ((image.getRGB(x, y) ushr 24) != 0) count++
+                }
+            }
+            return count
+        }
+
+        val smallUploaded = stubUploads()
+        compositor.compose(
+            organizationId = orgId,
+            orderId = UUID.randomUUID(),
+            orderItemId = UUID.randomUUID(),
+            swagLogoMediaAssetId = logoAssetId,
+            printAreaWidthPx = 2000,
+            printAreaHeightPx = 2000,
+            backPrintAreaWidthPx = null,
+            backPrintAreaHeightPx = null,
+            personalizationName = null,
+            personalizationNumber = null,
+            personalizationPlacement = PersonalizationPlacement.CENTER_FRONT,
+            personalizationLogoSize = SwagLogoSize.SMALL,
+        )
+        val smallCount = opaquePixelCount(ImageIO.read(ByteArrayInputStream(smallUploaded.single())))
+
+        val largeUploaded = stubUploads()
+        compositor.compose(
+            organizationId = orgId,
+            orderId = UUID.randomUUID(),
+            orderItemId = UUID.randomUUID(),
+            swagLogoMediaAssetId = logoAssetId,
+            printAreaWidthPx = 2000,
+            printAreaHeightPx = 2000,
+            backPrintAreaWidthPx = null,
+            backPrintAreaHeightPx = null,
+            personalizationName = null,
+            personalizationNumber = null,
+            personalizationPlacement = PersonalizationPlacement.CENTER_FRONT,
+            personalizationLogoSize = SwagLogoSize.LARGE,
+        )
+        val largeCount = opaquePixelCount(ImageIO.read(ByteArrayInputStream(largeUploaded.single())))
+
+        assertTrue(largeCount > smallCount, "LARGE ($largeCount opaque samples) should draw a bigger logo than SMALL ($smallCount)")
     }
 
     private fun hasOpaquePixel(image: BufferedImage): Boolean =

@@ -13,7 +13,7 @@ private const val PRODUCT_COLUMNS = """
     p.id, p.organization_id, p.store_id, p.name, p.description, p.catalog_source,
     p.manual_vendor_id, mv.name as manual_vendor_name, p.printify_blueprint_id,
     p.printify_image_id, p.printify_print_position, p.swag_logo_media_asset_id,
-    p.status, p.created_at, p.updated_at
+    p.swag_brand_asset_id, p.status, p.created_at, p.updated_at
 """
 
 @Repository
@@ -41,6 +41,7 @@ class ProductRepository(
         storeId: UUID,
         offset: Int,
         limit: Int,
+        includeArchived: Boolean = false,
     ): List<Product> =
         jdbcClient
             .sql(
@@ -48,19 +49,25 @@ class ProductRepository(
                 select $PRODUCT_COLUMNS from product p
                 left join manual_vendor mv on mv.id = p.manual_vendor_id
                 where p.store_id = :storeId
+                  and (:includeArchived = true or p.status <> 'ARCHIVED')
                 order by p.created_at desc
                 offset :offset limit :limit
                 """.trimIndent(),
             ).param("storeId", storeId)
+            .param("includeArchived", includeArchived)
             .param("offset", offset)
             .param("limit", limit)
             .query(::mapRow)
             .list()
 
-    fun countByStore(storeId: UUID): Long =
+    fun countByStore(
+        storeId: UUID,
+        includeArchived: Boolean = false,
+    ): Long =
         jdbcClient
-            .sql("select count(*) from product where store_id = :storeId")
+            .sql("select count(*) from product where store_id = :storeId and (:includeArchived = true or status <> 'ARCHIVED')")
             .param("storeId", storeId)
+            .param("includeArchived", includeArchived)
             .query(Long::class.java)
             .single()
 
@@ -164,6 +171,29 @@ class ProductRepository(
             .param("organizationId", organizationId)
             .update()
 
+    /** Snapshots both reusable-asset provenance and the exact media used for fulfillment. */
+    fun updateSwagBrandAssetSnapshot(
+        id: UUID,
+        organizationId: UUID,
+        swagBrandAssetId: UUID,
+        swagLogoMediaAssetId: UUID,
+    ): Int =
+        jdbcClient
+            .sql(
+                """
+                update product
+                set swag_brand_asset_id = :swagBrandAssetId,
+                    swag_logo_media_asset_id = :swagLogoMediaAssetId,
+                    updated_at = :now
+                where id = :id and organization_id = :organizationId
+                """.trimIndent(),
+            ).param("swagBrandAssetId", swagBrandAssetId)
+            .param("swagLogoMediaAssetId", swagLogoMediaAssetId)
+            .param("now", Timestamp.from(Instant.now()))
+            .param("id", id)
+            .param("organizationId", organizationId)
+            .update()
+
     /** True if any variant of this product has ever appeared on a paid order — blocks deletion. */
     fun hasOrderHistory(productId: UUID): Boolean =
         jdbcClient
@@ -206,6 +236,7 @@ class ProductRepository(
             printifyImageId = rs.getString("printify_image_id"),
             printifyPrintPosition = rs.getString("printify_print_position"),
             swagLogoMediaAssetId = rs.getObject("swag_logo_media_asset_id", UUID::class.java),
+            swagBrandAssetId = rs.getObject("swag_brand_asset_id", UUID::class.java),
             status = ProductStatus.valueOf(rs.getString("status")),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),

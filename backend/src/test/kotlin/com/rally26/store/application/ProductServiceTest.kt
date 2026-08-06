@@ -14,11 +14,14 @@ import com.rally26.integration.printify.infra.PrintifyUploadedImage
 import com.rally26.media.application.MediaAssignmentService
 import com.rally26.media.application.MediaDescriptor
 import com.rally26.media.application.MediaReadService
+import com.rally26.media.domain.MediaAsset
+import com.rally26.media.domain.MediaAssetStatus
 import com.rally26.media.domain.MediaAssignment
 import com.rally26.media.domain.MediaEntityType
 import com.rally26.media.domain.MediaUsageSlot
 import com.rally26.media.domain.PublicationStatus
 import com.rally26.media.domain.Visibility
+import com.rally26.media.infra.SpacesClient
 import com.rally26.media.persistence.MediaAssetRepository
 import com.rally26.membership.application.MembershipService
 import com.rally26.membership.domain.MembershipRole
@@ -60,6 +63,7 @@ class ProductServiceTest {
     private val printifyProductClient = mockk<PrintifyProductClient>()
     private val vendorSelectionService = mockk<VendorSelectionService>()
     private val markupRuleService = mockk<MarkupRuleService>()
+    private val spacesClient = mockk<SpacesClient>()
     private val service =
         ProductService(
             productRepository,
@@ -77,6 +81,7 @@ class ProductServiceTest {
             printifyProductClient,
             vendorSelectionService,
             markupRuleService,
+            spacesClient,
         )
 
     private val orgId = UUID.randomUUID()
@@ -115,9 +120,28 @@ class ProductServiceTest {
         every { productRepository.findById(product.id, orgId) } returns product
         every { storeRepository.findById(product.storeId, orgId) } returns store(product.storeId)
         every { mediaAssignmentService.listActive(orgId, MediaEntityType.PRODUCT, product.id, currentUser) } returns listOf(assignment)
-        every { mediaReadService.describe(assignment) } returns
-            MediaDescriptor(assignment, "https://signed.example.com/design.png", "image/png", 1024, 500, 500)
-        every { printifyImageClient.uploadImage("product-design.png", "https://signed.example.com/design.png") } returns
+        val designMedia =
+            MediaAsset(
+                id = assignment.assetId,
+                organizationId = orgId,
+                uploadedByUserId = UUID.randomUUID(),
+                intendedUsageSlot = MediaUsageSlot.PRODUCT_DESIGN,
+                originalFileName = "design.png",
+                declaredContentType = "image/png",
+                detectedContentType = "image/png",
+                storageKey = "organizations/$orgId/media/${assignment.assetId}/original.png",
+                byteSize = 1024L,
+                checksumSha256 = "checksum",
+                widthPx = 500,
+                heightPx = 500,
+                status = MediaAssetStatus.READY,
+                rejectionReason = null,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            )
+        every { mediaAssetRepository.findById(assignment.assetId, orgId) } returns designMedia
+        every { spacesClient.getObjectBytesCapped(designMedia.storageKey, any()) } returns byteArrayOf(1, 2, 3)
+        every { printifyImageClient.uploadImage("product-design.png", any()) } returns
             PrintifyUploadedImage("printify_img_1", "product-design.png")
         every { productRepository.updatePrintifyImageId(product.id, orgId, "printify_img_1") } returns 1
         every {
@@ -200,6 +224,43 @@ class ProductServiceTest {
             MediaDescriptor(assignment, "https://signed.example.com/design.png", "image/png", 1024, 500, 500)
 
         assertEquals("https://signed.example.com/design.png", service.getPublicDesignUrl(product.id))
+    }
+
+    @Test
+    fun `getSwagLogoPreviewUrl signs a preview URL when the product has a snapshotted logo`() {
+        val product = product(CatalogSource.PRINTIFY, printifyImageId = "printify_img_1")
+        val logoAssetId = UUID.randomUUID()
+        val withLogo = product.copy(swagLogoMediaAssetId = logoAssetId)
+        val media =
+            MediaAsset(
+                id = logoAssetId,
+                organizationId = orgId,
+                uploadedByUserId = UUID.randomUUID(),
+                intendedUsageSlot = MediaUsageSlot.LOGO,
+                originalFileName = "team-logo.png",
+                declaredContentType = "image/png",
+                detectedContentType = "image/png",
+                storageKey = "organizations/$orgId/media/$logoAssetId/original.png",
+                byteSize = 1024L,
+                checksumSha256 = "checksum",
+                widthPx = 200,
+                heightPx = 200,
+                status = MediaAssetStatus.READY,
+                rejectionReason = null,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            )
+        every { mediaAssetRepository.findById(logoAssetId, orgId) } returns media
+        every { spacesClient.presignedGetUrl(media.storageKey, any()) } returns "https://signed.example.com/team-logo.png"
+
+        assertEquals("https://signed.example.com/team-logo.png", service.getSwagLogoPreviewUrl(orgId, withLogo))
+    }
+
+    @Test
+    fun `getSwagLogoPreviewUrl returns null when the product has no snapshotted logo`() {
+        val product = product(CatalogSource.PRINTIFY, printifyImageId = "printify_img_1")
+
+        assertEquals(null, service.getSwagLogoPreviewUrl(orgId, product))
     }
 
     @Test

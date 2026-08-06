@@ -39,6 +39,10 @@ data class AssignProductDesignRequest(
     val altText: String? = null,
 )
 
+data class AssignSwagBrandAssetRequest(
+    @field:NotNull val brandAssetId: UUID,
+)
+
 data class CreateProductVariantRequest(
     @field:NotNull val printifyPrintProviderId: Long,
     @field:NotNull val printifyVariantId: Long,
@@ -79,25 +83,29 @@ data class ProductResponse(
     val status: String,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val swagBrandAssetId: UUID? = null,
+    val hasSwagBrandAsset: Boolean = false,
 )
 
 fun Product.toResponse(hasDesign: Boolean) =
     ProductResponse(
-        id,
-        organizationId,
-        storeId,
-        name,
-        description,
-        catalogSource.name,
-        manualVendorId,
-        manualVendorName,
-        printifyBlueprintId,
-        printifyPrintPosition,
-        hasDesign,
-        swagLogoMediaAssetId != null,
-        status.name,
-        createdAt,
-        updatedAt,
+        id = id,
+        organizationId = organizationId,
+        storeId = storeId,
+        name = name,
+        description = description,
+        catalogSource = catalogSource.name,
+        manualVendorId = manualVendorId,
+        manualVendorName = manualVendorName,
+        printifyBlueprintId = printifyBlueprintId,
+        printifyPrintPosition = printifyPrintPosition,
+        hasDesign = hasDesign,
+        hasSwagLogo = swagLogoMediaAssetId != null,
+        status = status.name,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        swagBrandAssetId = swagBrandAssetId,
+        hasSwagBrandAsset = swagBrandAssetId != null,
     )
 
 data class ProductVariantResponse(
@@ -156,6 +164,8 @@ data class SwagShopApparelTypeResponse(
     val productName: String,
     val description: String?,
     val hasSwagLogo: Boolean,
+    /** Path 2 (24.2): short-lived signed preview of the snapshotted logo, for the buyer's live-preview overlay. Null when no logo is assigned. */
+    val logoPreviewUrl: String?,
     val variants: List<ProductVariantResponse>,
 )
 

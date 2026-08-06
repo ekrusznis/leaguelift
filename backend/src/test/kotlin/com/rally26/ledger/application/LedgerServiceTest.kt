@@ -32,7 +32,7 @@ class LedgerServiceTest {
     private val orgId = UUID.randomUUID()
 
     @Test
-    fun `recordConfirmedContribution writes a gross credit, a 5% fee debit, and a net earning credit`() {
+    fun `recordConfirmedContribution writes a gross credit, a 5 percent fee debit, and a net earning credit`() {
         val contribution = confirmedContribution(amountMinor = 10_000L)
         val captured = mutableListOf<InsertCall>()
         stubInsert(captured)
@@ -57,7 +57,7 @@ class LedgerServiceTest {
     }
 
     @Test
-    fun `recordConfirmedSponsorship writes a gross credit, a 5% fee debit, and a net earning credit, sourced to SPONSORSHIP`() {
+    fun `recordConfirmedSponsorship writes a gross credit, a 5 percent fee debit, and a net earning credit, sourced to SPONSORSHIP`() {
         val sponsorship = confirmedSponsorship(amountMinor = 50_000L)
         val captured = mutableListOf<InsertCall>()
         stubInsert(captured)
