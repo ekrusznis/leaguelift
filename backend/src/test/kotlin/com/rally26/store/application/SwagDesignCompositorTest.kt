@@ -8,7 +8,6 @@ import com.rally26.media.persistence.MediaAssetRepository
 import com.rally26.order.domain.PersonalizationPlacement
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
 import io.mockk.verify
 import java.awt.Color
 import java.awt.image.BufferedImage

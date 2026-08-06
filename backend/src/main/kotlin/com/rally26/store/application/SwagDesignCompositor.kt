@@ -72,22 +72,36 @@ class SwagDesignCompositor(
             if (backPrintAreaWidthPx == null || backPrintAreaHeightPx == null) {
                 error("Order item $orderItemId requests BACK placement but has no back print-area dimensions")
             }
-            val frontUrl = uploadCanvas(organizationId, orderId, orderItemId, "front", printAreaWidthPx, printAreaHeightPx) { g, canvas ->
-                drawCenteredLogo(g, canvas, logoImage)
-            }
-            val backUrl = uploadCanvas(organizationId, orderId, orderItemId, "back", backPrintAreaWidthPx, backPrintAreaHeightPx) { g, canvas ->
-                drawBackPersonalization(g, canvas, personalizationName, personalizationNumber)
-            }
+            val frontUrl =
+                uploadCanvas(organizationId, orderId, orderItemId, "front", printAreaWidthPx, printAreaHeightPx) { g, canvas ->
+                    drawCenteredLogo(g, canvas, logoImage)
+                }
+            val backUrl =
+                uploadCanvas(organizationId, orderId, orderItemId, "back", backPrintAreaWidthPx, backPrintAreaHeightPx) { g, canvas ->
+                    drawBackPersonalization(g, canvas, personalizationName, personalizationNumber)
+                }
             return SwagCompositeResult(frontUrl, backUrl)
         }
 
-        val frontUrl = uploadCanvas(organizationId, orderId, orderItemId, "front", printAreaWidthPx, printAreaHeightPx) { g, canvas ->
-            when (personalizationPlacement) {
-                PersonalizationPlacement.LEFT_CHEST, PersonalizationPlacement.RIGHT_CHEST ->
-                    drawChestLogoAndPersonalization(g, canvas, logoImage, personalizationName, personalizationNumber, personalizationPlacement)
-                else -> drawCenteredLogo(g, canvas, logoImage)
+        val frontUrl =
+            uploadCanvas(organizationId, orderId, orderItemId, "front", printAreaWidthPx, printAreaHeightPx) { g, canvas ->
+                when (personalizationPlacement) {
+                    PersonalizationPlacement.LEFT_CHEST, PersonalizationPlacement.RIGHT_CHEST -> {
+                        drawChestLogoAndPersonalization(
+                            g,
+                            canvas,
+                            logoImage,
+                            personalizationName,
+                            personalizationNumber,
+                            personalizationPlacement,
+                        )
+                    }
+
+                    else -> {
+                        drawCenteredLogo(g, canvas, logoImage)
+                    }
+                }
             }
-        }
         return SwagCompositeResult(frontUrl, null)
     }
 

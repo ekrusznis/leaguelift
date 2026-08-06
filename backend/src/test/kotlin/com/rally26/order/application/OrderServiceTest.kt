@@ -27,6 +27,7 @@ import com.rally26.order.domain.FulfillmentStatus
 import com.rally26.order.domain.Order
 import com.rally26.order.domain.OrderItem
 import com.rally26.order.domain.OrderStatus
+import com.rally26.order.domain.PersonalizationPlacement
 import com.rally26.order.infra.OrderCheckoutSession
 import com.rally26.order.infra.StripeOrderCheckoutClient
 import com.rally26.order.persistence.FulfillmentHistoryRepository
@@ -34,10 +35,8 @@ import com.rally26.order.persistence.FulfillmentRepository
 import com.rally26.order.persistence.OrderItemRepository
 import com.rally26.order.persistence.OrderRepository
 import com.rally26.outbox.application.OutboxWriter
-import com.rally26.order.domain.PersonalizationPlacement
 import com.rally26.participant.domain.Participant
 import com.rally26.participant.domain.ParticipantStatus
-import com.rally26.participant.domain.ParticipantTeamAssignment
 import com.rally26.participant.persistence.ParticipantRepository
 import com.rally26.store.application.SwagCompositeResult
 import com.rally26.store.application.SwagDesignCompositor
@@ -300,10 +299,18 @@ class OrderServiceTest {
             )
         } returns SwagCompositeResult("https://signed.example.com/front.png", "https://signed.example.com/back.png")
         val lineItems = slot<List<PrintifyOrderLineItem>>()
-        every { printifyOrderClient.createDraftOrder(order.id.toString(), capture(lineItems)) } returns PrintifyDraftOrder("printify_order_1")
+        every { printifyOrderClient.createDraftOrder(order.id.toString(), capture(lineItems)) } returns
+            PrintifyDraftOrder("printify_order_1")
         val fulfillment = fulfillment(order.id, FulfillmentSource.PRINTIFY, FulfillmentStatus.DRAFT_CREATED, "printify_order_1")
         every {
-            fulfillmentRepository.insert(order.id, FulfillmentSource.PRINTIFY, FulfillmentStatus.DRAFT_CREATED, "printify_order_1", null, null)
+            fulfillmentRepository.insert(
+                order.id,
+                FulfillmentSource.PRINTIFY,
+                FulfillmentStatus.DRAFT_CREATED,
+                "printify_order_1",
+                null,
+                null,
+            )
         } returns fulfillment
         every { fulfillmentHistoryRepository.insert(orgId, fulfillment.id, null, FulfillmentStatus.DRAFT_CREATED, any(), null) } returns
             history(fulfillment)
@@ -690,7 +697,8 @@ class OrderServiceTest {
         val participant = participant(householdId)
         every { participantRepository.findById(participant.id, orgId) } returns participant
         every { authorizationService.hasGuardianRelationship(orgId, householdId, currentUser) } returns false
-        every { authorizationService.hasHouseholdCapability(orgId, householdId, currentUser, Capabilities.HOUSEHOLD_ORDER_CREATE) } returns false
+        every { authorizationService.hasHouseholdCapability(orgId, householdId, currentUser, Capabilities.HOUSEHOLD_ORDER_CREATE) } returns
+            false
         every { participantRepository.listTeamAssignments(participant.id, orgId) } returns emptyList()
 
         assertFailsWith<ForbiddenException> {

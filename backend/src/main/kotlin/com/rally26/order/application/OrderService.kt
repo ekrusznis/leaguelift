@@ -248,7 +248,14 @@ class OrderService(
         }
 
         return try {
-            val order = orderRepository.insertPending(organizationId, store.id, variant.currency, currentUser.displayName, currentUser.email)
+            val order =
+                orderRepository.insertPending(
+                    organizationId,
+                    store.id,
+                    variant.currency,
+                    currentUser.displayName,
+                    currentUser.email,
+                )
             orderItemRepository.insert(
                 orderId = order.id,
                 productVariantId = variant.id,
@@ -273,7 +280,9 @@ class OrderService(
             // which doesn't exist) with a status flag the page reads to show a banner —
             // matches the founder's own suggested UX after this was tested live and landed
             // on a dead route.
-            val successUrl = "${frontendProperties.baseUrl}/app/organizations/$organizationId/swag-shop/order?orderId=${order.id}&status=success"
+            val successUrl =
+                @Suppress("ktlint:standard:max-line-length")
+                "${frontendProperties.baseUrl}/app/organizations/$organizationId/swag-shop/order?orderId=${order.id}&status=success"
             val cancelUrl = "${frontendProperties.baseUrl}/app/organizations/$organizationId/swag-shop/order?status=canceled"
             val session = stripeOrderCheckoutClient.createOrderCheckoutSession(order.id, lineItems, successUrl, cancelUrl)
             orderRepository.attachStripeSession(order.id, session.sessionId)
@@ -306,7 +315,10 @@ class OrderService(
                 authorizationService.hasHouseholdCapability(organizationId, householdId, currentUser, Capabilities.HOUSEHOLD_ORDER_CREATE)
         if (asGuardian) return
         val participantTeamIds = participantRepository.listTeamAssignments(participantId, organizationId).map { it.teamId }
-        val asCoach = participantTeamIds.any { authorizationService.hasTeamCapability(organizationId, it, currentUser, Capabilities.TEAM_ORDER_CREATE) }
+        val asCoach =
+            participantTeamIds.any {
+                authorizationService.hasTeamCapability(organizationId, it, currentUser, Capabilities.TEAM_ORDER_CREATE)
+            }
         if (asCoach) return
         throw ForbiddenException("SWAG_SHOP_ORDER_ACCESS_DENIED", "You do not have access to order for this athlete.")
     }
@@ -504,7 +516,11 @@ class OrderService(
                             }
                         } else {
                             val designAssignment =
-                                mediaAssignmentService.getActiveAssignment(MediaEntityType.PRODUCT, product.id, MediaUsageSlot.PRODUCT_DESIGN)
+                                mediaAssignmentService.getActiveAssignment(
+                                    MediaEntityType.PRODUCT,
+                                    product.id,
+                                    MediaUsageSlot.PRODUCT_DESIGN,
+                                )
                                     ?: error("product ${product.id} has no design assigned")
                             val designUrl =
                                 mediaReadService.describe(designAssignment)?.url
