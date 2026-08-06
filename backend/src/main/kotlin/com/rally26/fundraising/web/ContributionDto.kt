@@ -17,6 +17,8 @@ data class CreateContributionCheckoutRequest(
     @field:Email @field:Size(max = 254) val supporterEmail: String? = null,
     @field:NotBlank val successUrl: String,
     @field:NotBlank val cancelUrl: String,
+    /** Phase 23 (DESIGN-DOC.md section 13/14.1): a household's private attribution code from `?ref=` on the public campaign page. Resolved server-side; never trusted to identify a household directly. */
+    @field:Size(max = 32) val attributionCode: String? = null,
 )
 
 data class ContributionCheckoutResponse(

@@ -43,7 +43,8 @@ data class CreateProductVariantRequest(
     @field:NotNull val printifyPrintProviderId: Long,
     @field:NotNull val printifyVariantId: Long,
     @field:NotBlank @field:Size(max = 120) val label: String,
-    @field:NotNull @field:Min(0) val priceMinor: Long,
+    /** Optional override — omitted means auto-computed from the org's markup rule engine (Phase 23) once Printify's real cost is known. */
+    @field:Min(0) val priceMinor: Long? = null,
 )
 
 data class ManualProductVariantRequest(

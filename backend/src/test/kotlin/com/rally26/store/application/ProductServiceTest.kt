@@ -59,6 +59,7 @@ class ProductServiceTest {
     private val printifyImageClient = mockk<PrintifyImageClient>()
     private val printifyProductClient = mockk<PrintifyProductClient>()
     private val vendorSelectionService = mockk<VendorSelectionService>()
+    private val markupRuleService = mockk<MarkupRuleService>()
     private val service =
         ProductService(
             productRepository,
@@ -75,6 +76,7 @@ class ProductServiceTest {
             printifyImageClient,
             printifyProductClient,
             vendorSelectionService,
+            markupRuleService,
         )
 
     private val orgId = UUID.randomUUID()

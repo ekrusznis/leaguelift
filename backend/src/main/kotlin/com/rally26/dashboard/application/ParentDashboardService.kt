@@ -4,6 +4,7 @@ import com.rally26.authorization.persistence.GuardianRelationshipRepository
 import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.web.CurrentUser
+import com.rally26.credit.application.FamilyCreditService
 import com.rally26.dashboard.web.AthleteSummary
 import com.rally26.dashboard.web.FamilyCredits
 import com.rally26.dashboard.web.FeeLineItem
@@ -62,6 +63,7 @@ class ParentDashboardService(
     private val contributionRepository: ContributionRepository,
     private val eventService: EventService,
     private val dashboardEventMapper: DashboardEventMapper,
+    private val familyCreditService: FamilyCreditService,
 ) {
     fun getOverview(
         organizationId: UUID,
@@ -129,12 +131,13 @@ class ParentDashboardService(
         currentUser: CurrentUser,
     ): FamilyCredits {
         requireHousehold(organizationId, householdId, currentUser)
+        val balance = familyCreditService.getBalance(organizationId, householdId, currentUser)
         return FamilyCredits(
-            isDemoData = true,
-            currency = "USD",
-            pendingMinor = 12_000,
-            availableMinor = 8_500,
-            appliedThisSeasonMinor = 21_500,
+            isDemoData = false,
+            currency = balance.currency,
+            pendingMinor = balance.pendingMinor,
+            availableMinor = balance.availableMinor,
+            appliedThisSeasonMinor = balance.appliedAllTimeMinor,
         )
     }
 
@@ -151,6 +154,7 @@ class ParentDashboardService(
                 FundraiserSummary(
                     campaignId = it.id,
                     name = it.name,
+                    slug = it.slug,
                     isRaisedDemoData = false,
                     raisedMinor = contributionRepository.sumConfirmedByCampaign(it.id),
                     goalMinor = it.goalAmountMinor,

@@ -6,6 +6,8 @@ import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
+import com.rally26.credit.application.FamilyCreditService
+import com.rally26.credit.application.HouseholdAttributionService
 import com.rally26.fundraising.domain.CampaignStatus
 import com.rally26.fundraising.domain.Contribution
 import com.rally26.fundraising.domain.ContributionLimits
@@ -64,6 +66,8 @@ class ContributionService(
     private val ledgerService: LedgerService,
     private val outboxWriter: OutboxWriter,
     private val objectMapper: ObjectMapper,
+    private val householdAttributionService: HouseholdAttributionService,
+    private val familyCreditService: FamilyCreditService,
 ) {
     @Transactional
     fun createCheckoutSession(
@@ -74,6 +78,7 @@ class ContributionService(
         supporterEmail: String?,
         successUrl: String,
         cancelUrl: String,
+        attributionCode: String? = null,
     ): ContributionCheckout {
         val campaign =
             campaignRepository.findBySlug(slug)
@@ -88,6 +93,14 @@ class ContributionService(
             )
         }
         val displayName = if (isAnonymous) null else supporterName?.take(120)
+        // Phase 23 (DESIGN-DOC.md section 13/14.1): resolved here, before Stripe is
+        // ever called, and stored directly on the contribution row — not
+        // round-tripped through Stripe metadata (see HouseholdAttributionService).
+        // An unrecognized/missing code silently resolves to no attribution rather
+        // than failing checkout — a stale or mistyped link should never block a
+        // supporter from giving.
+        val attributedHouseholdId =
+            attributionCode?.let { householdAttributionService.resolveByCode(campaign.organizationId, campaign.id, it) }
         return try {
             // Stripe's checkout-session metadata needs our contribution id, so the
             // contribution row is inserted (with a null session id) before Stripe is
@@ -101,6 +114,7 @@ class ContributionService(
                     displayName,
                     isAnonymous,
                     supporterEmail,
+                    attributedHouseholdId,
                 )
             val resolvedSuccessUrl = successUrl.replace(CONTRIBUTION_ID_PLACEHOLDER, provisional.id.toString())
             val session =
@@ -136,6 +150,15 @@ class ContributionService(
         if (updated > 0) {
             auditService.record(null, contribution.organizationId, "contribution.confirmed", "contribution", contribution.id)
             ledgerService.recordConfirmedContribution(contribution.copy(status = ContributionStatus.CONFIRMED))
+            if (contribution.attributedHouseholdId != null) {
+                familyCreditService.grantForContribution(
+                    contribution.organizationId,
+                    contribution.attributedHouseholdId,
+                    contribution.id,
+                    contribution.amountMinor,
+                    contribution.currency,
+                )
+            }
             if (contribution.supporterEmail != null) {
                 val campaign = campaignRepository.findById(contribution.campaignId, contribution.organizationId)
                 outboxWriter.write(
@@ -224,6 +247,9 @@ class ContributionService(
                 )
             }
         contributionRepository.markRefunded(contribution.id)
+        if (contribution.attributedHouseholdId != null) {
+            familyCreditService.reverseForRefundedContribution(organizationId, contribution.id)
+        }
         ledgerService.recordRefund(
             organizationId,
             LedgerSourceType.CONTRIBUTION,

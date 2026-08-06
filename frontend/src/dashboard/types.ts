@@ -237,6 +237,7 @@ export interface FamilyCredits {
 export interface FundraiserSummary {
 	campaignId: string;
 	name: string;
+	slug: string;
 	isRaisedDemoData: boolean;
 	raisedMinor: number;
 	goalMinor: number;

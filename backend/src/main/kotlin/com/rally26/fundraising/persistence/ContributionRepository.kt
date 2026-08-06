@@ -11,7 +11,7 @@ import java.util.UUID
 
 private const val COLUMNS =
     "id, organization_id, campaign_id, amount_minor, currency, supporter_name, is_anonymous, supporter_email, status, " +
-        "stripe_checkout_session_id, stripe_payment_intent_id, confirmed_at, refunded_at, created_at, payment_source"
+        "stripe_checkout_session_id, stripe_payment_intent_id, confirmed_at, refunded_at, created_at, payment_source, attributed_household_id"
 
 @Repository
 class ContributionRepository(
@@ -96,6 +96,7 @@ class ContributionRepository(
         supporterName: String?,
         isAnonymous: Boolean,
         supporterEmail: String?,
+        attributedHouseholdId: UUID? = null,
     ): Contribution {
         val id = UUID.randomUUID()
         val now = Instant.now()
@@ -103,9 +104,9 @@ class ContributionRepository(
             .sql(
                 """
                 insert into contribution
-                	(id, organization_id, campaign_id, amount_minor, currency, supporter_name, is_anonymous, supporter_email, status, created_at)
+                	(id, organization_id, campaign_id, amount_minor, currency, supporter_name, is_anonymous, supporter_email, status, created_at, attributed_household_id)
                 values
-                	(:id, :organizationId, :campaignId, :amountMinor, :currency, :supporterName, :isAnonymous, :supporterEmail, 'PENDING', :now)
+                	(:id, :organizationId, :campaignId, :amountMinor, :currency, :supporterName, :isAnonymous, :supporterEmail, 'PENDING', :now, :attributedHouseholdId)
                 """.trimIndent(),
             ).param("id", id)
             .param("organizationId", organizationId)
@@ -116,6 +117,7 @@ class ContributionRepository(
             .param("isAnonymous", isAnonymous)
             .param("supporterEmail", supporterEmail)
             .param("now", Timestamp.from(now))
+            .param("attributedHouseholdId", attributedHouseholdId)
             .update()
         return Contribution(
             id,
@@ -132,6 +134,7 @@ class ContributionRepository(
             null,
             null,
             now,
+            attributedHouseholdId = attributedHouseholdId,
         )
     }
 
@@ -241,5 +244,6 @@ class ContributionRepository(
             refundedAt = rs.getTimestamp("refunded_at")?.toInstant(),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             paymentSource = PaymentSource.valueOf(rs.getString("payment_source")),
+            attributedHouseholdId = rs.getObject("attributed_household_id", UUID::class.java),
         )
 }

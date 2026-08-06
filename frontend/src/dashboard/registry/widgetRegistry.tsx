@@ -29,6 +29,7 @@ export const WIDGET_REGISTRY: WidgetRegistryItem[] = [
 	{ id: "parent.athletes", contextType: "HOUSEHOLD" },
 	{ id: "parent.family-schedule", contextType: "HOUSEHOLD" },
 	{ id: "parent.outstanding-balance", contextType: "HOUSEHOLD" },
+	{ id: "parent.family-credits", contextType: "HOUSEHOLD" },
 	{ id: "parent.active-fundraisers", contextType: "HOUSEHOLD" },
 	{ id: "parent.documents", contextType: "HOUSEHOLD" },
 

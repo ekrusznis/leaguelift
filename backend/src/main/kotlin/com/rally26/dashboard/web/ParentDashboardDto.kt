@@ -38,7 +38,7 @@ data class FeeLineItem(
     val dueDate: LocalDate?,
 )
 
-/** Demo: no credit_event/credit_application tables exist yet. */
+/** Real as of Phase 23 (`FamilyCreditService.getBalance`) — `isDemoData` kept for API-shape stability, always false now. */
 data class FamilyCredits(
     @get:JsonProperty("isDemoData") val isDemoData: Boolean,
     val currency: String,
@@ -51,6 +51,8 @@ data class FamilyCredits(
 data class FundraiserSummary(
     val campaignId: UUID,
     val name: String,
+    /** Phase 23 (DESIGN-DOC.md section 13/14.1): needed for the guardian's household-attribution sharing link (`/campaigns/{slug}?ref=`). */
+    val slug: String,
     @get:JsonProperty("isRaisedDemoData") val isRaisedDemoData: Boolean,
     val raisedMinor: Long,
     val goalMinor: Long,

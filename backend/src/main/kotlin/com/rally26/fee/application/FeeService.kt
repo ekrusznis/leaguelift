@@ -294,23 +294,74 @@ class FeeService(
         currentUser: CurrentUser,
     ): FeeAssignmentWithBalance {
         membershipService.requireManagerRole(organizationId, currentUser)
+        return insertAdjustmentAndRecompute(organizationId, assignmentId, adjustmentType, amountMinor, reason, currentUser).second
+    }
+
+    /**
+     * Phase 23 (DESIGN-DOC.md section 13/14.1): a guardian applying their own
+     * household's available family credit against one of their own outstanding
+     * fees — the same underlying `fee_adjustment` (CREDIT) mechanism `applyAdjustment`
+     * above uses for manager-issued discounts, just gated by household capability
+     * instead of manager role. Returns the created adjustment so the caller
+     * (`FamilyCreditService`) can record which grant(s) funded it. The household-id
+     * match check (assignment must belong to the caller's own household) is the
+     * actual authorization boundary here, not just the capability check — a real
+     * capability grant is org-membership/guardian-relationship scoped, not
+     * fee-assignment scoped.
+     */
+    @Transactional
+    fun applyCreditFromHousehold(
+        organizationId: UUID,
+        assignmentId: UUID,
+        householdId: UUID,
+        amountMinor: Long,
+        currentUser: CurrentUser,
+    ): Pair<FeeAdjustment, FeeAssignmentWithBalance> {
+        if (!authorizationService.hasHouseholdCapability(organizationId, householdId, currentUser, Capabilities.HOUSEHOLD_CREDIT_APPLY)) {
+            throw ForbiddenException("HOUSEHOLD_ACCESS_DENIED", "You do not have access to apply credit for this household.")
+        }
+        val assignment =
+            feeRepository.findAssignmentById(assignmentId, organizationId)
+                ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
+        if (assignment.householdId != householdId) {
+            throw ValidationException("This fee does not belong to your household.")
+        }
+        return insertAdjustmentAndRecompute(
+            organizationId,
+            assignmentId,
+            AdjustmentType.CREDIT,
+            amountMinor,
+            "Family credit applied by guardian",
+            currentUser,
+        )
+    }
+
+    private fun insertAdjustmentAndRecompute(
+        organizationId: UUID,
+        assignmentId: UUID,
+        adjustmentType: AdjustmentType,
+        amountMinor: Long,
+        reason: String?,
+        currentUser: CurrentUser,
+    ): Pair<FeeAdjustment, FeeAssignmentWithBalance> {
         val assignment = requireOpenAssignment(organizationId, assignmentId)
         if (feePaymentPlanRepository.findActiveByAssignment(organizationId, assignmentId) != null) {
             throw ValidationException("Cancel and recreate the active payment plan before applying an adjustment.")
         }
-        feeAdjustmentRepository.insert(
-            organizationId,
-            assignmentId,
-            assignment.householdId,
-            adjustmentType,
-            amountMinor,
-            assignment.currency,
-            reason,
-            currentUser.userId,
-        )
+        val adjustment =
+            feeAdjustmentRepository.insert(
+                organizationId,
+                assignmentId,
+                assignment.householdId,
+                adjustmentType,
+                amountMinor,
+                assignment.currency,
+                reason,
+                currentUser.userId,
+            )
         val result = recomputeStatus(organizationId, assignment)
         auditService.record(currentUser.userId, organizationId, "fee_assignment.adjustment_applied", "fee_assignment", assignmentId)
-        return result
+        return adjustment to result
     }
 
     @Transactional

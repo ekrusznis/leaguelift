@@ -62,6 +62,7 @@ class ProductService(
     private val printifyImageClient: PrintifyImageClient,
     private val printifyProductClient: PrintifyProductClient,
     private val vendorSelectionService: VendorSelectionService,
+    private val markupRuleService: MarkupRuleService,
 ) {
     fun listBlueprints(
         organizationId: UUID,
@@ -139,7 +140,13 @@ class ProductService(
      * GET /public/stores/{slug}, so an authenticated-only gate reveals nothing new.
      */
     fun listSwagShopApparelTypes(organizationId: UUID): List<Triple<Store, Product, List<ProductVariant>>> {
-        val activeStores = storeRepository.findAll(organizationId, 0, 500).filter { it.status == com.rally26.store.domain.StoreStatus.ACTIVE }
+        val activeStores =
+            storeRepository
+                .findAll(
+                    organizationId,
+                    0,
+                    500,
+                ).filter { it.status == com.rally26.store.domain.StoreStatus.ACTIVE }
         return activeStores.flatMap { store ->
             listPublicProducts(store.id)
                 .filter { it.catalogSource == CatalogSource.PRINTIFY }
@@ -182,6 +189,7 @@ class ProductService(
                 if (printifyBlueprintId == null || printifyBlueprintId <= 0) throw ValidationException("Choose a Printify product type.")
                 if (manualVendorId != null) throw ValidationException("A Printify product cannot reference a manual vendor.")
             }
+
             CatalogSource.MANUAL -> {
                 if (printifyBlueprintId != null) throw ValidationException("Manual products cannot contain a Printify blueprint ID.")
                 manualVendorId?.let { manualVendorService.requireActiveVendor(organizationId, it) }
@@ -284,7 +292,7 @@ class ProductService(
         printifyPrintProviderId: Long,
         printifyVariantId: Long,
         label: String,
-        priceMinor: Long,
+        priceMinor: Long?,
         currentUser: CurrentUser,
     ): ProductVariant {
         val product = requireProductManageAccess(organizationId, productId, currentUser)
@@ -296,6 +304,12 @@ class ProductService(
         val blueprintId = product.printifyBlueprintId ?: error("PRINTIFY product ${product.id} has no blueprint ID")
         val printifyImageId = product.printifyImageId ?: uploadDesignToPrintify(organizationId, product, currentUser)
 
+        // The price submitted here is a formality Printify's create-product API
+        // requires — it never affects the cost Printify returns, and is unrelated to
+        // what Rally26 actually charges via its own Stripe Checkout at order time
+        // (confirmed live against the real Printify sandbox, 2026-08-05). When the
+        // caller omits a price, submit a placeholder; the real markup-computed price
+        // below is what actually gets stored and charged.
         val result =
             withPrintifyErrorTranslation {
                 printifyProductClient.createProduct(
@@ -303,7 +317,7 @@ class ProductService(
                     blueprintId = blueprintId,
                     printProviderId = printifyPrintProviderId,
                     printifyVariantIds = listOf(printifyVariantId),
-                    requestedPriceMinor = priceMinor,
+                    requestedPriceMinor = priceMinor ?: 0L,
                     printifyImageId = printifyImageId,
                     printPosition = product.printifyPrintPosition,
                 )
@@ -314,6 +328,10 @@ class ProductService(
                     "PRINTIFY_PROVIDER_UNAVAILABLE",
                     "Printify did not return pricing for the selected variant.",
                 )
+        // Markup rule engine (Phase 23, DESIGN-DOC.md section 13/14.1): an explicit
+        // caller-supplied price is always honored as an override; otherwise the price
+        // is computed from the org's real markup rule now that the real cost is known.
+        val resolvedPriceMinor = priceMinor ?: markupRuleService.computePrice(organizationId, blueprintId, variantCost.costMinor)
 
         // Swag Shop (DESIGN-DOC.md section 13): captured once here, at setup time, so
         // order-time compositing never needs an extra live Printify call inside the
@@ -343,7 +361,7 @@ class ProductService(
                 printifyVariantId,
                 currency = "USD",
                 costMinor = variantCost.costMinor,
-                priceMinor = variantCost.priceMinor,
+                priceMinor = resolvedPriceMinor,
                 printAreaWidthPx = placeholder?.width,
                 printAreaHeightPx = placeholder?.height,
                 backPrintAreaWidthPx = backPlaceholder?.width,

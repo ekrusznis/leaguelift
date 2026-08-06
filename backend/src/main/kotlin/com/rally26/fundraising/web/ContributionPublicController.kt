@@ -35,6 +35,7 @@ class ContributionPublicController(
                 request.supporterEmail,
                 request.successUrl,
                 request.cancelUrl,
+                request.attributionCode,
             ).toResponse()
 
     @GetMapping("/{contributionId}")

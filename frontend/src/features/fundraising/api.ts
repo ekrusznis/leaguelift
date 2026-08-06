@@ -83,7 +83,7 @@ export function usePublicCampaign(slug: string) {
  */
 export function useCreateContributionCheckout(slug: string) {
 	return useMutation({
-		mutationFn: (values: CreateContributionFormValues & { successUrl: string; cancelUrl: string }) =>
+		mutationFn: (values: CreateContributionFormValues & { successUrl: string; cancelUrl: string; attributionCode?: string | null }) =>
 			apiFetch<ContributionCheckout>(`/public/campaigns/${slug}/contributions`, {
 				method: "POST",
 				body: {
@@ -93,6 +93,8 @@ export function useCreateContributionCheckout(slug: string) {
 					supporterEmail: values.supporterEmail || null,
 					successUrl: values.successUrl,
 					cancelUrl: values.cancelUrl,
+					// Phase 23: a household's private attribution link (?ref= on this page) — resolved server-side, never trusted client-side.
+					attributionCode: values.attributionCode || null,
 				},
 			}),
 	});

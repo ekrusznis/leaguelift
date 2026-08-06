@@ -6,6 +6,8 @@ import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
+import com.rally26.credit.application.FamilyCreditService
+import com.rally26.credit.application.HouseholdAttributionService
 import com.rally26.fundraising.domain.Campaign
 import com.rally26.fundraising.domain.CampaignStatus
 import com.rally26.fundraising.domain.CampaignType
@@ -44,6 +46,8 @@ class ContributionServiceTest {
     private val auditService = mockk<AuditService>()
     private val ledgerService = mockk<LedgerService>()
     private val outboxWriter = mockk<OutboxWriter>()
+    private val householdAttributionService = mockk<HouseholdAttributionService>()
+    private val familyCreditService = mockk<FamilyCreditService>()
     private val service =
         ContributionService(
             contributionRepository,
@@ -54,6 +58,8 @@ class ContributionServiceTest {
             ledgerService,
             outboxWriter,
             ObjectMapper(),
+            householdAttributionService,
+            familyCreditService,
         )
 
     private val orgId = UUID.randomUUID()
@@ -122,6 +128,66 @@ class ContributionServiceTest {
 
         assertFailsWith<ServiceUnavailableException> {
             service.createCheckoutSession("spring-fund", 5000L, "Jane Doe", false, null, "https://x/success", "https://x/cancel")
+        }
+    }
+
+    @Test
+    fun `createCheckoutSession resolves an attribution code and stores it on the contribution`() {
+        val campaign = campaign()
+        val attributedHouseholdId = UUID.randomUUID()
+        every { campaignRepository.findBySlug("spring-fund") } returns campaign
+        every { householdAttributionService.resolveByCode(campaign.organizationId, campaign.id, "ABC12345") } returns attributedHouseholdId
+        every {
+            contributionRepository.insertPending(
+                campaign.organizationId,
+                campaign.id,
+                5000L,
+                "USD",
+                "Jane Doe",
+                false,
+                null,
+                attributedHouseholdId,
+            )
+        } returns pendingContribution(campaign).copy(attributedHouseholdId = attributedHouseholdId)
+        every { stripeCheckoutClient.createContributionCheckoutSession(any(), 5000L, "USD", campaign.name, any(), any()) } returns
+            CheckoutSession("cs_test_123", "https://checkout.stripe.com/cs_test_123")
+        every { contributionRepository.attachStripeSession(any(), "cs_test_123") } returns 1
+
+        service.createCheckoutSession("spring-fund", 5000L, "Jane Doe", false, null, "https://x/success", "https://x/cancel", "ABC12345")
+
+        verify(exactly = 1) {
+            contributionRepository.insertPending(
+                campaign.organizationId,
+                campaign.id,
+                5000L,
+                "USD",
+                "Jane Doe",
+                false,
+                null,
+                attributedHouseholdId,
+            )
+        }
+    }
+
+    @Test
+    fun `confirmFromWebhook grants family credit when the contribution has an attributed household`() {
+        val campaign = campaign()
+        val attributedHouseholdId = UUID.randomUUID()
+        val contribution = pendingContribution(campaign).copy(attributedHouseholdId = attributedHouseholdId)
+        val confirmed = contribution.copy(status = ContributionStatus.CONFIRMED, confirmedAt = Instant.now())
+        every { contributionRepository.findByStripeCheckoutSessionId("cs_test_123") } returns contribution
+        every { contributionRepository.markConfirmed(contribution.id, "pi_test_123") } returns 1
+        every { contributionRepository.findById(contribution.id) } returns confirmed
+        every { auditService.record(null, campaign.organizationId, "contribution.confirmed", "contribution", contribution.id) } just runs
+        every { ledgerService.recordConfirmedContribution(any()) } just runs
+        every {
+            familyCreditService.grantForContribution(campaign.organizationId, attributedHouseholdId, contribution.id, 5000L, "USD")
+        } returns mockk()
+
+        service.confirmFromWebhook("cs_test_123", "paid", "pi_test_123")
+
+        verify(exactly = 1) {
+            familyCreditService.grantForContribution(campaign.organizationId, attributedHouseholdId, contribution.id, 5000L, "USD")
         }
     }
 
@@ -249,6 +315,41 @@ class ContributionServiceTest {
                 "re_test_123",
             )
         }
+    }
+
+    @Test
+    fun `refund reverses remaining family credit when the contribution was attributed to a household`() {
+        val campaign = campaign()
+        val attributedHouseholdId = UUID.randomUUID()
+        val confirmed =
+            pendingContribution(campaign)
+                .copy(
+                    status = ContributionStatus.CONFIRMED,
+                    stripePaymentIntentId = "pi_test_123",
+                    confirmedAt = Instant.now(),
+                    attributedHouseholdId = attributedHouseholdId,
+                )
+        val manager = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
+        every { membershipService.requireManagerRole(orgId, manager) } returns managerMembership(manager)
+        every { contributionRepository.findById(confirmed.id) } returns confirmed
+        every { stripeCheckoutClient.createRefund("pi_test_123") } returns "re_test_123"
+        every { contributionRepository.markRefunded(confirmed.id) } returns 1
+        every {
+            ledgerService.recordRefund(
+                orgId,
+                LedgerSourceType.CONTRIBUTION,
+                confirmed.id,
+                confirmed.amountMinor,
+                confirmed.currency,
+                "re_test_123",
+            )
+        } just runs
+        every { auditService.record(manager.userId, orgId, "contribution.refunded", "contribution", confirmed.id) } just runs
+        every { familyCreditService.reverseForRefundedContribution(orgId, confirmed.id) } just runs
+
+        service.refund(orgId, confirmed.id, manager)
+
+        verify(exactly = 1) { familyCreditService.reverseForRefundedContribution(orgId, confirmed.id) }
     }
 
     @Test

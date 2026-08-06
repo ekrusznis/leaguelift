@@ -29,6 +29,7 @@ object Capabilities {
     const val TEAM_PAGE_EDIT = "team.page.edit"
     const val TEAM_FUNDRAISING_MANAGE = "team.fundraising.manage"
     const val TEAM_STORE_MANAGE = "team.store.manage"
+
     /** Swag Shop (DESIGN-DOC.md section 13): a coach placing a personalized order on behalf of a roster athlete — deliberately separate from TEAM_STORE_MANAGE (catalog setup) since ordering is a lower, more routine bar. */
     const val TEAM_ORDER_CREATE = "team.order.create"
     const val TEAM_ROSTER_MANAGE = "team.roster.manage"
@@ -48,7 +49,14 @@ object Capabilities {
     const val HOUSEHOLD_FEE_VIEW = "household.fee.view"
     const val HOUSEHOLD_FEE_PAY = "household.fee.pay"
     const val HOUSEHOLD_CREDIT_VIEW = "household.credit.view"
+
+    /** Phase 23: applying available family credit against one of the household's own outstanding fees. */
+    const val HOUSEHOLD_CREDIT_APPLY = "household.credit.apply"
+
+    /** Phase 23: peer-to-peer credit transfer to another household in the org — checked alongside AuthorizationService.hasGuardianRelationship (exact guardian, not the broader "any active org member" branch), the same real-money-movement caution EventRsvpService/HOUSEHOLD_ORDER_CREATE already apply. */
+    const val HOUSEHOLD_CREDIT_TRANSFER = "household.credit.transfer"
     const val HOUSEHOLD_ORDER_VIEW = "household.order.view"
+
     /** Swag Shop (DESIGN-DOC.md section 13): a guardian placing a personalized order for their own household's participant. Checked alongside AuthorizationService.hasGuardianRelationship, not the broader hasHouseholdCapability "any active org member" branch — see EventRsvpService.resolveSource for the same pattern. */
     const val HOUSEHOLD_ORDER_CREATE = "household.order.create"
     const val HOUSEHOLD_PROFILE_MANAGE = "household.profile.manage"
@@ -128,7 +136,7 @@ object CapabilityRegistry {
      */
     fun organizationCapabilities(role: MembershipRole): Set<String> =
         when (role) {
-            MembershipRole.OWNER ->
+            MembershipRole.OWNER -> {
                 setOf(
                     Capabilities.ORG_MANAGE,
                     Capabilities.ORG_MEMBERS_MANAGE,
@@ -141,7 +149,9 @@ object CapabilityRegistry {
                     Capabilities.ORG_EVENT_MANAGE,
                     Capabilities.EVENT_READ,
                 )
-            MembershipRole.ADMINISTRATOR ->
+            }
+
+            MembershipRole.ADMINISTRATOR -> {
                 setOf(
                     Capabilities.ORG_MANAGE,
                     Capabilities.ORG_MEMBERS_MANAGE,
@@ -152,14 +162,24 @@ object CapabilityRegistry {
                     Capabilities.ORG_EVENT_MANAGE,
                     Capabilities.EVENT_READ,
                 )
-            MembershipRole.VIEWER -> setOf(Capabilities.ORG_REPORT_VIEW)
-            MembershipRole.TEAM_ADMINISTRATOR, MembershipRole.TOURNAMENT_ADMINISTRATOR -> emptySet()
+            }
+
+            MembershipRole.VIEWER -> {
+                setOf(Capabilities.ORG_REPORT_VIEW)
+            }
+
+            MembershipRole.TEAM_ADMINISTRATOR, MembershipRole.TOURNAMENT_ADMINISTRATOR -> {
+                emptySet()
+            }
         }
 
     fun teamCapabilities(role: ResourceRole): Set<String> =
         when (role) {
-            ResourceRole.COACH_READ -> setOf(Capabilities.TEAM_VIEW, Capabilities.EVENT_READ)
-            ResourceRole.TEAM_EDITOR ->
+            ResourceRole.COACH_READ -> {
+                setOf(Capabilities.TEAM_VIEW, Capabilities.EVENT_READ)
+            }
+
+            ResourceRole.TEAM_EDITOR -> {
                 setOf(
                     Capabilities.TEAM_VIEW,
                     Capabilities.TEAM_PAGE_EDIT,
@@ -174,7 +194,9 @@ object CapabilityRegistry {
                     Capabilities.TEAM_EVENT_MANAGE,
                     Capabilities.TEAM_COMMUNICATION_MANAGE,
                 )
-            ResourceRole.TEAM_MANAGER ->
+            }
+
+            ResourceRole.TEAM_MANAGER -> {
                 setOf(
                     Capabilities.TEAM_VIEW,
                     Capabilities.TEAM_PAGE_EDIT,
@@ -193,13 +215,20 @@ object CapabilityRegistry {
                     Capabilities.TEAM_EVENT_MANAGE,
                     Capabilities.TEAM_COMMUNICATION_MANAGE,
                 )
-            else -> emptySet()
+            }
+
+            else -> {
+                emptySet()
+            }
         }
 
     fun tournamentCapabilities(role: ResourceRole): Set<String> =
         when (role) {
-            ResourceRole.TOURNAMENT_VIEWER -> setOf(Capabilities.TOURNAMENT_VIEW, Capabilities.EVENT_READ)
-            ResourceRole.TOURNAMENT_ADMINISTRATOR ->
+            ResourceRole.TOURNAMENT_VIEWER -> {
+                setOf(Capabilities.TOURNAMENT_VIEW, Capabilities.EVENT_READ)
+            }
+
+            ResourceRole.TOURNAMENT_ADMINISTRATOR -> {
                 setOf(
                     Capabilities.TOURNAMENT_VIEW,
                     Capabilities.TOURNAMENT_MANAGE,
@@ -214,12 +243,16 @@ object CapabilityRegistry {
                     Capabilities.TOURNAMENT_EVENT_MANAGE,
                     Capabilities.TOURNAMENT_COMMUNICATION_MANAGE,
                 )
-            else -> emptySet()
+            }
+
+            else -> {
+                emptySet()
+            }
         }
 
     fun platformCapabilities(role: ResourceRole): Set<String> =
         when (role) {
-            ResourceRole.PLATFORM_ADMIN ->
+            ResourceRole.PLATFORM_ADMIN -> {
                 setOf(
                     Capabilities.PLATFORM_ORG_VIEW,
                     Capabilities.PLATFORM_ORG_MANAGE,
@@ -234,7 +267,11 @@ object CapabilityRegistry {
                     Capabilities.PLATFORM_SUPPORT_CASE_MANAGE,
                     Capabilities.PLATFORM_SWAG_SHOP_VIEW,
                 )
-            else -> emptySet()
+            }
+
+            else -> {
+                emptySet()
+            }
         }
 
     /** The full household capability set — what a real guardian holds for their own household, and what OWNER/ADMINISTRATOR hold org-wide. */
@@ -244,6 +281,8 @@ object CapabilityRegistry {
             Capabilities.HOUSEHOLD_FEE_VIEW,
             Capabilities.HOUSEHOLD_FEE_PAY,
             Capabilities.HOUSEHOLD_CREDIT_VIEW,
+            Capabilities.HOUSEHOLD_CREDIT_APPLY,
+            Capabilities.HOUSEHOLD_CREDIT_TRANSFER,
             Capabilities.HOUSEHOLD_ORDER_VIEW,
             Capabilities.HOUSEHOLD_ORDER_CREATE,
             Capabilities.HOUSEHOLD_PROFILE_MANAGE,
@@ -267,15 +306,22 @@ object CapabilityRegistry {
      */
     fun householdCapabilitiesForOrgRole(role: MembershipRole): Set<String> =
         when (role) {
-            MembershipRole.OWNER, MembershipRole.ADMINISTRATOR -> householdCapabilities()
-            MembershipRole.VIEWER ->
+            MembershipRole.OWNER, MembershipRole.ADMINISTRATOR -> {
+                householdCapabilities()
+            }
+
+            MembershipRole.VIEWER -> {
                 setOf(
                     Capabilities.HOUSEHOLD_VIEW,
                     Capabilities.HOUSEHOLD_FEE_VIEW,
                     Capabilities.HOUSEHOLD_FEE_PAY,
                     Capabilities.EVENT_READ,
                 )
-            MembershipRole.TEAM_ADMINISTRATOR, MembershipRole.TOURNAMENT_ADMINISTRATOR -> setOf(Capabilities.EVENT_READ)
+            }
+
+            MembershipRole.TEAM_ADMINISTRATOR, MembershipRole.TOURNAMENT_ADMINISTRATOR -> {
+                setOf(Capabilities.EVENT_READ)
+            }
         }
 
     /** Deliberately excludes anything fee/payment/report-related — see the class doc. */

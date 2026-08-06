@@ -22,6 +22,8 @@ data class Contribution(
     val refundedAt: Instant?,
     val createdAt: Instant,
     val paymentSource: PaymentSource = PaymentSource.STRIPE,
+    /** Phase 23 (DESIGN-DOC.md section 13/14.1): the household whose attribution link the supporter arrived through, if any — resolved and set at insert time, never round-tripped through Stripe metadata. */
+    val attributedHouseholdId: UUID? = null,
 )
 
 /**

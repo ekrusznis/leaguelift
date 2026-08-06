@@ -25,6 +25,9 @@ import {
 	ShieldIcon as GuardianIcon,
 } from "../icons";
 import { HouseholdDocumentsPanel } from "../../features/documents/HouseholdDocumentsPanel";
+import { FamilyCreditsCard } from "../../features/credit/FamilyCreditsCard";
+import { AttributionLinkPanel } from "../../features/credit/AttributionLinkPanel";
+import { useState } from "react";
 
 /** Parent/guardian dashboard, wired to real per-card API calls (DESIGN-DOC.md section 10.1/10.2). */
 export function ParentDashboard({ organizationId, householdId }: { organizationId: string; householdId: string }) {
@@ -162,6 +165,12 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 					</DashCard>
 				)}
 
+				{visibleWidgets.has("parent.family-credits") && (
+					<DashCard title="Family Credits">
+						<FamilyCreditsCard organizationId={organizationId} householdId={householdId} />
+					</DashCard>
+				)}
+
 				{visibleWidgets.has("parent.active-fundraisers") && (
 					<DashCard id="parent-fundraising" title="Active Fundraisers">
 						<CardQuery query={activeFundraisers} loadingLabel="Loading fundraisers…" isEmpty={(items) => items.length === 0} emptyTitle="No active fundraisers">
@@ -180,6 +189,7 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 											<div className="mt-1">
 												<ProgressBar percent={(fundraiser.raisedMinor / fundraiser.goalMinor) * 100} />
 											</div>
+											<FundraiserAttributionToggle organizationId={organizationId} householdId={householdId} campaignId={fundraiser.campaignId} campaignSlug={fundraiser.slug} />
 										</li>
 									))}
 								</ul>
@@ -197,5 +207,20 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 
 			</div>
 		</DashboardShell>
+	);
+}
+
+function FundraiserAttributionToggle({ organizationId, householdId, campaignId, campaignSlug }: { organizationId: string; householdId: string; campaignId: string; campaignSlug: string }) {
+	const [showLink, setShowLink] = useState(false);
+
+	return (
+		<div className="mt-2">
+			<button type="button" onClick={() => setShowLink((value) => !value)} className="text-xs font-medium text-green-600 hover:underline">
+				{showLink ? "Hide my sharing link" : "Get my sharing link"}
+			</button>
+			{showLink && (
+				<AttributionLinkPanel organizationId={organizationId} householdId={householdId} campaignId={campaignId} campaignSlug={campaignSlug} />
+			)}
+		</div>
 	);
 }

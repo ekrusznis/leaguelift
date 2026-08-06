@@ -34,7 +34,7 @@ describe("dashboard navigation registry", () => {
 		expect(items.map((item) => item.id)).toEqual(["owner.overview", "owner.action-center", "owner.announcements", "owner.integrations", "owner.fees", "owner.reports"]);
 	});
 
-	it("does not advertise unimplemented parent credit or order destinations", () => {
+	it("does not give family credit or order history their own nav destination (both live inline on the dashboard/fee views)", () => {
 		const items = navItemsFor(
 			"HOUSEHOLD",
 			new Set([Capabilities.EVENT_READ, Capabilities.HOUSEHOLD_FEE_VIEW, Capabilities.HOUSEHOLD_VIEW]),

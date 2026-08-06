@@ -225,7 +225,7 @@ function PrintifyVariantManagement({ organizationId, productId, printifyBlueprin
 	const catalogVariants = usePrintifyCatalogVariants(organizationId, printifyBlueprintId, providerId);
 	const createVariant = useCreateProductVariant(organizationId, productId);
 	const updateStatus = useUpdateProductVariantStatus(organizationId, productId);
-	const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<z.input<typeof createProductVariantSchema>, unknown, z.output<typeof createProductVariantSchema>>({ resolver: zodResolver(createProductVariantSchema), defaultValues: { printifyPrintProviderId: 0, printifyVariantId: 0, label: "", priceMinor: 0 } });
+	const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<z.input<typeof createProductVariantSchema>, unknown, z.output<typeof createProductVariantSchema>>({ resolver: zodResolver(createProductVariantSchema), defaultValues: { printifyPrintProviderId: 0, printifyVariantId: 0, label: "", priceMinor: undefined } });
 	const onSubmit = handleSubmit(async (values) => { await createVariant.mutateAsync(values); reset(); });
 	return (
 		<div className="flex flex-col gap-3"><h4 className="text-sm font-semibold text-navy">Printify variants</h4><VariantList variants={variants.data ?? []} onToggle={(variant) => updateStatus.mutate({ variantId: variant.id, isActive: !variant.isActive })} />
@@ -233,7 +233,7 @@ function PrintifyVariantManagement({ organizationId, productId, printifyBlueprin
 				<FormField label="US print provider" id={`provider-${productId}`}><select id={`provider-${productId}`} {...register("printifyPrintProviderId")} onChange={(event) => setProviderId(Number(event.target.value) || null)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"><option value={0}>Select…</option>{providers.data?.map((provider) => <option key={provider.id} value={provider.id}>{provider.title}</option>)}</select></FormField>
 				<FormField label="Size / color" id={`variant-${productId}`}><select id={`variant-${productId}`} {...register("printifyVariantId")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"><option value={0}>Select…</option>{catalogVariants.data?.map((variant) => <option key={variant.id} value={variant.id}>{variant.title}</option>)}</select></FormField>
 				<FormField label="Label" id={`label-${productId}`}><input id={`label-${productId}`} {...register("label")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></FormField>
-				<FormField label="Price (cents)" id={`price-${productId}`}><input id={`price-${productId}`} type="number" min={0} {...register("priceMinor")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></FormField>
+				<FormField label="Price (cents)" id={`price-${productId}`}><input id={`price-${productId}`} type="number" min={0} placeholder="Auto from markup rule" {...register("priceMinor")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></FormField>
 				<div className="md:col-span-4"><Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Adding…" : "Add Printify variant"}</Button>{Object.keys(errors).length > 0 && <p role="alert" className="mt-1 text-sm text-error-red">Complete all variant fields.</p>}</div>
 			</form>
 		</div>

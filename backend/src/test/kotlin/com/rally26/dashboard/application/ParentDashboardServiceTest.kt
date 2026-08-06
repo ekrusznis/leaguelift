@@ -6,6 +6,7 @@ import com.rally26.authorization.persistence.GuardianRelationshipRepository
 import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.web.CurrentUser
+import com.rally26.credit.application.FamilyCreditService
 import com.rally26.event.application.EventService
 import com.rally26.fee.domain.FeeAssignment
 import com.rally26.fee.domain.FeeAssignmentStatus
@@ -46,6 +47,7 @@ class ParentDashboardServiceTest {
     private val contributionRepository = mockk<ContributionRepository>()
     private val eventService = mockk<EventService>()
     private val dashboardEventMapper = mockk<DashboardEventMapper>()
+    private val familyCreditService = mockk<FamilyCreditService>()
 
     private val service =
         ParentDashboardService(
@@ -61,6 +63,7 @@ class ParentDashboardServiceTest {
             contributionRepository,
             eventService,
             dashboardEventMapper,
+            familyCreditService,
         )
 
     private val orgId = UUID.randomUUID()

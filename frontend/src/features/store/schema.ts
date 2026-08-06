@@ -39,7 +39,11 @@ export const createProductVariantSchema = z.object({
 	printifyPrintProviderId: z.coerce.number().int("Choose a print provider."),
 	printifyVariantId: z.coerce.number().int("Choose a size/color."),
 	label: z.string().trim().min(1, "Label is required.").max(120),
-	priceMinor: z.coerce.number().int("Price must be a whole number of cents.").min(0, "Price must be 0 or greater."),
+	/** Blank means "compute from the organization's markup rule" (MarkupRuleService). */
+	priceMinor: z.preprocess(
+		(value) => (value === "" || value === null || value === undefined ? undefined : value),
+		z.coerce.number().int("Price must be a whole number of cents.").min(0, "Price must be 0 or greater.").optional(),
+	),
 });
 export type CreateProductVariantFormValues = z.infer<typeof createProductVariantSchema>;
 

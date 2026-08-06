@@ -38,6 +38,8 @@ export const Capabilities = {
 	HOUSEHOLD_FEE_VIEW: "household.fee.view",
 	HOUSEHOLD_FEE_PAY: "household.fee.pay",
 	HOUSEHOLD_CREDIT_VIEW: "household.credit.view",
+	HOUSEHOLD_CREDIT_APPLY: "household.credit.apply",
+	HOUSEHOLD_CREDIT_TRANSFER: "household.credit.transfer",
 	HOUSEHOLD_ORDER_VIEW: "household.order.view",
 	HOUSEHOLD_ORDER_CREATE: "household.order.create",
 	HOUSEHOLD_PROFILE_MANAGE: "household.profile.manage",

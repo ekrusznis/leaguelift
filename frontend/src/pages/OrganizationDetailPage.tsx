@@ -11,6 +11,7 @@ import { OrganizationDocumentsPanel } from "../features/documents/OrganizationDo
 import { OnboardingPanel } from "../features/onboarding/OnboardingPanel";
 import { OfflineFinancialRecordsPanel } from "../features/offlineFinance/OfflineFinancialRecordsPanel";
 import { FinancialCorrectionsPanel } from "../features/financialCorrections/FinancialCorrectionsPanel";
+import { CreditMarkupSettingsPanel } from "../features/credit/CreditMarkupSettingsPanel";
 import { ReconciliationPanel } from "../features/reconciliation/ReconciliationPanel";
 import { OrganizationCorrectionReviewPanel } from "../features/profileCorrections/OrganizationCorrectionReviewPanel";
 import { EventListPanel } from "../features/events/EventListPanel";
@@ -254,6 +255,7 @@ function OrganizationSectionContent({
 							<Section title="Branding"><OrganizationBrandingPanel organizationId={organization.id} organizationName={organization.name} /></Section>
 							<Section title="Organization Profile"><OrganizationProfileForm organization={organization} /></Section>
 							<Section title="Public Pages"><PublicPagesPanel organizationId={organization.id} organizationName={organization.name} /></Section>
+							<Section title="Credit & Markup"><CreditMarkupSettingsPanel organizationId={organization.id} /></Section>
 						</>
 					)}
 					{canManagePayouts && (

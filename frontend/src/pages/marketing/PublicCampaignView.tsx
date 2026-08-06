@@ -79,7 +79,7 @@ function ContributionReturnPanel({ slug, contributionId }: { slug: string; contr
 	);
 }
 
-function ContributionForm({ slug, campaignName }: { slug: string; campaignName: string }) {
+function ContributionForm({ slug, campaignName, attributionCode }: { slug: string; campaignName: string; attributionCode: string | null }) {
 	const createCheckout = useCreateContributionCheckout(slug);
 	const {
 		register,
@@ -102,6 +102,7 @@ function ContributionForm({ slug, campaignName }: { slug: string; campaignName: 
 			...values,
 			successUrl: `${returnBase}?contributionId={CONTRIBUTION_ID}`,
 			cancelUrl: `${returnBase}?checkoutCanceled=1`,
+			attributionCode,
 		});
 		window.location.href = result.checkoutUrl;
 	});
@@ -245,7 +246,7 @@ export function PublicCampaignView() {
 									Checkout was canceled — no contribution was made.
 								</p>
 							)}
-							<ContributionForm slug={campaign.slug} campaignName={campaign.name} />
+							<ContributionForm slug={campaign.slug} campaignName={campaign.name} attributionCode={searchParams.get("ref")} />
 						</>
 					)}
 
