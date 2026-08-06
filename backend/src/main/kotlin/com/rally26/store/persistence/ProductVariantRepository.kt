@@ -196,6 +196,12 @@ class ProductVariantRepository(
             .param("organizationId", organizationId)
             .update()
 
+    fun deleteByProduct(productId: UUID): Int =
+        jdbcClient
+            .sql("delete from product_variant where product_id = :productId")
+            .param("productId", productId)
+            .update()
+
     private fun mapRow(
         rs: java.sql.ResultSet,
         _rowNum: Int,

@@ -196,6 +196,50 @@ class ProductServiceTest {
         assertEquals("https://signed.example.com/design.png", service.getPublicDesignUrl(product.id))
     }
 
+    @Test
+    fun `delete removes a draft product with no order history`() {
+        val product = product(CatalogSource.MANUAL, printifyImageId = null)
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { productRepository.findById(product.id, orgId) } returns product
+        every { storeRepository.findById(product.storeId, orgId) } returns store(product.storeId)
+        every { productRepository.hasOrderHistory(product.id) } returns false
+        every { productVariantRepository.deleteByProduct(product.id) } returns 1
+        every { productRepository.delete(product.id, orgId) } returns 1
+        every { auditService.record(any(), any(), any(), any(), any()) } just runs
+
+        service.delete(orgId, product.id, currentUser)
+
+        verify(exactly = 1) { productVariantRepository.deleteByProduct(product.id) }
+        verify(exactly = 1) { productRepository.delete(product.id, orgId) }
+    }
+
+    @Test
+    fun `delete rejects a non-draft product`() {
+        val product = product(CatalogSource.MANUAL, printifyImageId = null).copy(status = ProductStatus.ACTIVE)
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { productRepository.findById(product.id, orgId) } returns product
+        every { storeRepository.findById(product.storeId, orgId) } returns store(product.storeId)
+
+        assertFailsWith<ValidationException> {
+            service.delete(orgId, product.id, currentUser)
+        }
+        verify(exactly = 0) { productRepository.delete(any(), any()) }
+    }
+
+    @Test
+    fun `delete rejects a draft product with order history`() {
+        val product = product(CatalogSource.MANUAL, printifyImageId = null)
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { productRepository.findById(product.id, orgId) } returns product
+        every { storeRepository.findById(product.storeId, orgId) } returns store(product.storeId)
+        every { productRepository.hasOrderHistory(product.id) } returns true
+
+        assertFailsWith<ValidationException> {
+            service.delete(orgId, product.id, currentUser)
+        }
+        verify(exactly = 0) { productRepository.delete(any(), any()) }
+    }
+
     private fun product(
         source: CatalogSource,
         printifyImageId: String?,

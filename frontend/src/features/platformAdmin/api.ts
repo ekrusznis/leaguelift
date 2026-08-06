@@ -8,6 +8,7 @@ import type {
 	PlatformOrganizationListItem,
 	PlatformSupportAccess,
 	PlatformSupportAccessListItem,
+	PlatformSwagShopProductListItem,
 	PlatformUserListItem,
 } from "./types";
 
@@ -18,6 +19,10 @@ export interface PlatformListFilters {
 	size?: number;
 }
 
+export interface PlatformSwagShopListFilters extends PlatformListFilters {
+	organizationId?: string;
+}
+
 function listQuery(filters: PlatformListFilters) {
 	const params = new URLSearchParams();
 	if (filters.query?.trim()) params.set("query", filters.query.trim());
@@ -25,6 +30,15 @@ function listQuery(filters: PlatformListFilters) {
 	params.set("page", String(filters.page ?? 0));
 	params.set("size", String(filters.size ?? 25));
 	return params.toString();
+}
+
+export function usePlatformSwagShopProducts(filters: PlatformSwagShopListFilters) {
+	const params = new URLSearchParams(listQuery(filters));
+	if (filters.organizationId) params.set("organizationId", filters.organizationId);
+	return useQuery({
+		queryKey: ["platform", "admin", "swag-shop", "products", filters],
+		queryFn: () => apiFetch<PageResponse<PlatformSwagShopProductListItem>>(`/platform/admin/swag-shop/products?${params.toString()}`),
+	});
 }
 
 export function usePlatformAdminOrganizations(filters: PlatformListFilters) {

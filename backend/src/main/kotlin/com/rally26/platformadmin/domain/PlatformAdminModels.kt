@@ -96,3 +96,25 @@ data class PlatformSupportAccess(
     val endedAt: Instant?,
     val createdAt: Instant,
 )
+
+/**
+ * Swag Shop support triage (DESIGN-DOC.md section 13): a read-only cross-org row so
+ * an employee can find which organization owns a stuck product before drilling into
+ * that org's existing Swag Shop console section (no separate mutation UI here).
+ */
+data class PlatformSwagShopProductListItem(
+    val productId: UUID,
+    val productName: String,
+    val status: String,
+    val catalogSource: String,
+    val storeId: UUID,
+    val storeName: String,
+    val teamId: UUID?,
+    val teamName: String?,
+    val organizationId: UUID,
+    val organizationName: String,
+    val variantCount: Long,
+    val hasSwagLogo: Boolean,
+    val createdAt: Instant,
+    val updatedAt: Instant,
+)

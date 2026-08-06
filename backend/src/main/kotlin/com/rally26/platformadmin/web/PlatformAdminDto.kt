@@ -4,6 +4,7 @@ import com.rally26.platformadmin.domain.PlatformOrganizationDetail
 import com.rally26.platformadmin.domain.PlatformOrganizationListItem
 import com.rally26.platformadmin.domain.PlatformSupportAccess
 import com.rally26.platformadmin.domain.PlatformSupportAccessListItem
+import com.rally26.platformadmin.domain.PlatformSwagShopProductListItem
 import com.rally26.platformadmin.domain.PlatformUserListItem
 import com.rally26.platformadmin.domain.PlatformUserOrganizationMembership
 import jakarta.validation.constraints.Size
@@ -90,6 +91,23 @@ data class PlatformSupportAccessListItemResponse(
     val expiresAt: Instant,
     val endedAt: Instant?,
     val createdAt: Instant,
+)
+
+data class PlatformSwagShopProductListItemResponse(
+    val productId: UUID,
+    val productName: String,
+    val status: String,
+    val catalogSource: String,
+    val storeId: UUID,
+    val storeName: String,
+    val teamId: UUID?,
+    val teamName: String?,
+    val organizationId: UUID,
+    val organizationName: String,
+    val variantCount: Long,
+    val hasSwagLogo: Boolean,
+    val createdAt: Instant,
+    val updatedAt: Instant,
 )
 
 data class StartPlatformSupportAccessRequest(
@@ -188,6 +206,24 @@ fun PlatformSupportAccessListItem.toResponse() =
         expiresAt,
         endedAt,
         createdAt,
+    )
+
+fun PlatformSwagShopProductListItem.toResponse() =
+    PlatformSwagShopProductListItemResponse(
+        productId,
+        productName,
+        status,
+        catalogSource,
+        storeId,
+        storeName,
+        teamId,
+        teamName,
+        organizationId,
+        organizationName,
+        variantCount,
+        hasSwagLogo,
+        createdAt,
+        updatedAt,
     )
 
 fun PlatformSupportAccess.toResponse() =

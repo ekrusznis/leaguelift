@@ -15,6 +15,7 @@ import com.rally26.platformadmin.domain.PlatformOrganizationListItem
 import com.rally26.platformadmin.domain.PlatformSupportAccess
 import com.rally26.platformadmin.domain.PlatformSupportAccessListItem
 import com.rally26.platformadmin.domain.PlatformSupportAccessStatus
+import com.rally26.platformadmin.domain.PlatformSwagShopProductListItem
 import com.rally26.platformadmin.domain.PlatformUserListItem
 import com.rally26.platformadmin.persistence.PlatformAdminConsoleRepository
 import com.rally26.platformadmin.persistence.PlatformSupportAccessRepository
@@ -28,6 +29,7 @@ import java.util.UUID
 private val ORGANIZATION_STATUSES = setOf("ACTIVE", "SUSPENDED", "ARCHIVED")
 private val USER_STATUSES = setOf("ACTIVE", "SUSPENDED")
 private val SUPPORT_ACCESS_STATUSES = setOf("ACTIVE", "ENDED", "EXPIRED")
+private val SWAG_SHOP_PRODUCT_STATUSES = setOf("DRAFT", "ACTIVE", "ARCHIVED")
 private val SUPPORT_ACCESS_DURATION: Duration = Duration.ofHours(2)
 
 /**
@@ -98,6 +100,23 @@ class PlatformAdminConsoleService(
             page = pageRequest.page,
             size = pageRequest.size,
             totalElements = consoleRepository.countSupportAccess(normalizedStatus),
+        )
+    }
+
+    fun listSwagShopProducts(
+        currentUser: CurrentUser,
+        query: String?,
+        status: String?,
+        organizationId: UUID?,
+        pageRequest: PageRequest,
+    ): PageResponse<PlatformSwagShopProductListItem> {
+        authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_SWAG_SHOP_VIEW)
+        val normalizedStatus = normalizeStatus(status, SWAG_SHOP_PRODUCT_STATUSES, "product status")
+        return PageResponse(
+            items = consoleRepository.listSwagShopProducts(query?.trim(), normalizedStatus, organizationId, pageRequest),
+            page = pageRequest.page,
+            size = pageRequest.size,
+            totalElements = consoleRepository.countSwagShopProducts(query?.trim(), normalizedStatus, organizationId),
         )
     }
 

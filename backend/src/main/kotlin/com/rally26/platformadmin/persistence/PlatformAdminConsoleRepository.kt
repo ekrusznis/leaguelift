@@ -5,6 +5,7 @@ import com.rally26.platformadmin.domain.PlatformOrganizationDetail
 import com.rally26.platformadmin.domain.PlatformOrganizationListItem
 import com.rally26.platformadmin.domain.PlatformSupportAccessListItem
 import com.rally26.platformadmin.domain.PlatformSupportAccessStatus
+import com.rally26.platformadmin.domain.PlatformSwagShopProductListItem
 import com.rally26.platformadmin.domain.PlatformUserListItem
 import com.rally26.platformadmin.domain.PlatformUserOrganizationMembership
 import org.springframework.jdbc.core.simple.JdbcClient
@@ -265,6 +266,89 @@ class PlatformAdminConsoleRepository(
         var spec = jdbcClient.sql("select count(*) from app_user $whereSql")
         if (!query.isNullOrBlank()) spec = spec.param("query", "%${query.trim().lowercase()}%")
         if (!status.isNullOrBlank()) spec = spec.param("status", status)
+        return spec.query(Long::class.java).single()
+    }
+
+    fun listSwagShopProducts(
+        query: String?,
+        status: String?,
+        organizationId: UUID?,
+        pageRequest: PageRequest,
+    ): List<PlatformSwagShopProductListItem> {
+        val where = mutableListOf<String>()
+        if (!query.isNullOrBlank()) {
+            where += "(lower(p.name) like :query or lower(s.name) like :query or lower(o.name) like :query)"
+        }
+        if (!status.isNullOrBlank()) where += "p.status = :status"
+        if (organizationId != null) where += "p.organization_id = :organizationId"
+        val whereSql = if (where.isEmpty()) "" else "where ${where.joinToString(" and ")}"
+        var spec =
+            jdbcClient.sql(
+                """
+                select p.id, p.name, p.status, p.catalog_source, p.swag_logo_media_asset_id, p.created_at, p.updated_at,
+                       s.id as store_id, s.name as store_name, s.team_id,
+                       t.name as team_name,
+                       o.id as organization_id, o.name as organization_name,
+                       (select count(*) from product_variant pv where pv.product_id = p.id) as variant_count
+                from product p
+                join store s on s.id = p.store_id
+                join organization o on o.id = p.organization_id
+                left join team t on t.id = s.team_id
+                $whereSql
+                order by p.created_at desc
+                limit :limit offset :offset
+                """.trimIndent(),
+            )
+        if (!query.isNullOrBlank()) spec = spec.param("query", "%${query.trim().lowercase()}%")
+        if (!status.isNullOrBlank()) spec = spec.param("status", status)
+        if (organizationId != null) spec = spec.param("organizationId", organizationId)
+        return spec
+            .param("limit", pageRequest.size)
+            .param("offset", pageRequest.offset)
+            .query { rs, _ ->
+                PlatformSwagShopProductListItem(
+                    productId = rs.getObject("id", UUID::class.java),
+                    productName = rs.getString("name"),
+                    status = rs.getString("status"),
+                    catalogSource = rs.getString("catalog_source"),
+                    storeId = rs.getObject("store_id", UUID::class.java),
+                    storeName = rs.getString("store_name"),
+                    teamId = rs.getObject("team_id", UUID::class.java),
+                    teamName = rs.getString("team_name"),
+                    organizationId = rs.getObject("organization_id", UUID::class.java),
+                    organizationName = rs.getString("organization_name"),
+                    variantCount = rs.getLong("variant_count"),
+                    hasSwagLogo = rs.getObject("swag_logo_media_asset_id") != null,
+                    createdAt = rs.getTimestamp("created_at").toInstant(),
+                    updatedAt = rs.getTimestamp("updated_at").toInstant(),
+                )
+            }.list()
+    }
+
+    fun countSwagShopProducts(
+        query: String?,
+        status: String?,
+        organizationId: UUID?,
+    ): Long {
+        val where = mutableListOf<String>()
+        if (!query.isNullOrBlank()) {
+            where += "(lower(p.name) like :query or lower(s.name) like :query or lower(o.name) like :query)"
+        }
+        if (!status.isNullOrBlank()) where += "p.status = :status"
+        if (organizationId != null) where += "p.organization_id = :organizationId"
+        val whereSql = if (where.isEmpty()) "" else "where ${where.joinToString(" and ")}"
+        var spec =
+            jdbcClient.sql(
+                """
+                select count(*) from product p
+                join store s on s.id = p.store_id
+                join organization o on o.id = p.organization_id
+                $whereSql
+                """.trimIndent(),
+            )
+        if (!query.isNullOrBlank()) spec = spec.param("query", "%${query.trim().lowercase()}%")
+        if (!status.isNullOrBlank()) spec = spec.param("status", status)
+        if (organizationId != null) spec = spec.param("organizationId", organizationId)
         return spec.query(Long::class.java).single()
     }
 

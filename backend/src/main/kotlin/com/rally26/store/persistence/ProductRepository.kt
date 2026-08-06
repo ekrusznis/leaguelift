@@ -164,6 +164,31 @@ class ProductRepository(
             .param("organizationId", organizationId)
             .update()
 
+    /** True if any variant of this product has ever appeared on a paid order — blocks deletion. */
+    fun hasOrderHistory(productId: UUID): Boolean =
+        jdbcClient
+            .sql(
+                """
+                select exists(
+                    select 1 from order_item oi
+                    join product_variant pv on pv.id = oi.product_variant_id
+                    where pv.product_id = :productId
+                )
+                """.trimIndent(),
+            ).param("productId", productId)
+            .query(Boolean::class.java)
+            .single()
+
+    fun delete(
+        id: UUID,
+        organizationId: UUID,
+    ): Int =
+        jdbcClient
+            .sql("delete from product where id = :id and organization_id = :organizationId")
+            .param("id", id)
+            .param("organizationId", organizationId)
+            .update()
+
     private fun mapRow(
         rs: java.sql.ResultSet,
         _rowNum: Int,

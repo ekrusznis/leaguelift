@@ -7,9 +7,11 @@ import com.rally26.authorization.domain.Capabilities
 import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
+import com.rally26.common.web.PageRequest
 import com.rally26.platformadmin.domain.PlatformOrganizationDetail
 import com.rally26.platformadmin.domain.PlatformSupportAccess
 import com.rally26.platformadmin.domain.PlatformSupportAccessStatus
+import com.rally26.platformadmin.domain.PlatformSwagShopProductListItem
 import com.rally26.platformadmin.persistence.PlatformAdminConsoleRepository
 import com.rally26.platformadmin.persistence.PlatformSupportAccessRepository
 import io.mockk.every
@@ -105,6 +107,47 @@ class PlatformAdminConsoleServiceTest {
             service.requireActiveSupportAccess(admin, access.id, UUID.randomUUID())
         }
     }
+
+    @Test
+    fun `listSwagShopProducts requires the platform swag shop capability`() {
+        every { authorizationService.requirePlatformCapability(admin, Capabilities.PLATFORM_SWAG_SHOP_VIEW) } throws
+            ForbiddenException("PLATFORM_ACCESS_DENIED", "denied")
+
+        assertFailsWith<ForbiddenException> {
+            service.listSwagShopProducts(admin, null, null, null, PageRequest(0, 25))
+        }
+    }
+
+    @Test
+    fun `listSwagShopProducts maps repository rows through to the page response`() {
+        val item = swagShopProduct()
+        every { authorizationService.requirePlatformCapability(admin, Capabilities.PLATFORM_SWAG_SHOP_VIEW) } just runs
+        every { consoleRepository.listSwagShopProducts("hoodie", "DRAFT", organizationId, PageRequest(0, 25)) } returns listOf(item)
+        every { consoleRepository.countSwagShopProducts("hoodie", "DRAFT", organizationId) } returns 1L
+
+        val result = service.listSwagShopProducts(admin, "hoodie", "draft", organizationId, PageRequest(0, 25))
+
+        assertEquals(listOf(item), result.items)
+        assertEquals(1L, result.totalElements)
+    }
+
+    private fun swagShopProduct() =
+        PlatformSwagShopProductListItem(
+            productId = UUID.randomUUID(),
+            productName = "Team Hoodie",
+            status = "DRAFT",
+            catalogSource = "PRINTIFY",
+            storeId = UUID.randomUUID(),
+            storeName = "Team Store",
+            teamId = UUID.randomUUID(),
+            teamName = "U12 Sharks",
+            organizationId = organizationId,
+            organizationName = "North Jersey Volleyball Club",
+            variantCount = 2,
+            hasSwagLogo = true,
+            createdAt = now,
+            updatedAt = now,
+        )
 
     private fun access(
         id: UUID,

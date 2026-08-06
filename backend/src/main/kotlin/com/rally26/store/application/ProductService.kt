@@ -462,6 +462,31 @@ class ProductService(
         return findProduct(organizationId, productId)
     }
 
+    /**
+     * Platform Admin Swag Shop support triage (DESIGN-DOC.md section 13): cleans up
+     * a stuck/broken draft product. Only a DRAFT product with no order history can be
+     * deleted — a product that ever shipped a real order keeps its row for the same
+     * reason order/ledger history is never rewritten elsewhere in this codebase; an
+     * org admin/coach should archive an unwanted ACTIVE product instead.
+     */
+    @Transactional
+    fun delete(
+        organizationId: UUID,
+        productId: UUID,
+        currentUser: CurrentUser,
+    ) {
+        val product = requireProductManageAccess(organizationId, productId, currentUser)
+        if (product.status != ProductStatus.DRAFT) {
+            throw ValidationException("Only a draft product can be deleted. Archive it instead.")
+        }
+        if (productRepository.hasOrderHistory(productId)) {
+            throw ValidationException("This product has order history and can't be deleted — archive it instead.")
+        }
+        productVariantRepository.deleteByProduct(productId)
+        productRepository.delete(productId, organizationId)
+        auditService.record(currentUser.userId, organizationId, "product.deleted", "product", productId)
+    }
+
     private fun uploadDesignToPrintify(
         organizationId: UUID,
         product: Product,

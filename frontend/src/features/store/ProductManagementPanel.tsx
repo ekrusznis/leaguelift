@@ -17,6 +17,7 @@ import {
 	useCreateManualProductVariant,
 	useCreateProduct,
 	useCreateProductVariant,
+	useDeleteProduct,
 	useManualVendors,
 	usePrintifyBlueprints,
 	usePrintifyCatalogVariants,
@@ -36,6 +37,7 @@ export function ProductManagementPanel({ organizationId, storeId, teamId = null 
 	const vendors = useManualVendors(organizationId);
 	const createProduct = useCreateProduct(organizationId, storeId);
 	const updateStatus = useUpdateProductStatus(organizationId, storeId);
+	const deleteProduct = useDeleteProduct(organizationId, storeId);
 	const [showForm, setShowForm] = useState(false);
 	const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
 	const [mutationError, setMutationError] = useState<string | null>(null);
@@ -70,6 +72,17 @@ export function ProductManagementPanel({ organizationId, storeId, teamId = null 
 			await updateStatus.mutateAsync({ productId, status: "ACTIVE" });
 		} catch (error) {
 			setMutationError(error instanceof ApiError ? error.message : "Could not activate the product.");
+		}
+	}
+
+	async function remove(productId: string, name: string) {
+		if (!window.confirm(`Delete the draft product "${name}"? This can't be undone.`)) return;
+		setMutationError(null);
+		try {
+			await deleteProduct.mutateAsync(productId);
+			if (expandedProductId === productId) setExpandedProductId(null);
+		} catch (error) {
+			setMutationError(error instanceof ApiError ? error.message : "Could not delete the product.");
 		}
 	}
 
@@ -131,6 +144,7 @@ export function ProductManagementPanel({ organizationId, storeId, teamId = null 
 								</div>
 								<div className="flex shrink-0 flex-wrap gap-2">
 									{product.status === "DRAFT" && <Button type="button" variant="secondary" onClick={() => activate(product.id)} disabled={updateStatus.isPending}>Activate</Button>}
+									{product.status === "DRAFT" && <Button type="button" variant="secondary" onClick={() => remove(product.id, product.name)} disabled={deleteProduct.isPending}>Delete</Button>}
 									<Button type="button" variant="secondary" onClick={() => setExpandedProductId((current) => current === product.id ? null : product.id)}>{expandedProductId === product.id ? "Hide details" : "Manage"}</Button>
 								</div>
 							</div>

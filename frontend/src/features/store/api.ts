@@ -154,6 +154,14 @@ export function useUpdateProductStatus(organizationId: string, storeId: string) 
 	});
 }
 
+export function useDeleteProduct(organizationId: string, storeId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (productId: string) => apiFetch(`/organizations/${organizationId}/products/${productId}`, { method: "DELETE" }),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: productsKey(organizationId, storeId) }),
+	});
+}
+
 export function useAssignProductDesign(organizationId: string, storeId: string) {
 	const queryClient = useQueryClient();
 	return useMutation({

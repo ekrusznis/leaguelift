@@ -38,6 +38,7 @@ export type NavDestination =
 	| { type: "platform-support-sessions" }
 	| { type: "platform-help-articles" }
 	| { type: "platform-support-cases" }
+	| { type: "platform-swag-shop" }
 	| { type: "organization"; section: OrganizationSection }
 	| { type: "household"; section: HouseholdSection }
 	| { type: "team-events" }
@@ -153,6 +154,7 @@ export const NAV_REGISTRY: NavRegistryItem[] = [
 	{ id: "platform.support-sessions", label: "Support Sessions", icon: <ShieldIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_SUPPORT_ACCESS], destination: { type: "platform-support-sessions" } },
 	{ id: "platform.help-articles", label: "Help Articles", icon: <HelpIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_HELP_MANAGE], destination: { type: "platform-help-articles" } },
 	{ id: "platform.support-cases", label: "Support Cases", icon: <MessageSquareIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_SUPPORT_CASE_MANAGE], destination: { type: "platform-support-cases" } },
+	{ id: "platform.swag-shop", label: "Swag Shop", icon: <ShirtIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_SWAG_SHOP_VIEW], destination: { type: "platform-swag-shop" } },
 ];
 
 function resolveDestination(destination: NavDestination, context: NavRouteContext): string | null {
@@ -181,6 +183,8 @@ function resolveDestination(destination: NavDestination, context: NavRouteContex
 			return appPaths.platformHelpArticles();
 		case "platform-support-cases":
 			return appPaths.platformSupportCases();
+		case "platform-swag-shop":
+			return appPaths.platformSwagShop();
 		case "organization":
 			return context.organizationId ? appPaths.organization(context.organizationId, destination.section) : null;
 		case "household":

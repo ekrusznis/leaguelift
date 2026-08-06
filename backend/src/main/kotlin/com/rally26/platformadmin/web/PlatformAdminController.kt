@@ -53,6 +53,19 @@ class PlatformAdminController(
         return PageResponse(result.items.map { it.toResponse() }, result.page, result.size, result.totalElements)
     }
 
+    @GetMapping("/swag-shop/products")
+    fun listSwagShopProducts(
+        @RequestParam(required = false) query: String?,
+        @RequestParam(required = false) status: String?,
+        @RequestParam(required = false) organizationId: UUID?,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "25") size: Int,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PageResponse<PlatformSwagShopProductListItemResponse> {
+        val result = service.listSwagShopProducts(currentUser, query, status, organizationId, PageRequest(page, size))
+        return PageResponse(result.items.map { it.toResponse() }, result.page, result.size, result.totalElements)
+    }
+
     @GetMapping("/support-access")
     fun listSupportAccess(
         @RequestParam(required = false) status: String?,

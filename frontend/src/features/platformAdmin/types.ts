@@ -22,6 +22,23 @@ export interface PlatformOrganizationListItem {
 	grossVolumeMinor: number;
 }
 
+export interface PlatformSwagShopProductListItem {
+	productId: string;
+	productName: string;
+	status: string;
+	catalogSource: string;
+	storeId: string;
+	storeName: string;
+	teamId: string | null;
+	teamName: string | null;
+	organizationId: string;
+	organizationName: string;
+	variantCount: number;
+	hasSwagLogo: boolean;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface PlatformOrganizationDetail extends PlatformOrganizationListItem {
 	contactPhone: string | null;
 	updatedAt: string;
