@@ -116,6 +116,12 @@ data class ProductVariantResponse(
     /** Swag Shop (DESIGN-DOC.md section 13): real print-area pixel dimensions, captured at creation time — null for manual variants. */
     val printAreaWidthPx: Int?,
     val printAreaHeightPx: Int?,
+    /** Real Printify "back" placeholder dimensions, so BACK-placed personalization can print on the garment's actual back. Null if the blueprint has no back placeholder or the variant predates this capability. */
+    val backPrintAreaWidthPx: Int?,
+    val backPrintAreaHeightPx: Int?,
+    /** Real photorealistic Printify mockup images (this variant's color, design already composited) — free from the same cost-discovery call, no stock-photo fallback needed. Null for manual variants or variants created before this capability. */
+    val mockupFrontUrl: String?,
+    val mockupBackUrl: String?,
 )
 
 fun ProductVariant.toResponse() =
@@ -135,6 +141,10 @@ fun ProductVariant.toResponse() =
         isActive,
         printAreaWidthPx,
         printAreaHeightPx,
+        backPrintAreaWidthPx,
+        backPrintAreaHeightPx,
+        mockupFrontUrl,
+        mockupBackUrl,
     )
 
 /** Swag Shop (DESIGN-DOC.md section 13) buyer picker — one row per active apparel type, combining store/product/variant so the frontend doesn't need three round trips per store. */

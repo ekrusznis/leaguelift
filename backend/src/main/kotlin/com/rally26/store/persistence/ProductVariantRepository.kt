@@ -10,7 +10,8 @@ import java.util.UUID
 
 private const val VARIANT_COLUMNS =
     "id, organization_id, product_id, catalog_source, label, sku, size, color, printify_print_provider_id, printify_variant_id, " +
-        "currency, cost_minor, price_minor, is_active, print_area_width_px, print_area_height_px, created_at, updated_at"
+        "currency, cost_minor, price_minor, is_active, print_area_width_px, print_area_height_px, " +
+        "back_print_area_width_px, back_print_area_height_px, mockup_front_url, mockup_back_url, created_at, updated_at"
 
 @Repository
 class ProductVariantRepository(
@@ -53,6 +54,10 @@ class ProductVariantRepository(
         priceMinor: Long,
         printAreaWidthPx: Int? = null,
         printAreaHeightPx: Int? = null,
+        backPrintAreaWidthPx: Int? = null,
+        backPrintAreaHeightPx: Int? = null,
+        mockupFrontUrl: String? = null,
+        mockupBackUrl: String? = null,
     ): ProductVariant =
         insert(
             organizationId,
@@ -69,6 +74,10 @@ class ProductVariantRepository(
             priceMinor,
             printAreaWidthPx,
             printAreaHeightPx,
+            backPrintAreaWidthPx,
+            backPrintAreaHeightPx,
+            mockupFrontUrl,
+            mockupBackUrl,
         )
 
     fun insertManual(
@@ -97,6 +106,10 @@ class ProductVariantRepository(
             priceMinor,
             null,
             null,
+            null,
+            null,
+            null,
+            null,
         )
 
     private fun insert(
@@ -114,6 +127,10 @@ class ProductVariantRepository(
         priceMinor: Long,
         printAreaWidthPx: Int? = null,
         printAreaHeightPx: Int? = null,
+        backPrintAreaWidthPx: Int? = null,
+        backPrintAreaHeightPx: Int? = null,
+        mockupFrontUrl: String? = null,
+        mockupBackUrl: String? = null,
     ): ProductVariant {
         val id = UUID.randomUUID()
         val now = Instant.now()
@@ -123,11 +140,13 @@ class ProductVariantRepository(
                 insert into product_variant
                 	(id, organization_id, product_id, catalog_source, label, sku, size, color,
                 	 printify_print_provider_id, printify_variant_id, currency, cost_minor, price_minor,
-                	 print_area_width_px, print_area_height_px, is_active, created_at, updated_at)
+                	 print_area_width_px, print_area_height_px, back_print_area_width_px, back_print_area_height_px,
+                	 mockup_front_url, mockup_back_url, is_active, created_at, updated_at)
                 values
                 	(:id, :organizationId, :productId, :catalogSource, :label, :sku, :size, :color,
                 	 :printifyPrintProviderId, :printifyVariantId, :currency, :costMinor, :priceMinor,
-                	 :printAreaWidthPx, :printAreaHeightPx, true, :now, :now)
+                	 :printAreaWidthPx, :printAreaHeightPx, :backPrintAreaWidthPx, :backPrintAreaHeightPx,
+                	 :mockupFrontUrl, :mockupBackUrl, true, :now, :now)
                 """.trimIndent(),
             ).param("id", id)
             .param("organizationId", organizationId)
@@ -144,6 +163,10 @@ class ProductVariantRepository(
             .param("priceMinor", priceMinor)
             .param("printAreaWidthPx", printAreaWidthPx)
             .param("printAreaHeightPx", printAreaHeightPx)
+            .param("backPrintAreaWidthPx", backPrintAreaWidthPx)
+            .param("backPrintAreaHeightPx", backPrintAreaHeightPx)
+            .param("mockupFrontUrl", mockupFrontUrl)
+            .param("mockupBackUrl", mockupBackUrl)
             .param("now", Timestamp.from(now))
             .update()
         return findById(id, organizationId)!!
@@ -223,6 +246,10 @@ class ProductVariantRepository(
             isActive = rs.getBoolean("is_active"),
             printAreaWidthPx = rs.getObject("print_area_width_px", java.lang.Integer::class.java)?.toInt(),
             printAreaHeightPx = rs.getObject("print_area_height_px", java.lang.Integer::class.java)?.toInt(),
+            backPrintAreaWidthPx = rs.getObject("back_print_area_width_px", java.lang.Integer::class.java)?.toInt(),
+            backPrintAreaHeightPx = rs.getObject("back_print_area_height_px", java.lang.Integer::class.java)?.toInt(),
+            mockupFrontUrl = rs.getString("mockup_front_url"),
+            mockupBackUrl = rs.getString("mockup_back_url"),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
         )

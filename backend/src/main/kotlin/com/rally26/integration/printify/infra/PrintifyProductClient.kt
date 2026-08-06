@@ -13,6 +13,21 @@ data class PrintifyProductVariantCost(
 data class PrintifyProductResult(
     val printifyProductId: String,
     val variantCosts: List<PrintifyProductVariantCost>,
+    val mockups: List<PrintifyProductMockup>,
+)
+
+/**
+ * A real, photorealistic garment mockup Printify auto-generates per position
+ * (front/back/size-chart/...) once a product is created with a design in
+ * place — free with the same create-product call already made for cost
+ * discovery (ADR-016), confirmed live against the real Printify sandbox
+ * 2026-08-05. `variantIds` mirrors Printify's own response shape (one mockup
+ * image can apply to multiple variants sharing the same color/print).
+ */
+data class PrintifyProductMockup(
+    val variantIds: List<Long>,
+    val position: String,
+    val src: String,
 )
 
 private data class CreateProductVariantDto(
@@ -53,9 +68,16 @@ private data class ProductVariantResponseDto(
     val cost: Long,
 )
 
+private data class ProductImageResponseDto(
+    val src: String,
+    val variant_ids: List<Long>,
+    val position: String,
+)
+
 private data class CreateProductResponseDto(
     val id: String,
     val variants: List<ProductVariantResponseDto>,
+    val images: List<ProductImageResponseDto> = emptyList(),
 )
 
 /**
@@ -111,6 +133,7 @@ class PrintifyProductClient(
         return PrintifyProductResult(
             printifyProductId = dto.id,
             variantCosts = dto.variants.map { PrintifyProductVariantCost(it.id, it.cost, it.price) },
+            mockups = dto.images.map { PrintifyProductMockup(it.variant_ids, it.position, it.src) },
         )
     }
 }

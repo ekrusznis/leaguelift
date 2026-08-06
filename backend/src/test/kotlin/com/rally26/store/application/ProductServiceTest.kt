@@ -121,7 +121,11 @@ class ProductServiceTest {
         every {
             printifyProductClient.createProduct("Team Hoodie", 12L, 5L, listOf(100L), 2500L, "printify_img_1", "front")
         } returns
-            PrintifyProductResult("printify_product_1", listOf(PrintifyProductVariantCost(100L, costMinor = 1200L, priceMinor = 2500L)))
+            PrintifyProductResult(
+                "printify_product_1",
+                listOf(PrintifyProductVariantCost(100L, costMinor = 1200L, priceMinor = 2500L)),
+                emptyList(),
+            )
         every { printifyCatalogClient.listVariants(12L, 5L) } returns emptyList()
         every { productVariantRepository.insertPrintify(orgId, product.id, "M / Navy", 5L, 100L, "USD", 1200L, 2500L) } returns
             productVariant(product.id, CatalogSource.PRINTIFY, 1200L, 2500L)

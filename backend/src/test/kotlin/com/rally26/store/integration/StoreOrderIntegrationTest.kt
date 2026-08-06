@@ -110,7 +110,11 @@ class StoreOrderIntegrationTest : AbstractIntegrationTest() {
         assignReadyDesign(organization.id, product.id, owner)
 
         every { printifyProductClient.createProduct("Team Hoodie", 12L, 5L, listOf(100L), 2500L, any(), "front") } returns
-            PrintifyProductResult("printify_product_1", listOf(PrintifyProductVariantCost(100L, costMinor = 1200L, priceMinor = 2500L)))
+            PrintifyProductResult(
+                "printify_product_1",
+                listOf(PrintifyProductVariantCost(100L, costMinor = 1200L, priceMinor = 2500L)),
+                emptyList(),
+            )
         every { printifyCatalogClient.listVariants(12L, 5L) } returns emptyList()
 
         val variant = productService.createVariant(organization.id, product.id, 5L, 100L, "M / Navy", 2500L, owner)

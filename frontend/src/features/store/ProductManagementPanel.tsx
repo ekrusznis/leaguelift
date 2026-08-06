@@ -268,7 +268,25 @@ function ManualVariantManagement({ organizationId, productId }: { organizationId
 
 function VariantList({ variants, onEdit, onToggle }: { variants: ProductVariant[]; onEdit?: (variant: ProductVariant) => void; onToggle: (variant: ProductVariant) => void }) {
 	if (variants.length === 0) return <p className="text-sm text-slate-gray">No variants yet.</p>;
-	return <ul className="flex flex-col gap-1" aria-label="Product variants">{variants.map((variant) => <li key={variant.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-ice-white px-3 py-2 text-sm"><span className="min-w-0 flex-1 break-words">{variant.label}{variant.sku && <span className="ml-2 text-xs text-slate-gray">SKU {variant.sku}</span>}</span><span className="text-slate-gray">{formatMoneyMinorUnits(variant.priceMinor, variant.currency)} · cost {formatMoneyMinorUnits(variant.costMinor, variant.currency)}</span><Badge>{variant.isActive ? "Active" : "Inactive"}</Badge>{onEdit && <Button type="button" variant="secondary" onClick={() => onEdit(variant)}>Edit</Button>}<Button type="button" variant="secondary" onClick={() => onToggle(variant)}>{variant.isActive ? "Deactivate" : "Activate"}</Button></li>)}</ul>;
+	return (
+		<ul className="flex flex-col gap-1" aria-label="Product variants">
+			{variants.map((variant) => (
+				<li key={variant.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-ice-white px-3 py-2 text-sm">
+					{(variant.mockupFrontUrl || variant.mockupBackUrl) && (
+						<span className="flex shrink-0 gap-1">
+							{variant.mockupFrontUrl && <img src={variant.mockupFrontUrl} alt={`${variant.label} — front`} className="h-14 w-14 rounded-md border border-slate-gray/20 object-cover" />}
+							{variant.mockupBackUrl && <img src={variant.mockupBackUrl} alt={`${variant.label} — back`} className="h-14 w-14 rounded-md border border-slate-gray/20 object-cover" />}
+						</span>
+					)}
+					<span className="min-w-0 flex-1 break-words">{variant.label}{variant.sku && <span className="ml-2 text-xs text-slate-gray">SKU {variant.sku}</span>}</span>
+					<span className="text-slate-gray">{formatMoneyMinorUnits(variant.priceMinor, variant.currency)} · cost {formatMoneyMinorUnits(variant.costMinor, variant.currency)}</span>
+					<Badge>{variant.isActive ? "Active" : "Inactive"}</Badge>
+					{onEdit && <Button type="button" variant="secondary" onClick={() => onEdit(variant)}>Edit</Button>}
+					<Button type="button" variant="secondary" onClick={() => onToggle(variant)}>{variant.isActive ? "Deactivate" : "Activate"}</Button>
+				</li>
+			))}
+		</ul>
+	);
 }
 
 function Badge({ children, warning = false }: { children: ReactNode; warning?: boolean }) { return <span className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${warning ? "bg-championship-gold/20 text-navy" : "bg-ice-white text-slate-gray"}`}>{children}</span>; }

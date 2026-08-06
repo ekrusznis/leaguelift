@@ -318,11 +318,21 @@ class ProductService(
         // Swag Shop (DESIGN-DOC.md section 13): captured once here, at setup time, so
         // order-time compositing never needs an extra live Printify call inside the
         // payment-confirmation transaction (see OrderService.createInitialFulfillment).
-        val placeholder =
+        val placeholders =
             withPrintifyErrorTranslation { printifyCatalogClient.listVariants(blueprintId, printifyPrintProviderId) }
                 .firstOrNull { it.id == printifyVariantId }
                 ?.placeholders
-                ?.firstOrNull { it.position == product.printifyPrintPosition }
+        val placeholder = placeholders?.firstOrNull { it.position == product.printifyPrintPosition }
+        // The real "back" placeholder (independent of the logo's own print position),
+        // so a BACK-placed personalization can print on the garment's actual back —
+        // see SwagDesignCompositor and OrderService.createInitialFulfillment.
+        val backPlaceholder = placeholders?.firstOrNull { it.position == "back" }
+
+        // Free, real photorealistic garment mockups from the same create-product
+        // response above (position "front"/"back", confirmed live against the real
+        // Printify sandbox 2026-08-05) — no extra Printify call.
+        val mockupFrontUrl = result.mockups.firstOrNull { it.position == "front" && printifyVariantId in it.variantIds }?.src
+        val mockupBackUrl = result.mockups.firstOrNull { it.position == "back" && printifyVariantId in it.variantIds }?.src
 
         val variant =
             productVariantRepository.insertPrintify(
@@ -336,6 +346,10 @@ class ProductService(
                 priceMinor = variantCost.priceMinor,
                 printAreaWidthPx = placeholder?.width,
                 printAreaHeightPx = placeholder?.height,
+                backPrintAreaWidthPx = backPlaceholder?.width,
+                backPrintAreaHeightPx = backPlaceholder?.height,
+                mockupFrontUrl = mockupFrontUrl,
+                mockupBackUrl = mockupBackUrl,
             )
         auditService.record(currentUser.userId, organizationId, "product_variant.created", "product_variant", variant.id)
         return variant

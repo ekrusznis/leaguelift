@@ -237,6 +237,14 @@ class OrderService(
             if (variant.printAreaWidthPx == null || variant.printAreaHeightPx == null) {
                 throw ValidationException("This apparel type is missing print-area dimensions — ask staff to re-create the variant.")
             }
+            // BACK personalization is a real second physical print (2026-08-05) — reject
+            // cleanly here rather than failing deep in fulfillment for a variant created
+            // before this capability, or from a blueprint with no "back" placeholder.
+            if (personalizationPlacement == PersonalizationPlacement.BACK &&
+                (variant.backPrintAreaWidthPx == null || variant.backPrintAreaHeightPx == null)
+            ) {
+                throw ValidationException("This apparel type doesn't support back placement yet — ask staff to re-create the variant.")
+            }
         }
 
         return try {
@@ -467,29 +475,41 @@ class OrderService(
                     // Swag Shop (DESIGN-DOC.md section 13): a personalized item's print file is
                     // composited fresh per order (logo + name/number); a non-personalized item
                     // reuses today's unchanged static per-product design, exactly as before.
-                    val printAreaUrl =
+                    // BACK placement (2026-08-05) submits a real second print position — the
+                    // buyer's name/number physically prints on the garment's back, not a
+                    // back-style layout on the front.
+                    val printAreaImagesByPosition =
                         if (isPersonalized) {
                             val swagLogoMediaAssetId =
                                 product.swagLogoMediaAssetId ?: error("product ${product.id} has no Swag Shop logo assigned")
                             val widthPx = variant.printAreaWidthPx ?: error("product_variant ${variant.id} has no print-area width")
                             val heightPx = variant.printAreaHeightPx ?: error("product_variant ${variant.id} has no print-area height")
-                            swagDesignCompositor.compose(
-                                organizationId = organizationId,
-                                orderId = orderId,
-                                orderItemId = item.id,
-                                swagLogoMediaAssetId = swagLogoMediaAssetId,
-                                printAreaWidthPx = widthPx,
-                                printAreaHeightPx = heightPx,
-                                personalizationName = item.personalizationName,
-                                personalizationNumber = item.personalizationNumber,
-                                personalizationPlacement = item.personalizationPlacement,
-                            )
+                            val result =
+                                swagDesignCompositor.compose(
+                                    organizationId = organizationId,
+                                    orderId = orderId,
+                                    orderItemId = item.id,
+                                    swagLogoMediaAssetId = swagLogoMediaAssetId,
+                                    printAreaWidthPx = widthPx,
+                                    printAreaHeightPx = heightPx,
+                                    backPrintAreaWidthPx = variant.backPrintAreaWidthPx,
+                                    backPrintAreaHeightPx = variant.backPrintAreaHeightPx,
+                                    personalizationName = item.personalizationName,
+                                    personalizationNumber = item.personalizationNumber,
+                                    personalizationPlacement = item.personalizationPlacement,
+                                )
+                            buildMap {
+                                put(product.printifyPrintPosition, result.frontUrl)
+                                if (result.backUrl != null) put("back", result.backUrl)
+                            }
                         } else {
                             val designAssignment =
                                 mediaAssignmentService.getActiveAssignment(MediaEntityType.PRODUCT, product.id, MediaUsageSlot.PRODUCT_DESIGN)
                                     ?: error("product ${product.id} has no design assigned")
-                            mediaReadService.describe(designAssignment)?.url
-                                ?: error("product ${product.id}'s design asset could not be found")
+                            val designUrl =
+                                mediaReadService.describe(designAssignment)?.url
+                                    ?: error("product ${product.id}'s design asset could not be found")
+                            mapOf(product.printifyPrintPosition to designUrl)
                         }
                     PrintifyOrderLineItem(
                         printifyBlueprintId = product.printifyBlueprintId ?: error("PRINTIFY product ${product.id} has no blueprint ID"),
@@ -497,7 +517,7 @@ class OrderService(
                             variant.printifyPrintProviderId ?: error("PRINTIFY variant ${variant.id} has no provider ID"),
                         printifyVariantId = variant.printifyVariantId ?: error("PRINTIFY variant ${variant.id} has no variant ID"),
                         quantity = item.quantity,
-                        printAreaImagesByPosition = mapOf(product.printifyPrintPosition to printAreaUrl),
+                        printAreaImagesByPosition = printAreaImagesByPosition,
                     )
                 }
             val draftOrder = printifyOrderClient.createDraftOrder(orderId.toString(), lineItems)

@@ -11,6 +11,7 @@ import com.rally26.common.web.CurrentUser
 import com.rally26.config.FrontendProperties
 import com.rally26.integration.printify.infra.PrintifyDraftOrder
 import com.rally26.integration.printify.infra.PrintifyOrderClient
+import com.rally26.integration.printify.infra.PrintifyOrderLineItem
 import com.rally26.ledger.application.LedgerService
 import com.rally26.ledger.domain.LedgerSourceType
 import com.rally26.media.application.MediaAssignmentService
@@ -38,6 +39,7 @@ import com.rally26.participant.domain.Participant
 import com.rally26.participant.domain.ParticipantStatus
 import com.rally26.participant.domain.ParticipantTeamAssignment
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.store.application.SwagCompositeResult
 import com.rally26.store.application.SwagDesignCompositor
 import com.rally26.store.domain.CatalogSource
 import com.rally26.store.domain.Product
@@ -244,6 +246,74 @@ class OrderServiceTest {
         verify(
             exactly = 1,
         ) { fulfillmentHistoryRepository.insert(orgId, fulfillment.id, null, FulfillmentStatus.DRAFT_CREATED, any(), null) }
+    }
+
+    @Test
+    fun `confirmFromWebhook submits a real second print position for BACK-placed personalization`() {
+        val store = store()
+        val product = product(store.id).copy(swagLogoMediaAssetId = UUID.randomUUID(), printifyPrintPosition = "front")
+        val variant =
+            productVariant(product.id).copy(
+                printAreaWidthPx = 1000,
+                printAreaHeightPx = 1000,
+                backPrintAreaWidthPx = 800,
+                backPrintAreaHeightPx = 900,
+            )
+        val order = pendingOrder(store)
+        val confirmed = order.copy(status = OrderStatus.CONFIRMED, confirmedAt = Instant.now())
+        val participantId = UUID.randomUUID()
+        every { orderRepository.findByStripeCheckoutSessionId("cs_test_123") } returns order
+        every { orderRepository.markConfirmed(order.id, null, null) } returns 1
+        every { auditService.record(null, orgId, "order.confirmed", "order", order.id) } just runs
+        every { orderItemRepository.findByOrder(order.id) } returns
+            listOf(
+                OrderItem(
+                    UUID.randomUUID(),
+                    order.id,
+                    variant.id,
+                    1,
+                    variant.priceMinor,
+                    variant.costMinor,
+                    participantId,
+                    "Johnson",
+                    "7",
+                    PersonalizationPlacement.BACK,
+                ),
+            )
+        every { ledgerService.recordConfirmedOrder(any(), any()) } just runs
+        every { productVariantRepository.findById(variant.id, orgId) } returns variant
+        every { productRepository.findById(product.id, orgId) } returns product
+        every { orderRepository.findById(order.id, orgId) } returns confirmed
+        every {
+            swagDesignCompositor.compose(
+                organizationId = orgId,
+                orderId = order.id,
+                orderItemId = any(),
+                swagLogoMediaAssetId = product.swagLogoMediaAssetId!!,
+                printAreaWidthPx = 1000,
+                printAreaHeightPx = 1000,
+                backPrintAreaWidthPx = 800,
+                backPrintAreaHeightPx = 900,
+                personalizationName = "Johnson",
+                personalizationNumber = "7",
+                personalizationPlacement = PersonalizationPlacement.BACK,
+            )
+        } returns SwagCompositeResult("https://signed.example.com/front.png", "https://signed.example.com/back.png")
+        val lineItems = slot<List<PrintifyOrderLineItem>>()
+        every { printifyOrderClient.createDraftOrder(order.id.toString(), capture(lineItems)) } returns PrintifyDraftOrder("printify_order_1")
+        val fulfillment = fulfillment(order.id, FulfillmentSource.PRINTIFY, FulfillmentStatus.DRAFT_CREATED, "printify_order_1")
+        every {
+            fulfillmentRepository.insert(order.id, FulfillmentSource.PRINTIFY, FulfillmentStatus.DRAFT_CREATED, "printify_order_1", null, null)
+        } returns fulfillment
+        every { fulfillmentHistoryRepository.insert(orgId, fulfillment.id, null, FulfillmentStatus.DRAFT_CREATED, any(), null) } returns
+            history(fulfillment)
+
+        service.confirmFromWebhook("cs_test_123", "paid", null, null)
+
+        val printAreas = lineItems.captured.single().printAreaImagesByPosition
+        assertEquals(2, printAreas.size)
+        assertEquals("https://signed.example.com/front.png", printAreas["front"])
+        assertEquals("https://signed.example.com/back.png", printAreas["back"])
     }
 
     @Test
@@ -541,7 +611,13 @@ class OrderServiceTest {
         val participant = participant(householdId)
         val storeEntity = store()
         val product = product(storeEntity.id)
-        val variant = productVariant(product.id).copy(printAreaWidthPx = 1000, printAreaHeightPx = 1000)
+        val variant =
+            productVariant(product.id).copy(
+                printAreaWidthPx = 1000,
+                printAreaHeightPx = 1000,
+                backPrintAreaWidthPx = 800,
+                backPrintAreaHeightPx = 900,
+            )
         every { participantRepository.findById(participant.id, orgId) } returns participant
         every { authorizationService.hasGuardianRelationship(orgId, householdId, currentUser) } returns true
         every { productVariantRepository.findById(variant.id, orgId) } returns variant
@@ -578,6 +654,33 @@ class OrderServiceTest {
             )
 
         assertEquals("https://checkout.stripe.com/test", result.checkoutUrl)
+    }
+
+    @Test
+    fun `createSwagShopCheckoutSession rejects BACK placement when the variant has no back print-area dimensions`() {
+        val currentUser = CurrentUser(UUID.randomUUID(), "guardian@example.com", "Sarah Johnson")
+        val householdId = UUID.randomUUID()
+        val participant = participant(householdId)
+        val storeEntity = store()
+        val product = product(storeEntity.id)
+        val variant = productVariant(product.id).copy(printAreaWidthPx = 1000, printAreaHeightPx = 1000)
+        every { participantRepository.findById(participant.id, orgId) } returns participant
+        every { authorizationService.hasGuardianRelationship(orgId, householdId, currentUser) } returns true
+        every { productVariantRepository.findById(variant.id, orgId) } returns variant
+        every { productRepository.findById(product.id, orgId) } returns product.copy(swagLogoMediaAssetId = UUID.randomUUID())
+        every { storeRepository.findById(product.storeId, orgId) } returns storeEntity
+
+        assertFailsWith<ValidationException> {
+            service.createSwagShopCheckoutSession(
+                orgId,
+                variant.id,
+                participant.id,
+                "Johnson",
+                "7",
+                PersonalizationPlacement.BACK,
+                currentUser,
+            )
+        }
     }
 
     @Test

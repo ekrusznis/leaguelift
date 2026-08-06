@@ -79,6 +79,12 @@ export interface ProductVariant {
 	/** Swag Shop: real Printify print-area pixel dimensions, captured at creation time — null for manual variants. */
 	printAreaWidthPx: number | null;
 	printAreaHeightPx: number | null;
+	/** Real Printify "back" placeholder dimensions, so BACK-placed personalization can print on the garment's actual back. Null if the blueprint has no back placeholder or the variant predates this capability. */
+	backPrintAreaWidthPx: number | null;
+	backPrintAreaHeightPx: number | null;
+	/** Real photorealistic Printify mockup images (this variant's color, design already composited) — null for manual variants or variants created before this capability. */
+	mockupFrontUrl: string | null;
+	mockupBackUrl: string | null;
 }
 
 export interface PrintifyBlueprint {

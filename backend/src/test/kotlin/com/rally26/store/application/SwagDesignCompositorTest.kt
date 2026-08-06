@@ -19,6 +19,7 @@ import java.util.UUID
 import javax.imageio.ImageIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SwagDesignCompositorTest {
@@ -60,17 +61,22 @@ class SwagDesignCompositorTest {
             updatedAt = Instant.now(),
         )
 
-    @Test
-    fun `compose produces a print-ready PNG sized to the real print area and uploads it`() {
-        val orderId = UUID.randomUUID()
-        val orderItemId = UUID.randomUUID()
+    private fun stubUploads(): MutableList<ByteArray> {
         every { mediaAssetRepository.findById(logoAssetId, orgId) } returns logoAsset()
         every { spacesClient.getObjectBytesCapped(logoAsset().storageKey, any()) } returns realLogoPngBytes()
-        val uploadedBytes = slot<ByteArray>()
-        every { spacesClient.putObject(any(), "image/png", capture(uploadedBytes)) } returns Unit
-        every { spacesClient.presignedGetUrl(any(), any()) } returns "https://signed.example.com/composited.png"
+        val uploaded = mutableListOf<ByteArray>()
+        every { spacesClient.putObject(any(), "image/png", capture(uploaded)) } returns Unit
+        every { spacesClient.presignedGetUrl(any(), any()) } answers { "https://signed.example.com/${firstArg<String>()}" }
+        return uploaded
+    }
 
-        val url =
+    @Test
+    fun `BACK placement composites two distinct print files, front logo-only and back personalization-only`() {
+        val orderId = UUID.randomUUID()
+        val orderItemId = UUID.randomUUID()
+        val uploaded = stubUploads()
+
+        val result =
             compositor.compose(
                 organizationId = orgId,
                 orderId = orderId,
@@ -78,44 +84,79 @@ class SwagDesignCompositorTest {
                 swagLogoMediaAssetId = logoAssetId,
                 printAreaWidthPx = 3909,
                 printAreaHeightPx = 4431,
+                backPrintAreaWidthPx = 3000,
+                backPrintAreaHeightPx = 3600,
                 personalizationName = "Johnson",
                 personalizationNumber = "7",
                 personalizationPlacement = PersonalizationPlacement.BACK,
             )
 
-        assertEquals("https://signed.example.com/composited.png", url)
-        verify(exactly = 1) { spacesClient.putObject("swag-shop/composited/$orderId/$orderItemId.png", "image/png", any()) }
+        assertEquals("https://signed.example.com/swag-shop/composited/$orderId/$orderItemId-front.png", result.frontUrl)
+        assertEquals("https://signed.example.com/swag-shop/composited/$orderId/$orderItemId-back.png", result.backUrl)
+        verify(exactly = 1) { spacesClient.putObject("swag-shop/composited/$orderId/$orderItemId-front.png", "image/png", any()) }
+        verify(exactly = 1) { spacesClient.putObject("swag-shop/composited/$orderId/$orderItemId-back.png", "image/png", any()) }
+        assertEquals(2, uploaded.size)
 
-        val composited = ImageIO.read(ByteArrayInputStream(uploadedBytes.captured))
-        assertEquals(3909, composited.width)
-        assertEquals(4431, composited.height)
-        // Not fully transparent -- the logo/text were actually drawn onto the canvas.
-        val hasOpaquePixel = (0 until composited.width step 97).any { x -> (0 until composited.height step 97).any { y -> (composited.getRGB(x, y) ushr 24) != 0 } }
-        assertTrue(hasOpaquePixel, "composited image should not be fully transparent")
+        val front = ImageIO.read(ByteArrayInputStream(uploaded[0]))
+        assertEquals(3909, front.width)
+        assertEquals(4431, front.height)
+        val back = ImageIO.read(ByteArrayInputStream(uploaded[1]))
+        assertEquals(3000, back.width)
+        assertEquals(3600, back.height)
+        assertTrue(hasOpaquePixel(front), "front canvas should have the logo drawn on it")
+        assertTrue(hasOpaquePixel(back), "back canvas should have the name/number drawn on it")
     }
 
     @Test
-    fun `compose without personalization still draws the logo`() {
-        every { mediaAssetRepository.findById(logoAssetId, orgId) } returns logoAsset()
-        every { spacesClient.getObjectBytesCapped(logoAsset().storageKey, any()) } returns realLogoPngBytes()
-        val uploadedBytes = slot<ByteArray>()
-        every { spacesClient.putObject(any(), "image/png", capture(uploadedBytes)) } returns Unit
-        every { spacesClient.presignedGetUrl(any(), any()) } returns "https://signed.example.com/composited.png"
+    fun `LEFT_CHEST placement composites a single front print file, no back`() {
+        val uploaded = stubUploads()
 
-        compositor.compose(
-            organizationId = orgId,
-            orderId = UUID.randomUUID(),
-            orderItemId = UUID.randomUUID(),
-            swagLogoMediaAssetId = logoAssetId,
-            printAreaWidthPx = 1000,
-            printAreaHeightPx = 1000,
-            personalizationName = null,
-            personalizationNumber = null,
-            personalizationPlacement = null,
-        )
+        val result =
+            compositor.compose(
+                organizationId = orgId,
+                orderId = UUID.randomUUID(),
+                orderItemId = UUID.randomUUID(),
+                swagLogoMediaAssetId = logoAssetId,
+                printAreaWidthPx = 3909,
+                printAreaHeightPx = 4431,
+                backPrintAreaWidthPx = null,
+                backPrintAreaHeightPx = null,
+                personalizationName = "Johnson",
+                personalizationNumber = "7",
+                personalizationPlacement = PersonalizationPlacement.LEFT_CHEST,
+            )
 
-        val composited = ImageIO.read(ByteArrayInputStream(uploadedBytes.captured))
+        assertNull(result.backUrl)
+        assertEquals(1, uploaded.size)
+        verify(exactly = 0) { spacesClient.putObject(match { it.contains("-back") }, any(), any()) }
+    }
+
+    @Test
+    fun `compose without personalization still draws the logo, front only`() {
+        val uploaded = stubUploads()
+
+        val result =
+            compositor.compose(
+                organizationId = orgId,
+                orderId = UUID.randomUUID(),
+                orderItemId = UUID.randomUUID(),
+                swagLogoMediaAssetId = logoAssetId,
+                printAreaWidthPx = 1000,
+                printAreaHeightPx = 1000,
+                backPrintAreaWidthPx = null,
+                backPrintAreaHeightPx = null,
+                personalizationName = null,
+                personalizationNumber = null,
+                personalizationPlacement = null,
+            )
+
+        assertNull(result.backUrl)
+        val composited = ImageIO.read(ByteArrayInputStream(uploaded.single()))
         assertEquals(1000, composited.width)
         assertEquals(1000, composited.height)
+        assertTrue(hasOpaquePixel(composited), "composited image should not be fully transparent")
     }
+
+    private fun hasOpaquePixel(image: BufferedImage): Boolean =
+        (0 until image.width step 37).any { x -> (0 until image.height step 37).any { y -> (image.getRGB(x, y) ushr 24) != 0 } }
 }

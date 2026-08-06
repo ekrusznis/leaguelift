@@ -158,6 +158,23 @@ export function SwagShopOrderFlow() {
 						</div>
 					)}
 
+					{selectedVariant && (selectedVariant.mockupFrontUrl || selectedVariant.mockupBackUrl) && (
+						<div className="flex gap-3">
+							{selectedVariant.mockupFrontUrl && (
+								<div className="flex flex-col items-center gap-1">
+									<img src={selectedVariant.mockupFrontUrl} alt={`${selectedProduct?.productName} — front`} className="h-40 w-40 rounded-lg border border-slate-gray/20 object-cover" />
+									<span className="text-xs text-slate-gray">Front</span>
+								</div>
+							)}
+							{wantsPersonalization && placement === "BACK" && selectedVariant.mockupBackUrl && (
+								<div className="flex flex-col items-center gap-1">
+									<img src={selectedVariant.mockupBackUrl} alt={`${selectedProduct?.productName} — back`} className="h-40 w-40 rounded-lg border border-slate-gray/20 object-cover" />
+									<span className="text-xs text-slate-gray">Back — your name/number prints here</span>
+								</div>
+							)}
+						</div>
+					)}
+
 					{combinedParticipants.length > 0 && (
 						<div className="flex flex-col gap-1">
 							<label htmlFor="swagshop-participant" className="text-sm font-medium text-navy">Athlete</label>
