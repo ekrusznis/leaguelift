@@ -14,7 +14,7 @@ enum class OrganizationType {
     OTHER,
 }
 
-enum class OrganizationStatus { ACTIVE, SUSPENDED, ARCHIVED }
+enum class OrganizationStatus { DRAFT, ACTIVE, SUSPENDED, ARCHIVED }
 
 data class Organization(
     val id: UUID,

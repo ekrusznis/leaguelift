@@ -29,9 +29,9 @@ rally26:
     secret-key: ${SPACES_SECRET_KEY:rally26_local_password}
     bucket: ${SPACES_BUCKET:rally26-local}
     region: ${SPACES_REGION:us-east-1}
-  # Stripe Connect Express onboarding only (ADR-005) — no live charge routing. Blank by
-  # default since no real Stripe account exists yet; onboarding calls fail with a clear
-  # error until STRIPE_SECRET_KEY (a test-mode secret key) is supplied in .env.
+  # Shared Stripe credentials for existing test-mode commerce/Connect flows and the
+  # organization subscription Checkout added by Phase 24.6/26.1. Blank locally unless
+  # STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET are supplied; use Stripe test keys for local QA.
   stripe:
     secret-key: ${STRIPE_SECRET_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}

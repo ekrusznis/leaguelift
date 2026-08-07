@@ -15,8 +15,8 @@ rally26:
     secret-key: ${SPACES_SECRET_KEY}
     bucket: ${SPACES_BUCKET}
     region: ${SPACES_REGION}
-  # No default — startup fails if unset. Test-mode key expected here (ADR-005 scopes
-  # this phase to Connect onboarding only, never live charge routing).
+  # No default — startup fails if unset. Use isolated Stripe test-mode credentials in
+  # staging; subscription Checkout, commerce, Connect, and webhook verification share them.
   stripe:
     secret-key: ${STRIPE_SECRET_KEY}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET}

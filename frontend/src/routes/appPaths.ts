@@ -18,7 +18,6 @@ export type OrganizationSection =
 	| "settings";
 
 export type HouseholdSection = "profile" | "participants" | "fees" | "events" | "documents" | "corrections";
-
 export const appPaths = {
 	dashboard: (hash?: string) => `/app${hash ? `#${hash}` : ""}`,
 	organizations: () => "/app/organizations",
@@ -41,6 +40,7 @@ export const appPaths = {
 		`/app/organizations/${organizationId}/events/${eventId}${search && search.size > 0 ? `?${search.toString()}` : ""}`,
 	actionCenter: () => "/app/action-center",
 	announcements: () => "/app/announcements",
+	messages: () => "/app/messages",
 	personalIntegrations: () => "/app/integrations",
 	help: () => "/app/help",
 	helpArticle: (slug: string) => `/app/help/${slug}`,

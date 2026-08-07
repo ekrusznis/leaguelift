@@ -8,16 +8,17 @@ import { RequireCapability } from "../authorization/RequireCapability";
 import { ActionCenterPage } from "../features/actionCenter/ActionCenterPage";
 import { AnnouncementsPage } from "../features/communications/AnnouncementsPage";
 import { CollectionsPage } from "../features/collections/CollectionsPage";
-import { PersonalIntegrationsPage } from "../features/integrations/PersonalIntegrationsPage";
 import { EventDetailPage } from "../features/events/EventDetailPage";
 import { EventsPage } from "../features/events/EventsPage";
+import { PersonalIntegrationsPage } from "../features/integrations/PersonalIntegrationsPage";
+import { MessagesPage } from "../features/messaging/MessagesPage";
 import { PlatformAdminConsoleLayout } from "../features/platformAdmin/PlatformAdminConsoleLayout";
 import { PlatformAuditPage } from "../features/platformAdmin/PlatformAuditPage";
 import { PlatformOperationsPage } from "../features/platformAdmin/PlatformOperationsPage";
 import { PlatformOrganizationConsolePage } from "../features/platformAdmin/PlatformOrganizationConsolePage";
 import { PlatformOrganizationsPage } from "../features/platformAdmin/PlatformOrganizationsPage";
-import { PlatformSwagShopPage } from "../features/platformAdmin/PlatformSwagShopPage";
 import { PlatformSupportSessionsPage } from "../features/platformAdmin/PlatformSupportSessionsPage";
+import { PlatformSwagShopPage } from "../features/platformAdmin/PlatformSwagShopPage";
 import { PlatformUsersPage } from "../features/platformAdmin/PlatformUsersPage";
 import { PlatformReportsPage } from "../features/reporting/PlatformReportsPage";
 import { SwagShopOrderFlow } from "../features/swagshop/SwagShopOrderFlow";
@@ -26,12 +27,13 @@ import { HelpCenterPage } from "../features/support/HelpCenterPage";
 import { PlatformHelpArticlesPage } from "../features/support/PlatformHelpArticlesPage";
 import { PlatformSupportCasesPage } from "../features/support/PlatformSupportCasesPage";
 import { SupportRequestPage } from "../features/support/SupportRequestPage";
+import { DashboardPage } from "../pages/DashboardPage";
 import { HouseholdDetailPage } from "../pages/HouseholdDetailPage";
+import { NotFoundPage } from "../pages/NotFoundPage";
 import { OrganizationDetailPage } from "../pages/OrganizationDetailPage";
 import { OrganizationsPage } from "../pages/OrganizationsPage";
+import { OwnerOnboardingPage } from "../pages/OwnerOnboardingPage";
 import { PublicPageView } from "../pages/PublicPageView";
-import { DashboardPage } from "../pages/DashboardPage";
-import { NotFoundPage } from "../pages/NotFoundPage";
 import { AuthErrorPage } from "../pages/auth/AuthErrorPage";
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage";
 import { InvitationPage } from "../pages/auth/InvitationPage";
@@ -61,16 +63,12 @@ function platformGuard(capability: string, child: ReactNode) {
 export function AppRoutes() {
 	return (
 		<Routes>
-			{/* Self-contained single-page homepage (ADR-057) — own header/footer via HomeHeader, not MarketingLayout's dropdown-IA SiteHeader. */}
 			<Route path="/" element={<HomePage />} />
-
 			<Route element={<MarketingLayout />}>
 				<Route path="solutions/:slug" element={<SolutionDetailPage />} />
 				<Route path="talk-to-sales" element={<TalkToSalesPage />} />
 				<Route path="founding-pilot" element={<Navigate to="/talk-to-sales" replace />} />
-				{/* Book a Demo was removed (ADR-059) in favor of the homepage Contact Us section — redirect any stale bookmarks/links straight to Talk to Sales, the closest surviving equivalent. */}
 				<Route path="book-demo" element={<Navigate to="/talk-to-sales" replace />} />
-				{/* /contact was a non-functional mock form (ADR-059) — every existing link to it now lands on the real, backend-wired Contact Us section on the homepage instead. */}
 				<Route path="contact" element={<ContactRedirect />} />
 				<Route path="security" element={<SecurityPage />} />
 				<Route path="help" element={<HelpCenterPage />} />
@@ -85,7 +83,6 @@ export function AppRoutes() {
 				<Route path="sponsors/:slug" element={<PublicSponsorshipView />} />
 				<Route path="404" element={<NotFoundPage />} />
 			</Route>
-
 			<Route element={<AuthLayout />}>
 				<Route path="auth/sign-in" element={<SignInPage />} />
 				<Route path="auth/register" element={<RegisterPage />} />
@@ -96,14 +93,14 @@ export function AppRoutes() {
 				<Route path="auth/invitation" element={<InvitationPage />} />
 				<Route path="auth/error" element={<AuthErrorPage />} />
 			</Route>
-
 			<Route path="p/:slug" element={<PublicPageView />} />
-
 			<Route path="app" element={<ProtectedRoute />}>
 				<Route index element={<DashboardPage />} />
+				<Route path="onboarding/:step?" element={<OwnerOnboardingPage />} />
 				<Route element={<AppShell />}>
 					<Route path="action-center" element={<ActionCenterPage />} />
 					<Route path="announcements" element={<AnnouncementsPage />} />
+					<Route path="messages" element={<MessagesPage />} />
 					<Route path="integrations" element={<PersonalIntegrationsPage />} />
 					<Route path="help" element={<HelpCenterPage authenticated />} />
 					<Route path="help/support" element={<SupportRequestPage authenticated />} />
@@ -120,7 +117,6 @@ export function AppRoutes() {
 					<Route path="organizations/:organizationId/households/:householdId/:section" element={<HouseholdDetailPage />} />
 					<Route path="organizations/:organizationId/:section" element={<OrganizationDetailPage />} />
 				</Route>
-
 				<Route path="platform" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformAdminConsoleLayout />)}>
 					<Route index element={<Navigate to="organizations" replace />} />
 					<Route path="organizations" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformOrganizationsPage />)} />
@@ -135,7 +131,6 @@ export function AppRoutes() {
 					<Route path="swag-shop" element={platformGuard(Capabilities.PLATFORM_SWAG_SHOP_VIEW, <PlatformSwagShopPage />)} />
 				</Route>
 			</Route>
-
 			<Route element={<MarketingLayout />}>
 				<Route path="*" element={<NotFoundPage />} />
 			</Route>

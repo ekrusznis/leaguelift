@@ -75,6 +75,10 @@ info:
     Customer-data requests require the support-access header on organization-prefixed
     routes and on resource-first team, tournament, household, participant, event, RSVP,
     and calendar routes carrying the target organizationId query parameter.
+    Phase 24.6 plus the founder-requested Phase 26 billing pull-forward adds resumable
+    owner onboarding, DRAFT organizations, backend-driven subscription plans, real Stripe
+    subscription Checkout/Product/Price/Customer creation, billing portal sessions, and
+    signed-webhook-authoritative organization activation.
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
     Phase 17 now includes the Help Center/support foundation plus role-aware Action Center aggregation, one-way organization/team/tournament announcements,
@@ -97,7 +101,7 @@ info:
     is never serialized, direct participant-to-household order attribution (no attribution-code
     indirection), family-credit grant/reversal wiring on order confirm/refund, and a guardian
     dashboard recent-orders card (ADR-069).
-  version: "0.28.0"
+  version: "0.30.0"
 servers:
 - url: /api/v1
 tags:
@@ -134,6 +138,8 @@ tags:
 - name: integrations
 - name: platform-admin
 - name: onboarding
+- name: messaging
+- name: subscriptions
 - name: season-rollovers
 - name: help
 - name: support-cases
@@ -646,6 +652,141 @@ paths:
               schema:
                 $ref: "#/components/schemas/StatusResponse"
 
+  /owner-onboarding:
+    get:
+      tags: [onboarding]
+      summary: Resume the signed-in organization owner's durable onboarding state
+      operationId: getOwnerOnboarding
+      responses:
+        "200":
+          description: Current onboarding, draft organization, and subscription state
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OwnerOnboardingResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /owner-onboarding/plans:
+    get:
+      tags: [onboarding, subscriptions]
+      summary: List active backend-owned organization subscription plans
+      operationId: listOwnerOnboardingPlans
+      responses:
+        "200":
+          description: Active plan cards, including contact-only options
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/SubscriptionPlanResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /owner-onboarding/timezone-suggestion:
+    get:
+      tags: [onboarding]
+      summary: Suggest an IANA timezone from the entered country/state for owner confirmation
+      operationId: suggestOwnerOnboardingTimezone
+      parameters:
+      - {name: country, in: query, required: false, schema: {type: string}}
+      - {name: state, in: query, required: false, schema: {type: string}}
+      responses:
+        "200":
+          description: Suggestion only; null means Rally26 will not guess
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/TimezoneSuggestionResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /owner-onboarding/organization:
+    put:
+      tags: [onboarding]
+      summary: Create or update the owner's one DRAFT organization and advance to Plan
+      operationId: saveOwnerOnboardingOrganization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/SaveOwnerOrganizationRequest"}
+      responses:
+        "200":
+          description: Saved resumable onboarding state
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OwnerOnboardingResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /owner-onboarding/plan:
+    put:
+      tags: [onboarding, subscriptions]
+      summary: Select the backend-owned monthly plan for the draft organization
+      operationId: selectOwnerOnboardingPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/SelectOwnerPlanRequest"}
+      responses:
+        "200":
+          description: Plan saved; onboarding is ready for review/checkout
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OwnerOnboardingResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /owner-onboarding/checkout:
+    post:
+      tags: [onboarding, subscriptions]
+      summary: Create or resume a real Stripe subscription Checkout session
+      description: >
+        Creates/reuses the Stripe Product, recurring Price, Customer, and an open
+        subscription-mode Checkout Session using the configured Stripe account. Browser
+        success never activates the organization; only signed subscription webhooks do.
+      operationId: startOwnerSubscriptionCheckout
+      responses:
+        "200":
+          description: Hosted Stripe Checkout destination
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SubscriptionCheckoutResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /organizations/{organizationId}/subscription:
+    get:
+      tags: [subscriptions]
+      summary: Read the owner-visible organization subscription status
+      operationId: getOrganizationSubscription
+      parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Subscription state, or null before checkout starts
+          content:
+            application/json:
+              schema:
+                allOf: [{$ref: "#/components/schemas/OrganizationSubscriptionResponse"}]
+                nullable: true
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /organizations/{organizationId}/subscription/portal:
+    post:
+      tags: [subscriptions]
+      summary: Create a Stripe Billing Portal session for the organization owner
+      operationId: createOrganizationBillingPortal
+      parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Stripe-hosted billing-management URL
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BillingPortalResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
   /auth/register:
     post:
       tags: [auth]
@@ -8983,6 +9124,304 @@ paths:
                 type: array
                 items: {$ref: '#/components/schemas/PlatformProviderContractResponse'}
 
+  /public/help/articles/{slug}/media:
+    get:
+      tags: [Support]
+      summary: List ready media for a public Help article
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: {type: string}
+      security: []
+      responses:
+        '200':
+          description: Ordered ready article media
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/SupportArticleMediaResponse'}
+  /public/help/article-media:
+    get:
+      tags: [Support]
+      summary: Batch media-type indicators for public Help article cards
+      parameters:
+        - in: query
+          name: slugs
+          required: true
+          schema: {type: array, items: {type: string}}
+          style: form
+          explode: true
+      security: []
+      responses:
+        '200':
+          description: Media types keyed by authorized article slug
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupportArticleMediaTypeIndexResponse'}
+  /help/articles/{slug}/media:
+    get:
+      tags: [Support]
+      summary: List ready media for an authenticated, audience-authorized Help article
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: {type: string}
+      responses:
+        '200':
+          description: Ordered ready article media
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/SupportArticleMediaResponse'}
+  /help/article-media:
+    get:
+      tags: [Support]
+      summary: Batch media-type indicators for authenticated Help article cards
+      parameters:
+        - in: query
+          name: slugs
+          required: true
+          schema: {type: array, items: {type: string}}
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: Media types keyed by authorized article slug
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupportArticleMediaTypeIndexResponse'}
+  /platform/admin/help/articles/{articleId}/media:
+    get:
+      tags: [Platform Admin, Support]
+      summary: List non-archived media for a Help article
+      parameters:
+        - in: path
+          name: articleId
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Platform authoring media list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/SupportArticleMediaResponse'}
+  /platform/admin/help/articles/{articleId}/media/uploads:
+    post:
+      tags: [Platform Admin, Support]
+      summary: Request a signed Help article media upload
+      parameters:
+        - in: path
+          name: articleId
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RequestSupportArticleMediaUpload'}
+      responses:
+        '200':
+          description: Signed direct-to-storage upload instructions
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RequestSupportArticleMediaUploadResponse'}
+  /platform/admin/help/articles/{articleId}/media/{mediaId}/confirm:
+    post:
+      tags: [Platform Admin, Support]
+      summary: Confirm and signature-validate an uploaded Help media object
+      parameters:
+        - in: path
+          name: articleId
+          required: true
+          schema: {type: string, format: uuid}
+        - in: path
+          name: mediaId
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Confirmed media
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupportArticleMediaResponse'}
+  /platform/admin/help/articles/{articleId}/media/{mediaId}:
+    patch:
+      tags: [Platform Admin, Support]
+      summary: Update Help media caption, accessible description, and order
+      parameters:
+        - in: path
+          name: articleId
+          required: true
+          schema: {type: string, format: uuid}
+        - in: path
+          name: mediaId
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/UpdateSupportArticleMediaRequest'}
+      responses:
+        '200':
+          description: Updated media
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupportArticleMediaResponse'}
+  /platform/admin/help/articles/{articleId}/media/{mediaId}/archive:
+    post:
+      tags: [Platform Admin, Support]
+      summary: Archive a Help media attachment
+      parameters:
+        - in: path
+          name: articleId
+          required: true
+          schema: {type: string, format: uuid}
+        - in: path
+          name: mediaId
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Archived media
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupportArticleMediaResponse'}
+
+  /organizations/{organizationId}/message-threads:
+    get:
+      tags: [messaging]
+      summary: List broadcast message threads for an authorized organization/team scope
+      parameters:
+        - {in: path, name: organizationId, required: true, schema: {type: string, format: uuid}}
+        - {in: query, name: scopeType, required: false, schema: {type: string, enum: [ORGANIZATION, TEAM]}}
+        - {in: query, name: scopeId, required: false, schema: {type: string, format: uuid}}
+        - {in: query, name: status, required: false, schema: {type: string, enum: [OPEN, ARCHIVED]}}
+        - {in: query, name: page, required: false, schema: {type: integer, minimum: 0, default: 0}}
+        - {in: query, name: size, required: false, schema: {type: integer, minimum: 1, maximum: 200, default: 25}}
+      responses:
+        '200':
+          description: Managed broadcast threads
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MessageThreadPageResponse'}
+    post:
+      tags: [messaging]
+      summary: Create a one-way organization or team broadcast thread
+      parameters:
+        - {in: path, name: organizationId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateMessageThreadRequest'}
+      responses:
+        '201':
+          description: Broadcast thread created or safely reused by idempotency key
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MessageThreadResponse'}
+  /organizations/{organizationId}/message-threads/{threadId}:
+    get:
+      tags: [messaging]
+      summary: Get a managed broadcast thread
+      parameters:
+        - {in: path, name: organizationId, required: true, schema: {type: string, format: uuid}}
+        - {in: path, name: threadId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Broadcast thread
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MessageThreadResponse'}
+  /organizations/{organizationId}/message-threads/{threadId}/messages:
+    get:
+      tags: [messaging]
+      summary: List sent messages in a managed broadcast thread
+      parameters:
+        - {in: path, name: organizationId, required: true, schema: {type: string, format: uuid}}
+        - {in: path, name: threadId, required: true, schema: {type: string, format: uuid}}
+        - {in: query, name: page, required: false, schema: {type: integer, minimum: 0, default: 0}}
+        - {in: query, name: size, required: false, schema: {type: integer, minimum: 1, maximum: 200, default: 100}}
+      responses:
+        '200':
+          description: Sent message history
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BroadcastMessagePageResponse'}
+    post:
+      tags: [messaging]
+      summary: Append and send a broadcast message to the thread's current audience
+      description: Each send creates an immutable recipient snapshot. Athlete-targeted messages also create in-app-only guardian visibility copies for linked guardians.
+      parameters:
+        - {in: path, name: organizationId, required: true, schema: {type: string, format: uuid}}
+        - {in: path, name: threadId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SendBroadcastMessageRequest'}
+      responses:
+        '201':
+          description: Broadcast message sent or safely reused by idempotency key
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BroadcastMessageResponse'}
+  /organizations/{organizationId}/message-threads/{threadId}/archive:
+    post:
+      tags: [messaging]
+      summary: Archive a broadcast thread and prevent future sends
+      parameters:
+        - {in: path, name: organizationId, required: true, schema: {type: string, format: uuid}}
+        - {in: path, name: threadId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Archived thread
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MessageThreadResponse'}
+  /me/message-threads:
+    get:
+      tags: [messaging]
+      summary: List message threads whose recipient snapshots include the current user
+      parameters:
+        - {in: query, name: page, required: false, schema: {type: integer, minimum: 0, default: 0}}
+        - {in: query, name: size, required: false, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+      responses:
+        '200':
+          description: Current user's message-thread inbox
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MyMessageThreadPageResponse'}
+  /me/message-threads/{threadId}/messages:
+    get:
+      tags: [messaging]
+      summary: List only messages in a thread whose immutable snapshot includes the current user
+      parameters:
+        - {in: path, name: threadId, required: true, schema: {type: string, format: uuid}}
+        - {in: query, name: page, required: false, schema: {type: integer, minimum: 0, default: 0}}
+        - {in: query, name: size, required: false, schema: {type: integer, minimum: 1, maximum: 200, default: 100}}
+      responses:
+        '200':
+          description: Current user's visible messages in the thread
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MyBroadcastMessagePageResponse'}
+  /me/messages/{messageId}/read:
+    post:
+      tags: [messaging]
+      summary: Mark the current user's visible copy of a broadcast message read
+      parameters:
+        - {in: path, name: messageId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '204': {description: Message marked read}
+
 components:
   securitySchemes:
     bearerAuth:
@@ -9612,7 +10051,7 @@ components:
                 type: string
     RegisterRequest:
       type: object
-      required: [email, password, firstName, lastName]
+      required: [email, password, firstName, lastName, agreeToTerms, confirmAdult]
       properties:
         email:
           type: string
@@ -9627,6 +10066,115 @@ components:
         lastName:
           type: string
           maxLength: 60
+        invitationToken:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Preserves invitation activation after email verification; invitation registrations do not create owner onboarding.
+        agreeToTerms:
+          type: boolean
+          enum: [true]
+        confirmAdult:
+          type: boolean
+          enum: [true]
+    OwnerOnboardingResponse:
+      type: object
+      required: [id, currentStep]
+      properties:
+        id: {type: string, format: uuid}
+        currentStep: {type: string, enum: [ORGANIZATION, PLAN, REVIEW, CHECKOUT, COMPLETE]}
+        organization:
+          allOf: [{$ref: "#/components/schemas/OnboardingOrganizationResponse"}]
+          nullable: true
+        selectedPlanCode: {type: string, nullable: true}
+        selectedBillingFrequency: {type: string, enum: [MONTHLY], nullable: true}
+        checkoutSessionId: {type: string, nullable: true}
+        subscriptionStatus:
+          type: string
+          enum: [CHECKOUT_PENDING, TRIALING, ACTIVE, PAST_DUE, CANCELED, INCOMPLETE]
+          nullable: true
+        completedAt: {type: string, format: date-time, nullable: true}
+    OnboardingOrganizationResponse:
+      type: object
+      required: [id, name, slug, organizationType, status, sports]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        slug: {type: string}
+        organizationType: {$ref: "#/components/schemas/OrganizationType"}
+        status: {type: string, enum: [DRAFT, ACTIVE, SUSPENDED, ARCHIVED]}
+        sports:
+          type: array
+          items: {type: string}
+        contactEmail: {type: string, format: email, nullable: true}
+        contactPhone: {type: string, nullable: true}
+        addressLine1: {type: string, nullable: true}
+        addressLine2: {type: string, nullable: true}
+        addressCity: {type: string, nullable: true}
+        addressState: {type: string, nullable: true}
+        addressPostalCode: {type: string, nullable: true}
+        addressCountry: {type: string, nullable: true}
+        timezone: {type: string, nullable: true}
+    SaveOwnerOrganizationRequest:
+      type: object
+      required: [name, slug, organizationType, sports, contactEmail, addressLine1, addressCity, addressState, addressPostalCode, addressCountry, timezone]
+      properties:
+        name: {type: string, maxLength: 160}
+        slug: {type: string, maxLength: 63}
+        organizationType: {$ref: "#/components/schemas/OrganizationType"}
+        sports:
+          type: array
+          minItems: 1
+          items: {type: string}
+        contactEmail: {type: string, format: email}
+        contactPhone: {type: string, maxLength: 40, nullable: true}
+        addressLine1: {type: string, maxLength: 160}
+        addressLine2: {type: string, maxLength: 160, nullable: true}
+        addressCity: {type: string, maxLength: 100}
+        addressState: {type: string, maxLength: 100}
+        addressPostalCode: {type: string, maxLength: 30}
+        addressCountry: {type: string, minLength: 2, maxLength: 2}
+        timezone: {type: string, maxLength: 100}
+    SelectOwnerPlanRequest:
+      type: object
+      required: [planCode, billingFrequency]
+      properties:
+        planCode: {type: string}
+        billingFrequency: {type: string, enum: [MONTHLY]}
+    SubscriptionPlanResponse:
+      type: object
+      required: [code, name, description, contactOnly]
+      properties:
+        code: {type: string}
+        name: {type: string}
+        description: {type: string}
+        amountMinor: {type: integer, format: int64, nullable: true}
+        currency: {type: string, nullable: true}
+        billingInterval: {type: string, enum: [MONTHLY], nullable: true}
+        contactOnly: {type: boolean}
+    TimezoneSuggestionResponse:
+      type: object
+      properties:
+        timezone: {type: string, nullable: true}
+    SubscriptionCheckoutResponse:
+      type: object
+      required: [sessionId, checkoutUrl]
+      properties:
+        sessionId: {type: string}
+        checkoutUrl: {type: string, format: uri}
+    OrganizationSubscriptionResponse:
+      type: object
+      required: [id, organizationId, planCode, status]
+      properties:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        planCode: {type: string}
+        status: {type: string, enum: [CHECKOUT_PENDING, TRIALING, ACTIVE, PAST_DUE, CANCELED, INCOMPLETE]}
+    BillingPortalResponse:
+      type: object
+      required: [url]
+      properties:
+        url: {type: string, format: uri}
     RegistrationAcceptedResponse:
       type: object
       required: [email]
@@ -9784,7 +10332,7 @@ components:
           $ref: "#/components/schemas/OrganizationType"
         status:
           type: string
-          enum: [ACTIVE, SUSPENDED, ARCHIVED]
+          enum: [DRAFT, ACTIVE, SUSPENDED, ARCHIVED]
         sports:
           type: array
           items:
@@ -15973,6 +16521,163 @@ components:
         capabilities:
           type: array
           items: {$ref: '#/components/schemas/ProviderContractCapabilityResponse'}
+
+    RequestSupportArticleMediaUpload:
+      type: object
+      required: [fileName, contentType, fileSizeBytes, altText]
+      properties:
+        fileName: {type: string, maxLength: 255}
+        contentType: {type: string, enum: [image/png, image/jpeg, image/webp, image/gif, video/mp4, video/webm]}
+        fileSizeBytes: {type: integer, format: int64, minimum: 1}
+        caption: {type: string, maxLength: 500, nullable: true}
+        altText: {type: string, minLength: 3, maxLength: 500}
+        sortOrder: {type: integer, minimum: 0, maximum: 10000, default: 0}
+    UpdateSupportArticleMediaRequest:
+      type: object
+      required: [altText, sortOrder]
+      properties:
+        caption: {type: string, maxLength: 500, nullable: true}
+        altText: {type: string, minLength: 3, maxLength: 500}
+        sortOrder: {type: integer, minimum: 0, maximum: 10000}
+    SupportArticleMediaResponse:
+      type: object
+      required: [id, articleId, mediaType, status, fileName, contentType, altText, sortOrder, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        articleId: {type: string, format: uuid}
+        mediaType: {type: string, enum: [IMAGE, GIF, VIDEO]}
+        status: {type: string, enum: [PENDING_UPLOAD, READY, REJECTED, ARCHIVED]}
+        fileName: {type: string}
+        contentType: {type: string}
+        byteSize: {type: integer, format: int64, nullable: true}
+        caption: {type: string, nullable: true}
+        altText: {type: string}
+        sortOrder: {type: integer}
+        rejectionReason: {type: string, nullable: true}
+        url: {type: string, format: uri, nullable: true, description: Short-lived signed GET URL; present only when readable and READY.}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    RequestSupportArticleMediaUploadResponse:
+      type: object
+      required: [media, uploadUrl, uploadMethod, requiredHeaders, expiresAt]
+      properties:
+        media: {$ref: '#/components/schemas/SupportArticleMediaResponse'}
+        uploadUrl: {type: string, format: uri}
+        uploadMethod: {type: string, enum: [PUT]}
+        requiredHeaders:
+          type: object
+          additionalProperties: {type: string}
+        expiresAt: {type: string, format: date-time}
+    SupportArticleMediaTypeIndexResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: object
+          additionalProperties:
+            type: array
+            uniqueItems: true
+            items: {type: string, enum: [IMAGE, GIF, VIDEO]}
+
+    CreateMessageThreadRequest:
+      type: object
+      required: [scopeType, idempotencyKey, title, audience]
+      properties:
+        scopeType: {type: string, enum: [ORGANIZATION, TEAM]}
+        scopeId: {type: string, format: uuid, nullable: true}
+        idempotencyKey: {type: string, minLength: 8, maxLength: 160}
+        title: {type: string, minLength: 3, maxLength: 180}
+        audience: {type: string, enum: [ALL, STAFF, GUARDIANS, ATHLETES]}
+        emailEnabled: {type: boolean, default: true}
+        smsEnabled: {type: boolean, default: false}
+    SendBroadcastMessageRequest:
+      type: object
+      required: [idempotencyKey, body]
+      properties:
+        idempotencyKey: {type: string, minLength: 8, maxLength: 160}
+        body: {type: string, minLength: 1, maxLength: 5000}
+    MessageThreadResponse:
+      type: object
+      required: [id, organizationId, scopeType, scopeId, title, audience, emailEnabled, smsEnabled, status, messageCount, recipientCount, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        scopeType: {type: string, enum: [ORGANIZATION, TEAM]}
+        scopeId: {type: string, format: uuid}
+        scopeName: {type: string, nullable: true}
+        title: {type: string}
+        audience: {type: string, enum: [ALL, STAFF, GUARDIANS, ATHLETES]}
+        emailEnabled: {type: boolean}
+        smsEnabled: {type: boolean}
+        status: {type: string, enum: [OPEN, ARCHIVED]}
+        messageCount: {type: integer, format: int64}
+        recipientCount: {type: integer, format: int64, description: Unique snapshotted recipient keys across sent messages in the thread.}
+        archivedAt: {type: string, format: date-time, nullable: true}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    BroadcastMessageResponse:
+      type: object
+      required: [id, organizationId, threadId, senderUserId, senderDisplayName, body, sentAt, recipientCount, emailSentCount, emailFailedCount, smsSentCount, smsFailedCount]
+      properties:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        threadId: {type: string, format: uuid}
+        senderUserId: {type: string, format: uuid}
+        senderDisplayName: {type: string}
+        body: {type: string}
+        sentAt: {type: string, format: date-time}
+        recipientCount: {type: integer, format: int64}
+        emailSentCount: {type: integer, format: int64}
+        emailFailedCount: {type: integer, format: int64}
+        smsSentCount: {type: integer, format: int64}
+        smsFailedCount: {type: integer, format: int64}
+    MyMessageThreadResponse:
+      type: object
+      required: [thread, unreadCount, lastMessageAt, lastMessagePreview]
+      properties:
+        thread: {$ref: '#/components/schemas/MessageThreadResponse'}
+        unreadCount: {type: integer, format: int64}
+        lastMessageAt: {type: string, format: date-time}
+        lastMessagePreview: {type: string}
+    MyBroadcastMessageResponse:
+      type: object
+      required: [message, accessReason]
+      properties:
+        message: {$ref: '#/components/schemas/BroadcastMessageResponse'}
+        readAt: {type: string, format: date-time, nullable: true}
+        accessReason: {type: string, enum: [TARGETED, GUARDIAN_VISIBILITY]}
+    MessageThreadPageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/MessageThreadResponse'}}
+        page: {type: integer}
+        size: {type: integer}
+        totalElements: {type: integer, format: int64}
+    BroadcastMessagePageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/BroadcastMessageResponse'}}
+        page: {type: integer}
+        size: {type: integer}
+        totalElements: {type: integer, format: int64}
+    MyMessageThreadPageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/MyMessageThreadResponse'}}
+        page: {type: integer}
+        size: {type: integer}
+        totalElements: {type: integer, format: int64}
+    MyBroadcastMessagePageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/MyBroadcastMessageResponse'}}
+        page: {type: integer}
+        size: {type: integer}
+        totalElements: {type: integer, format: int64}
 
 security:
 - bearerAuth: []

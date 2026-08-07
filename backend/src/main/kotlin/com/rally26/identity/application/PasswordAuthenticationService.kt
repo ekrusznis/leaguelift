@@ -6,6 +6,7 @@ import com.rally26.common.web.CurrentUser
 import com.rally26.identity.domain.AppUser
 import com.rally26.identity.domain.AppUserStatus
 import com.rally26.identity.persistence.AppUserRepository
+import com.rally26.onboarding.owner.persistence.OwnerOnboardingRepository
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -21,6 +22,7 @@ class PasswordAuthenticationService(
     private val appUserRepository: AppUserRepository,
     private val emailVerificationService: EmailVerificationService,
     private val passwordEncoder: PasswordEncoder,
+    private val ownerOnboardingRepository: OwnerOnboardingRepository? = null,
 ) {
     data class RegistrationAccepted(
         val email: String,
@@ -58,11 +60,15 @@ class PasswordAuthenticationService(
         password: String,
         displayName: String,
         invitationToken: String? = null,
+        acceptedTerms: Boolean = true,
+        confirmedAdult: Boolean = true,
     ): RegistrationAccepted {
         val normalizedEmail = email.trim().lowercase()
         if (appUserRepository.findByEmail(normalizedEmail) != null) {
             throw emailAlreadyRegistered()
         }
+        require(acceptedTerms) { "Terms must be accepted before owner registration." }
+        require(confirmedAdult) { "Owner registration requires adult confirmation." }
         val created =
             try {
                 appUserRepository.insert(
@@ -74,6 +80,12 @@ class PasswordAuthenticationService(
             } catch (_: DuplicateKeyException) {
                 throw emailAlreadyRegistered()
             }
+        // Invitation registrations are staff/guardian/athlete account activation, not
+        // organization-owner self-service. Only a normal owner registration gets a
+        // resumable onboarding row; the unique owner_user_id constraint makes retries safe.
+        if (invitationToken.isNullOrBlank()) {
+            ownerOnboardingRepository?.createForOwner(created.id)
+        }
         val issued = emailVerificationService.issueForUser(created.id, invitationToken)
         emailVerificationService.enqueueVerificationEmail(issued)
         return RegistrationAccepted(email = normalizedEmail)

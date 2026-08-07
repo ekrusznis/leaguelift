@@ -3,14 +3,12 @@ package com.rally26.config
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 /**
- * Bound from `rally26.stripe.*`. Test-mode only (ADR-005) — no live charge
- * routing. Neither [secretKey] nor [webhookSecret] has a default in staging/prod
- * config so a missing value fails startup rather than silently running
- * unauthenticated/unverified; locally both default to blank since no real Stripe
- * keys are provisioned yet (calls simply fail with a clear error until a founder
- * supplies test-mode keys). [webhookSecret] verifies the `Stripe-Signature` header
- * on `POST /api/v1/webhooks/stripe` (campaign-contribution confirmation only this
- * slice — Connect-account webhooks remain Phase 5).
+ * Bound from `rally26.stripe.*`. The same account-level secret powers the existing
+ * test-mode commerce/Connect flows and Phase 24.6/26.1 organization subscription
+ * Checkout. The key itself determines Stripe test vs live mode; Rally26 never toggles
+ * that in application code. Neither value has a default in staging/prod. Locally both
+ * may be blank, in which case real Stripe calls fail until test credentials are supplied.
+ * [webhookSecret] verifies every event received at `POST /api/v1/webhooks/stripe`.
  */
 @ConfigurationProperties(prefix = "rally26.stripe")
 data class StripeProperties(

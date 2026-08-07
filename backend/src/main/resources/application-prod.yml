@@ -16,8 +16,9 @@ rally26:
     secret-key: ${SPACES_SECRET_KEY}
     bucket: ${SPACES_BUCKET}
     region: ${SPACES_REGION}
-  # No default — startup fails if unset. Live-mode routing is NOT enabled by this key
-  # alone; ADR-005 explicitly scopes this phase to Connect onboarding only.
+  # No default — startup fails if unset. Stripe mode is determined by the supplied key.
+  # Organization subscription Checkout is real provider-backed; use test-mode credentials
+  # until the production billing go-live decision explicitly rotates to live-mode keys.
   stripe:
     secret-key: ${STRIPE_SECRET_KEY}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET}
