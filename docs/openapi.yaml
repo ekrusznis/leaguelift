@@ -101,7 +101,7 @@ info:
     is never serialized, direct participant-to-household order attribution (no attribution-code
     indirection), family-credit grant/reversal wiring on order confirm/refund, and a guardian
     dashboard recent-orders card (ADR-069).
-  version: "0.30.0"
+  version: "0.35.0"
 servers:
 - url: /api/v1
 tags:
@@ -9297,7 +9297,7 @@ paths:
   /organizations/{organizationId}/message-threads:
     get:
       tags: [messaging]
-      summary: List broadcast message threads for an authorized organization/team scope
+      summary: List managed broadcast and conversation threads for an authorized organization/team scope
       parameters:
         - {in: path, name: organizationId, required: true, schema: {type: string, format: uuid}}
         - {in: query, name: scopeType, required: false, schema: {type: string, enum: [ORGANIZATION, TEAM]}}
@@ -9307,7 +9307,7 @@ paths:
         - {in: query, name: size, required: false, schema: {type: integer, minimum: 1, maximum: 200, default: 25}}
       responses:
         '200':
-          description: Managed broadcast threads
+          description: Managed message threads
           content:
             application/json:
               schema: {$ref: '#/components/schemas/MessageThreadPageResponse'}
@@ -9324,6 +9324,39 @@ paths:
       responses:
         '201':
           description: Broadcast thread created or safely reused by idempotency key
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MessageThreadResponse'}
+  /organizations/{organizationId}/message-threads/contacts:
+    get:
+      tags: [messaging]
+      summary: List activated guardian and athlete contacts eligible for a team conversation
+      parameters:
+        - {in: path, name: organizationId, required: true, schema: {type: string, format: uuid}}
+        - {in: query, name: teamId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Eligible team conversation contacts
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/ConversationContactResponse'}
+  /organizations/{organizationId}/message-threads/conversations:
+    post:
+      tags: [messaging]
+      summary: Create a team-scoped two-way coach-to-family conversation and send its first message
+      description: Selected guardians and activated athletes become reply-capable members. Linked guardians of selected athletes are added automatically with in-app read-only visibility unless explicitly selected too.
+      parameters:
+        - {in: path, name: organizationId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateConversationRequest'}
+      responses:
+        '201':
+          description: Conversation created or safely reused by idempotency key
           content:
             application/json:
               schema: {$ref: '#/components/schemas/MessageThreadResponse'}
@@ -9399,6 +9432,20 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/MyMessageThreadPageResponse'}
+  /me/message-threads/{threadId}/members:
+    get:
+      tags: [messaging]
+      summary: List privacy-safe active members of a two-way conversation visible to the current user
+      parameters:
+        - {in: path, name: threadId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Conversation members; internal household and participant IDs are intentionally omitted
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/MessageThreadMemberResponse'}
   /me/message-threads/{threadId}/messages:
     get:
       tags: [messaging]
@@ -9413,6 +9460,23 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/MyBroadcastMessagePageResponse'}
+    post:
+      tags: [messaging]
+      summary: Reply to a two-way conversation as an explicitly reply-capable member
+      description: Guardian visibility-only members are read-only. Broadcast threads reject replies.
+      parameters:
+        - {in: path, name: threadId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SendBroadcastMessageRequest'}
+      responses:
+        '201':
+          description: Conversation reply sent or safely reused by idempotency key
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BroadcastMessageResponse'}
   /me/messages/{messageId}/read:
     post:
       tags: [messaging]
@@ -9421,6 +9485,182 @@ paths:
         - {in: path, name: messageId, required: true, schema: {type: string, format: uuid}}
       responses:
         '204': {description: Message marked read}
+
+  /me/messages/{messageId}/reports:
+    post:
+      tags: [messaging]
+      summary: Report a specific visible message for safety review
+      description: The reporter must be able to see or have sent the exact message. Reporting does not delete or edit message history.
+      parameters:
+        - {in: path, name: messageId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateMessageSafetyReportRequest'}
+      responses:
+        '201':
+          description: Safety report created or the reporter's existing active report returned
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MessageSafetyReportResponse'}
+  /me/message-reports:
+    get:
+      tags: [messaging]
+      summary: List message safety reports submitted by the current user
+      parameters:
+        - {in: query, name: page, required: false, schema: {type: integer, minimum: 0, default: 0}}
+        - {in: query, name: size, required: false, schema: {type: integer, minimum: 1, maximum: 200, default: 25}}
+      responses:
+        '200':
+          description: Current user's safety reports
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MessageSafetyReportPageResponse'}
+  /organizations/{organizationId}/message-reports:
+    get:
+      tags: [messaging]
+      summary: List message safety reports for an authorized organization/team scope
+      parameters:
+        - {in: path, name: organizationId, required: true, schema: {type: string, format: uuid}}
+        - {in: query, name: scopeType, required: false, schema: {type: string, enum: [ORGANIZATION, TEAM]}}
+        - {in: query, name: scopeId, required: false, schema: {type: string, format: uuid}}
+        - {in: query, name: status, required: false, schema: {type: string, enum: [OPEN, IN_REVIEW, RESOLVED, DISMISSED]}}
+        - {in: query, name: page, required: false, schema: {type: integer, minimum: 0, default: 0}}
+        - {in: query, name: size, required: false, schema: {type: integer, minimum: 1, maximum: 200, default: 25}}
+      responses:
+        '200':
+          description: Authorized safety review queue
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MessageSafetyReportPageResponse'}
+  /organizations/{organizationId}/message-reports/{reportId}:
+    patch:
+      tags: [messaging]
+      summary: Move a message safety report into review or close it with a recorded outcome
+      parameters:
+        - {in: path, name: organizationId, required: true, schema: {type: string, format: uuid}}
+        - {in: path, name: reportId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReviewMessageSafetyReportRequest'}
+      responses:
+        '200':
+          description: Updated safety report
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MessageSafetyReportResponse'}
+  /organizations/{organizationId}/message-reports/{reportId}/events:
+    get:
+      tags: [messaging]
+      summary: List append-only moderation events for a message safety report
+      parameters:
+        - {in: path, name: organizationId, required: true, schema: {type: string, format: uuid}}
+        - {in: path, name: reportId, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Moderation history
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/MessageModerationEventResponse'}
+  /organizations/{organizationId}/message-threads/{threadId}/safety-lock:
+    post:
+      tags: [messaging]
+      summary: Temporarily pause all new messages in a thread for safety review
+      parameters:
+        - {in: path, name: organizationId, required: true, schema: {type: string, format: uuid}}
+        - {in: path, name: threadId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SafetyLockThreadRequest'}
+      responses:
+        '200':
+          description: Safety-locked thread
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MessageThreadResponse'}
+  /organizations/{organizationId}/message-threads/{threadId}/safety-unlock:
+    post:
+      tags: [messaging]
+      summary: Remove a thread safety lock after recording a review note
+      parameters:
+        - {in: path, name: organizationId, required: true, schema: {type: string, format: uuid}}
+        - {in: path, name: threadId, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SafetyUnlockThreadRequest'}
+      responses:
+        '200':
+          description: Unlocked thread
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MessageThreadResponse'}
+
+  /organizations/{organizationId}/messaging/safe-sport-policy:
+    get:
+      summary: Read the messaging SafeSport policy gate
+      parameters:
+        - $ref: '#/components/parameters/OrganizationIdParam'
+      responses:
+        '200': {description: Policy gate, content: {application/json: {schema: {$ref: '#/components/schemas/MessageSafeSportPolicyResponse'}}}}
+    patch:
+      summary: Record the platform SafeSport/compliance review gate (platform administrator only)
+      parameters:
+        - $ref: '#/components/parameters/OrganizationIdParam'
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UpdateMessageSafeSportPolicyRequest'}}}}
+      responses:
+        '200': {description: Updated policy gate, content: {application/json: {schema: {$ref: '#/components/schemas/MessageSafeSportPolicyResponse'}}}}
+  /me/messaging/guardian-participants:
+    get:
+      summary: List participants linked to the current guardian for messaging safety controls
+      responses:
+        '200': {description: Linked participants, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/GuardianMessagingParticipantResponse'}}}}}
+  /me/messaging/contact-restrictions:
+    get:
+      summary: List guardian-created messaging contact restrictions
+      responses:
+        '200': {description: Restrictions, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/MessageContactRestrictionResponse'}}}}}
+    post:
+      summary: Record a guardian communication restriction
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CreateMessageContactRestrictionRequest'}}}}
+      responses:
+        '201': {description: Restriction recorded, content: {application/json: {schema: {$ref: '#/components/schemas/MessageContactRestrictionResponse'}}}}
+  /me/messaging/contact-restrictions/{restrictionId}/lift:
+    post:
+      summary: Lift a guardian-created communication restriction while retaining history
+      parameters:
+        - {name: restrictionId, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/LiftMessageContactRestrictionRequest'}}}}
+      responses:
+        '200': {description: Lifted restriction, content: {application/json: {schema: {$ref: '#/components/schemas/MessageContactRestrictionResponse'}}}}
+
+  /me/messaging/athlete-teams:
+    get:
+      summary: List current athlete team contexts and whether athlete messaging is enabled
+      responses:
+        '200': {description: Athlete teams, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/AthleteMessagingTeamResponse'}}}}}
+  /me/messaging/athlete-contacts:
+    get:
+      summary: List eligible same-team athlete peers for a gated athlete conversation
+      parameters:
+        - {name: organizationId, in: query, required: true, schema: {type: string, format: uuid}}
+        - {name: teamId, in: query, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Eligible peers, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/ConversationContactResponse'}}}}}
+  /me/messaging/athlete-conversations:
+    post:
+      summary: Create a gated athlete direct/group conversation
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CreateAthleteConversationRequest'}}}}
+      responses:
+        '201': {description: Athlete conversation created, content: {application/json: {schema: {$ref: '#/components/schemas/MessageThreadResponse'}}}}
 
 components:
   securitySchemes:
@@ -16590,31 +16830,69 @@ components:
         audience: {type: string, enum: [ALL, STAFF, GUARDIANS, ATHLETES]}
         emailEnabled: {type: boolean, default: true}
         smsEnabled: {type: boolean, default: false}
+    CreateConversationRequest:
+      type: object
+      required: [teamId, idempotencyKey, title, targetUserIds, initialMessageIdempotencyKey, initialMessage]
+      properties:
+        teamId: {type: string, format: uuid}
+        idempotencyKey: {type: string, minLength: 8, maxLength: 160}
+        title: {type: string, minLength: 3, maxLength: 180}
+        targetUserIds:
+          type: array
+          minItems: 1
+          maxItems: 250
+          uniqueItems: true
+          items: {type: string, format: uuid}
+        emailEnabled: {type: boolean, default: true}
+        smsEnabled: {type: boolean, default: false}
+        initialMessageIdempotencyKey: {type: string, minLength: 8, maxLength: 160}
+        initialMessage: {type: string, minLength: 1, maxLength: 5000}
+    ConversationContactResponse:
+      type: object
+      required: [userId, recipientType, displayName]
+      properties:
+        userId: {type: string, format: uuid}
+        recipientType: {type: string, enum: [GUARDIAN, ATHLETE]}
+        householdId: {type: string, format: uuid, nullable: true}
+        participantId: {type: string, format: uuid, nullable: true}
+        displayName: {type: string}
     SendBroadcastMessageRequest:
       type: object
       required: [idempotencyKey, body]
       properties:
         idempotencyKey: {type: string, minLength: 8, maxLength: 160}
         body: {type: string, minLength: 1, maxLength: 5000}
+    MessageThreadMemberResponse:
+      type: object
+      required: [userId, memberType, displayName, accessReason, canReply]
+      properties:
+        userId: {type: string, format: uuid}
+        memberType: {type: string, enum: [STAFF, GUARDIAN, ATHLETE]}
+        displayName: {type: string}
+        accessReason: {type: string, enum: [TARGETED, GUARDIAN_VISIBILITY]}
+        canReply: {type: boolean}
     MessageThreadResponse:
       type: object
-      required: [id, organizationId, scopeType, scopeId, title, audience, emailEnabled, smsEnabled, status, messageCount, recipientCount, createdAt, updatedAt]
+      required: [id, organizationId, scopeType, scopeId, threadType, title, audience, emailEnabled, smsEnabled, status, messageCount, recipientCount, createdAt, updatedAt]
       properties:
         id: {type: string, format: uuid}
         organizationId: {type: string, format: uuid}
         scopeType: {type: string, enum: [ORGANIZATION, TEAM]}
         scopeId: {type: string, format: uuid}
         scopeName: {type: string, nullable: true}
+        threadType: {type: string, enum: [BROADCAST, CONVERSATION, ATHLETE_CONVERSATION]}
         title: {type: string}
-        audience: {type: string, enum: [ALL, STAFF, GUARDIANS, ATHLETES]}
+        audience: {type: string, enum: [ALL, STAFF, GUARDIANS, ATHLETES, SELECTED]}
         emailEnabled: {type: boolean}
         smsEnabled: {type: boolean}
         status: {type: string, enum: [OPEN, ARCHIVED]}
         messageCount: {type: integer, format: int64}
-        recipientCount: {type: integer, format: int64, description: Unique snapshotted recipient keys across sent messages in the thread.}
+        recipientCount: {type: integer, format: int64, description: Unique snapshotted recipient keys for broadcasts; active durable member count for conversations.}
         archivedAt: {type: string, format: date-time, nullable: true}
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}
+        safetyLockedAt: {type: string, format: date-time, nullable: true, description: When present, all new sends/replies are paused for safety review.}
+        safetyLockReason: {type: string, nullable: true}
     BroadcastMessageResponse:
       type: object
       required: [id, organizationId, threadId, senderUserId, senderDisplayName, body, sentAt, recipientCount, emailSentCount, emailFailedCount, smsSentCount, smsFailedCount]
@@ -16633,12 +16911,14 @@ components:
         smsFailedCount: {type: integer, format: int64}
     MyMessageThreadResponse:
       type: object
-      required: [thread, unreadCount, lastMessageAt, lastMessagePreview]
+      required: [thread, unreadCount, lastMessageAt, lastMessagePreview, canReply, accessReason]
       properties:
         thread: {$ref: '#/components/schemas/MessageThreadResponse'}
         unreadCount: {type: integer, format: int64}
         lastMessageAt: {type: string, format: date-time}
         lastMessagePreview: {type: string}
+        canReply: {type: boolean, description: True only for an active reply-capable conversation member. Broadcast recipients remain false.}
+        accessReason: {type: string, enum: [TARGETED, GUARDIAN_VISIBILITY]}
     MyBroadcastMessageResponse:
       type: object
       required: [message, accessReason]
@@ -16678,6 +16958,155 @@ components:
         page: {type: integer}
         size: {type: integer}
         totalElements: {type: integer, format: int64}
+
+    CreateMessageSafetyReportRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: {type: string, enum: [HARASSMENT, BULLYING, INAPPROPRIATE_CONTENT, SAFETY_CONCERN, SPAM, OTHER]}
+        details: {type: string, maxLength: 2000, nullable: true}
+    ReviewMessageSafetyReportRequest:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, enum: [IN_REVIEW, RESOLVED, DISMISSED]}
+        note: {type: string, maxLength: 2000, nullable: true, description: Required when resolving or dismissing.}
+    SafetyLockThreadRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: {type: string, minLength: 5, maxLength: 1000}
+        reportId: {type: string, format: uuid, nullable: true, description: Optional linked safety report for append-only moderation history.}
+    SafetyUnlockThreadRequest:
+      type: object
+      required: [note]
+      properties:
+        note: {type: string, minLength: 3, maxLength: 2000}
+        reportId: {type: string, format: uuid, nullable: true, description: Optional linked safety report for append-only moderation history.}
+    MessageSafetyReportResponse:
+      type: object
+      required: [id, organizationId, threadId, threadTitle, messageId, messageBody, messageSenderDisplayName, reporterUserId, reporterDisplayName, reason, status, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        threadId: {type: string, format: uuid}
+        threadTitle: {type: string}
+        messageId: {type: string, format: uuid}
+        messageBody: {type: string, description: Retained exact reported message body.}
+        messageSenderDisplayName: {type: string}
+        reporterUserId: {type: string, format: uuid}
+        reporterDisplayName: {type: string}
+        reason: {type: string, enum: [HARASSMENT, BULLYING, INAPPROPRIATE_CONTENT, SAFETY_CONCERN, SPAM, OTHER]}
+        details: {type: string, nullable: true}
+        status: {type: string, enum: [OPEN, IN_REVIEW, RESOLVED, DISMISSED]}
+        assignedToUserId: {type: string, format: uuid, nullable: true}
+        resolutionNote: {type: string, nullable: true}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+        resolvedAt: {type: string, format: date-time, nullable: true}
+        threadSafetyLockedAt: {type: string, format: date-time, nullable: true}
+        threadSafetyLockReason: {type: string, nullable: true}
+    MessageModerationEventResponse:
+      type: object
+      required: [id, organizationId, threadId, actorUserId, actorDisplayName, eventType, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        reportId: {type: string, format: uuid, nullable: true}
+        threadId: {type: string, format: uuid}
+        messageId: {type: string, format: uuid, nullable: true}
+        actorUserId: {type: string, format: uuid}
+        actorDisplayName: {type: string}
+        eventType: {type: string, enum: [REPORT_CREATED, REVIEW_STARTED, RESOLVED, DISMISSED, THREAD_LOCKED, THREAD_UNLOCKED]}
+        note: {type: string, nullable: true}
+        createdAt: {type: string, format: date-time}
+    MessageSafetyReportPageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/MessageSafetyReportResponse'}}
+        page: {type: integer}
+        size: {type: integer}
+        totalElements: {type: integer, format: int64}
+
+    UpdateMessageSafeSportPolicyRequest:
+      type: object
+      required: [reviewStatus]
+      properties:
+        reviewStatus: {type: string, enum: [PENDING, APPROVED, REJECTED]}
+        athleteMessagingEnabled: {type: boolean, default: false}
+        reviewReference: {type: string, maxLength: 500, nullable: true}
+    MessageSafeSportPolicyResponse:
+      type: object
+      required: [organizationId, reviewStatus, athleteMessagingEnabled, retentionMode, guardianVisibilityRequired, adultMinorOpenTransparentRequired, parentDiscontinueRequestsEnforced, updatedAt]
+      properties:
+        organizationId: {type: string, format: uuid}
+        reviewStatus: {type: string, enum: [PENDING, APPROVED, REJECTED]}
+        athleteMessagingEnabled: {type: boolean}
+        reviewReference: {type: string, nullable: true}
+        reviewedByUserId: {type: string, format: uuid, nullable: true}
+        reviewedAt: {type: string, format: date-time, nullable: true}
+        retentionMode: {type: string, enum: [PRESERVE_NO_AUTOMATIC_DELETION]}
+        guardianVisibilityRequired: {type: boolean}
+        adultMinorOpenTransparentRequired: {type: boolean}
+        parentDiscontinueRequestsEnforced: {type: boolean}
+        updatedAt: {type: string, format: date-time}
+    GuardianMessagingParticipantResponse:
+      type: object
+      required: [organizationId, participantId, displayName]
+      properties:
+        organizationId: {type: string, format: uuid}
+        participantId: {type: string, format: uuid}
+        displayName: {type: string}
+    CreateMessageContactRestrictionRequest:
+      type: object
+      required: [organizationId, participantId, kind]
+      properties:
+        organizationId: {type: string, format: uuid}
+        participantId: {type: string, format: uuid}
+        kind: {type: string, enum: [ADULT_TO_MINOR, ALL_MESSAGING]}
+        note: {type: string, maxLength: 1000, nullable: true}
+    LiftMessageContactRestrictionRequest:
+      type: object
+      required: [note]
+      properties:
+        note: {type: string, minLength: 3, maxLength: 1000}
+    MessageContactRestrictionResponse:
+      type: object
+      required: [id, organizationId, participantId, participantDisplayName, requestedByUserId, kind, status, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        participantId: {type: string, format: uuid}
+        participantDisplayName: {type: string}
+        requestedByUserId: {type: string, format: uuid}
+        kind: {type: string, enum: [ADULT_TO_MINOR, ALL_MESSAGING]}
+        note: {type: string, nullable: true}
+        status: {type: string, enum: [ACTIVE, LIFTED]}
+        createdAt: {type: string, format: date-time}
+        liftedAt: {type: string, format: date-time, nullable: true}
+        liftedByUserId: {type: string, format: uuid, nullable: true}
+        liftNote: {type: string, nullable: true}
+
+    AthleteMessagingTeamResponse:
+      type: object
+      required: [organizationId, teamId, teamName, athleteMessagingEnabled]
+      properties:
+        organizationId: {type: string, format: uuid}
+        teamId: {type: string, format: uuid}
+        teamName: {type: string}
+        athleteMessagingEnabled: {type: boolean}
+    CreateAthleteConversationRequest:
+      type: object
+      required: [organizationId, teamId, idempotencyKey, title, targetUserIds, initialMessageIdempotencyKey, initialMessage]
+      properties:
+        organizationId: {type: string, format: uuid}
+        teamId: {type: string, format: uuid}
+        idempotencyKey: {type: string, minLength: 8, maxLength: 160}
+        title: {type: string, maxLength: 180}
+        targetUserIds: {type: array, minItems: 1, maxItems: 20, uniqueItems: true, items: {type: string, format: uuid}}
+        initialMessageIdempotencyKey: {type: string, minLength: 8, maxLength: 160}
+        initialMessage: {type: string, maxLength: 5000}
 
 security:
 - bearerAuth: []

@@ -15,19 +15,19 @@ import java.time.Instant
 import java.util.UUID
 
 @Component
-class BroadcastMessageDeliveryHandler(
+class ConversationMessageDeliveryHandler(
     private val repository: MessageRepository,
     private val emailProvider: EmailProvider,
     private val smsProvider: SmsProvider,
     private val objectMapper: ObjectMapper,
     private val clock: Clock,
 ) : OutboxEventHandler {
-    override val eventType: String = "message.broadcast_sent"
+    override val eventType: String = "message.conversation_sent"
 
     override fun handle(event: OutboxEvent) {
         val payload = objectMapper.readTree(event.payload)
         val messageId = payload.get("messageId")?.asText()?.let(UUID::fromString) ?: event.aggregateId
-        val organizationId = event.organizationId ?: error("Broadcast message event is missing organizationId.")
+        val organizationId = event.organizationId ?: error("Conversation message event is missing organizationId.")
         val message = repository.findMessageById(messageId, organizationId) ?: error("Message $messageId no longer exists.")
         val thread =
             repository.findThreadById(message.threadId, organizationId) ?: error("Message thread ${message.threadId} no longer exists.")
@@ -38,11 +38,11 @@ class BroadcastMessageDeliveryHandler(
                     emailProvider.send(
                         EmailMessage(
                             to = recipient.email,
-                            subject = thread.title,
+                            subject = "New reply: ${thread.title}",
                             body =
                                 "Hi ${recipient.displayName},\n\n${message.body}" +
-                                    "\n\nOpen Rally26 Messages to view the thread.\n\n— Rally26",
-                            idempotencyKey = "message-${message.id}-${recipient.id}-email",
+                                    "\n\nOpen Rally26 Messages to view and reply.\n\n— Rally26",
+                            idempotencyKey = "conversation-${message.id}-${recipient.id}-email",
                         ),
                     )
                     repository.markEmailSent(recipient.id, Instant.now(clock))
@@ -53,7 +53,7 @@ class BroadcastMessageDeliveryHandler(
             }
             if (recipient.smsStatus in setOf(DeliveryStatus.PENDING, DeliveryStatus.FAILED) && recipient.phone != null) {
                 try {
-                    smsProvider.send(SmsMessage(recipient.phone, "Rally26: ${thread.title}. ${message.body}".take(1200)))
+                    smsProvider.send(SmsMessage(recipient.phone, "Rally26 message: ${thread.title}. ${message.body}".take(1200)))
                     repository.markSmsSent(recipient.id, Instant.now(clock))
                 } catch (ex: Exception) {
                     repository.markSmsFailed(recipient.id, ex.message ?: ex.javaClass.simpleName)
@@ -61,6 +61,6 @@ class BroadcastMessageDeliveryHandler(
                 }
             }
         }
-        if (failures > 0) error("$failures broadcast message delivery attempt(s) failed.")
+        if (failures > 0) error("$failures conversation message delivery attempt(s) failed.")
     }
 }
