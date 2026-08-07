@@ -3,6 +3,8 @@ package com.rally26.messaging.persistence
 import com.rally26.common.web.PageRequest
 import com.rally26.communication.domain.DeliveryStatus
 import com.rally26.messaging.domain.BroadcastMessage
+import com.rally26.messaging.domain.ConversationContact
+import com.rally26.messaging.domain.GuardianObserverLink
 import com.rally26.messaging.domain.MessageAccessReason
 import com.rally26.messaging.domain.MessageAudience
 import com.rally26.messaging.domain.MessageRecipient
@@ -10,7 +12,10 @@ import com.rally26.messaging.domain.MessageRecipientCandidate
 import com.rally26.messaging.domain.MessageRecipientType
 import com.rally26.messaging.domain.MessageScopeType
 import com.rally26.messaging.domain.MessageThread
+import com.rally26.messaging.domain.MessageThreadMember
+import com.rally26.messaging.domain.MessageThreadMemberCandidate
 import com.rally26.messaging.domain.MessageThreadStatus
+import com.rally26.messaging.domain.MessageThreadType
 import com.rally26.messaging.domain.MyBroadcastMessage
 import com.rally26.messaging.domain.MyMessageThread
 import org.springframework.jdbc.core.simple.JdbcClient
@@ -30,6 +35,31 @@ class MessageRepository(
         threadQuery("where mt.id = :id and mt.organization_id = :organizationId")
             .param("id", id)
             .param("organizationId", organizationId)
+            .query(::mapThread)
+            .optional()
+            .orElse(null)
+
+    fun findThreadByIdForUser(
+        id: UUID,
+        userId: UUID,
+    ): MessageThread? =
+        threadQuery(
+            """
+            where mt.id = :id
+              and (
+                exists (
+                    select 1 from message_thread_member mtm
+                     where mtm.thread_id = mt.id and mtm.user_id = :userId and mtm.left_at is null
+                )
+                or exists (
+                    select 1
+                      from message_entry me join message_recipient mr on mr.message_id = me.id
+                     where me.thread_id = mt.id and mr.user_id = :userId and mr.in_app_visible = true
+                )
+              )
+            """.trimIndent(),
+        ).param("id", id)
+            .param("userId", userId)
             .query(::mapThread)
             .optional()
             .orElse(null)
@@ -79,6 +109,38 @@ class MessageRepository(
             .param("createdByUserId", createdByUserId)
             .update()
         return findThreadById(id, organizationId) ?: error("Inserted message thread was not found.")
+    }
+
+    fun insertConversationThread(
+        organizationId: UUID,
+        teamId: UUID,
+        idempotencyKey: String,
+        title: String,
+        emailEnabled: Boolean,
+        smsEnabled: Boolean,
+        createdByUserId: UUID,
+    ): MessageThread {
+        val id = UUID.randomUUID()
+        jdbcClient
+            .sql(
+                """
+                insert into message_thread
+                    (id, organization_id, scope_type, scope_id, thread_type, idempotency_key, title, audience,
+                     email_enabled, sms_enabled, status, created_by_user_id)
+                values
+                    (:id, :organizationId, 'TEAM', :teamId, 'CONVERSATION', :idempotencyKey, :title, 'SELECTED',
+                     :emailEnabled, :smsEnabled, 'OPEN', :createdByUserId)
+                """.trimIndent(),
+            ).param("id", id)
+            .param("organizationId", organizationId)
+            .param("teamId", teamId)
+            .param("idempotencyKey", idempotencyKey)
+            .param("title", title)
+            .param("emailEnabled", emailEnabled)
+            .param("smsEnabled", smsEnabled)
+            .param("createdByUserId", createdByUserId)
+            .update()
+        return findThreadById(id, organizationId) ?: error("Inserted conversation thread was not found.")
     }
 
     fun archiveThread(
@@ -309,6 +371,186 @@ class MessageRepository(
             .query(Long::class.java)
             .single()
 
+    fun listConversationContacts(
+        organizationId: UUID,
+        teamId: UUID,
+    ): List<ConversationContact> =
+        jdbcClient
+            .sql(
+                """
+                select distinct gr.user_id, 'GUARDIAN' as recipient_type, h.id as household_id,
+                       null::uuid as participant_id,
+                       trim(ha.first_name || ' ' || ha.last_name) as display_name
+                  from participant_team pt
+                  join participant p on p.id = pt.participant_id and p.organization_id = pt.organization_id and p.status = 'ACTIVE'
+                  join household h on h.id = p.household_id and h.organization_id = p.organization_id and h.status = 'ACTIVE'
+                  join guardian_relationship gr on gr.organization_id = h.organization_id and gr.household_id = h.id and gr.status = 'ACTIVE'
+                  join app_user au on au.id = gr.user_id and au.status = 'ACTIVE'
+                  join household_adult ha on ha.id = gr.household_adult_id and ha.organization_id = gr.organization_id and ha.status = 'ACTIVE'
+                 where pt.organization_id = :organizationId and pt.team_id = :teamId and pt.status = 'ACTIVE'
+                union
+                select distinct ra.user_id, 'ATHLETE' as recipient_type, p.household_id,
+                       p.id as participant_id, au.display_name
+                  from participant_team pt
+                  join participant p on p.id = pt.participant_id and p.organization_id = pt.organization_id and p.status = 'ACTIVE'
+                  join role_assignment ra on ra.organization_id = p.organization_id and ra.context_type = 'PARTICIPANT'
+                                         and ra.resource_id = p.id and ra.status = 'ACTIVE'
+                  join app_user au on au.id = ra.user_id and au.status = 'ACTIVE'
+                 where pt.organization_id = :organizationId and pt.team_id = :teamId and pt.status = 'ACTIVE'
+                 order by display_name, recipient_type
+                """.trimIndent(),
+            ).param("organizationId", organizationId)
+            .param("teamId", teamId)
+            .query { rs, _ ->
+                ConversationContact(
+                    userId = rs.getObject("user_id", UUID::class.java),
+                    recipientType = MessageRecipientType.valueOf(rs.getString("recipient_type")),
+                    householdId = rs.getObject("household_id", UUID::class.java),
+                    participantId = rs.getObject("participant_id", UUID::class.java),
+                    displayName = rs.getString("display_name"),
+                )
+            }.list()
+
+    fun listGuardianObserverLinks(
+        organizationId: UUID,
+        teamId: UUID,
+    ): List<GuardianObserverLink> =
+        jdbcClient
+            .sql(
+                """
+                select distinct athlete_ra.user_id as athlete_user_id, gr.user_id as guardian_user_id,
+                       gr.household_id, trim(ha.first_name || ' ' || ha.last_name) as display_name
+                  from participant_team pt
+                  join participant p on p.id = pt.participant_id and p.organization_id = pt.organization_id and p.status = 'ACTIVE'
+                  join role_assignment athlete_ra on athlete_ra.organization_id = p.organization_id
+                         and athlete_ra.context_type = 'PARTICIPANT' and athlete_ra.resource_id = p.id and athlete_ra.status = 'ACTIVE'
+                  join app_user athlete_user on athlete_user.id = athlete_ra.user_id and athlete_user.status = 'ACTIVE'
+                  join guardian_relationship gr on gr.organization_id = p.organization_id and gr.household_id = p.household_id and gr.status = 'ACTIVE'
+                  join app_user guardian_user on guardian_user.id = gr.user_id and guardian_user.status = 'ACTIVE'
+                  join household_adult ha on ha.id = gr.household_adult_id and ha.organization_id = gr.organization_id and ha.status = 'ACTIVE'
+                 where pt.organization_id = :organizationId and pt.team_id = :teamId and pt.status = 'ACTIVE'
+                """.trimIndent(),
+            ).param("organizationId", organizationId)
+            .param("teamId", teamId)
+            .query { rs, _ ->
+                GuardianObserverLink(
+                    athleteUserId = rs.getObject("athlete_user_id", UUID::class.java),
+                    member =
+                        MessageThreadMemberCandidate(
+                            userId = rs.getObject("guardian_user_id", UUID::class.java),
+                            memberType = MessageRecipientType.GUARDIAN,
+                            householdId = rs.getObject("household_id", UUID::class.java),
+                            participantId = null,
+                            displayName = rs.getString("display_name"),
+                            accessReason = MessageAccessReason.GUARDIAN_VISIBILITY,
+                            canReply = false,
+                        ),
+                )
+            }.list()
+
+    fun insertThreadMember(
+        organizationId: UUID,
+        threadId: UUID,
+        candidate: MessageThreadMemberCandidate,
+        joinedAt: Instant,
+    ): Int =
+        jdbcClient
+            .sql(
+                """
+                insert into message_thread_member
+                    (organization_id, thread_id, user_id, member_type, household_id, participant_id,
+                     display_name, access_reason, can_reply, joined_at)
+                values
+                    (:organizationId, :threadId, :userId, :memberType, :householdId, :participantId,
+                     :displayName, :accessReason, :canReply, :joinedAt)
+                on conflict do nothing
+                """.trimIndent(),
+            ).param("organizationId", organizationId)
+            .param("threadId", threadId)
+            .param("userId", candidate.userId)
+            .param("memberType", candidate.memberType.name)
+            .param("householdId", candidate.householdId)
+            .param("participantId", candidate.participantId)
+            .param("displayName", candidate.displayName)
+            .param("accessReason", candidate.accessReason.name)
+            .param("canReply", candidate.canReply)
+            .param("joinedAt", Timestamp.from(joinedAt))
+            .update()
+
+    fun listActiveThreadMembers(threadId: UUID): List<MessageThreadMember> =
+        jdbcClient
+            .sql(
+                """
+                select id, organization_id, thread_id, user_id, member_type, household_id, participant_id,
+                       display_name, access_reason, can_reply, joined_at, left_at
+                  from message_thread_member
+                 where thread_id = :threadId and left_at is null
+                 order by joined_at, display_name
+                """.trimIndent(),
+            ).param("threadId", threadId)
+            .query(::mapThreadMember)
+            .list()
+
+    fun findActiveThreadMember(
+        threadId: UUID,
+        userId: UUID,
+    ): MessageThreadMember? =
+        jdbcClient
+            .sql(
+                """
+                select id, organization_id, thread_id, user_id, member_type, household_id, participant_id,
+                       display_name, access_reason, can_reply, joined_at, left_at
+                  from message_thread_member
+                 where thread_id = :threadId and user_id = :userId and left_at is null
+                """.trimIndent(),
+            ).param("threadId", threadId)
+            .param("userId", userId)
+            .query(::mapThreadMember)
+            .optional()
+            .orElse(null)
+
+    fun listConversationRecipients(
+        threadId: UUID,
+        senderUserId: UUID,
+    ): List<MessageRecipientCandidate> =
+        jdbcClient
+            .sql(
+                """
+                select distinct mtm.member_type, mtm.user_id, mtm.household_id, mtm.display_name, mtm.access_reason,
+                       case
+                         when mtm.access_reason = 'GUARDIAN_VISIBILITY' then null
+                         when mtm.member_type = 'GUARDIAN' then
+                           case when h.email_reminders_opt_out then null
+                                else coalesce(nullif(trim(ha.email), ''), nullif(trim(h.contact_email), ''), au.email) end
+                         else au.email
+                       end as email,
+                       case
+                         when mtm.access_reason = 'TARGETED' and mtm.member_type = 'GUARDIAN' and h.sms_reminders_opt_in
+                           then coalesce(nullif(trim(ha.phone), ''), nullif(trim(h.contact_phone), ''))
+                         else null
+                       end as phone
+                  from message_thread_member mtm
+                  join app_user au on au.id = mtm.user_id and au.status = 'ACTIVE'
+                  left join household h on h.id = mtm.household_id and h.organization_id = mtm.organization_id and h.status = 'ACTIVE'
+                  left join guardian_relationship gr on mtm.member_type = 'GUARDIAN' and gr.organization_id = mtm.organization_id
+                         and gr.household_id = mtm.household_id and gr.user_id = mtm.user_id and gr.status = 'ACTIVE'
+                  left join household_adult ha on ha.id = gr.household_adult_id and ha.organization_id = gr.organization_id and ha.status = 'ACTIVE'
+                 where mtm.thread_id = :threadId and mtm.left_at is null and mtm.user_id <> :senderUserId
+                """.trimIndent(),
+            ).param("threadId", threadId)
+            .param("senderUserId", senderUserId)
+            .query { rs, _ ->
+                MessageRecipientCandidate(
+                    recipientType = MessageRecipientType.valueOf(rs.getString("member_type")),
+                    userId = rs.getObject("user_id", UUID::class.java),
+                    householdId = rs.getObject("household_id", UUID::class.java),
+                    displayName = rs.getString("display_name"),
+                    email = rs.getString("email"),
+                    phone = rs.getString("phone"),
+                    accessReason = MessageAccessReason.valueOf(rs.getString("access_reason")),
+                )
+            }.list()
+
     fun listMine(
         userId: UUID,
         page: PageRequest,
@@ -316,29 +558,52 @@ class MessageRepository(
         jdbcClient
             .sql(
                 """
+                with mine_threads as (
+                    select distinct me.thread_id
+                      from message_entry me join message_recipient mr on mr.message_id = me.id
+                     where mr.user_id = :userId and mr.in_app_visible = true
+                    union
+                    select mtm.thread_id
+                      from message_thread_member mtm
+                     where mtm.user_id = :userId and mtm.left_at is null
+                ), mine as (
+                    select me.thread_id,
+                           count(*) filter (where mr.user_id = :userId and mr.in_app_visible = true and mr.read_at is null) as unread_count,
+                           max(me.sent_at) as last_message_at,
+                           (array_agg(me.body order by me.sent_at desc))[1] as last_message_preview,
+                           bool_or(mr.user_id = :userId and mr.access_reason = 'TARGETED') as has_targeted_copy
+                      from message_entry me
+                      join mine_threads x on x.thread_id = me.thread_id
+                      left join message_recipient mr on mr.message_id = me.id and mr.user_id = :userId and mr.in_app_visible = true
+                     group by me.thread_id
+                ), member_access as (
+                    select thread_id, can_reply, access_reason
+                      from message_thread_member
+                     where user_id = :userId and left_at is null
+                )
                 select mt.*,
                        case mt.scope_type when 'ORGANIZATION' then o.name when 'TEAM' then t.name end as scope_name,
+                       case when mt.thread_type = 'CONVERSATION' then coalesce(ms.member_count, 0)
+                            else coalesce(stats.recipient_count, 0) end as recipient_count,
                        coalesce(stats.message_count, 0) as message_count,
-                       coalesce(stats.recipient_count, 0) as recipient_count,
-                       mine.unread_count, mine.last_message_at, mine.last_message_preview
+                       mine.unread_count, mine.last_message_at, mine.last_message_preview,
+                       coalesce(member_access.can_reply, false) as can_reply,
+                       coalesce(member_access.access_reason,
+                                case when mine.has_targeted_copy then 'TARGETED' else 'GUARDIAN_VISIBILITY' end) as mine_access_reason
                   from message_thread mt
                   join organization o on o.id = mt.organization_id
                   left join team t on mt.scope_type = 'TEAM' and t.id = mt.scope_id and t.organization_id = mt.organization_id
-                  join (
-                    select me.thread_id,
-                           count(*) filter (where mr.read_at is null) as unread_count,
-                           max(me.sent_at) as last_message_at,
-                           (array_agg(me.body order by me.sent_at desc))[1] as last_message_preview
-                      from message_entry me
-                      join message_recipient mr on mr.message_id = me.id
-                     where mr.user_id = :userId and mr.in_app_visible = true
-                     group by me.thread_id
-                  ) mine on mine.thread_id = mt.id
+                  join mine on mine.thread_id = mt.id
+                  left join member_access on member_access.thread_id = mt.id
                   left join (
                     select me.thread_id, count(distinct me.id) as message_count, count(distinct mr.recipient_key) as recipient_count
                       from message_entry me left join message_recipient mr on mr.message_id = me.id
                      group by me.thread_id
                   ) stats on stats.thread_id = mt.id
+                  left join (
+                    select thread_id, count(*) as member_count
+                      from message_thread_member where left_at is null group by thread_id
+                  ) ms on ms.thread_id = mt.id
                  order by mine.last_message_at desc
                  offset :offset limit :limit
                 """.trimIndent(),
@@ -351,6 +616,8 @@ class MessageRepository(
                     unreadCount = rs.getLong("unread_count"),
                     lastMessageAt = rs.getTimestamp("last_message_at").toInstant(),
                     lastMessagePreview = rs.getString("last_message_preview"),
+                    canReply = rs.getBoolean("can_reply"),
+                    accessReason = MessageAccessReason.valueOf(rs.getString("mine_access_reason")),
                 )
             }.list()
 
@@ -358,9 +625,14 @@ class MessageRepository(
         jdbcClient
             .sql(
                 """
-                select count(distinct me.thread_id)
-                  from message_entry me join message_recipient mr on mr.message_id = me.id
-                 where mr.user_id = :userId and mr.in_app_visible = true
+                select count(*) from (
+                    select distinct me.thread_id
+                      from message_entry me join message_recipient mr on mr.message_id = me.id
+                     where mr.user_id = :userId and mr.in_app_visible = true
+                    union
+                    select mtm.thread_id from message_thread_member mtm
+                     where mtm.user_id = :userId and mtm.left_at is null
+                ) mine
                 """.trimIndent(),
             ).param("userId", userId)
             .query(Long::class.java)
@@ -375,11 +647,17 @@ class MessageRepository(
             .sql(
                 """
                 select me.*, au.display_name as sender_display_name,
-                       ds.recipient_count, ds.email_sent_count, ds.email_failed_count, ds.sms_sent_count, ds.sms_failed_count,
-                       mr.read_at, mr.access_reason
+                       coalesce(ds.recipient_count, 0) as recipient_count,
+                       coalesce(ds.email_sent_count, 0) as email_sent_count,
+                       coalesce(ds.email_failed_count, 0) as email_failed_count,
+                       coalesce(ds.sms_sent_count, 0) as sms_sent_count,
+                       coalesce(ds.sms_failed_count, 0) as sms_failed_count,
+                       case when me.sender_user_id = :userId then me.sent_at else mr.read_at end as read_at,
+                       coalesce(mr.access_reason, mtm.access_reason) as access_reason
                   from message_entry me
                   join app_user au on au.id = me.sender_user_id
-                  join message_recipient mr on mr.message_id = me.id and mr.user_id = :userId and mr.in_app_visible = true
+                  left join message_thread_member mtm on mtm.thread_id = me.thread_id and mtm.user_id = :userId and mtm.left_at is null
+                  left join message_recipient mr on mr.message_id = me.id and mr.user_id = :userId and mr.in_app_visible = true
                   left join (
                     select message_id, count(*) as recipient_count,
                            count(*) filter (where email_status = 'SENT') as email_sent_count,
@@ -389,6 +667,7 @@ class MessageRepository(
                       from message_recipient group by message_id
                   ) ds on ds.message_id = me.id
                  where me.thread_id = :threadId
+                   and (mtm.id is not null or mr.id is not null)
                  order by me.sent_at asc
                  offset :offset limit :limit
                 """.trimIndent(),
@@ -396,10 +675,7 @@ class MessageRepository(
             .param("threadId", threadId)
             .param("offset", page.offset)
             .param("limit", page.size)
-            .query {
-                rs,
-                _,
-                ->
+            .query { rs, _ ->
                 MyBroadcastMessage(
                     mapMessage(rs, 0),
                     rs.getTimestamp("read_at")?.toInstant(),
@@ -414,8 +690,11 @@ class MessageRepository(
         jdbcClient
             .sql(
                 """
-                select count(*) from message_entry me join message_recipient mr on mr.message_id = me.id
-                 where me.thread_id = :threadId and mr.user_id = :userId and mr.in_app_visible = true
+                select count(*)
+                  from message_entry me
+                  left join message_thread_member mtm on mtm.thread_id = me.thread_id and mtm.user_id = :userId and mtm.left_at is null
+                  left join message_recipient mr on mr.message_id = me.id and mr.user_id = :userId and mr.in_app_visible = true
+                 where me.thread_id = :threadId and (mtm.id is not null or mr.id is not null)
                 """.trimIndent(),
             ).param("threadId", threadId)
             .param("userId", userId)
@@ -501,7 +780,8 @@ class MessageRepository(
             select mt.*,
                    case mt.scope_type when 'ORGANIZATION' then o.name when 'TEAM' then t.name end as scope_name,
                    coalesce(stats.message_count, 0) as message_count,
-                   coalesce(stats.recipient_count, 0) as recipient_count
+                   case when mt.thread_type = 'CONVERSATION' then coalesce(ms.member_count, 0)
+                        else coalesce(stats.recipient_count, 0) end as recipient_count
               from message_thread mt
               join organization o on o.id = mt.organization_id
               left join team t on mt.scope_type = 'TEAM' and t.id = mt.scope_id and t.organization_id = mt.organization_id
@@ -510,6 +790,9 @@ class MessageRepository(
                   from message_entry me left join message_recipient mr on mr.message_id = me.id
                  group by me.thread_id
               ) stats on stats.thread_id = mt.id
+              left join (
+                select thread_id, count(*) as member_count from message_thread_member where left_at is null group by thread_id
+              ) ms on ms.thread_id = mt.id
               $tail
             """.trimIndent(),
         )
@@ -547,6 +830,7 @@ class MessageRepository(
             scopeType = MessageScopeType.valueOf(rs.getString("scope_type")),
             scopeId = rs.getObject("scope_id", UUID::class.java),
             scopeName = rs.getString("scope_name"),
+            threadType = MessageThreadType.valueOf(rs.getString("thread_type")),
             title = rs.getString("title"),
             audience = MessageAudience.valueOf(rs.getString("audience")),
             emailEnabled = rs.getBoolean("email_enabled"),
@@ -558,6 +842,8 @@ class MessageRepository(
             recipientCount = rs.getLong("recipient_count"),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
+            safetyLockedAt = rs.getTimestamp("safety_locked_at")?.toInstant(),
+            safetyLockReason = rs.getString("safety_lock_reason"),
         )
 
     private fun mapMessage(
@@ -577,6 +863,25 @@ class MessageRepository(
             emailFailedCount = rs.getLong("email_failed_count"),
             smsSentCount = rs.getLong("sms_sent_count"),
             smsFailedCount = rs.getLong("sms_failed_count"),
+        )
+
+    private fun mapThreadMember(
+        rs: java.sql.ResultSet,
+        _rowNum: Int,
+    ): MessageThreadMember =
+        MessageThreadMember(
+            id = rs.getObject("id", UUID::class.java),
+            organizationId = rs.getObject("organization_id", UUID::class.java),
+            threadId = rs.getObject("thread_id", UUID::class.java),
+            userId = rs.getObject("user_id", UUID::class.java),
+            memberType = MessageRecipientType.valueOf(rs.getString("member_type")),
+            householdId = rs.getObject("household_id", UUID::class.java),
+            participantId = rs.getObject("participant_id", UUID::class.java),
+            displayName = rs.getString("display_name"),
+            accessReason = MessageAccessReason.valueOf(rs.getString("access_reason")),
+            canReply = rs.getBoolean("can_reply"),
+            joinedAt = rs.getTimestamp("joined_at").toInstant(),
+            leftAt = rs.getTimestamp("left_at")?.toInstant(),
         )
 
     private fun mapRecipient(

@@ -1,12 +1,15 @@
 package com.rally26.messaging.web
 
 import com.rally26.messaging.domain.BroadcastMessage
+import com.rally26.messaging.domain.ConversationContact
 import com.rally26.messaging.domain.MessageAudience
 import com.rally26.messaging.domain.MessageScopeType
 import com.rally26.messaging.domain.MessageThread
+import com.rally26.messaging.domain.MessageThreadMember
 import com.rally26.messaging.domain.MyBroadcastMessage
 import com.rally26.messaging.domain.MyMessageThread
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 import java.time.Instant
@@ -22,9 +25,36 @@ data class CreateMessageThreadRequest(
     val smsEnabled: Boolean = false,
 )
 
+data class CreateConversationRequest(
+    @field:NotNull val teamId: UUID,
+    @field:NotBlank @field:Size(min = 8, max = 160) val idempotencyKey: String,
+    @field:NotBlank @field:Size(max = 180) val title: String,
+    @field:NotEmpty @field:Size(max = 250) val targetUserIds: Set<UUID>,
+    val emailEnabled: Boolean = true,
+    val smsEnabled: Boolean = false,
+    @field:NotBlank @field:Size(min = 8, max = 160) val initialMessageIdempotencyKey: String,
+    @field:NotBlank @field:Size(max = 5000) val initialMessage: String,
+)
+
 data class SendBroadcastMessageRequest(
     @field:NotBlank @field:Size(min = 8, max = 160) val idempotencyKey: String,
     @field:NotBlank @field:Size(max = 5000) val body: String,
+)
+
+data class ConversationContactResponse(
+    val userId: UUID,
+    val recipientType: String,
+    val householdId: UUID?,
+    val participantId: UUID?,
+    val displayName: String,
+)
+
+data class MessageThreadMemberResponse(
+    val userId: UUID,
+    val memberType: String,
+    val displayName: String,
+    val accessReason: String,
+    val canReply: Boolean,
 )
 
 data class MessageThreadResponse(
@@ -33,6 +63,7 @@ data class MessageThreadResponse(
     val scopeType: String,
     val scopeId: UUID,
     val scopeName: String?,
+    val threadType: String,
     val title: String,
     val audience: String,
     val emailEnabled: Boolean,
@@ -43,6 +74,8 @@ data class MessageThreadResponse(
     val archivedAt: Instant?,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val safetyLockedAt: Instant?,
+    val safetyLockReason: String?,
 )
 
 data class BroadcastMessageResponse(
@@ -65,6 +98,8 @@ data class MyMessageThreadResponse(
     val unreadCount: Long,
     val lastMessageAt: Instant,
     val lastMessagePreview: String,
+    val canReply: Boolean,
+    val accessReason: String,
 )
 
 data class MyBroadcastMessageResponse(
@@ -73,6 +108,24 @@ data class MyBroadcastMessageResponse(
     val accessReason: String,
 )
 
+fun ConversationContact.toResponse() =
+    ConversationContactResponse(
+        userId = userId,
+        recipientType = recipientType.name,
+        householdId = householdId,
+        participantId = participantId,
+        displayName = displayName,
+    )
+
+fun MessageThreadMember.toResponse() =
+    MessageThreadMemberResponse(
+        userId = userId,
+        memberType = memberType.name,
+        displayName = displayName,
+        accessReason = accessReason.name,
+        canReply = canReply,
+    )
+
 fun MessageThread.toResponse() =
     MessageThreadResponse(
         id = id,
@@ -80,6 +133,7 @@ fun MessageThread.toResponse() =
         scopeType = scopeType.name,
         scopeId = scopeId,
         scopeName = scopeName,
+        threadType = threadType.name,
         title = title,
         audience = audience.name,
         emailEnabled = emailEnabled,
@@ -90,6 +144,8 @@ fun MessageThread.toResponse() =
         archivedAt = archivedAt,
         createdAt = createdAt,
         updatedAt = updatedAt,
+        safetyLockedAt = safetyLockedAt,
+        safetyLockReason = safetyLockReason,
     )
 
 fun BroadcastMessage.toResponse() =
@@ -108,6 +164,7 @@ fun BroadcastMessage.toResponse() =
         smsFailedCount = smsFailedCount,
     )
 
-fun MyMessageThread.toResponse() = MyMessageThreadResponse(thread.toResponse(), unreadCount, lastMessageAt, lastMessagePreview)
+fun MyMessageThread.toResponse() =
+    MyMessageThreadResponse(thread.toResponse(), unreadCount, lastMessageAt, lastMessagePreview, canReply, accessReason.name)
 
 fun MyBroadcastMessage.toResponse() = MyBroadcastMessageResponse(message.toResponse(), readAt, accessReason.name)

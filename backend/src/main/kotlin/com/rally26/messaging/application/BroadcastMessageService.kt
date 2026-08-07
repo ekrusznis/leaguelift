@@ -23,6 +23,7 @@ import com.rally26.messaging.domain.MessageRecipientType
 import com.rally26.messaging.domain.MessageScopeType
 import com.rally26.messaging.domain.MessageThread
 import com.rally26.messaging.domain.MessageThreadStatus
+import com.rally26.messaging.domain.MessageThreadType
 import com.rally26.messaging.domain.MyBroadcastMessage
 import com.rally26.messaging.domain.MyMessageThread
 import com.rally26.messaging.persistence.MessageRepository
@@ -145,8 +146,14 @@ class BroadcastMessageService(
     ): BroadcastMessage {
         val thread = requireThread(organizationId, threadId)
         requireManage(organizationId, thread.scopeType, thread.scopeId, currentUser)
+        if (thread.threadType != MessageThreadType.BROADCAST) {
+            throw ConflictException("MESSAGE_THREAD_NOT_BROADCAST", "Two-way conversations must be replied to from the member inbox.")
+        }
         if (thread.status != MessageThreadStatus.OPEN) {
             throw ConflictException("MESSAGE_THREAD_ARCHIVED", "Archived message threads cannot receive new messages.")
+        }
+        if (thread.safetyLockedAt != null) {
+            throw ConflictException("MESSAGE_THREAD_SAFETY_LOCKED", "This message thread is temporarily locked for safety review.")
         }
         val input = BroadcastMessagePolicy.normalizeMessage(body, idempotencyKey)
         repository.findMessageByIdempotencyKey(threadId, input.idempotencyKey)?.let { existing ->
@@ -308,6 +315,10 @@ class BroadcastMessageService(
                 MessageAudience.STAFF -> staff
                 MessageAudience.GUARDIANS -> guardians
                 MessageAudience.ATHLETES -> athletes
+                MessageAudience.SELECTED -> throw ConflictException(
+                    "MESSAGE_THREAD_NOT_BROADCAST",
+                    "Selected-member conversations do not use broadcast audience resolution.",
+                )
             }.map(::toMessageCandidate)
 
         if (thread.audience != MessageAudience.ATHLETES) return targeted
