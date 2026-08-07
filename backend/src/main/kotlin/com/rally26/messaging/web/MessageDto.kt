@@ -1,5 +1,6 @@
 package com.rally26.messaging.web
 
+import com.rally26.messaging.domain.AthleteMessagingTeam
 import com.rally26.messaging.domain.BroadcastMessage
 import com.rally26.messaging.domain.ConversationContact
 import com.rally26.messaging.domain.MessageAudience
@@ -34,6 +35,23 @@ data class CreateConversationRequest(
     val smsEnabled: Boolean = false,
     @field:NotBlank @field:Size(min = 8, max = 160) val initialMessageIdempotencyKey: String,
     @field:NotBlank @field:Size(max = 5000) val initialMessage: String,
+)
+
+data class CreateAthleteConversationRequest(
+    val organizationId: UUID,
+    val teamId: UUID,
+    @field:NotBlank @field:Size(min = 8, max = 160) val idempotencyKey: String,
+    @field:NotBlank @field:Size(max = 180) val title: String,
+    @field:NotEmpty @field:Size(max = 20) val targetUserIds: Set<UUID>,
+    @field:NotBlank @field:Size(min = 8, max = 160) val initialMessageIdempotencyKey: String,
+    @field:NotBlank @field:Size(max = 5000) val initialMessage: String,
+)
+
+data class AthleteMessagingTeamResponse(
+    val organizationId: UUID,
+    val teamId: UUID,
+    val teamName: String,
+    val athleteMessagingEnabled: Boolean,
 )
 
 data class SendBroadcastMessageRequest(
@@ -168,3 +186,5 @@ fun MyMessageThread.toResponse() =
     MyMessageThreadResponse(thread.toResponse(), unreadCount, lastMessageAt, lastMessagePreview, canReply, accessReason.name)
 
 fun MyBroadcastMessage.toResponse() = MyBroadcastMessageResponse(message.toResponse(), readAt, accessReason.name)
+
+fun AthleteMessagingTeam.toResponse() = AthleteMessagingTeamResponse(organizationId, teamId, teamName, athleteMessagingEnabled)

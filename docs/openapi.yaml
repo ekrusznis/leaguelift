@@ -101,7 +101,7 @@ info:
     is never serialized, direct participant-to-household order attribution (no attribution-code
     indirection), family-credit grant/reversal wiring on order confirm/refund, and a guardian
     dashboard recent-orders card (ADR-069).
-  version: "0.32.0"
+  version: "0.35.0"
 servers:
 - url: /api/v1
 tags:
@@ -9604,6 +9604,64 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/MessageThreadResponse'}
 
+  /organizations/{organizationId}/messaging/safe-sport-policy:
+    get:
+      summary: Read the messaging SafeSport policy gate
+      parameters:
+        - $ref: '#/components/parameters/OrganizationIdParam'
+      responses:
+        '200': {description: Policy gate, content: {application/json: {schema: {$ref: '#/components/schemas/MessageSafeSportPolicyResponse'}}}}
+    patch:
+      summary: Record the platform SafeSport/compliance review gate (platform administrator only)
+      parameters:
+        - $ref: '#/components/parameters/OrganizationIdParam'
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/UpdateMessageSafeSportPolicyRequest'}}}}
+      responses:
+        '200': {description: Updated policy gate, content: {application/json: {schema: {$ref: '#/components/schemas/MessageSafeSportPolicyResponse'}}}}
+  /me/messaging/guardian-participants:
+    get:
+      summary: List participants linked to the current guardian for messaging safety controls
+      responses:
+        '200': {description: Linked participants, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/GuardianMessagingParticipantResponse'}}}}}
+  /me/messaging/contact-restrictions:
+    get:
+      summary: List guardian-created messaging contact restrictions
+      responses:
+        '200': {description: Restrictions, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/MessageContactRestrictionResponse'}}}}}
+    post:
+      summary: Record a guardian communication restriction
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CreateMessageContactRestrictionRequest'}}}}
+      responses:
+        '201': {description: Restriction recorded, content: {application/json: {schema: {$ref: '#/components/schemas/MessageContactRestrictionResponse'}}}}
+  /me/messaging/contact-restrictions/{restrictionId}/lift:
+    post:
+      summary: Lift a guardian-created communication restriction while retaining history
+      parameters:
+        - {name: restrictionId, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/LiftMessageContactRestrictionRequest'}}}}
+      responses:
+        '200': {description: Lifted restriction, content: {application/json: {schema: {$ref: '#/components/schemas/MessageContactRestrictionResponse'}}}}
+
+  /me/messaging/athlete-teams:
+    get:
+      summary: List current athlete team contexts and whether athlete messaging is enabled
+      responses:
+        '200': {description: Athlete teams, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/AthleteMessagingTeamResponse'}}}}}
+  /me/messaging/athlete-contacts:
+    get:
+      summary: List eligible same-team athlete peers for a gated athlete conversation
+      parameters:
+        - {name: organizationId, in: query, required: true, schema: {type: string, format: uuid}}
+        - {name: teamId, in: query, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Eligible peers, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/ConversationContactResponse'}}}}}
+  /me/messaging/athlete-conversations:
+    post:
+      summary: Create a gated athlete direct/group conversation
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CreateAthleteConversationRequest'}}}}
+      responses:
+        '201': {description: Athlete conversation created, content: {application/json: {schema: {$ref: '#/components/schemas/MessageThreadResponse'}}}}
+
 components:
   securitySchemes:
     bearerAuth:
@@ -16822,7 +16880,7 @@ components:
         scopeType: {type: string, enum: [ORGANIZATION, TEAM]}
         scopeId: {type: string, format: uuid}
         scopeName: {type: string, nullable: true}
-        threadType: {type: string, enum: [BROADCAST, CONVERSATION]}
+        threadType: {type: string, enum: [BROADCAST, CONVERSATION, ATHLETE_CONVERSATION]}
         title: {type: string}
         audience: {type: string, enum: [ALL, STAFF, GUARDIANS, ATHLETES, SELECTED]}
         emailEnabled: {type: boolean}
@@ -16970,6 +17028,85 @@ components:
         page: {type: integer}
         size: {type: integer}
         totalElements: {type: integer, format: int64}
+
+    UpdateMessageSafeSportPolicyRequest:
+      type: object
+      required: [reviewStatus]
+      properties:
+        reviewStatus: {type: string, enum: [PENDING, APPROVED, REJECTED]}
+        athleteMessagingEnabled: {type: boolean, default: false}
+        reviewReference: {type: string, maxLength: 500, nullable: true}
+    MessageSafeSportPolicyResponse:
+      type: object
+      required: [organizationId, reviewStatus, athleteMessagingEnabled, retentionMode, guardianVisibilityRequired, adultMinorOpenTransparentRequired, parentDiscontinueRequestsEnforced, updatedAt]
+      properties:
+        organizationId: {type: string, format: uuid}
+        reviewStatus: {type: string, enum: [PENDING, APPROVED, REJECTED]}
+        athleteMessagingEnabled: {type: boolean}
+        reviewReference: {type: string, nullable: true}
+        reviewedByUserId: {type: string, format: uuid, nullable: true}
+        reviewedAt: {type: string, format: date-time, nullable: true}
+        retentionMode: {type: string, enum: [PRESERVE_NO_AUTOMATIC_DELETION]}
+        guardianVisibilityRequired: {type: boolean}
+        adultMinorOpenTransparentRequired: {type: boolean}
+        parentDiscontinueRequestsEnforced: {type: boolean}
+        updatedAt: {type: string, format: date-time}
+    GuardianMessagingParticipantResponse:
+      type: object
+      required: [organizationId, participantId, displayName]
+      properties:
+        organizationId: {type: string, format: uuid}
+        participantId: {type: string, format: uuid}
+        displayName: {type: string}
+    CreateMessageContactRestrictionRequest:
+      type: object
+      required: [organizationId, participantId, kind]
+      properties:
+        organizationId: {type: string, format: uuid}
+        participantId: {type: string, format: uuid}
+        kind: {type: string, enum: [ADULT_TO_MINOR, ALL_MESSAGING]}
+        note: {type: string, maxLength: 1000, nullable: true}
+    LiftMessageContactRestrictionRequest:
+      type: object
+      required: [note]
+      properties:
+        note: {type: string, minLength: 3, maxLength: 1000}
+    MessageContactRestrictionResponse:
+      type: object
+      required: [id, organizationId, participantId, participantDisplayName, requestedByUserId, kind, status, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        participantId: {type: string, format: uuid}
+        participantDisplayName: {type: string}
+        requestedByUserId: {type: string, format: uuid}
+        kind: {type: string, enum: [ADULT_TO_MINOR, ALL_MESSAGING]}
+        note: {type: string, nullable: true}
+        status: {type: string, enum: [ACTIVE, LIFTED]}
+        createdAt: {type: string, format: date-time}
+        liftedAt: {type: string, format: date-time, nullable: true}
+        liftedByUserId: {type: string, format: uuid, nullable: true}
+        liftNote: {type: string, nullable: true}
+
+    AthleteMessagingTeamResponse:
+      type: object
+      required: [organizationId, teamId, teamName, athleteMessagingEnabled]
+      properties:
+        organizationId: {type: string, format: uuid}
+        teamId: {type: string, format: uuid}
+        teamName: {type: string}
+        athleteMessagingEnabled: {type: boolean}
+    CreateAthleteConversationRequest:
+      type: object
+      required: [organizationId, teamId, idempotencyKey, title, targetUserIds, initialMessageIdempotencyKey, initialMessage]
+      properties:
+        organizationId: {type: string, format: uuid}
+        teamId: {type: string, format: uuid}
+        idempotencyKey: {type: string, minLength: 8, maxLength: 160}
+        title: {type: string, maxLength: 180}
+        targetUserIds: {type: array, minItems: 1, maxItems: 20, uniqueItems: true, items: {type: string, format: uuid}}
+        initialMessageIdempotencyKey: {type: string, minLength: 8, maxLength: 160}
+        initialMessage: {type: string, maxLength: 5000}
 
 security:
 - bearerAuth: []

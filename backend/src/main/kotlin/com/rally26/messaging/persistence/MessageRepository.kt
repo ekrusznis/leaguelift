@@ -143,6 +143,34 @@ class MessageRepository(
         return findThreadById(id, organizationId) ?: error("Inserted conversation thread was not found.")
     }
 
+    fun insertAthleteConversationThread(
+        organizationId: UUID,
+        teamId: UUID,
+        idempotencyKey: String,
+        title: String,
+        createdByUserId: UUID,
+    ): MessageThread {
+        val id = UUID.randomUUID()
+        jdbcClient
+            .sql(
+                """
+                insert into message_thread
+                    (id, organization_id, scope_type, scope_id, thread_type, idempotency_key, title, audience,
+                     email_enabled, sms_enabled, status, created_by_user_id)
+                values
+                    (:id, :organizationId, 'TEAM', :teamId, 'ATHLETE_CONVERSATION', :idempotencyKey, :title, 'SELECTED',
+                     true, false, 'OPEN', :createdByUserId)
+                """.trimIndent(),
+            ).param("id", id)
+            .param("organizationId", organizationId)
+            .param("teamId", teamId)
+            .param("idempotencyKey", idempotencyKey)
+            .param("title", title)
+            .param("createdByUserId", createdByUserId)
+            .update()
+        return findThreadById(id, organizationId) ?: error("Inserted athlete conversation thread was not found.")
+    }
+
     fun archiveThread(
         id: UUID,
         organizationId: UUID,
@@ -583,7 +611,7 @@ class MessageRepository(
                 )
                 select mt.*,
                        case mt.scope_type when 'ORGANIZATION' then o.name when 'TEAM' then t.name end as scope_name,
-                       case when mt.thread_type = 'CONVERSATION' then coalesce(ms.member_count, 0)
+                       case when mt.thread_type in ('CONVERSATION', 'ATHLETE_CONVERSATION') then coalesce(ms.member_count, 0)
                             else coalesce(stats.recipient_count, 0) end as recipient_count,
                        coalesce(stats.message_count, 0) as message_count,
                        mine.unread_count, mine.last_message_at, mine.last_message_preview,
@@ -761,6 +789,95 @@ class MessageRepository(
             }.list()
     }
 
+    fun listAthleteMessagingTeams(userId: UUID): List<Triple<UUID, UUID, String>> =
+        jdbcClient
+            .sql(
+                """
+                select distinct p.organization_id, t.id as team_id, t.name as team_name
+                  from role_assignment ra
+                  join participant p on p.organization_id = ra.organization_id and p.id = ra.resource_id and p.status = 'ACTIVE'
+                  join participant_team pt on pt.organization_id = p.organization_id and pt.participant_id = p.id and pt.status = 'ACTIVE'
+                  join team t on t.organization_id = pt.organization_id and t.id = pt.team_id and t.status = 'ACTIVE'
+                 where ra.user_id = :userId and ra.context_type = 'PARTICIPANT' and ra.status = 'ACTIVE'
+                 order by team_name
+                """.trimIndent(),
+            ).param("userId", userId)
+            .query { rs, _ ->
+                Triple(
+                    rs.getObject("organization_id", UUID::class.java),
+                    rs.getObject("team_id", UUID::class.java),
+                    rs.getString("team_name"),
+                )
+            }.list()
+
+    fun isActiveAthleteOnTeam(
+        organizationId: UUID,
+        teamId: UUID,
+        userId: UUID,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                select exists(
+                    select 1 from role_assignment ra
+                    join participant p on p.organization_id = ra.organization_id and p.id = ra.resource_id and p.status = 'ACTIVE'
+                    join participant_team pt on pt.organization_id = p.organization_id and pt.participant_id = p.id and pt.status = 'ACTIVE'
+                     where ra.organization_id = :organizationId and ra.user_id = :userId and ra.context_type = 'PARTICIPANT'
+                       and ra.status = 'ACTIVE' and pt.team_id = :teamId
+                )
+                """.trimIndent(),
+            ).param("organizationId", organizationId)
+            .param("teamId", teamId)
+            .param("userId", userId)
+            .query(Boolean::class.java)
+            .single()
+
+    fun listAthletePeerContacts(
+        organizationId: UUID,
+        teamId: UUID,
+        senderUserId: UUID,
+    ): List<ConversationContact> =
+        listConversationContacts(organizationId, teamId).filter {
+            it.recipientType == MessageRecipientType.ATHLETE &&
+                it.userId != senderUserId
+        }
+
+    fun listOpenConversationThreads(): List<MessageThread> =
+        threadQuery("where mt.status = 'OPEN' and mt.thread_type in ('CONVERSATION', 'ATHLETE_CONVERSATION') order by mt.updated_at")
+            .query(::mapThread)
+            .list()
+
+    fun activeAthleteUserIdsForTeam(
+        organizationId: UUID,
+        teamId: UUID,
+    ): Set<UUID> =
+        listConversationContacts(
+            organizationId,
+            teamId,
+        ).filter { it.recipientType == MessageRecipientType.ATHLETE }.map { it.userId }.toSet()
+
+    fun activeGuardianUserIdsForTeam(
+        organizationId: UUID,
+        teamId: UUID,
+    ): Set<UUID> =
+        listConversationContacts(
+            organizationId,
+            teamId,
+        ).filter { it.recipientType == MessageRecipientType.GUARDIAN }.map { it.userId }.toSet()
+
+    fun markThreadMemberLeft(
+        threadId: UUID,
+        userId: UUID,
+        now: Instant,
+    ): Int =
+        jdbcClient
+            .sql(
+                "update message_thread_member set left_at = :now where thread_id = :threadId and user_id = :userId and left_at is null",
+            ).param("now", Timestamp.from(now))
+            .param("threadId", threadId)
+            .param("userId", userId)
+            .update()
+
     private fun touchThread(
         threadId: UUID,
         organizationId: UUID,
@@ -780,7 +897,7 @@ class MessageRepository(
             select mt.*,
                    case mt.scope_type when 'ORGANIZATION' then o.name when 'TEAM' then t.name end as scope_name,
                    coalesce(stats.message_count, 0) as message_count,
-                   case when mt.thread_type = 'CONVERSATION' then coalesce(ms.member_count, 0)
+                   case when mt.thread_type in ('CONVERSATION', 'ATHLETE_CONVERSATION') then coalesce(ms.member_count, 0)
                         else coalesce(stats.recipient_count, 0) end as recipient_count
               from message_thread mt
               join organization o on o.id = mt.organization_id

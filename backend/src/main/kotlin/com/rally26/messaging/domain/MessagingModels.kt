@@ -6,7 +6,7 @@ import java.util.UUID
 
 enum class MessageScopeType { ORGANIZATION, TEAM }
 
-enum class MessageThreadType { BROADCAST, CONVERSATION }
+enum class MessageThreadType { BROADCAST, CONVERSATION, ATHLETE_CONVERSATION }
 
 enum class MessageAudience { ALL, STAFF, GUARDIANS, ATHLETES, SELECTED }
 
@@ -21,6 +21,14 @@ enum class MessageSafetyReportReason { HARASSMENT, BULLYING, INAPPROPRIATE_CONTE
 enum class MessageSafetyReportStatus { OPEN, IN_REVIEW, RESOLVED, DISMISSED }
 
 enum class MessageModerationEventType { REPORT_CREATED, REVIEW_STARTED, RESOLVED, DISMISSED, THREAD_LOCKED, THREAD_UNLOCKED }
+
+enum class MessageSafeSportReviewStatus { PENDING, APPROVED, REJECTED }
+
+enum class MessageRetentionMode { PRESERVE_NO_AUTOMATIC_DELETION }
+
+enum class MessageContactRestrictionKind { ADULT_TO_MINOR, ALL_MESSAGING }
+
+enum class MessageContactRestrictionStatus { ACTIVE, LIFTED }
 
 data class MessageThread(
     val id: UUID,
@@ -181,4 +189,46 @@ data class MessageModerationEvent(
     val eventType: MessageModerationEventType,
     val note: String?,
     val createdAt: Instant,
+)
+
+data class MessageSafeSportPolicy(
+    val organizationId: UUID,
+    val reviewStatus: MessageSafeSportReviewStatus,
+    val athleteMessagingEnabled: Boolean,
+    val reviewReference: String?,
+    val reviewedByUserId: UUID?,
+    val reviewedAt: Instant?,
+    val retentionMode: MessageRetentionMode,
+    val guardianVisibilityRequired: Boolean,
+    val adultMinorOpenTransparentRequired: Boolean,
+    val parentDiscontinueRequestsEnforced: Boolean,
+    val updatedAt: Instant,
+)
+
+data class GuardianMessagingParticipant(
+    val organizationId: UUID,
+    val participantId: UUID,
+    val displayName: String,
+)
+
+data class MessageContactRestriction(
+    val id: UUID,
+    val organizationId: UUID,
+    val participantId: UUID,
+    val participantDisplayName: String,
+    val requestedByUserId: UUID,
+    val kind: MessageContactRestrictionKind,
+    val note: String?,
+    val status: MessageContactRestrictionStatus,
+    val createdAt: Instant,
+    val liftedAt: Instant?,
+    val liftedByUserId: UUID?,
+    val liftNote: String?,
+)
+
+data class AthleteMessagingTeam(
+    val organizationId: UUID,
+    val teamId: UUID,
+    val teamName: String,
+    val athleteMessagingEnabled: Boolean,
 )

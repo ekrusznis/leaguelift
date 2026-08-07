@@ -47,6 +47,7 @@ class BroadcastMessageService(
     private val auditService: AuditService,
     private val objectMapper: ObjectMapper,
     private val clock: Clock,
+    private val safeSportService: MessageSafeSportService? = null,
 ) {
     fun listForManagement(
         organizationId: UUID,
@@ -166,7 +167,14 @@ class BroadcastMessageService(
             return existing
         }
 
-        val recipients = BroadcastRecipientPolicy.merge(resolveRecipients(thread))
+        val resolvedRecipients = resolveRecipients(thread)
+        val policyFiltered =
+            safeSportService?.filterAdultOriginRecipients(
+                thread.organizationId,
+                if (thread.scopeType == MessageScopeType.TEAM) thread.scopeId else null,
+                resolvedRecipients,
+            ) ?: resolvedRecipients
+        val recipients = BroadcastRecipientPolicy.merge(policyFiltered)
         val eligible =
             recipients.filterValues { candidate ->
                 candidate.userId != null ||

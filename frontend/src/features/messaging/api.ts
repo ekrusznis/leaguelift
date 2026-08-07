@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/apiClient";
-import type { BroadcastMessage, ConversationContact, MessageAudience, MessageModerationEvent, MessageSafetyReport, MessageSafetyReportReason, MessageSafetyReportStatus, MessageScopeType, MessageThread, MessageThreadMember, MessageThreadStatus, MyBroadcastMessage, MyMessageThread, PageResponse } from "./types";
+import type { BroadcastMessage, ConversationContact, MessageAudience, MessageModerationEvent, MessageSafetyReport, MessageSafetyReportReason, MessageSafetyReportStatus, MessageScopeType, MessageThread, MessageThreadMember, MessageThreadStatus, MyBroadcastMessage, MyMessageThread, PageResponse, GuardianMessagingParticipant, MessageContactRestriction, MessageContactRestrictionKind, MessageSafeSportPolicy, AthleteMessagingTeam } from "./types";
 
 export function useMyMessageThreads() {
 	return useQuery({
@@ -229,3 +229,13 @@ export function useSafetyUnlockMessageThread() {
 		},
 	});
 }
+
+export function useGuardianMessagingParticipants() { return useQuery({ queryKey: ["me", "messaging", "guardian-participants"], queryFn: () => apiFetch<GuardianMessagingParticipant[]>("/me/messaging/guardian-participants") }); }
+export function useMyMessageContactRestrictions() { return useQuery({ queryKey: ["me", "messaging", "contact-restrictions"], queryFn: () => apiFetch<MessageContactRestriction[]>("/me/messaging/contact-restrictions") }); }
+export function useCreateMessageContactRestriction() { const qc=useQueryClient(); return useMutation({ mutationFn: (body: { organizationId: string; participantId: string; kind: MessageContactRestrictionKind; note?: string }) => apiFetch<MessageContactRestriction>("/me/messaging/contact-restrictions", { method: "POST", body }), onSuccess: () => qc.invalidateQueries({ queryKey: ["me", "messaging"] }) }); }
+export function useLiftMessageContactRestriction() { const qc=useQueryClient(); return useMutation({ mutationFn: ({ restrictionId, note }: { restrictionId: string; note: string }) => apiFetch<MessageContactRestriction>(`/me/messaging/contact-restrictions/${restrictionId}/lift`, { method: "POST", body: { note } }), onSuccess: () => qc.invalidateQueries({ queryKey: ["me", "messaging"] }) }); }
+export function useMessageSafeSportPolicy(organizationId: string | undefined) { return useQuery({ queryKey: ["messaging", "safe-sport-policy", organizationId], queryFn: () => apiFetch<MessageSafeSportPolicy>(`/organizations/${organizationId}/messaging/safe-sport-policy`), enabled: !!organizationId }); }
+
+export function useAthleteMessagingTeams() { return useQuery({ queryKey: ["me", "messaging", "athlete-teams"], queryFn: () => apiFetch<AthleteMessagingTeam[]>("/me/messaging/athlete-teams") }); }
+export function useAthleteMessagingContacts(team: AthleteMessagingTeam | undefined) { const p=team?new URLSearchParams({organizationId:team.organizationId,teamId:team.teamId}).toString():""; return useQuery({ queryKey:["me","messaging","athlete-contacts",team?.organizationId,team?.teamId], queryFn:()=>apiFetch<ConversationContact[]>(`/me/messaging/athlete-contacts?${p}`), enabled:!!team?.athleteMessagingEnabled }); }
+export function useCreateAthleteConversation() { const qc=useQueryClient(); return useMutation({ mutationFn: (input:{organizationId:string;teamId:string;title:string;targetUserIds:string[];initialMessage:string}) => apiFetch<MessageThread>("/me/messaging/athlete-conversations", {method:"POST", body:{...input,idempotencyKey:crypto.randomUUID(),initialMessageIdempotencyKey:crypto.randomUUID()}}), onSuccess:()=>qc.invalidateQueries({queryKey:["me","message-threads"]}) }); }

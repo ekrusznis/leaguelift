@@ -40,8 +40,8 @@ class BroadcastMessageDeliveryHandler(
                             to = recipient.email,
                             subject = thread.title,
                             body =
-                                "Hi ${recipient.displayName},\n\n${message.body}\n\nOpen Rally26 Messages to view the thread." +
-                                    "\n\n— Rally26",
+                                "Hi ${recipient.displayName},\n\n${message.body}" +
+                                    "\n\nOpen Rally26 Messages to view the thread.\n\n— Rally26",
                             idempotencyKey = "message-${message.id}-${recipient.id}-email",
                         ),
                     )

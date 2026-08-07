@@ -40,8 +40,8 @@ class ConversationMessageDeliveryHandler(
                             to = recipient.email,
                             subject = "New reply: ${thread.title}",
                             body =
-                                "Hi ${recipient.displayName},\n\n${message.body}\n\nOpen Rally26 Messages to view and reply." +
-                                    "\n\n— Rally26",
+                                "Hi ${recipient.displayName},\n\n${message.body}" +
+                                    "\n\nOpen Rally26 Messages to view and reply.\n\n— Rally26",
                             idempotencyKey = "conversation-${message.id}-${recipient.id}-email",
                         ),
                     )

@@ -1,5 +1,5 @@
 export type MessageScopeType = "ORGANIZATION" | "TEAM";
-export type MessageThreadType = "BROADCAST" | "CONVERSATION";
+export type MessageThreadType = "BROADCAST" | "CONVERSATION" | "ATHLETE_CONVERSATION";
 export type MessageAudience = "ALL" | "STAFF" | "GUARDIANS" | "ATHLETES" | "SELECTED";
 export type MessageThreadStatus = "OPEN" | "ARCHIVED";
 export type MessageAccessReason = "TARGETED" | "GUARDIAN_VISIBILITY";
@@ -125,3 +125,12 @@ export interface MessageModerationEvent {
 	note: string | null;
 	createdAt: string;
 }
+
+export type MessageSafeSportReviewStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type MessageContactRestrictionKind = "ADULT_TO_MINOR" | "ALL_MESSAGING";
+export type MessageContactRestrictionStatus = "ACTIVE" | "LIFTED";
+export interface MessageSafeSportPolicy { organizationId: string; reviewStatus: MessageSafeSportReviewStatus; athleteMessagingEnabled: boolean; reviewReference: string | null; reviewedByUserId: string | null; reviewedAt: string | null; retentionMode: "PRESERVE_NO_AUTOMATIC_DELETION"; guardianVisibilityRequired: true; adultMinorOpenTransparentRequired: true; parentDiscontinueRequestsEnforced: true; updatedAt: string; }
+export interface GuardianMessagingParticipant { organizationId: string; participantId: string; displayName: string; }
+export interface MessageContactRestriction { id: string; organizationId: string; participantId: string; participantDisplayName: string; requestedByUserId: string; kind: MessageContactRestrictionKind; note: string | null; status: MessageContactRestrictionStatus; createdAt: string; liftedAt: string | null; liftedByUserId: string | null; liftNote: string | null; }
+
+export interface AthleteMessagingTeam { organizationId: string; teamId: string; teamName: string; athleteMessagingEnabled: boolean; }

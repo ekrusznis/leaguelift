@@ -171,6 +171,38 @@ class MyMessageController(
             conversationService.reply(threadId, request.idempotencyKey, request.body, currentUser).toResponse(),
         )
 
+    @GetMapping("/messaging/athlete-teams")
+    fun athleteTeams(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = conversationService.listAthleteTeams(currentUser).map { it.toResponse() }
+
+    @GetMapping("/messaging/athlete-contacts")
+    fun athleteContacts(
+        @RequestParam organizationId: UUID,
+        @RequestParam teamId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): List<ConversationContactResponse> =
+        conversationService.listAthleteContacts(organizationId, teamId, currentUser).map { it.toResponse() }
+
+    @PostMapping("/messaging/athlete-conversations")
+    fun createAthleteConversation(
+        @Valid @RequestBody request: CreateAthleteConversationRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): ResponseEntity<MessageThreadResponse> =
+        ResponseEntity.status(HttpStatus.CREATED).body(
+            conversationService
+                .createAthleteConversation(
+                    request.organizationId,
+                    request.teamId,
+                    request.idempotencyKey,
+                    request.title,
+                    request.targetUserIds,
+                    request.initialMessageIdempotencyKey,
+                    request.initialMessage,
+                    currentUser,
+                ).toResponse(),
+        )
+
     @PostMapping("/messages/{messageId}/read")
     fun markRead(
         @PathVariable messageId: UUID,
