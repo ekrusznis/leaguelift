@@ -12,6 +12,8 @@ import { EventDetailPage } from "../features/events/EventDetailPage";
 import { EventsPage } from "../features/events/EventsPage";
 import { PersonalIntegrationsPage } from "../features/integrations/PersonalIntegrationsPage";
 import { MessagesPage } from "../features/messaging/MessagesPage";
+import { OrganizationBillingPage } from "../features/subscriptionBilling/OrganizationBillingPage";
+import { PlatformSubscriptionsPage } from "../features/subscriptionBilling/PlatformSubscriptionsPage";
 import { PlatformAdminConsoleLayout } from "../features/platformAdmin/PlatformAdminConsoleLayout";
 import { PlatformAuditPage } from "../features/platformAdmin/PlatformAuditPage";
 import { PlatformOperationsPage } from "../features/platformAdmin/PlatformOperationsPage";
@@ -107,6 +109,7 @@ export function AppRoutes() {
 					<Route path="help/:slug" element={<HelpArticlePage authenticated />} />
 					<Route path="organizations" element={<OrganizationsPage />} />
 					<Route path="organizations/:organizationId" element={<OrganizationDetailPage />} />
+					<Route path="organizations/:organizationId/billing" element={<OrganizationBillingPage />} />
 					<Route path="organizations/:organizationId/collections" element={<CollectionsPage />} />
 					<Route path="organizations/:organizationId/swag-shop/order" element={<SwagShopOrderFlow />} />
 					<Route path="organizations/:organizationId/events/:eventId" element={<EventDetailPage />} />
@@ -129,6 +132,7 @@ export function AppRoutes() {
 					<Route path="help-articles" element={platformGuard(Capabilities.PLATFORM_HELP_MANAGE, <PlatformHelpArticlesPage />)} />
 					<Route path="support-cases" element={platformGuard(Capabilities.PLATFORM_SUPPORT_CASE_MANAGE, <PlatformSupportCasesPage />)} />
 					<Route path="swag-shop" element={platformGuard(Capabilities.PLATFORM_SWAG_SHOP_VIEW, <PlatformSwagShopPage />)} />
+					<Route path="subscriptions" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformSubscriptionsPage />)} />
 				</Route>
 			</Route>
 			<Route element={<MarketingLayout />}>

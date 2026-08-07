@@ -18,6 +18,13 @@ enum class OrganizationAccessDecision {
     SUSPEND,
 }
 
+enum class BillingRecoveryState {
+    CHECKOUT_REQUIRED,
+    CURRENT,
+    PAYMENT_ACTION_REQUIRED,
+    ENDED,
+}
+
 fun organizationAccessDecision(status: OrganizationSubscriptionStatus): OrganizationAccessDecision =
     when (status) {
         OrganizationSubscriptionStatus.TRIALING,
@@ -29,6 +36,18 @@ fun organizationAccessDecision(status: OrganizationSubscriptionStatus): Organiza
         OrganizationSubscriptionStatus.PAST_DUE,
         OrganizationSubscriptionStatus.CHECKOUT_PENDING,
         -> OrganizationAccessDecision.KEEP_CURRENT
+    }
+
+fun billingRecoveryState(status: OrganizationSubscriptionStatus): BillingRecoveryState =
+    when (status) {
+        OrganizationSubscriptionStatus.TRIALING,
+        OrganizationSubscriptionStatus.ACTIVE,
+        -> BillingRecoveryState.CURRENT
+        OrganizationSubscriptionStatus.PAST_DUE -> BillingRecoveryState.PAYMENT_ACTION_REQUIRED
+        OrganizationSubscriptionStatus.CANCELED -> BillingRecoveryState.ENDED
+        OrganizationSubscriptionStatus.CHECKOUT_PENDING,
+        OrganizationSubscriptionStatus.INCOMPLETE,
+        -> BillingRecoveryState.CHECKOUT_REQUIRED
     }
 
 data class OrganizationSubscription(
@@ -43,6 +62,9 @@ data class OrganizationSubscription(
     val lastPaymentFailureAt: Instant?,
     val createdAt: Instant,
     val updatedAt: Instant,
+    // Appended with a default so older positional test fixtures remain source-compatible.
+    val lastPaymentSuccessAt: Instant? = null,
+    val cancelAtPeriodEnd: Boolean = false,
 )
 
 data class SubscriptionPlan(
@@ -56,6 +78,23 @@ data class SubscriptionPlan(
     val active: Boolean,
     val stripeProductId: String?,
     val stripePriceId: String?,
+)
+
+data class PlatformOrganizationSubscription(
+    val organizationId: UUID,
+    val organizationName: String,
+    val organizationStatus: String,
+    val planCode: String?,
+    val planName: String?,
+    val amountMinor: Long?,
+    val currency: String?,
+    val status: OrganizationSubscriptionStatus?,
+    val lastPaymentFailureAt: Instant?,
+    val lastPaymentSuccessAt: Instant?,
+    val hasStripeCustomer: Boolean,
+    val hasStripeSubscription: Boolean,
+    val cancelAtPeriodEnd: Boolean,
+    val updatedAt: Instant,
 )
 
 fun stripeSubscriptionStatus(status: String?): OrganizationSubscriptionStatus =

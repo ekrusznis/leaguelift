@@ -101,7 +101,7 @@ info:
     is never serialized, direct participant-to-household order attribution (no attribution-code
     indirection), family-credit grant/reversal wiring on order confirm/refund, and a guardian
     dashboard recent-orders card (ADR-069).
-  version: "0.35.0"
+  version: "0.36.0"
 servers:
 - url: /api/v1
 tags:
@@ -787,6 +787,29 @@ paths:
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
         "409": {$ref: "#/components/responses/Conflict"}
+  /platform/admin/subscriptions:
+    get:
+      tags: [subscriptions, platform-admin]
+      summary: List organization subscription states for Platform Admin support
+      description: Read-only sanitized billing visibility. Includes organizations that have not started subscription checkout.
+      operationId: listPlatformOrganizationSubscriptions
+      parameters:
+      - {name: query, in: query, required: false, schema: {type: string}}
+      - name: status
+        in: query
+        required: false
+        schema: {type: string, enum: [NONE, CHECKOUT_PENDING, TRIALING, ACTIVE, PAST_DUE, CANCELED, INCOMPLETE]}
+      - {$ref: "#/components/parameters/PageParam"}
+      - {$ref: "#/components/parameters/SizeParam"}
+      responses:
+        "200":
+          description: Paginated organization billing states
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PlatformOrganizationSubscriptionPageResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "400": {$ref: "#/components/responses/BadRequest"}
   /auth/register:
     post:
       tags: [auth]
@@ -10404,12 +10427,50 @@ components:
         checkoutUrl: {type: string, format: uri}
     OrganizationSubscriptionResponse:
       type: object
-      required: [id, organizationId, planCode, status]
+      required: [id, organizationId, planCode, status, recoveryState, billingPortalAvailable, cancelAtPeriodEnd]
       properties:
         id: {type: string, format: uuid}
         organizationId: {type: string, format: uuid}
         planCode: {type: string}
+        planName: {type: string, nullable: true}
+        amountMinor: {type: integer, format: int64, nullable: true}
+        currency: {type: string, nullable: true}
+        billingInterval: {type: string, enum: [MONTHLY], nullable: true}
         status: {type: string, enum: [CHECKOUT_PENDING, TRIALING, ACTIVE, PAST_DUE, CANCELED, INCOMPLETE]}
+        recoveryState: {type: string, enum: [CHECKOUT_REQUIRED, CURRENT, PAYMENT_ACTION_REQUIRED, ENDED]}
+        lastPaymentFailureAt: {type: string, format: date-time, nullable: true}
+        lastPaymentSuccessAt: {type: string, format: date-time, nullable: true}
+        billingPortalAvailable: {type: boolean}
+        cancelAtPeriodEnd: {type: boolean}
+    PlatformOrganizationSubscriptionPageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/PlatformOrganizationSubscriptionResponse"}
+        page: {type: integer, minimum: 0}
+        size: {type: integer, minimum: 1, maximum: 100}
+        totalElements: {type: integer, format: int64}
+    PlatformOrganizationSubscriptionResponse:
+      type: object
+      required: [organizationId, organizationName, organizationStatus, recoveryState, hasStripeCustomer, hasStripeSubscription, cancelAtPeriodEnd, updatedAt]
+      properties:
+        organizationId: {type: string, format: uuid}
+        organizationName: {type: string}
+        organizationStatus: {type: string, enum: [DRAFT, ACTIVE, SUSPENDED, ARCHIVED]}
+        planCode: {type: string, nullable: true}
+        planName: {type: string, nullable: true}
+        amountMinor: {type: integer, format: int64, nullable: true}
+        currency: {type: string, nullable: true}
+        status: {type: string, enum: [CHECKOUT_PENDING, TRIALING, ACTIVE, PAST_DUE, CANCELED, INCOMPLETE], nullable: true}
+        recoveryState: {type: string, enum: [NOT_STARTED, CHECKOUT_REQUIRED, CURRENT, PAYMENT_ACTION_REQUIRED, ENDED]}
+        lastPaymentFailureAt: {type: string, format: date-time, nullable: true}
+        lastPaymentSuccessAt: {type: string, format: date-time, nullable: true}
+        hasStripeCustomer: {type: boolean}
+        hasStripeSubscription: {type: boolean}
+        cancelAtPeriodEnd: {type: boolean}
+        updatedAt: {type: string, format: date-time}
     BillingPortalResponse:
       type: object
       required: [url]

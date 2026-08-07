@@ -23,6 +23,7 @@ export const appPaths = {
 	organizations: () => "/app/organizations",
 	organization: (organizationId: string, section: OrganizationSection = "overview") =>
 		`/app/organizations/${organizationId}/${section}`,
+	organizationBilling: (organizationId: string) => `/app/organizations/${organizationId}/billing`,
 	collections: (organizationId: string) => `/app/organizations/${organizationId}/collections`,
 	swagShopOrder: (organizationId: string) => `/app/organizations/${organizationId}/swag-shop/order`,
 	household: (organizationId: string, householdId: string, section: HouseholdSection = "profile") =>
@@ -55,4 +56,5 @@ export const appPaths = {
 	platformHelpArticles: () => "/app/platform/help-articles",
 	platformSupportCases: () => "/app/platform/support-cases",
 	platformSwagShop: () => "/app/platform/swag-shop",
+	platformSubscriptions: () => "/app/platform/subscriptions",
 } as const;
