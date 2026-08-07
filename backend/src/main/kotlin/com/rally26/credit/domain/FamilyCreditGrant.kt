@@ -5,7 +5,7 @@ import java.util.UUID
 
 enum class FamilyCreditGrantStatus { PENDING, AVAILABLE, EXPIRED, REVOKED }
 
-enum class CreditSourceType { CAMPAIGN_ATTRIBUTION, ORG_PROMO, MANUAL, P2P_TRANSFER }
+enum class CreditSourceType { CAMPAIGN_ATTRIBUTION, STOREFRONT_ATTRIBUTION, ORG_PROMO, MANUAL, P2P_TRANSFER }
 
 /**
  * One row per grant (Phase 23, DESIGN-DOC.md section 13/14.1). `remainingMinor`

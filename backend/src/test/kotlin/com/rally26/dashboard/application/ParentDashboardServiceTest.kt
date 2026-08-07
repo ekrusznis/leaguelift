@@ -7,6 +7,9 @@ import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.web.CurrentUser
 import com.rally26.credit.application.FamilyCreditService
+import com.rally26.credit.domain.CreditSourceType
+import com.rally26.credit.domain.FamilyCreditGrant
+import com.rally26.credit.domain.FamilyCreditGrantStatus
 import com.rally26.event.application.EventService
 import com.rally26.fee.domain.FeeAssignment
 import com.rally26.fee.domain.FeeAssignmentStatus
@@ -24,7 +27,22 @@ import com.rally26.household.domain.HouseholdAdult
 import com.rally26.household.domain.HouseholdStatus
 import com.rally26.household.persistence.HouseholdRepository
 import com.rally26.membership.persistence.MembershipRepository
+import com.rally26.order.domain.Fulfillment
+import com.rally26.order.domain.FulfillmentSource
+import com.rally26.order.domain.FulfillmentStatus
+import com.rally26.order.domain.Order
+import com.rally26.order.domain.OrderItem
+import com.rally26.order.domain.OrderStatus
+import com.rally26.order.persistence.FulfillmentRepository
+import com.rally26.order.persistence.OrderItemRepository
+import com.rally26.order.persistence.OrderRepository
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.store.domain.CatalogSource
+import com.rally26.store.domain.Product
+import com.rally26.store.domain.ProductStatus
+import com.rally26.store.domain.ProductVariant
+import com.rally26.store.persistence.ProductRepository
+import com.rally26.store.persistence.ProductVariantRepository
 import com.rally26.team.persistence.TeamRepository
 import io.mockk.every
 import io.mockk.mockk
@@ -33,6 +51,7 @@ import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 class ParentDashboardServiceTest {
     private val householdRepository = mockk<HouseholdRepository>()
@@ -48,6 +67,11 @@ class ParentDashboardServiceTest {
     private val eventService = mockk<EventService>()
     private val dashboardEventMapper = mockk<DashboardEventMapper>()
     private val familyCreditService = mockk<FamilyCreditService>()
+    private val orderRepository = mockk<OrderRepository>()
+    private val orderItemRepository = mockk<OrderItemRepository>()
+    private val fulfillmentRepository = mockk<FulfillmentRepository>()
+    private val productVariantRepository = mockk<ProductVariantRepository>()
+    private val productRepository = mockk<ProductRepository>()
 
     private val service =
         ParentDashboardService(
@@ -64,6 +88,11 @@ class ParentDashboardServiceTest {
             eventService,
             dashboardEventMapper,
             familyCreditService,
+            orderRepository,
+            orderItemRepository,
+            fulfillmentRepository,
+            productVariantRepository,
+            productRepository,
         )
 
     private val orgId = UUID.randomUUID()
@@ -203,6 +232,173 @@ class ParentDashboardServiceTest {
         assertEquals(false, result.first().isRaisedDemoData)
         assertEquals(34_500L, result.first().raisedMinor)
     }
+
+    @Test
+    fun `getRecentOrders returns real household-attributed orders with product name, fulfillment status, and credit grant`() {
+        every { householdRepository.findById(householdId, orgId) } returns household()
+        every { membershipRepository.findActiveMembership(orgId, guardian.userId) } returns null
+        every { guardianRelationshipRepository.findActiveForHousehold(guardian.userId, householdId) } returns null
+        every { householdRepository.listAdults(householdId, orgId) } returns listOf(adult(guardian.email))
+
+        val order = order(status = OrderStatus.CONFIRMED)
+        every { orderRepository.findByAttributedHousehold(orgId, householdId, offset = 0, limit = 25) } returns listOf(order)
+
+        val productId = UUID.randomUUID()
+        val variant = productVariant(productId)
+        val item = OrderItem(UUID.randomUUID(), order.id, variant.id, 1, variant.priceMinor, variant.costMinor)
+        every { orderItemRepository.findByOrder(order.id) } returns listOf(item)
+        every { productVariantRepository.findById(variant.id, orgId) } returns variant
+        val product = product(productId, order.storeId)
+        every { productRepository.findById(productId, orgId) } returns product
+
+        val fulfillment = fulfillment(order.id, FulfillmentStatus.SHIPPED)
+        every { fulfillmentRepository.findByOrder(order.id) } returns fulfillment
+
+        val grant =
+            FamilyCreditGrant(
+                UUID.randomUUID(),
+                orgId,
+                householdId,
+                250L,
+                250L,
+                "USD",
+                FamilyCreditGrantStatus.AVAILABLE,
+                CreditSourceType.STOREFRONT_ATTRIBUTION,
+                order.id,
+                Instant.now(),
+                Instant.now(),
+                null,
+                Instant.now(),
+            )
+        every { familyCreditService.findGrantForOrder(orgId, order.id) } returns grant
+
+        val result = service.getRecentOrders(orgId, householdId, guardian)
+
+        assertEquals(1, result.size)
+        val summary = result.single()
+        assertEquals("Youth Hoodie - Youth M", summary.productName)
+        assertEquals("SHIPPED", summary.status)
+        assertEquals(250L, summary.creditGrantedMinor)
+        assertEquals("AVAILABLE", summary.creditStatus)
+    }
+
+    @Test
+    fun `getRecentOrders falls back to order status and omits credit fields when there is no fulfillment or grant yet`() {
+        every { householdRepository.findById(householdId, orgId) } returns household()
+        every { membershipRepository.findActiveMembership(orgId, guardian.userId) } returns null
+        every { guardianRelationshipRepository.findActiveForHousehold(guardian.userId, householdId) } returns null
+        every { householdRepository.listAdults(householdId, orgId) } returns listOf(adult(guardian.email))
+
+        val order = order(status = OrderStatus.PENDING)
+        every { orderRepository.findByAttributedHousehold(orgId, householdId, offset = 0, limit = 25) } returns listOf(order)
+        every { orderItemRepository.findByOrder(order.id) } returns emptyList()
+        every { fulfillmentRepository.findByOrder(order.id) } returns null
+        every { familyCreditService.findGrantForOrder(orgId, order.id) } returns null
+
+        val result = service.getRecentOrders(orgId, householdId, guardian)
+
+        val summary = result.single()
+        assertEquals("Swag Shop order", summary.productName)
+        assertEquals("PENDING", summary.status)
+        assertNull(summary.creditGrantedMinor)
+        assertNull(summary.creditStatus)
+    }
+
+    @Test
+    fun `getRecentOrders is empty when this household has no storefront-attributed orders`() {
+        every { householdRepository.findById(householdId, orgId) } returns household()
+        every { membershipRepository.findActiveMembership(orgId, guardian.userId) } returns null
+        every { guardianRelationshipRepository.findActiveForHousehold(guardian.userId, householdId) } returns null
+        every { householdRepository.listAdults(householdId, orgId) } returns listOf(adult(guardian.email))
+        every { orderRepository.findByAttributedHousehold(orgId, householdId, offset = 0, limit = 25) } returns emptyList()
+
+        val result = service.getRecentOrders(orgId, householdId, guardian)
+
+        assertEquals(0, result.size)
+    }
+
+    private fun order(status: OrderStatus) =
+        Order(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            storeId = UUID.randomUUID(),
+            status = status,
+            currency = "USD",
+            supporterName = null,
+            supporterEmail = null,
+            shippingAddress = null,
+            stripeCheckoutSessionId = null,
+            stripePaymentIntentId = null,
+            confirmedAt = if (status == OrderStatus.CONFIRMED) Instant.now() else null,
+            refundedAt = null,
+            createdAt = Instant.now(),
+            attributedHouseholdId = householdId,
+        )
+
+    private fun product(
+        productId: UUID,
+        storeId: UUID,
+    ) = Product(
+        id = productId,
+        organizationId = orgId,
+        storeId = storeId,
+        name = "Youth Hoodie",
+        description = null,
+        catalogSource = CatalogSource.PRINTIFY,
+        manualVendorId = null,
+        manualVendorName = null,
+        printifyBlueprintId = 77L,
+        printifyImageId = null,
+        printifyPrintPosition = "front",
+        status = ProductStatus.ACTIVE,
+        createdAt = Instant.now(),
+        updatedAt = Instant.now(),
+    )
+
+    private fun productVariant(productId: UUID) =
+        ProductVariant(
+            id = UUID.randomUUID(),
+            organizationId = orgId,
+            productId = productId,
+            catalogSource = CatalogSource.PRINTIFY,
+            label = "Youth M",
+            sku = null,
+            size = "M",
+            color = "Navy",
+            printifyPrintProviderId = 1L,
+            printifyVariantId = 100L,
+            currency = "USD",
+            costMinor = 1200L,
+            priceMinor = 2500L,
+            isActive = true,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
+
+    private fun fulfillment(
+        orderId: UUID,
+        status: FulfillmentStatus,
+    ) = Fulfillment(
+        id = UUID.randomUUID(),
+        orderId = orderId,
+        source = FulfillmentSource.PRINTIFY,
+        status = status,
+        printifyOrderId = "printify_1",
+        manualVendorId = null,
+        manualVendorName = null,
+        vendorOrderReference = null,
+        carrier = null,
+        trackingNumber = null,
+        trackingUrl = null,
+        internalNotes = null,
+        attentionReason = null,
+        lastError = null,
+        statusChangedAt = Instant.now(),
+        shippedAt = Instant.now(),
+        deliveredAt = null,
+        createdAt = Instant.now(),
+        updatedAt = Instant.now(),
+    )
 
     private fun feeAssignment(
         status: FeeAssignmentStatus,

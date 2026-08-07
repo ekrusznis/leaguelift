@@ -350,4 +350,60 @@ class FamilyCreditServiceTest {
 
         verify(exactly = 1) { grantRepository.revokeRemainingBySource(orgId, CreditSourceType.CAMPAIGN_ATTRIBUTION, contributionId) }
     }
+
+    @Test
+    fun `grantForStorefrontOrder computes the grant from the org's configured credit percent and uses STOREFRONT_ATTRIBUTION`() {
+        val orderId = UUID.randomUUID()
+        every { settingsRepository.getOrCreateDefault(orgId) } returns settings(percent = 1000)
+        every { auditService.record(null, orgId, "family_credit.granted", "family_credit_grant", any()) } just runs
+        every {
+            grantRepository.insert(
+                orgId,
+                householdId,
+                250L,
+                "USD",
+                FamilyCreditGrantStatus.AVAILABLE,
+                CreditSourceType.STOREFRONT_ATTRIBUTION,
+                orderId,
+                null,
+            )
+        } returns grant(250L).copy(sourceType = CreditSourceType.STOREFRONT_ATTRIBUTION, sourceId = orderId)
+
+        val result = service.grantForStorefrontOrder(orgId, householdId, orderId, 2500L, "USD")
+
+        assertEquals(250L, result.remainingMinor)
+        assertEquals(CreditSourceType.STOREFRONT_ATTRIBUTION, result.sourceType)
+    }
+
+    @Test
+    fun `reverseForRefundedOrder revokes only remaining unapplied grant balance sourced from STOREFRONT_ATTRIBUTION`() {
+        val orderId = UUID.randomUUID()
+        every { grantRepository.revokeRemainingBySource(orgId, CreditSourceType.STOREFRONT_ATTRIBUTION, orderId) } returns 1
+        every { auditService.record(null, orgId, "family_credit.revoked", "order", orderId) } just runs
+
+        service.reverseForRefundedOrder(orgId, orderId)
+
+        verify(exactly = 1) { grantRepository.revokeRemainingBySource(orgId, CreditSourceType.STOREFRONT_ATTRIBUTION, orderId) }
+    }
+
+    @Test
+    fun `reverseForRefundedOrder does not record an audit event when nothing was revoked`() {
+        val orderId = UUID.randomUUID()
+        every { grantRepository.revokeRemainingBySource(orgId, CreditSourceType.STOREFRONT_ATTRIBUTION, orderId) } returns 0
+
+        service.reverseForRefundedOrder(orgId, orderId)
+
+        verify(exactly = 0) { auditService.record(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `findGrantForOrder looks up by STOREFRONT_ATTRIBUTION source`() {
+        val orderId = UUID.randomUUID()
+        val existing = grant(250L).copy(sourceType = CreditSourceType.STOREFRONT_ATTRIBUTION, sourceId = orderId)
+        every { grantRepository.findBySource(orgId, CreditSourceType.STOREFRONT_ATTRIBUTION, orderId) } returns existing
+
+        val result = service.findGrantForOrder(orgId, orderId)
+
+        assertEquals(existing, result)
+    }
 }

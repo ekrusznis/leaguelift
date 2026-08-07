@@ -9,6 +9,7 @@ import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.config.FrontendProperties
+import com.rally26.credit.application.FamilyCreditService
 import com.rally26.integration.printify.infra.PrintifyDraftOrder
 import com.rally26.integration.printify.infra.PrintifyOrderClient
 import com.rally26.integration.printify.infra.PrintifyOrderLineItem
@@ -39,8 +40,12 @@ import com.rally26.outbox.application.OutboxWriter
 import com.rally26.participant.domain.Participant
 import com.rally26.participant.domain.ParticipantStatus
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.store.application.AthleteStorefrontPublic
+import com.rally26.store.application.AthleteStorefrontService
 import com.rally26.store.application.SwagCompositeResult
 import com.rally26.store.application.SwagDesignCompositor
+import com.rally26.store.domain.AthleteStorefront
+import com.rally26.store.domain.AthleteStorefrontStatus
 import com.rally26.store.domain.CatalogSource
 import com.rally26.store.domain.Product
 import com.rally26.store.domain.ProductStatus
@@ -83,6 +88,8 @@ class OrderServiceTest {
     private val auditService = mockk<AuditService>()
     private val ledgerService = mockk<LedgerService>()
     private val outboxWriter = mockk<OutboxWriter>()
+    private val athleteStorefrontService = mockk<AthleteStorefrontService>()
+    private val familyCreditService = mockk<FamilyCreditService>()
     private val service =
         OrderService(
             orderRepository,
@@ -105,6 +112,8 @@ class OrderServiceTest {
             ledgerService,
             outboxWriter,
             ObjectMapper(),
+            athleteStorefrontService,
+            familyCreditService,
         )
     private val orgId = UUID.randomUUID()
 
@@ -756,5 +765,224 @@ class OrderServiceTest {
         assertFailsWith<ForbiddenException> {
             service.createSwagShopCheckoutSession(orgId, UUID.randomUUID(), participant.id, null, null, null, null, currentUser)
         }
+    }
+
+    private fun athleteStorefront(
+        storeId: UUID,
+        participantId: UUID,
+        status: AthleteStorefrontStatus = AthleteStorefrontStatus.PUBLISHED,
+    ) = AthleteStorefront(
+        id = UUID.randomUUID(),
+        organizationId = orgId,
+        participantId = participantId,
+        teamId = null,
+        storeId = storeId,
+        slug = "maya-johnson",
+        status = status,
+        publishedAt = if (status == AthleteStorefrontStatus.PUBLISHED) Instant.now() else null,
+        createdAt = Instant.now(),
+        updatedAt = Instant.now(),
+    )
+
+    @Test
+    fun `createAthleteStorefrontCheckoutSession succeeds for an approved product and snapshots household attribution`() {
+        val storeEntity = store()
+        val product = product(storeEntity.id)
+        val variant = productVariant(product.id)
+        val household = participant(UUID.randomUUID())
+        val storefront = athleteStorefront(storeEntity.id, household.id)
+        val public = AthleteStorefrontPublic(storefront, "Maya J.")
+        every { athleteStorefrontService.getPublic("maya-johnson") } returns public
+        every { athleteStorefrontService.getPublicProducts(storefront) } returns listOf(product to listOf(variant))
+        every { productVariantRepository.findById(variant.id, orgId) } returns variant
+        every { productRepository.findById(product.id, orgId) } returns product
+        every { storeRepository.findById(storefront.storeId, orgId) } returns storeEntity
+        every { participantRepository.findById(storefront.participantId, orgId) } returns household
+        val pending = pendingOrder(storeEntity)
+        every {
+            orderRepository.insertPending(
+                orgId,
+                storeEntity.id,
+                variant.currency,
+                "Jane Doe",
+                null,
+                attributedHouseholdId = household.householdId,
+            )
+        } returns pending
+        every {
+            orderItemRepository.insert(
+                pending.id,
+                variant.id,
+                1,
+                variant.priceMinor,
+                variant.costMinor,
+                household.id,
+                null,
+                null,
+                null,
+                null,
+            )
+        } returns mockk(relaxed = true)
+        every { stripeOrderCheckoutClient.createOrderCheckoutSession(pending.id, any(), any(), any()) } returns
+            OrderCheckoutSession("cs_storefront_1", "https://checkout.stripe.com/storefront")
+        every { orderRepository.attachStripeSession(pending.id, "cs_storefront_1") } returns 1
+
+        val result = service.createAthleteStorefrontCheckoutSession("maya-johnson", variant.id, null, null, null, null, "Jane Doe", null)
+
+        assertEquals("https://checkout.stripe.com/storefront", result.checkoutUrl)
+        verify(exactly = 1) {
+            orderRepository.insertPending(
+                orgId,
+                storeEntity.id,
+                variant.currency,
+                "Jane Doe",
+                null,
+                attributedHouseholdId = household.householdId,
+            )
+        }
+    }
+
+    @Test
+    fun `createAthleteStorefrontCheckoutSession rejects an item that is not in the storefront's approved product set`() {
+        val storeEntity = store()
+        val approvedProduct = product(storeEntity.id)
+        val otherProduct = product(storeEntity.id)
+        val variant = productVariant(otherProduct.id)
+        val household = participant(UUID.randomUUID())
+        val storefront = athleteStorefront(storeEntity.id, household.id)
+        val public = AthleteStorefrontPublic(storefront, "Maya J.")
+        every { athleteStorefrontService.getPublic("maya-johnson") } returns public
+        every { athleteStorefrontService.getPublicProducts(storefront) } returns listOf(approvedProduct to emptyList())
+        every { productVariantRepository.findById(variant.id, orgId) } returns variant
+        every { productRepository.findById(otherProduct.id, orgId) } returns otherProduct
+
+        assertFailsWith<ValidationException> {
+            service.createAthleteStorefrontCheckoutSession("maya-johnson", variant.id, null, null, null, null, null, null)
+        }
+    }
+
+    @Test
+    fun `createAthleteStorefrontCheckoutSession throws NotFoundException for an inactive variant`() {
+        val storeEntity = store()
+        val product = product(storeEntity.id)
+        val inactiveVariant = productVariant(product.id).copy(isActive = false)
+        val household = participant(UUID.randomUUID())
+        val storefront = athleteStorefront(storeEntity.id, household.id)
+        val public = AthleteStorefrontPublic(storefront, "Maya J.")
+        every { athleteStorefrontService.getPublic("maya-johnson") } returns public
+        every { athleteStorefrontService.getPublicProducts(storefront) } returns listOf(product to emptyList())
+        every { productVariantRepository.findById(inactiveVariant.id, orgId) } returns inactiveVariant
+
+        assertFailsWith<NotFoundException> {
+            service.createAthleteStorefrontCheckoutSession("maya-johnson", inactiveVariant.id, null, null, null, null, null, null)
+        }
+    }
+
+    @Test
+    fun `getAthleteStorefrontOrderStatus throws NotFoundException when the order belongs to a different store`() {
+        val storeEntity = store()
+        val household = participant(UUID.randomUUID())
+        val storefront = athleteStorefront(storeEntity.id, household.id)
+        val public = AthleteStorefrontPublic(storefront, "Maya J.")
+        val orderFromOtherStore = pendingOrder(store())
+        every { athleteStorefrontService.getPublic("maya-johnson") } returns public
+        every { orderRepository.findById(orderFromOtherStore.id, orgId) } returns orderFromOtherStore
+
+        assertFailsWith<NotFoundException> {
+            service.getAthleteStorefrontOrderStatus("maya-johnson", orderFromOtherStore.id)
+        }
+    }
+
+    @Test
+    fun `confirmFromWebhook grants a family credit when the order carries a household attribution`() {
+        val store = store()
+        val vendorId = UUID.randomUUID()
+        val product = product(store.id, CatalogSource.MANUAL, vendorId)
+        val variant = productVariant(product.id, CatalogSource.MANUAL)
+        val householdId = UUID.randomUUID()
+        val order = pendingOrder(store).copy(attributedHouseholdId = householdId)
+        val confirmed = order.copy(status = OrderStatus.CONFIRMED, confirmedAt = Instant.now())
+        stubConfirmation(order, confirmed, product, variant)
+        val fulfillment = fulfillment(order.id, FulfillmentSource.MANUAL, FulfillmentStatus.READY, manualVendorId = vendorId)
+        every { fulfillmentRepository.insert(order.id, FulfillmentSource.MANUAL, FulfillmentStatus.READY, null, vendorId, null) } returns
+            fulfillment
+        every { fulfillmentHistoryRepository.insert(orgId, fulfillment.id, null, FulfillmentStatus.READY, any(), null) } returns
+            history(fulfillment)
+        every { familyCreditService.grantForStorefrontOrder(orgId, householdId, order.id, variant.priceMinor, order.currency) } returns
+            mockk()
+
+        service.confirmFromWebhook("cs_test_123", "paid", null, null)
+
+        verify(
+            exactly = 1,
+        ) { familyCreditService.grantForStorefrontOrder(orgId, householdId, order.id, variant.priceMinor, order.currency) }
+    }
+
+    @Test
+    fun `confirmFromWebhook does not grant a family credit for an order with no household attribution`() {
+        val store = store()
+        val vendorId = UUID.randomUUID()
+        val product = product(store.id, CatalogSource.MANUAL, vendorId)
+        val variant = productVariant(product.id, CatalogSource.MANUAL)
+        val order = pendingOrder(store)
+        val confirmed = order.copy(status = OrderStatus.CONFIRMED, confirmedAt = Instant.now())
+        stubConfirmation(order, confirmed, product, variant)
+        val fulfillment = fulfillment(order.id, FulfillmentSource.MANUAL, FulfillmentStatus.READY, manualVendorId = vendorId)
+        every { fulfillmentRepository.insert(order.id, FulfillmentSource.MANUAL, FulfillmentStatus.READY, null, vendorId, null) } returns
+            fulfillment
+        every { fulfillmentHistoryRepository.insert(orgId, fulfillment.id, null, FulfillmentStatus.READY, any(), null) } returns
+            history(fulfillment)
+
+        service.confirmFromWebhook("cs_test_123", "paid", null, null)
+
+        verify(exactly = 0) { familyCreditService.grantForStorefrontOrder(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `refund reverses the family credit when the order carries a household attribution`() {
+        val store = store()
+        val householdId = UUID.randomUUID()
+        val order =
+            pendingOrder(store)
+                .copy(
+                    status = OrderStatus.CONFIRMED,
+                    stripePaymentIntentId = "pi_test_123",
+                    confirmedAt = Instant.now(),
+                    attributedHouseholdId = householdId,
+                )
+        val manager = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
+        every { membershipService.requireManagerRole(orgId, manager) } returns managerMembership(manager)
+        every { orderRepository.findById(order.id, orgId) } returns order
+        every { orderItemRepository.findByOrder(order.id) } returns
+            listOf(OrderItem(UUID.randomUUID(), order.id, UUID.randomUUID(), 2, 2500L, 1200L))
+        every { stripeOrderCheckoutClient.createRefund("pi_test_123") } returns "re_test_123"
+        every { orderRepository.markRefunded(order.id) } returns 1
+        every { ledgerService.recordRefund(orgId, LedgerSourceType.ORDER, order.id, 5000L, order.currency, "re_test_123") } just runs
+        every { auditService.record(manager.userId, orgId, "order.refunded", "order", order.id) } just runs
+        every { familyCreditService.reverseForRefundedOrder(orgId, order.id) } just runs
+
+        service.refund(orgId, order.id, manager)
+
+        verify(exactly = 1) { familyCreditService.reverseForRefundedOrder(orgId, order.id) }
+    }
+
+    @Test
+    fun `refund does not reverse family credit for an order with no household attribution`() {
+        val store = store()
+        val order =
+            pendingOrder(store).copy(status = OrderStatus.CONFIRMED, stripePaymentIntentId = "pi_test_123", confirmedAt = Instant.now())
+        val manager = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
+        every { membershipService.requireManagerRole(orgId, manager) } returns managerMembership(manager)
+        every { orderRepository.findById(order.id, orgId) } returns order
+        every { orderItemRepository.findByOrder(order.id) } returns
+            listOf(OrderItem(UUID.randomUUID(), order.id, UUID.randomUUID(), 2, 2500L, 1200L))
+        every { stripeOrderCheckoutClient.createRefund("pi_test_123") } returns "re_test_123"
+        every { orderRepository.markRefunded(order.id) } returns 1
+        every { ledgerService.recordRefund(orgId, LedgerSourceType.ORDER, order.id, 5000L, order.currency, "re_test_123") } just runs
+        every { auditService.record(manager.userId, orgId, "order.refunded", "order", order.id) } just runs
+
+        service.refund(orgId, order.id, manager)
+
+        verify(exactly = 0) { familyCreditService.reverseForRefundedOrder(any(), any()) }
     }
 }

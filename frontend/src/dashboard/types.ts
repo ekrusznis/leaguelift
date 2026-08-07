@@ -96,6 +96,9 @@ export interface OrderSummary {
 	orderNumber: string;
 	orderedAt: string;
 	status: string;
+	/** Phase 24 slice 24.3: only set for a household-attributed athlete-storefront order with a real family_credit_grant. */
+	creditGrantedMinor: number | null;
+	creditStatus: string | null;
 }
 
 export interface ActivityItem {

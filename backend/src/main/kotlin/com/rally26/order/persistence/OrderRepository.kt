@@ -14,7 +14,7 @@ import java.util.UUID
 private const val COLUMNS = """
     id, organization_id, store_id, status, currency, supporter_name, supporter_email,
     shipping_address, stripe_checkout_session_id, stripe_payment_intent_id, confirmed_at,
-    refunded_at, created_at, payment_source
+    refunded_at, created_at, payment_source, attributed_household_id
 """
 
 @Repository
@@ -62,6 +62,28 @@ class OrderRepository(
             .query(::mapRow)
             .list()
 
+    /** Guardian dashboard (Phase 24 slice 24.3) — only orders placed through a published athlete storefront ever carry this attribution; a regular authenticated Swag Shop order never does. */
+    fun findByAttributedHousehold(
+        organizationId: UUID,
+        householdId: UUID,
+        offset: Int,
+        limit: Int,
+    ): List<Order> =
+        jdbcClient
+            .sql(
+                """
+                select $COLUMNS from "order"
+                where organization_id = :organizationId and attributed_household_id = :householdId
+                order by created_at desc
+                offset :offset limit :limit
+                """.trimIndent(),
+            ).param("organizationId", organizationId)
+            .param("householdId", householdId)
+            .param("offset", offset)
+            .param("limit", limit)
+            .query(::mapRow)
+            .list()
+
     /** Platform-wide order counts by status (Platform Admin dashboard, Phase 7 completion) — no organization filter, unlike every other query here. */
     fun countAllByStatus(): Map<String, Long> =
         jdbcClient
@@ -83,14 +105,17 @@ class OrderRepository(
         currency: String,
         supporterName: String?,
         supporterEmail: String?,
+        attributedHouseholdId: UUID? = null,
     ): Order {
         val id = UUID.randomUUID()
         val now = Instant.now()
         jdbcClient
             .sql(
                 """
-                insert into "order" (id, organization_id, store_id, status, currency, supporter_name, supporter_email, created_at)
-                values (:id, :organizationId, :storeId, 'PENDING', :currency, :supporterName, :supporterEmail, :now)
+                insert into "order"
+                	(id, organization_id, store_id, status, currency, supporter_name, supporter_email, created_at, attributed_household_id)
+                values
+                	(:id, :organizationId, :storeId, 'PENDING', :currency, :supporterName, :supporterEmail, :now, :attributedHouseholdId)
                 """.trimIndent(),
             ).param("id", id)
             .param("organizationId", organizationId)
@@ -99,6 +124,7 @@ class OrderRepository(
             .param("supporterName", supporterName)
             .param("supporterEmail", supporterEmail)
             .param("now", Timestamp.from(now))
+            .param("attributedHouseholdId", attributedHouseholdId)
             .update()
         return Order(
             id,
@@ -114,6 +140,7 @@ class OrderRepository(
             null,
             null,
             now,
+            attributedHouseholdId = attributedHouseholdId,
         )
     }
 
@@ -223,5 +250,6 @@ class OrderRepository(
             refundedAt = rs.getTimestamp("refunded_at")?.toInstant(),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             paymentSource = PaymentSource.valueOf(rs.getString("payment_source")),
+            attributedHouseholdId = rs.getObject("attributed_household_id", UUID::class.java),
         )
 }

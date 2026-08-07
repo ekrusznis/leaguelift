@@ -35,6 +35,9 @@ data class OrderSummary(
     val orderNumber: String,
     val orderedAt: LocalDate,
     val status: String,
+    /** Phase 24 slice 24.3: only set for a household-attributed athlete-storefront order with a real family_credit_grant. */
+    val creditGrantedMinor: Long? = null,
+    val creditStatus: String? = null,
 )
 
 data class ActivityItem(

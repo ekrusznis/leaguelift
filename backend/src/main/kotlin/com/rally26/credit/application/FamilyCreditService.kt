@@ -83,12 +83,33 @@ class FamilyCreditService(
         contributionId: UUID,
         contributionAmountMinor: Long,
         currency: String,
+    ): FamilyCreditGrant =
+        createGrant(organizationId, householdId, CreditSourceType.CAMPAIGN_ATTRIBUTION, contributionId, contributionAmountMinor, currency)
+
+    /** Called from `OrderService.confirmFromWebhook` only when the order has a real `attributedHouseholdId` (Phase 24 slice 24.3 — set only for orders placed through a published athlete storefront). */
+    @Transactional
+    fun grantForStorefrontOrder(
+        organizationId: UUID,
+        householdId: UUID,
+        orderId: UUID,
+        orderAmountMinor: Long,
+        currency: String,
+    ): FamilyCreditGrant =
+        createGrant(organizationId, householdId, CreditSourceType.STOREFRONT_ATTRIBUTION, orderId, orderAmountMinor, currency)
+
+    private fun createGrant(
+        organizationId: UUID,
+        householdId: UUID,
+        sourceType: CreditSourceType,
+        sourceId: UUID,
+        saleAmountMinor: Long,
+        currency: String,
     ): FamilyCreditGrant {
         val settings = settingsRepository.getOrCreateDefault(organizationId)
-        val amountMinor = (contributionAmountMinor * settings.defaultCreditPercent) / 10_000
+        val amountMinor = (saleAmountMinor * settings.defaultCreditPercent) / 10_000
         if (amountMinor <= 0) {
             // A real but zero-value grant would just be noise — nothing to record.
-            error("Computed credit amount for contribution $contributionId was zero or negative; caller should not have invoked this")
+            error("Computed credit amount for $sourceType $sourceId was zero or negative; caller should not have invoked this")
         }
         val expiresAt =
             if (settings.expirationPolicy == CreditExpirationPolicy.EXPIRES) {
@@ -103,13 +124,19 @@ class FamilyCreditService(
                 amountMinor,
                 currency,
                 FamilyCreditGrantStatus.AVAILABLE,
-                CreditSourceType.CAMPAIGN_ATTRIBUTION,
-                contributionId,
+                sourceType,
+                sourceId,
                 expiresAt,
             )
         auditService.record(null, organizationId, "family_credit.granted", "family_credit_grant", grant.id)
         return grant
     }
+
+    /** Phase 24 slice 24.3 — used by the guardian dashboard's Recent Orders card to show one order's own credit state/amount, if any. Caller (`ParentDashboardService`) already gates household access; this is a narrow, order-scoped lookup, not a new authorization surface. */
+    fun findGrantForOrder(
+        organizationId: UUID,
+        orderId: UUID,
+    ) = grantRepository.findBySource(organizationId, CreditSourceType.STOREFRONT_ATTRIBUTION, orderId)
 
     /** Guardian-or-staff read access — same household-capability check as fee viewing. */
     fun getBalance(
@@ -312,10 +339,23 @@ class FamilyCreditService(
     fun reverseForRefundedContribution(
         organizationId: UUID,
         contributionId: UUID,
+    ) = reverseGrant(organizationId, CreditSourceType.CAMPAIGN_ATTRIBUTION, contributionId, "contribution")
+
+    /** Called from `OrderService.refund` only when the order has a real `attributedHouseholdId`. Revokes only the remaining, unapplied portion — never rewrites an already-applied grant. */
+    fun reverseForRefundedOrder(
+        organizationId: UUID,
+        orderId: UUID,
+    ) = reverseGrant(organizationId, CreditSourceType.STOREFRONT_ATTRIBUTION, orderId, "order")
+
+    private fun reverseGrant(
+        organizationId: UUID,
+        sourceType: CreditSourceType,
+        sourceId: UUID,
+        entityType: String,
     ) {
-        val rows = grantRepository.revokeRemainingBySource(organizationId, CreditSourceType.CAMPAIGN_ATTRIBUTION, contributionId)
+        val rows = grantRepository.revokeRemainingBySource(organizationId, sourceType, sourceId)
         if (rows > 0) {
-            auditService.record(null, organizationId, "family_credit.revoked", "contribution", contributionId)
+            auditService.record(null, organizationId, "family_credit.revoked", entityType, sourceId)
         }
     }
 }

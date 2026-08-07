@@ -175,6 +175,25 @@ class FamilyCreditGrantRepository(
             .param("organizationId", organizationId)
             .update()
 
+    /** Phase 24 slice 24.3 — the guardian dashboard's real Recent Orders card looks up a single order's own grant, if any, by exact source. */
+    fun findBySource(
+        organizationId: UUID,
+        sourceType: CreditSourceType,
+        sourceId: UUID,
+    ): FamilyCreditGrant? =
+        jdbcClient
+            .sql(
+                """
+                select $COLUMNS from family_credit_grant
+                where organization_id = :organizationId and source_type = :sourceType and source_id = :sourceId
+                """.trimIndent(),
+            ).param("organizationId", organizationId)
+            .param("sourceType", sourceType.name)
+            .param("sourceId", sourceId)
+            .query(::mapRow)
+            .optional()
+            .orElse(null)
+
     /** Revokes the remaining (unapplied) balance of every grant sourced from a specific contribution — used when that contribution is refunded. */
     fun revokeRemainingBySource(
         organizationId: UUID,

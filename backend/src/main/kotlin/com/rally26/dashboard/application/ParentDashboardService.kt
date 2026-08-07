@@ -27,11 +27,19 @@ import com.rally26.fundraising.persistence.ContributionRepository
 import com.rally26.household.domain.Household
 import com.rally26.household.persistence.HouseholdRepository
 import com.rally26.membership.persistence.MembershipRepository
+import com.rally26.order.persistence.FulfillmentRepository
+import com.rally26.order.persistence.OrderItemRepository
+import com.rally26.order.persistence.OrderRepository
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.store.persistence.ProductRepository
+import com.rally26.store.persistence.ProductVariantRepository
 import com.rally26.team.persistence.TeamRepository
 import org.springframework.stereotype.Service
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.UUID
+
+private const val RECENT_ORDER_LIMIT = 25
 
 private val OUTSTANDING_STATUSES = setOf(FeeAssignmentStatus.OPEN, FeeAssignmentStatus.PARTIALLY_PAID)
 private const val FEE_ASSIGNMENT_LIMIT = 50
@@ -64,6 +72,11 @@ class ParentDashboardService(
     private val eventService: EventService,
     private val dashboardEventMapper: DashboardEventMapper,
     private val familyCreditService: FamilyCreditService,
+    private val orderRepository: OrderRepository,
+    private val orderItemRepository: OrderItemRepository,
+    private val fulfillmentRepository: FulfillmentRepository,
+    private val productVariantRepository: ProductVariantRepository,
+    private val productRepository: ProductRepository,
 ) {
     fun getOverview(
         organizationId: UUID,
@@ -163,13 +176,33 @@ class ParentDashboardService(
             }
     }
 
+    /** Phase 24 slice 24.3: real data — only orders placed through a *published athlete storefront* are ever household-attributed (a regular authenticated Swag Shop order never is), so this is naturally scoped to storefront sales, not every order this household has ever placed. */
     fun getRecentOrders(
         organizationId: UUID,
         householdId: UUID,
         currentUser: CurrentUser,
     ): List<OrderSummary> {
         requireHousehold(organizationId, householdId, currentUser)
-        return listOf(OrderSummary("ord-1", "Riverside Soccer Hoodie", "#LL-78231", LocalDate.now().minusDays(10), "Shipped"))
+        return orderRepository.findByAttributedHousehold(organizationId, householdId, offset = 0, limit = RECENT_ORDER_LIMIT).map { order ->
+            val items = orderItemRepository.findByOrder(order.id)
+            val productName =
+                items.firstOrNull()?.let { item ->
+                    val variant = productVariantRepository.findById(item.productVariantId, organizationId)
+                    val product = variant?.let { productRepository.findById(it.productId, organizationId) }
+                    listOfNotNull(product?.name, variant?.label).joinToString(" - ").ifBlank { "Swag Shop order" }
+                } ?: "Swag Shop order"
+            val fulfillment = fulfillmentRepository.findByOrder(order.id)
+            val grant = familyCreditService.findGrantForOrder(organizationId, order.id)
+            OrderSummary(
+                id = order.id.toString(),
+                productName = productName,
+                orderNumber = "#${order.id.toString().take(8).uppercase()}",
+                orderedAt = LocalDate.ofInstant(order.confirmedAt ?: order.createdAt, ZoneOffset.UTC),
+                status = fulfillment?.status?.name ?: order.status.name,
+                creditGrantedMinor = grant?.amountMinor,
+                creditStatus = grant?.status?.name,
+            )
+        }
     }
 
     fun getRequiredActions(

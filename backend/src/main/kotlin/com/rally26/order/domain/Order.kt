@@ -32,4 +32,6 @@ data class Order(
     val refundedAt: Instant?,
     val createdAt: Instant,
     val paymentSource: PaymentSource = PaymentSource.STRIPE,
+    /** Phase 24 slice 24.3: set only for an order placed through a published athlete storefront, resolved and snapshotted before Stripe is ever called (mirrors Contribution.attributedHouseholdId). Null for every other order. */
+    val attributedHouseholdId: UUID? = null,
 )

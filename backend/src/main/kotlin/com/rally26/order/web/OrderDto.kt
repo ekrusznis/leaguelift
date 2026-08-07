@@ -47,6 +47,17 @@ data class CreateSwagShopOrderRequest(
     val personalizationLogoSize: SwagLogoSize? = null,
 )
 
+/** Phase 24 slice 24.3: public, unauthenticated athlete-storefront checkout — no successUrl/cancelUrl from the caller (fixed to the storefront's own page, see OrderService.createAthleteStorefrontCheckoutSession), one item only, same personalization shape as CreateSwagShopOrderRequest. */
+data class CreateAthleteStorefrontOrderRequest(
+    @field:NotNull val productVariantId: UUID,
+    @field:Size(max = 60) val personalizationName: String? = null,
+    @field:Size(max = 20) val personalizationNumber: String? = null,
+    val personalizationPlacement: PersonalizationPlacement? = null,
+    val personalizationLogoSize: SwagLogoSize? = null,
+    @field:Size(max = 120) val supporterName: String? = null,
+    @field:Email @field:Size(max = 254) val supporterEmail: String? = null,
+)
+
 data class OrderCheckoutResponse(
     val orderId: UUID,
     val checkoutUrl: String,

@@ -10,6 +10,7 @@ import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.config.FrontendProperties
+import com.rally26.credit.application.FamilyCreditService
 import com.rally26.integration.printify.infra.PrintifyOrderClient
 import com.rally26.integration.printify.infra.PrintifyOrderLineItem
 import com.rally26.ledger.application.LedgerService
@@ -35,6 +36,7 @@ import com.rally26.order.persistence.OrderItemRepository
 import com.rally26.order.persistence.OrderRepository
 import com.rally26.outbox.application.OutboxWriter
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.store.application.AthleteStorefrontService
 import com.rally26.store.application.SwagDesignCompositor
 import com.rally26.store.domain.CatalogSource
 import com.rally26.store.domain.ProductStatus
@@ -109,6 +111,8 @@ class OrderService(
     private val ledgerService: LedgerService,
     private val outboxWriter: OutboxWriter,
     private val objectMapper: ObjectMapper,
+    private val athleteStorefrontService: AthleteStorefrontService,
+    private val familyCreditService: FamilyCreditService,
 ) {
     @Transactional
     fun createCheckoutSession(
@@ -300,6 +304,127 @@ class OrderService(
     }
 
     /**
+     * Phase 24 slice 24.3 (DESIGN-DOC.md section 14.1G): public, unauthenticated
+     * checkout through a published athlete storefront — a supporter with the link
+     * (e.g. a grandparent) buys for one specific, fixed athlete, no Rally26 account
+     * needed. Unlike `createSwagShopCheckoutSession`, household attribution is
+     * resolved directly from the storefront's own `participantId` (never from
+     * caller-supplied input) and snapshotted onto the order so `confirmFromWebhook`
+     * can grant a Phase 23 family credit once payment is confirmed.
+     */
+    @Transactional
+    fun createAthleteStorefrontCheckoutSession(
+        storefrontSlug: String,
+        productVariantId: UUID,
+        personalizationName: String?,
+        personalizationNumber: String?,
+        personalizationPlacement: PersonalizationPlacement?,
+        personalizationLogoSize: SwagLogoSize?,
+        supporterName: String?,
+        supporterEmail: String?,
+    ): OrderCheckout {
+        val public = athleteStorefrontService.getPublic(storefrontSlug)
+        val storefront = public.storefront
+        val approvedProductIds = athleteStorefrontService.getPublicProducts(storefront).map { it.first.id }.toSet()
+
+        val variant =
+            productVariantRepository
+                .findById(productVariantId, storefront.organizationId)
+                ?.takeIf { it.isActive }
+                ?: throw NotFoundException("PRODUCT_VARIANT_NOT_FOUND", "The selected apparel type could not be found.")
+        val product =
+            productRepository
+                .findById(variant.productId, storefront.organizationId)
+                ?.takeIf { it.status == ProductStatus.ACTIVE }
+                ?: throw NotFoundException("PRODUCT_NOT_FOUND", "The selected apparel type could not be found.")
+        if (product.id !in approvedProductIds) {
+            throw ValidationException("This item isn't offered on this storefront.")
+        }
+        val store =
+            storeRepository.findById(storefront.storeId, storefront.organizationId)
+                ?: throw NotFoundException("STORE_NOT_FOUND", "The Swag Shop could not be found.")
+        if (store.status != StoreStatus.ACTIVE) {
+            throw ValidationException("This Swag Shop isn't currently open for orders.")
+        }
+
+        val isPersonalized = personalizationName != null || personalizationNumber != null || personalizationPlacement != null
+        if (isPersonalized) {
+            if (product.swagLogoMediaAssetId == null) {
+                throw ValidationException("This apparel type isn't set up for personalization yet — ask staff to add the team logo.")
+            }
+            if (variant.printAreaWidthPx == null || variant.printAreaHeightPx == null) {
+                throw ValidationException("This apparel type is missing print-area dimensions — ask staff to re-create the variant.")
+            }
+            if (personalizationPlacement == PersonalizationPlacement.BACK &&
+                (variant.backPrintAreaWidthPx == null || variant.backPrintAreaHeightPx == null)
+            ) {
+                throw ValidationException("This apparel type doesn't support back placement yet — ask staff to re-create the variant.")
+            }
+        }
+
+        val participant =
+            participantRepository.findById(storefront.participantId, storefront.organizationId)
+                ?: error("Athlete storefront ${storefront.id} references a missing participant ${storefront.participantId}")
+
+        return try {
+            val order =
+                orderRepository.insertPending(
+                    storefront.organizationId,
+                    store.id,
+                    variant.currency,
+                    supporterName,
+                    supporterEmail,
+                    attributedHouseholdId = participant.householdId,
+                )
+            orderItemRepository.insert(
+                orderId = order.id,
+                productVariantId = variant.id,
+                quantity = 1,
+                unitPriceMinor = variant.priceMinor,
+                unitCostMinor = variant.costMinor,
+                participantId = participant.id,
+                personalizationName = personalizationName,
+                personalizationNumber = personalizationNumber,
+                personalizationPlacement = personalizationPlacement,
+                personalizationLogoSize = personalizationLogoSize,
+            )
+            val lineItems =
+                listOf(
+                    OrderCheckoutLineItem(
+                        name = "${product.name} - ${variant.label}",
+                        quantity = 1,
+                        unitPriceMinor = variant.priceMinor,
+                        currency = variant.currency,
+                    ),
+                )
+            val successUrl =
+                @Suppress("ktlint:standard:max-line-length")
+                "${frontendProperties.baseUrl}/swag-shop/athlete/$storefrontSlug?orderId=${order.id}&status=success"
+            val cancelUrl = "${frontendProperties.baseUrl}/swag-shop/athlete/$storefrontSlug?status=canceled"
+            val session = stripeOrderCheckoutClient.createOrderCheckoutSession(order.id, lineItems, successUrl, cancelUrl)
+            orderRepository.attachStripeSession(order.id, session.sessionId)
+            OrderCheckout(order.id, session.checkoutUrl)
+        } catch (e: StripeException) {
+            log.warn("Stripe athlete storefront checkout session creation failed: {}", e.message, e)
+            throw ServiceUnavailableException(
+                "ORDER_PROVIDER_UNAVAILABLE",
+                "Payments provider is not available right now. If this is local/staging, confirm STRIPE_SECRET_KEY is set.",
+            )
+        }
+    }
+
+    fun getAthleteStorefrontOrderStatus(
+        storefrontSlug: String,
+        orderId: UUID,
+    ): Order {
+        val storefront = athleteStorefrontService.getPublic(storefrontSlug).storefront
+        return orderRepository
+            .findById(orderId, storefront.organizationId)
+            ?.takeIf { it.storeId == storefront.storeId }
+            ?: throw NotFoundException("ORDER_NOT_FOUND", "The order could not be found.")
+    }
+
+    /**
      * A guardian may order for their own household's participant (real relationship
      * check, or org owner/admin acting on any household — mirrors
      * EventRsvpService.resolveSource's deliberate avoidance of the broader
@@ -342,8 +467,8 @@ class OrderService(
             val items = orderItemRepository.findByOrder(order.id)
             ledgerService.recordConfirmedOrder(order.copy(status = OrderStatus.CONFIRMED), items)
             createInitialFulfillment(order.id, order.organizationId)
+            val totalMinor = items.sumOf { it.unitPriceMinor * it.quantity }
             if (order.supporterEmail != null) {
-                val totalMinor = items.sumOf { it.unitPriceMinor * it.quantity }
                 outboxWriter.write(
                     aggregateType = "order",
                     aggregateId = order.id,
@@ -353,6 +478,19 @@ class OrderService(
                         objectMapper.writeValueAsString(
                             OrderConfirmedPayload(order.supporterEmail, order.supporterName, totalMinor, order.currency),
                         ),
+                )
+            }
+            // Phase 24 slice 24.3: only set for an order placed through a published
+            // athlete storefront — a regular authenticated Swag Shop order never
+            // grants credit (§13's "storefront revenue model" scopes credit-granting
+            // specifically to storefront-attributed swag sales).
+            if (order.attributedHouseholdId != null) {
+                familyCreditService.grantForStorefrontOrder(
+                    order.organizationId,
+                    order.attributedHouseholdId,
+                    order.id,
+                    totalMinor,
+                    order.currency,
                 )
             }
         }
@@ -439,6 +577,9 @@ class OrderService(
         orderRepository.markRefunded(order.id)
         ledgerService.recordRefund(organizationId, LedgerSourceType.ORDER, order.id, grossAmountMinor, order.currency, stripeRefundId)
         auditService.record(currentUser.userId, organizationId, "order.refunded", "order", order.id)
+        if (order.attributedHouseholdId != null) {
+            familyCreditService.reverseForRefundedOrder(organizationId, order.id)
+        }
         return orderRepository.findById(order.id, organizationId)!!
     }
 

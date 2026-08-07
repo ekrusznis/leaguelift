@@ -63,3 +63,16 @@ export const manualProductVariantSchema = z.object({
 	isActive: z.boolean().default(true),
 }).refine((value) => value.priceMinor >= value.costMinor, { path: ["priceMinor"], message: "Price cannot be below cost." });
 export type ManualProductVariantFormValues = z.infer<typeof manualProductVariantSchema>;
+
+export const createAthleteStorefrontSchema = z.object({
+	teamId: z.string().min(1, "Choose a team."),
+	participantId: z.string().min(1, "Choose an athlete."),
+	storeId: z.string().min(1, "Choose a Swag Shop."),
+	productIds: z.array(z.string()).min(1, "Select at least one product."),
+	slug: z
+		.string()
+		.trim()
+		.min(1, "Slug is required.")
+		.regex(/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/, "Use lowercase letters, numbers, and hyphens only."),
+});
+export type CreateAthleteStorefrontFormValues = z.infer<typeof createAthleteStorefrontSchema>;

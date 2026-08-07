@@ -20,6 +20,7 @@ import {
 	useParentFamilySchedule,
 	useParentOutstandingBalance,
 	useParentOverview,
+	useParentRecentOrders,
 } from "../api";
 import {
 	ShieldIcon as GuardianIcon,
@@ -37,6 +38,7 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 	const familySchedule = useParentFamilySchedule(organizationId, householdId);
 	const outstandingBalance = useParentOutstandingBalance(organizationId, householdId);
 	const activeFundraisers = useParentActiveFundraisers(organizationId, householdId);
+	const recentOrders = useParentRecentOrders(organizationId, householdId);
 
 	// Nav/widget visibility are registries filtered by real capabilities for this
 	// household (DESIGN-DOC.md section 10.2/10.3) — not hardcoded arrays. Parent
@@ -190,6 +192,33 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 												<ProgressBar percent={(fundraiser.raisedMinor / fundraiser.goalMinor) * 100} />
 											</div>
 											<FundraiserAttributionToggle organizationId={organizationId} householdId={householdId} campaignId={fundraiser.campaignId} campaignSlug={fundraiser.slug} />
+										</li>
+									))}
+								</ul>
+							)}
+						</CardQuery>
+					</DashCard>
+				)}
+
+				{visibleWidgets.has("parent.orders") && (
+					<DashCard id="parent-orders" title="Recent Orders">
+						<CardQuery query={recentOrders} loadingLabel="Loading orders…" isEmpty={(items) => items.length === 0} emptyTitle="No storefront orders yet">
+							{(items) => (
+								<ul className="flex flex-col gap-3">
+									{items.map((order) => (
+										<li key={order.id} className="flex items-center justify-between gap-3 border-b border-slate-200 pb-3 last:border-0 last:pb-0">
+											<div className="min-w-0 flex-1">
+												<p className="truncate font-medium text-navy-900">{order.productName}</p>
+												<p className="text-xs text-slate-500">{order.orderNumber} · {order.orderedAt}</p>
+											</div>
+											<div className="shrink-0 text-right">
+												<Pill tone={order.status === "DELIVERED" ? "success" : order.status === "NEEDS_ATTENTION" || order.status === "CANCELED" ? "error" : "neutral"}>{order.status}</Pill>
+												{order.creditGrantedMinor != null && (
+													<p className="mt-1 text-xs text-slate-500">
+														{order.creditStatus === "REVOKED" ? "Credit reversed" : `+${formatMoneyMinorUnits(order.creditGrantedMinor, "USD")} credit`}
+													</p>
+												)}
+											</div>
 										</li>
 									))}
 								</ul>

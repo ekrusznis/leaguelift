@@ -90,7 +90,13 @@ info:
     and production fail-closed guards (ADR-054). No provider-specific production client
     or credential activation is claimed in this slice. Phase 24 slice 1 adds reusable
     organization/team Swag Brand Assets, product snapshot assignment, and a restore-to-draft
-    archival lifecycle that hides archived products by default (ADR-067).
+    archival lifecycle that hides archived products by default (ADR-067). Phase 24 slice 24.3
+    adds a public, unauthenticated per-athlete Swag Shop storefront (a stable slug/QR-code page
+    scoped to exactly one participant at publish time), a supporter checkout with a
+    server-computed first-name-plus-last-initial privacy label so the real participant last name
+    is never serialized, direct participant-to-household order attribution (no attribution-code
+    indirection), family-credit grant/reversal wiring on order confirm/refund, and a guardian
+    dashboard recent-orders card (ADR-069).
   version: "0.28.0"
 servers:
 - url: /api/v1
@@ -115,6 +121,7 @@ tags:
 - name: stores
 - name: swag-brand-assets
 - name: orders
+- name: athlete-storefronts
 - name: sponsorships
 - name: dashboard
 - name: outbox-admin
@@ -4786,6 +4793,350 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # --- Public Athlete Storefronts (Phase 24 slice 24.3, ADR-069) ---
+
+  /organizations/{organizationId}/athlete-storefronts:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [athlete-storefronts]
+      summary: List an organization's per-athlete storefronts
+      operationId: listAthleteStorefronts
+      parameters:
+      - $ref: "#/components/parameters/PageParam"
+      - $ref: "#/components/parameters/SizeParam"
+      responses:
+        "200":
+          description: Paginated list of athlete storefronts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthleteStorefrontPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [athlete-storefronts]
+      summary: Create a per-athlete storefront
+      description: >
+        Team-scoped coach (TEAM_STORE_MANAGE) when teamId is given, otherwise
+        org manager (OWNER/ADMINISTRATOR). The participant must be on the
+        given team's active roster when teamId is specified, the store must
+        be ACTIVE, and every selected product must belong to that store and
+        be ACTIVE. Created in DRAFT status — not publicly visible (via GET
+        /public/athlete-storefronts/{slug}) until published.
+      operationId: createAthleteStorefront
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAthleteStorefrontRequest"
+      responses:
+        "201":
+          description: Athlete storefront created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthleteStorefrontResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The requested slug is already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /organizations/{organizationId}/athlete-storefronts/share-link-qr:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    post:
+      tags: [athlete-storefronts]
+      summary: Generate a shareable QR code for a storefront's public URL
+      description: >
+        Stateless — no persistence, no click-through tracking. The frontend
+        supplies its own public storefront page URL
+        (${origin}/swag-shop/athlete/${slug}); this endpoint just encodes it
+        as a QR code image. Any active org member.
+      operationId: buildAthleteStorefrontShareLinkQr
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuildAthleteStorefrontShareLinkRequest"
+      responses:
+        "200":
+          description: QR code encoding the given URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShareLinkQrResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /organizations/{organizationId}/athlete-storefronts/{storefrontId}:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/AthleteStorefrontIdParam"
+    get:
+      tags: [athlete-storefronts]
+      summary: Get an athlete storefront by ID
+      operationId: getAthleteStorefront
+      responses:
+        "200":
+          description: Athlete storefront
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthleteStorefrontResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/athlete-storefronts/{storefrontId}/products:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/AthleteStorefrontIdParam"
+    get:
+      tags: [athlete-storefronts]
+      summary: List the product IDs approved for a storefront
+      operationId: listAthleteStorefrontProductIds
+      responses:
+        "200":
+          description: Approved product IDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [athlete-storefronts]
+      summary: Replace a storefront's approved product selection
+      operationId: updateAthleteStorefrontProducts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAthleteStorefrontProductsRequest"
+      responses:
+        "200":
+          description: Athlete storefront with the updated product selection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthleteStorefrontResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/athlete-storefronts/{storefrontId}/publish:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/AthleteStorefrontIdParam"
+    patch:
+      tags: [athlete-storefronts]
+      summary: Publish an athlete storefront
+      description: Transitions a DRAFT storefront to PUBLISHED and makes it visible via GET /public/athlete-storefronts/{slug}. Rejected
+        (400) if the storefront is ARCHIVED or has no approved products selected. A no-op (200) if already PUBLISHED.
+      operationId: publishAthleteStorefront
+      responses:
+        "200":
+          description: Published athlete storefront
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthleteStorefrontResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/athlete-storefronts/{storefrontId}/unpublish:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/AthleteStorefrontIdParam"
+    patch:
+      tags: [athlete-storefronts]
+      summary: Unpublish an athlete storefront back to DRAFT
+      description: Rejected (400) if the storefront is ARCHIVED. A no-op (200) if already DRAFT.
+      operationId: unpublishAthleteStorefront
+      responses:
+        "200":
+          description: Unpublished (DRAFT) athlete storefront
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthleteStorefrontResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/athlete-storefronts/{storefrontId}/archive:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/AthleteStorefrontIdParam"
+    patch:
+      tags: [athlete-storefronts]
+      summary: Archive an athlete storefront
+      description: Terminal status. A no-op (200) if already ARCHIVED.
+      operationId: archiveAthleteStorefront
+      responses:
+        "200":
+          description: Archived athlete storefront
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthleteStorefrontResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /public/athlete-storefronts/{slug}:
+    get:
+      tags: [athlete-storefronts]
+      summary: Get a published athlete storefront's public page by slug
+      description: >
+        Public, unauthenticated. Never distinguishes "doesn't exist" from
+        "not published" (both 404), matching GET /public/stores/{slug}.
+        Combines org/team names, the athlete's public-safe label
+        ("Maya J." — first name plus last initial only, computed
+        server-side; the real last name is never serialized) and the
+        storefront's approved, still-ACTIVE products/variants into one
+        response.
+      operationId: getPublicAthleteStorefront
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Published athlete storefront
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AthleteStorefrontPublicResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /public/athlete-storefronts/{slug}/orders:
+    parameters:
+    - name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      tags: [athlete-storefronts]
+      summary: Start Stripe Checkout for a public athlete-storefront order
+      description: >
+        Public, unauthenticated — a supporter buying for a specific athlete
+        is never a Rally26 user. Single item only, same optional
+        personalization shape as POST
+        /organizations/{organizationId}/swag-shop/orders — no
+        successUrl/cancelUrl from the caller (fixed to this storefront's own
+        page). On confirmation the order is attributed directly to the
+        athlete's household (participantId -> household.id, no attribution
+        code) and grants a family credit.
+      operationId: createAthleteStorefrontOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAthleteStorefrontOrderRequest"
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderCheckoutResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: The payments provider is unavailable (e.g. no Stripe test-mode key configured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /public/athlete-storefronts/{slug}/orders/{orderId}:
+    parameters:
+    - name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: orderId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags: [athlete-storefronts]
+      summary: Poll an athlete-storefront order's status
+      description: >
+        Public, unauthenticated — used by the browser's Stripe Checkout
+        return page. Read-only: reflects what the Stripe webhook has already
+        recorded.
+      operationId: getAthleteStorefrontOrderStatus
+      responses:
+        "200":
+          description: Order status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderStatusResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   # --- Sponsorships (Phase 6 slice 1, ADR-018) ---
 
   /organizations/{organizationId}/sponsorship-packages:
@@ -8671,6 +9022,13 @@ components:
       schema:
         type: string
         format: uuid
+    AthleteStorefrontIdParam:
+      name: storefrontId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     PageParam:
       name: page
       in: query
@@ -11499,6 +11857,232 @@ components:
         confirmedAt:
           type: string
           format: date-time
+          nullable: true
+
+    AthleteStorefrontStatus:
+      type: string
+      enum: [DRAFT, PUBLISHED, ARCHIVED]
+
+    CreateAthleteStorefrontRequest:
+      type: object
+      required: [participantId, storeId, productIds, slug]
+      properties:
+        participantId:
+          type: string
+          format: uuid
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional team attribution. When given, the participant must be on this team's active roster.
+        storeId:
+          type: string
+          format: uuid
+        productIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: uuid
+          description: Explicit approved-product selection — not "every active store product."
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 63
+          pattern: "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
+          description: Lowercase alphanumeric with optional hyphens. Globally unique.
+
+    UpdateAthleteStorefrontProductsRequest:
+      type: object
+      required: [productIds]
+      properties:
+        productIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            format: uuid
+
+    BuildAthleteStorefrontShareLinkRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          maxLength: 2000
+
+    ShareLinkQrResponse:
+      type: object
+      required: [qrDataUri]
+      properties:
+        qrDataUri:
+          type: string
+          description: A shareable QR code image (data:image/png;base64,... ready to render in an <img src>) encoding the given URL.
+            Nothing persisted, no click-through tracking.
+
+    AthleteStorefrontResponse:
+      type: object
+      required: [id, organizationId, participantId, storeId, slug, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        participantId:
+          type: string
+          format: uuid
+        teamId:
+          type: string
+          format: uuid
+          nullable: true
+        storeId:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        status:
+          $ref: "#/components/schemas/AthleteStorefrontStatus"
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AthleteStorefrontPage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AthleteStorefrontResponse"
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+
+    AthleteStorefrontProductVariantResponse:
+      type: object
+      required: [id, label, priceMinor, currency]
+      description: Buyer-facing product/variant shape — deliberately fuller than the generic PublicProductVariantResponse (adds
+        print-area dimensions, mockup URLs) so the 24.2 SwagPersonalizationPreview component works unmodified on a public
+        storefront page.
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        priceMinor:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        printAreaWidthPx:
+          type: integer
+          nullable: true
+        printAreaHeightPx:
+          type: integer
+          nullable: true
+        backPrintAreaWidthPx:
+          type: integer
+          nullable: true
+          description: Real Printify "back" placeholder width, so BACK-placed personalization prints on the garment's actual back. Null
+            if the blueprint has no back placeholder or the variant predates this capability.
+        backPrintAreaHeightPx:
+          type: integer
+          nullable: true
+        mockupFrontUrl:
+          type: string
+          nullable: true
+        mockupBackUrl:
+          type: string
+          nullable: true
+
+    AthleteStorefrontProductResponse:
+      type: object
+      required: [id, name, hasSwagLogo, variants]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        hasSwagLogo:
+          type: boolean
+        logoPreviewUrl:
+          type: string
+          nullable: true
+          description: Short-lived signed preview of the snapshotted logo, for the buyer's live-preview overlay. Null when no logo is
+            assigned.
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/AthleteStorefrontProductVariantResponse"
+
+    AthleteStorefrontPublicResponse:
+      type: object
+      required: [slug, organizationName, athletePublicLabel, products]
+      properties:
+        slug:
+          type: string
+        organizationName:
+          type: string
+        teamName:
+          type: string
+          nullable: true
+        athletePublicLabel:
+          type: string
+          description: First name plus last initial only (e.g. "Maya J."), computed server-side. The real participant last name is
+            never serialized.
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/AthleteStorefrontProductResponse"
+
+    CreateAthleteStorefrontOrderRequest:
+      type: object
+      required: [productVariantId]
+      description: Public, unauthenticated athlete-storefront checkout — no successUrl/cancelUrl from the caller (fixed to the
+        storefront's own page), one item only, same personalization shape as CreateSwagShopOrderRequest.
+      properties:
+        productVariantId:
+          type: string
+          format: uuid
+        personalizationName:
+          type: string
+          maxLength: 60
+          nullable: true
+        personalizationNumber:
+          type: string
+          maxLength: 20
+          nullable: true
+        personalizationPlacement:
+          allOf: [{$ref: "#/components/schemas/PersonalizationPlacement"}]
+          nullable: true
+        personalizationLogoSize:
+          allOf: [{$ref: "#/components/schemas/SwagLogoSize"}]
+          nullable: true
+        supporterName:
+          type: string
+          maxLength: 120
+          nullable: true
+        supporterEmail:
+          type: string
+          format: email
+          maxLength: 254
           nullable: true
 
     ShippingAddressResponse:
