@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/states/EmptyState";
@@ -7,7 +7,8 @@ import { LoadingState } from "../../components/states/LoadingState";
 import { appPaths } from "../../routes/appPaths";
 import { EventTemplatePanel } from "./EventTemplatePanel";
 import { deriveTemplateTimes } from "./eventTemplateTiming";
-import { downloadEventCalendar, useCreateEvent, useEvents, useEventTemplates, type EventScope } from "./api";
+import { formatEventAllDayDate, formatEventDateTime } from "./formatEventDateTime";
+import { downloadEventCalendar, useCreateEvent, useEvents, useEventTemplates, useEventTimezoneDefault, type EventScope } from "./api";
 import type { CreateEventInput, EventTemplate, EventType, EventVisibility, Rally26Event } from "./types";
 
 function formatDateTime(value: string | null, timezone: string) {
@@ -150,8 +151,13 @@ export function EventListPanel({
 											<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusClasses(event.status)}`}>{event.status}</span>
 											{event.sourceType !== "MANUAL" && <span className="rounded-full bg-info-50 px-2 py-0.5 text-xs font-medium text-info-700">Imported</span>}
 										</div>
+										<p className="mt-0.5 text-xs text-slate-gray/80">
+											{event.allDayDate
+												? `${formatEventAllDayDate(event.allDayDate)} (all day)`
+												: (formatEventDateTime(event.startAt, event.timezone) ?? "To be determined")}
+										</p>
 										<p className="mt-1 text-sm text-slate-gray">
-											{formatDateTime(event.startAt, event.timezone)}
+											{event.allDayDate ? "All day" : formatDateTime(event.startAt, event.timezone)}
 											{event.arrivalAt ? ` · Arrive ${formatDateTime(event.arrivalAt, event.timezone)}` : ""}
 										</p>
 										<p className="text-sm text-slate-gray">
@@ -177,6 +183,8 @@ export function EventListPanel({
 	);
 }
 
+// Known gap (ADR-071): converts using the BROWSER's local zone, ignoring whichever `timezone` value is
+// actually selected in the form below — deferred pending a JS timezone-aware date library.
 function toInstant(value: string) {
 	return value ? new Date(value).toISOString() : null;
 }
@@ -209,6 +217,8 @@ function CreateEventForm({
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [opponentName, setOpponentName] = useState("");
+	const [isAllDay, setIsAllDay] = useState(false);
+	const [allDayDate, setAllDayDate] = useState("");
 	const [startAt, setStartAt] = useState("");
 	const [endAt, setEndAt] = useState("");
 	const [arrivalAt, setArrivalAt] = useState("");
@@ -220,7 +230,21 @@ function CreateEventForm({
 	const [directionsNotes, setDirectionsNotes] = useState("");
 	const [visibility, setVisibility] = useState<EventVisibility>(scope.type === "organization" ? "ORGANIZATION" : "TEAM");
 	const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York");
+	const [timezoneTouched, setTimezoneTouched] = useState(false);
 	const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? null;
+
+	// Browser Intl above is only the last-resort fallback (ADR-071) — the resolved override-chain default,
+	// once it loads, takes over as long as the user hasn't already typed something else.
+	const timezoneDefault = useEventTimezoneDefault(
+		scope.organizationId,
+		scope.type === "team" ? scope.teamId : undefined,
+		scope.type === "tournament" ? scope.tournamentId : undefined,
+	);
+	useEffect(() => {
+		if (!timezoneTouched && timezoneDefault.data?.timezone) {
+			setTimezone(timezoneDefault.data.timezone);
+		}
+	}, [timezoneDefault.data?.timezone, timezoneTouched]);
 
 	function selectTemplate(templateId: string) {
 		setSelectedTemplateId(templateId);
@@ -230,6 +254,7 @@ function CreateEventForm({
 		setTitle(template.title ?? "");
 		setDescription(template.description ?? "");
 		setTimezone(template.timezone);
+		setTimezoneTouched(true);
 		setVenueName(template.venueName ?? "");
 		setAddress(template.address ?? "");
 		setArea(template.area ?? "");
@@ -246,17 +271,17 @@ function CreateEventForm({
 			className="rounded-xl border border-slate-gray/20 bg-ice-white p-4"
 			onSubmit={async (event) => {
 				event.preventDefault();
-				const startInstant = toInstant(startAt);
-				const derived = deriveTemplateTimes(startInstant, selectedTemplate);
+				const startInstant = isAllDay ? null : toInstant(startAt);
+				const derived = isAllDay ? { endAt: null, arrivalAt: null, meetingAt: null } : deriveTemplateTimes(startInstant, selectedTemplate);
 				await onSubmit({
 					eventType,
 					title: title.trim() || null,
 					description: description.trim() || null,
 					opponentName: opponentName.trim() || null,
 					startAt: startInstant,
-					endAt: toInstant(endAt) ?? derived.endAt,
-					arrivalAt: toInstant(arrivalAt) ?? derived.arrivalAt,
-					meetingAt: toInstant(meetingAt) ?? derived.meetingAt,
+					endAt: isAllDay ? null : (toInstant(endAt) ?? derived.endAt),
+					arrivalAt: isAllDay ? null : (toInstant(arrivalAt) ?? derived.arrivalAt),
+					meetingAt: isAllDay ? null : (toInstant(meetingAt) ?? derived.meetingAt),
 					timezone,
 					venueName: venueName.trim() || null,
 					address: address.trim() || null,
@@ -264,6 +289,7 @@ function CreateEventForm({
 					meetingPoint: meetingPoint.trim() || null,
 					directionsNotes: directionsNotes.trim() || null,
 					visibility,
+					allDayDate: isAllDay ? allDayDate || null : null,
 				});
 			}}
 		>
@@ -308,24 +334,51 @@ function CreateEventForm({
 				</label>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
 					Timezone
-					<input required value={timezone} onChange={(event) => setTimezone(event.target.value)} maxLength={100} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+					<input
+						required
+						value={timezone}
+						onChange={(event) => {
+							setTimezone(event.target.value);
+							setTimezoneTouched(true);
+						}}
+						maxLength={100}
+						className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+					/>
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
-					Start time
-					<input type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+				<label className="flex min-h-11 items-center gap-2 text-sm font-medium text-navy md:col-span-2">
+					<input
+						type="checkbox"
+						checked={isAllDay}
+						onChange={(event) => setIsAllDay(event.target.checked)}
+						className="h-4 w-4"
+					/>
+					All-day event
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
-					End time
-					<input type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
-					Arrival time
-					<input type="datetime-local" value={arrivalAt} onChange={(event) => setArrivalAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
-					Meeting time
-					<input type="datetime-local" value={meetingAt} onChange={(event) => setMeetingAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-				</label>
+				{isAllDay ? (
+					<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+						Date
+						<input type="date" value={allDayDate} onChange={(event) => setAllDayDate(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+					</label>
+				) : (
+					<>
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+							Start time
+							<input type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+						</label>
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+							End time
+							<input type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+						</label>
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+							Arrival time
+							<input type="datetime-local" value={arrivalAt} onChange={(event) => setArrivalAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+						</label>
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+							Meeting time
+							<input type="datetime-local" value={meetingAt} onChange={(event) => setMeetingAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+						</label>
+					</>
+				)}
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
 					Venue
 					<input value={venueName} onChange={(event) => setVenueName(event.target.value)} maxLength={200} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />

@@ -1017,6 +1017,28 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /organizations/{organizationId}/timezone-suggestion:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [organizations]
+      summary: Suggest an IANA timezone from the organization's persisted address (ADR-071)
+      description: >-
+        A static country/state heuristic, not a real geocoding call. The owner must still actively confirm it via
+        PATCH /organizations/{organizationId} — this endpoint never itself persists anything.
+      operationId: getTimezoneSuggestion
+      responses:
+        "200":
+          description: Timezone suggestion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimezoneSuggestionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   # --- Payouts (Stripe Connect Express onboarding only — ADR-005, Phase 2 remainder) ---
 
   /organizations/{organizationId}/payout-account:
@@ -1394,6 +1416,37 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /organizations/{organizationId}/teams/{teamId}/timezone:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/TeamIdParam"
+    put:
+      tags: [teams]
+      summary: Set or clear this team's timezone override (ADR-071)
+      description: A null timezone explicitly clears the override back to "inherit organization default."
+      operationId: updateTeamTimezone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTeamTimezoneRequest"
+      responses:
+        "200":
+          description: Updated team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   # --- Tournaments ---
 
   /organizations/{organizationId}/tournaments:
@@ -1500,6 +1553,37 @@ paths:
       responses:
         "204":
           description: Tournament archived
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /organizations/{organizationId}/tournaments/{tournamentId}/timezone:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/TournamentIdParam"
+    put:
+      tags: [tournaments]
+      summary: Set or clear this tournament's timezone override (ADR-071)
+      description: A null timezone explicitly clears the override back to "inherit organization default."
+      operationId: updateTournamentTimezone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTournamentTimezoneRequest"
+      responses:
+        "200":
+          description: Updated tournament
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -6965,6 +7049,40 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /organizations/{organizationId}/events/timezone-default:
+    get:
+      tags: [events]
+      summary: Resolve the create-event form's smart timezone default (Phase 24 slice 24.5, ADR-071)
+      description: >-
+        Team override -> tournament override -> organization default -> hard-coded fallback. Never used to
+        validate or snapshot an actual event — the browser's own timezone is a last-resort client-side fallback
+        if this call fails, never the sole source of truth.
+      operationId: getEventTimezoneDefault
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: teamId
+        in: query
+        required: false
+        schema: {type: string, format: uuid}
+      - name: tournamentId
+        in: query
+        required: false
+        schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: Resolved default timezone
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimezoneDefaultResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /organizations/{organizationId}/events/csv-import:
     post:
       tags: [events]
@@ -9617,6 +9735,29 @@ components:
         contactPhone:
           type: string
           maxLength: 40
+        addressLine1:
+          type: string
+          maxLength: 200
+        addressLine2:
+          type: string
+          maxLength: 200
+        addressCity:
+          type: string
+          maxLength: 100
+        addressState:
+          type: string
+          maxLength: 100
+        addressPostalCode:
+          type: string
+          maxLength: 20
+        addressCountry:
+          type: string
+          maxLength: 100
+        timezone:
+          type: string
+          description: >-
+            Phase 24 slice 24.5 (ADR-071): an IANA time zone id. Submitting this field IS the owner's
+            timezone-confirmation act — the frontend never auto-submits a suggested value without an explicit click.
     OrganizationType:
       type: string
       enum:
@@ -9655,6 +9796,30 @@ components:
         contactPhone:
           type: string
           nullable: true
+        addressLine1:
+          type: string
+          nullable: true
+        addressLine2:
+          type: string
+          nullable: true
+        addressCity:
+          type: string
+          nullable: true
+        addressState:
+          type: string
+          nullable: true
+        addressPostalCode:
+          type: string
+          nullable: true
+        addressCountry:
+          type: string
+          nullable: true
+        timezone:
+          type: string
+          nullable: true
+          description: >-
+            An IANA time zone id, or null if the owner has not yet confirmed one (ADR-071). Null means the
+            organization default falls back to a hard-coded last resort, never presented as authoritative.
         createdAt:
           type: string
           format: date-time
@@ -9732,7 +9897,7 @@ components:
           $ref: "#/components/schemas/MembershipRole"
     OnboardingProgressResponse:
       type: object
-      required: [profileComplete, hasAdditionalAdministrator, payoutsConnected]
+      required: [profileComplete, hasAdditionalAdministrator, payoutsConnected, timezoneConfirmed]
       properties:
         profileComplete:
           type: boolean
@@ -9743,6 +9908,19 @@ components:
         payoutsConnected:
           type: boolean
           description: Stripe Connect Express onboarding is complete (chargesEnabled and payoutsEnabled both true — ADR-005).
+        timezoneConfirmed:
+          type: boolean
+          description: Organization has a non-null timezone — a non-null value IS the owner's confirmation signal (ADR-071).
+    TimezoneSuggestionResponse:
+      type: object
+      required: [timezone]
+      properties:
+        timezone:
+          type: string
+          nullable: true
+          description: >-
+            A static country/state heuristic suggestion (ADR-071), not a real geocoding result. Null when no
+            address is set yet or the country/state pair isn't recognized.
     InvitableMembershipRole:
       type: string
       description: MembershipRole minus OWNER — ownership transfer is a separate workflow.
@@ -9871,12 +10049,25 @@ components:
           type: string
           format: email
           nullable: true
+        timezoneOverride:
+          type: string
+          nullable: true
+          description: >-
+            An IANA time zone id overriding the organization default, or null to inherit it (ADR-071). Set via
+            PUT /organizations/{organizationId}/teams/{teamId}/timezone.
         createdAt:
           type: string
           format: date-time
         updatedAt:
           type: string
           format: date-time
+    UpdateTeamTimezoneRequest:
+      type: object
+      properties:
+        timezone:
+          type: string
+          nullable: true
+          description: An IANA time zone id, or null to explicitly clear the override back to "inherit organization default."
     TeamPage:
       type: object
       required: [items, page, size, totalElements]
@@ -9977,12 +10168,25 @@ components:
           type: string
           format: email
           nullable: true
+        timezoneOverride:
+          type: string
+          nullable: true
+          description: >-
+            An IANA time zone id overriding the organization default, or null to inherit it (ADR-071). Set via
+            PUT /organizations/{organizationId}/tournaments/{tournamentId}/timezone.
         createdAt:
           type: string
           format: date-time
         updatedAt:
           type: string
           format: date-time
+    UpdateTournamentTimezoneRequest:
+      type: object
+      properties:
+        timezone:
+          type: string
+          nullable: true
+          description: An IANA time zone id, or null to explicitly clear the override back to "inherit organization default."
     TournamentPage:
       type: object
       required: [items, page, size, totalElements]
@@ -14137,6 +14341,13 @@ components:
           type: string
           enum: [PUBLIC, ORGANIZATION, TEAM]
           default: TEAM
+        allDayDate:
+          type: string
+          format: date
+          nullable: true
+          description: >-
+            Phase 24 slice 24.5 (ADR-071): a true all-day date, never zone-converted. Mutually exclusive with
+            startAt/endAt/arrivalAt/meetingAt.
     UpdateEventRequest:
       type: object
       properties:
@@ -14204,6 +14415,13 @@ components:
           type: string
           nullable: true
           maxLength: 120
+        allDayDate:
+          type: string
+          format: date
+          nullable: true
+          description: >-
+            Phase 24 slice 24.5 (ADR-071): only settable when neither the incoming instant fields nor the event's
+            existing ones are set — an already-timed event can't be converted to all-day through this endpoint.
     EventResponse:
       type: object
       required: [id, organizationId, eventType, displayTitle, status, timezone, visibility, sourceType, createdAt, updatedAt]
@@ -14294,6 +14512,22 @@ components:
         updatedAt:
           type: string
           format: date-time
+        allDayDate:
+          type: string
+          format: date
+          nullable: true
+          description: >-
+            Phase 24 slice 24.5 (ADR-071): a true all-day date, never zone-converted. When set, startAt/endAt/
+            arrivalAt/meetingAt are all null.
+    TimezoneDefaultResponse:
+      type: object
+      required: [timezone]
+      properties:
+        timezone:
+          type: string
+          description: >-
+            The create-event form's smart default (ADR-071) — team override -> tournament override -> organization
+            default -> hard-coded fallback. Never used to validate or snapshot an actual event.
     SubmitRsvpRequest:
       type: object
       required: [response]

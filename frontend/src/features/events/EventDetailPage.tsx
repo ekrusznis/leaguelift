@@ -22,6 +22,7 @@ import {
 } from "./api";
 import type { Rally26Event, RsvpResponse } from "./types";
 import { ReminderButton } from "../communications/ReminderButton";
+import { formatEventAllDayDate, formatEventDateTime } from "./formatEventDateTime";
 
 function formatDateTime(value: string | null, timezone: string) {
 	if (!value) return "To be determined";
@@ -93,6 +94,11 @@ export function EventDetailPage() {
 					<div>
 						<h1 className="font-heading text-2xl font-bold text-navy">{event.displayTitle}</h1>
 						<p className="mt-1 text-slate-gray">{event.eventType} · {event.status}</p>
+						<p className="mt-0.5 text-xs text-slate-gray/80">
+							{event.allDayDate
+								? `${formatEventAllDayDate(event.allDayDate)} (all day)`
+								: (formatEventDateTime(event.startAt, event.timezone) ?? "To be determined")}
+						</p>
 					</div>
 					<div className="flex flex-wrap gap-2">
 						<Button type="button" variant="secondary" onClick={downloadCalendar}>Add to calendar</Button>
@@ -111,8 +117,8 @@ export function EventDetailPage() {
 				<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5">
 					<h2 className="font-heading text-lg font-semibold text-navy">Event details</h2>
 					<dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-						<Detail label="Starts" value={formatDateTime(event.startAt, event.timezone)} />
-						<Detail label="Ends" value={formatDateTime(event.endAt, event.timezone)} />
+						<Detail label="Starts" value={event.allDayDate ? `${formatEventAllDayDate(event.allDayDate)} (all day)` : formatDateTime(event.startAt, event.timezone)} />
+						<Detail label="Ends" value={event.allDayDate ? `${formatEventAllDayDate(event.allDayDate)} (all day)` : formatDateTime(event.endAt, event.timezone)} />
 						<Detail label="Arrival" value={formatDateTime(event.arrivalAt, event.timezone)} />
 						<Detail label="Meeting time" value={formatDateTime(event.meetingAt, event.timezone)} />
 						<Detail label="Venue" value={event.venueName ?? "To be determined"} />

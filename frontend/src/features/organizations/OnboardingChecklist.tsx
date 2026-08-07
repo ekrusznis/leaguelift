@@ -31,6 +31,7 @@ export function OnboardingChecklist({ organizationId }: { organizationId: string
 				<ChecklistItem done={data.profileComplete} label="Complete organization profile (sports + contact email)" />
 				<ChecklistItem done={data.hasAdditionalAdministrator} label="Invite a second administrator" />
 				<ChecklistItem done={data.payoutsConnected} label="Connect payouts (Stripe)" />
+				<ChecklistItem done={data.timezoneConfirmed} label="Confirm your organization's timezone" />
 			</ul>
 		</div>
 	);

@@ -19,11 +19,12 @@ import com.rally26.membership.application.MembershipService
 import com.rally26.outbox.application.OutboxWriter
 import com.rally26.participant.persistence.ParticipantRepository
 import com.rally26.team.persistence.TeamRepository
+import com.rally26.timezone.application.TimeZoneService
 import com.rally26.tournament.persistence.TournamentRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
-import java.time.ZoneId
+import java.time.LocalDate
 import java.util.UUID
 
 private const val ICS_SCHEDULE_LIMIT = 200
@@ -50,6 +51,7 @@ class EventService(
     private val mapsProvider: MapsProvider,
     private val outboxWriter: OutboxWriter,
     private val objectMapper: ObjectMapper,
+    private val timeZoneService: TimeZoneService,
 ) {
     /** Shared with [com.rally26.event.web.EventController]'s response mapping so calendar/directions and the JSON API compute the exact same title. */
     fun displayTitleFor(
@@ -115,10 +117,15 @@ class EventService(
         directionsNotes: String?,
         visibility: EventVisibility,
         currentUser: CurrentUser,
+        /** Phase 24 slice 24.5 (ADR-071): a true all-day date, never zone-converted. Mutually exclusive with the instant fields. */
+        allDayDate: LocalDate? = null,
     ): Event {
-        requireValidTimezone(timezone)
+        timeZoneService.requireValid(timezone)
         if (opponentTeamId != null && teamId != null && opponentTeamId == teamId) {
             throw ValidationException("An event's opponent team cannot be the same as its owning team.")
+        }
+        if (allDayDate != null && (startAt != null || endAt != null || arrivalAt != null || meetingAt != null)) {
+            throw ValidationException("An all-day event cannot also have a start, end, arrival, or meeting time.")
         }
         requireCreateAccess(organizationId, teamId, tournamentId, currentUser)
         if (teamId !=
@@ -163,9 +170,26 @@ class EventService(
                 directionsNotes,
                 visibility,
                 currentUser.userId,
+                allDayDate = allDayDate,
             )
         auditService.record(currentUser.userId, organizationId, "event.created", "event", event.id)
         return event
+    }
+
+    /**
+     * Resolves the timezone a create-event form should pre-fill (acceptance criterion:
+     * "browser timezone is a convenience fallback, never the sole source of truth").
+     * Never used to validate or snapshot an actual event — [create] always uses its own
+     * caller-supplied [timezone][create] parameter for that.
+     */
+    fun resolveDefaultTimezone(
+        organizationId: UUID,
+        teamId: UUID?,
+        tournamentId: UUID?,
+        currentUser: CurrentUser,
+    ): String {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        return timeZoneService.resolveEffectiveZone(organizationId, teamId, tournamentId)
     }
 
     fun get(
@@ -287,6 +311,8 @@ class EventService(
         opponentTeamId: UUID?,
         opponentName: String?,
         currentUser: CurrentUser,
+        /** Phase 24 slice 24.5 (ADR-071): only settable when neither the incoming instant fields nor the event's existing ones are set — the underlying [eventRepository] update is coalesce-only, so an already-timed event can't be converted to all-day through this method. */
+        allDayDate: LocalDate? = null,
     ): Event {
         val event = requireOwnedEvent(organizationId, eventId)
         requireManageAccess(event, currentUser, Capabilities.EVENT_UPDATE)
@@ -297,6 +323,14 @@ class EventService(
             if (opponentTeamId == event.teamId) throw ValidationException("An event's opponent team cannot be the same as its owning team.")
             teamRepository.findById(opponentTeamId, organizationId)
                 ?: throw NotFoundException("TEAM_NOT_FOUND", "The opponent team could not be found.")
+        }
+        if (allDayDate != null) {
+            if (startAt != null || endAt != null || arrivalAt != null || meetingAt != null) {
+                throw ValidationException("An all-day event cannot also have a start, end, arrival, or meeting time.")
+            }
+            if (event.startAt != null || event.endAt != null || event.arrivalAt != null || event.meetingAt != null) {
+                throw ValidationException("This event already has scheduled times and can't be converted to all-day.")
+            }
         }
         eventRepository.update(
             eventId,
@@ -318,6 +352,7 @@ class EventService(
             opponentTeamId,
             opponentName,
             currentUser.userId,
+            allDayDate = allDayDate,
         )
         auditService.record(currentUser.userId, organizationId, "event.updated", "event", eventId)
         val updated = eventRepository.findById(eventId, organizationId)!!
@@ -608,20 +643,6 @@ class EventService(
             throw ValidationException(
                 "This event was imported from an external source — opponent, start/end time, venue, and status can't be " +
                     "edited directly. Detach it from its source first, or update the value in the source system.",
-            )
-        }
-    }
-
-    private fun requireValidTimezone(timezone: String) {
-        try {
-            ZoneId.of(timezone)
-        } catch (e: Exception) {
-            throw ValidationException(
-                "Timezone must be a valid IANA time zone id (e.g. America/New_York).",
-                listOf(
-                    com.rally26.common.error
-                        .FieldError("timezone", "Invalid time zone."),
-                ),
             )
         }
     }

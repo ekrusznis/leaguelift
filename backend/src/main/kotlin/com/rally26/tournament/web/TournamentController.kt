@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -91,4 +92,13 @@ class TournamentController(
         @PathVariable tournamentId: UUID,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ) = tournamentService.archive(organizationId, tournamentId, currentUser)
+
+    @PutMapping("/{tournamentId}/timezone")
+    fun updateTimezone(
+        @PathVariable organizationId: UUID,
+        @PathVariable tournamentId: UUID,
+        @RequestBody request: UpdateTournamentTimezoneRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): TournamentResponse =
+        tournamentService.updateTimezoneOverride(organizationId, tournamentId, request.timezone, currentUser).toResponse()
 }

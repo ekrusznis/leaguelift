@@ -14,6 +14,8 @@ import com.rally26.organization.domain.isValidContactEmail
 import com.rally26.organization.domain.isValidSlug
 import com.rally26.organization.persistence.OrganizationRepository
 import com.rally26.payout.persistence.OrganizationPayoutAccountRepository
+import com.rally26.timezone.application.TimeZoneService
+import com.rally26.timezone.application.TimezoneSuggestionService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -25,6 +27,8 @@ class OrganizationService(
     private val auditService: AuditService,
     private val payoutAccountRepository: OrganizationPayoutAccountRepository,
     private val analyticsProvider: AnalyticsProvider,
+    private val timeZoneService: TimeZoneService,
+    private val timezoneSuggestionService: TimezoneSuggestionService,
 ) {
     @Transactional
     fun create(
@@ -96,6 +100,14 @@ class OrganizationService(
         contactEmail: String?,
         contactPhone: String?,
         currentUser: CurrentUser,
+        addressLine1: String? = null,
+        addressLine2: String? = null,
+        addressCity: String? = null,
+        addressState: String? = null,
+        addressPostalCode: String? = null,
+        addressCountry: String? = null,
+        /** Phase 24 slice 24.5 (ADR-071): a non-null value here IS the owner's timezone-confirmation signal — see [onboardingProgress]. */
+        timezone: String? = null,
     ): Organization {
         membershipService.requireActiveMembership(organizationId, currentUser)
         organizationRepository.findById(organizationId)
@@ -109,7 +121,22 @@ class OrganizationService(
                 ),
             )
         }
-        organizationRepository.updateProfile(organizationId, name, organizationType, sports, contactEmail, contactPhone)
+        if (timezone != null) timeZoneService.requireValid(timezone)
+        organizationRepository.updateProfile(
+            organizationId,
+            name,
+            organizationType,
+            sports,
+            contactEmail,
+            contactPhone,
+            addressLine1,
+            addressLine2,
+            addressCity,
+            addressState,
+            addressPostalCode,
+            addressCountry,
+            timezone,
+        )
         auditService.record(
             actorUserId = currentUser.userId,
             organizationId = organizationId,
@@ -118,6 +145,26 @@ class OrganizationService(
             entityId = organizationId,
         )
         return organizationRepository.findById(organizationId)!!
+    }
+
+    /**
+     * The create-organization-profile form's timezone suggestion (acceptance
+     * criterion: "suggests an IANA timezone from the entered organization address
+     * and requires confirmation") — a static heuristic (see
+     * [TimezoneSuggestionService]), not a real geocoding call. Reads whatever address
+     * is currently persisted; returns null if no address is set yet or the
+     * country/state pair isn't recognized — the caller/frontend falls back to the
+     * browser's own timezone as a last resort, never presenting this as authoritative.
+     */
+    fun suggestTimezone(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): String? {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        val organization =
+            organizationRepository.findById(organizationId)
+                ?: throw NotFoundException("ORGANIZATION_NOT_FOUND", "The organization could not be found.")
+        return timezoneSuggestionService.suggest(organization.addressCountry, organization.addressState)
     }
 
     /**
@@ -139,6 +186,7 @@ class OrganizationService(
             profileComplete = profileComplete,
             hasAdditionalAdministrator = membershipService.countMembers(organizationId) > 1,
             payoutsConnected = payoutAccountRepository.findByOrganizationId(organizationId)?.isFullyConnected ?: false,
+            timezoneConfirmed = organization.timezone != null,
         )
     }
 }
@@ -147,4 +195,5 @@ data class OnboardingProgress(
     val profileComplete: Boolean,
     val hasAdditionalAdministrator: Boolean,
     val payoutsConnected: Boolean,
+    val timezoneConfirmed: Boolean,
 )

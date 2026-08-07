@@ -6,6 +6,7 @@ import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.membership.application.MembershipService
+import com.rally26.timezone.application.TimeZoneService
 import com.rally26.tournament.domain.Tournament
 import com.rally26.tournament.persistence.TournamentRepository
 import org.springframework.dao.DuplicateKeyException
@@ -21,6 +22,7 @@ class TournamentService(
     private val tournamentRepository: TournamentRepository,
     private val membershipService: MembershipService,
     private val auditService: AuditService,
+    private val timeZoneService: TimeZoneService,
 ) {
     fun list(
         organizationId: UUID,
@@ -133,6 +135,29 @@ class TournamentService(
             entityType = "tournament",
             entityId = tournamentId,
         )
+    }
+
+    /** Phase 24 slice 24.5 (ADR-071): [timezoneOverride] null explicitly clears back to "inherit organization default." */
+    @Transactional
+    fun updateTimezoneOverride(
+        organizationId: UUID,
+        tournamentId: UUID,
+        timezoneOverride: String?,
+        currentUser: CurrentUser,
+    ): Tournament {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        tournamentRepository.findById(tournamentId, organizationId)
+            ?: throw NotFoundException("TOURNAMENT_NOT_FOUND", "The tournament could not be found.")
+        if (timezoneOverride != null) timeZoneService.requireValid(timezoneOverride)
+        tournamentRepository.updateTimezoneOverride(tournamentId, organizationId, timezoneOverride)
+        auditService.record(
+            actorUserId = currentUser.userId,
+            organizationId = organizationId,
+            action = "tournament.timezone_override_updated",
+            entityType = "tournament",
+            entityId = tournamentId,
+        )
+        return tournamentRepository.findById(tournamentId, organizationId)!!
     }
 
     private fun validateDates(

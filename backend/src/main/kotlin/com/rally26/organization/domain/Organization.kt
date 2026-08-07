@@ -27,6 +27,14 @@ data class Organization(
     val contactPhone: String?,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val addressLine1: String? = null,
+    val addressLine2: String? = null,
+    val addressCity: String? = null,
+    val addressState: String? = null,
+    val addressPostalCode: String? = null,
+    val addressCountry: String? = null,
+    /** Phase 24 slice 24.5 (ADR-071): only ever set via an owner-initiated confirm action; a non-null value IS the confirmation signal. */
+    val timezone: String? = null,
 )
 
 private val SLUG_PATTERN = Regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")

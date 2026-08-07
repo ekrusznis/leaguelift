@@ -7,6 +7,7 @@ import com.rally26.event.domain.EventVisibility
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 data class CreateEventRequest(
@@ -30,6 +31,7 @@ data class CreateEventRequest(
     @field:Size(max = 300) val meetingPoint: String? = null,
     @field:Size(max = 1000) val directionsNotes: String? = null,
     val visibility: EventVisibility = EventVisibility.TEAM,
+    val allDayDate: LocalDate? = null,
 )
 
 data class UpdateEventRequest(
@@ -49,6 +51,7 @@ data class UpdateEventRequest(
     @field:Size(max = 1000) val directionsNotes: String? = null,
     val opponentTeamId: UUID? = null,
     @field:Size(max = 120) val opponentName: String? = null,
+    val allDayDate: LocalDate? = null,
 )
 
 data class EventResponse(
@@ -79,10 +82,16 @@ data class EventResponse(
     val sourceType: String,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val allDayDate: LocalDate?,
 )
 
 data class DirectionsResponse(
     val url: String?,
+)
+
+/** Phase 24 slice 24.5 (ADR-071): the create-event form's smart default — never used to validate/snapshot an actual event. */
+data class TimezoneDefaultResponse(
+    val timezone: String,
 )
 
 fun Event.toResponse(displayTitle: String): EventResponse =
@@ -113,4 +122,5 @@ fun Event.toResponse(displayTitle: String): EventResponse =
         sourceType.name,
         createdAt,
         updatedAt,
+        allDayDate,
     )

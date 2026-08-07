@@ -8,6 +8,7 @@ import com.rally26.common.web.CurrentUser
 import com.rally26.membership.application.MembershipService
 import com.rally26.team.domain.Team
 import com.rally26.team.persistence.TeamRepository
+import com.rally26.timezone.application.TimeZoneService
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -20,6 +21,7 @@ class TeamService(
     private val teamRepository: TeamRepository,
     private val membershipService: MembershipService,
     private val auditService: AuditService,
+    private val timeZoneService: TimeZoneService,
 ) {
     fun list(
         organizationId: UUID,
@@ -120,6 +122,29 @@ class TeamService(
             entityType = "team",
             entityId = teamId,
         )
+    }
+
+    /** Phase 24 slice 24.5 (ADR-071): [timezoneOverride] null explicitly clears back to "inherit organization default" — a real, distinct intent from "leave unchanged," unlike every coalesce-based field above. */
+    @Transactional
+    fun updateTimezoneOverride(
+        organizationId: UUID,
+        teamId: UUID,
+        timezoneOverride: String?,
+        currentUser: CurrentUser,
+    ): Team {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        teamRepository.findById(teamId, organizationId)
+            ?: throw NotFoundException("TEAM_NOT_FOUND", "The team could not be found.")
+        if (timezoneOverride != null) timeZoneService.requireValid(timezoneOverride)
+        teamRepository.updateTimezoneOverride(teamId, organizationId, timezoneOverride)
+        auditService.record(
+            actorUserId = currentUser.userId,
+            organizationId = organizationId,
+            action = "team.timezone_override_updated",
+            entityType = "team",
+            entityId = teamId,
+        )
+        return teamRepository.findById(teamId, organizationId)!!
     }
 
     private fun validateContactEmail(email: String?) {

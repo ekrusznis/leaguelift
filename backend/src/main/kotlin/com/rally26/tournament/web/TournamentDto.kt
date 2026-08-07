@@ -44,6 +44,7 @@ data class TournamentResponse(
     val endDate: LocalDate?,
     val location: String?,
     val contactEmail: String?,
+    val timezoneOverride: String?,
     val createdAt: Instant,
     val updatedAt: Instant,
 )
@@ -59,8 +60,14 @@ fun Tournament.toResponse() =
         endDate = endDate,
         location = location,
         contactEmail = contactEmail,
+        timezoneOverride = timezoneOverride,
         createdAt = createdAt,
         updatedAt = updatedAt,
     )
+
+/** [timezone] null explicitly clears the override back to "inherit organization default." */
+data class UpdateTournamentTimezoneRequest(
+    val timezone: String? = null,
+)
 
 typealias TournamentPageResponse = PageResponse<TournamentResponse>

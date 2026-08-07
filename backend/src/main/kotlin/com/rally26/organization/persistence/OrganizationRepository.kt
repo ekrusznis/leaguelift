@@ -11,8 +11,11 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
-private const val ORGANIZATION_COLUMNS =
-    "id, name, slug, organization_type, status, sports, contact_email, contact_phone, created_at, updated_at"
+private const val ORGANIZATION_COLUMNS = """
+    id, name, slug, organization_type, status, sports, contact_email, contact_phone,
+    address_line1, address_line2, address_city, address_state, address_postal_code, address_country,
+    timezone, created_at, updated_at
+"""
 
 @Repository
 class OrganizationRepository(
@@ -49,7 +52,10 @@ class OrganizationRepository(
             .sql(
                 """
                 select o.id, o.name, o.slug, o.organization_type, o.status, o.sports,
-                       o.contact_email, o.contact_phone, o.created_at, o.updated_at
+                       o.contact_email, o.contact_phone,
+                       o.address_line1, o.address_line2, o.address_city, o.address_state,
+                       o.address_postal_code, o.address_country, o.timezone,
+                       o.created_at, o.updated_at
                 from organization o
                 join organization_membership m on m.organization_id = o.id
                 where m.user_id = :userId and m.status = 'ACTIVE'
@@ -149,6 +155,14 @@ class OrganizationRepository(
         sports: List<String>?,
         contactEmail: String?,
         contactPhone: String?,
+        addressLine1: String? = null,
+        addressLine2: String? = null,
+        addressCity: String? = null,
+        addressState: String? = null,
+        addressPostalCode: String? = null,
+        addressCountry: String? = null,
+        /** Phase 24 slice 24.5 (ADR-071): a non-null value here IS the owner's confirmation signal — no separate "confirmed" bookkeeping. */
+        timezone: String? = null,
     ): Int {
         val now = Instant.now()
         val sportsJson = sports?.let { objectMapper.writeValueAsString(it) }
@@ -161,6 +175,13 @@ class OrganizationRepository(
                     sports = coalesce(cast(:sports as jsonb), sports),
                     contact_email = coalesce(:contactEmail, contact_email),
                     contact_phone = coalesce(:contactPhone, contact_phone),
+                    address_line1 = coalesce(:addressLine1, address_line1),
+                    address_line2 = coalesce(:addressLine2, address_line2),
+                    address_city = coalesce(:addressCity, address_city),
+                    address_state = coalesce(:addressState, address_state),
+                    address_postal_code = coalesce(:addressPostalCode, address_postal_code),
+                    address_country = coalesce(:addressCountry, address_country),
+                    timezone = coalesce(:timezone, timezone),
                     updated_at = :now
                 where id = :id
                 """.trimIndent(),
@@ -169,6 +190,13 @@ class OrganizationRepository(
             .param("sports", sportsJson)
             .param("contactEmail", contactEmail)
             .param("contactPhone", contactPhone)
+            .param("addressLine1", addressLine1)
+            .param("addressLine2", addressLine2)
+            .param("addressCity", addressCity)
+            .param("addressState", addressState)
+            .param("addressPostalCode", addressPostalCode)
+            .param("addressCountry", addressCountry)
+            .param("timezone", timezone)
             .param("now", Timestamp.from(now))
             .param("id", id)
             .update()
@@ -187,6 +215,13 @@ class OrganizationRepository(
             sports = rs.getString("sports")?.let { objectMapper.readValue<List<String>>(it) } ?: emptyList(),
             contactEmail = rs.getString("contact_email"),
             contactPhone = rs.getString("contact_phone"),
+            addressLine1 = rs.getString("address_line1"),
+            addressLine2 = rs.getString("address_line2"),
+            addressCity = rs.getString("address_city"),
+            addressState = rs.getString("address_state"),
+            addressPostalCode = rs.getString("address_postal_code"),
+            addressCountry = rs.getString("address_country"),
+            timezone = rs.getString("timezone"),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
         )

@@ -2,6 +2,7 @@ package com.rally26.tournament.application
 
 import com.rally26.audit.application.AuditService
 import com.rally26.common.error.ConflictException
+import com.rally26.common.error.FieldError
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
@@ -9,6 +10,7 @@ import com.rally26.membership.application.MembershipService
 import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
+import com.rally26.timezone.application.TimeZoneService
 import com.rally26.tournament.domain.Tournament
 import com.rally26.tournament.domain.TournamentStatus
 import com.rally26.tournament.persistence.TournamentRepository
@@ -20,6 +22,7 @@ import io.mockk.verify
 import org.springframework.dao.DuplicateKeyException
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -29,7 +32,21 @@ class TournamentServiceTest {
     private val tournamentRepository = mockk<TournamentRepository>()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
-    private val service = TournamentService(tournamentRepository, membershipService, auditService)
+    private val timeZoneService =
+        mockk<TimeZoneService> {
+            every { requireValid(any()) } answers {
+                val tz = firstArg<String>()
+                try {
+                    ZoneId.of(tz)
+                } catch (e: Exception) {
+                    throw ValidationException(
+                        "Timezone must be a valid IANA time zone id (e.g. America/New_York).",
+                        listOf(FieldError("timezone", "Invalid time zone.")),
+                    )
+                }
+            }
+        }
+    private val service = TournamentService(tournamentRepository, membershipService, auditService, timeZoneService)
 
     private val orgId = UUID.randomUUID()
     private val currentUser = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
@@ -147,6 +164,57 @@ class TournamentServiceTest {
 
         assertFailsWith<NotFoundException> {
             service.archive(orgId, UUID.randomUUID(), currentUser)
+        }
+    }
+
+    @Test
+    fun `updateTimezoneOverride sets an override and records an audit event`() {
+        val tournament = sampleTournament()
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { tournamentRepository.findById(tournament.id, orgId) } returns
+            tournament andThen tournament.copy(timezoneOverride = "America/Chicago")
+        every { tournamentRepository.updateTimezoneOverride(tournament.id, orgId, "America/Chicago") } returns 1
+        every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+
+        val result = service.updateTimezoneOverride(orgId, tournament.id, "America/Chicago", currentUser)
+
+        assertEquals("America/Chicago", result.timezoneOverride)
+        verify(exactly = 1) {
+            auditService.record(currentUser.userId, orgId, "tournament.timezone_override_updated", "tournament", tournament.id, any())
+        }
+    }
+
+    @Test
+    fun `updateTimezoneOverride with null explicitly clears back to inherit organization default`() {
+        val tournament = sampleTournament().copy(timezoneOverride = "America/Chicago")
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { tournamentRepository.findById(tournament.id, orgId) } returns tournament andThen tournament.copy(timezoneOverride = null)
+        every { tournamentRepository.updateTimezoneOverride(tournament.id, orgId, null) } returns 1
+        every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+
+        val result = service.updateTimezoneOverride(orgId, tournament.id, null, currentUser)
+
+        assertEquals(null, result.timezoneOverride)
+    }
+
+    @Test
+    fun `updateTimezoneOverride rejects an invalid timezone`() {
+        val tournament = sampleTournament()
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { tournamentRepository.findById(tournament.id, orgId) } returns tournament
+
+        assertFailsWith<ValidationException> {
+            service.updateTimezoneOverride(orgId, tournament.id, "Not/AZone", currentUser)
+        }
+    }
+
+    @Test
+    fun `updateTimezoneOverride throws NotFoundException when tournament does not exist`() {
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { tournamentRepository.findById(any(), orgId) } returns null
+
+        assertFailsWith<NotFoundException> {
+            service.updateTimezoneOverride(orgId, UUID.randomUUID(), "America/New_York", currentUser)
         }
     }
 

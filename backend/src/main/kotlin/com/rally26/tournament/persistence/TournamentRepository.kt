@@ -10,8 +10,10 @@ import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
-private const val TOURNAMENT_COLUMNS =
-    "id, organization_id, name, sport, status, start_date, end_date, location, contact_email, created_at, updated_at"
+private const val TOURNAMENT_COLUMNS = """
+    id, organization_id, name, sport, status, start_date, end_date, location, contact_email,
+    timezone_override, created_at, updated_at
+"""
 
 @Repository
 class TournamentRepository(
@@ -166,6 +168,26 @@ class TournamentRepository(
             .update()
     }
 
+    /** Phase 24 slice 24.5 (ADR-071): explicit set/clear, not coalesce — [timezoneOverride] null must actually clear back to "inherit organization default." */
+    fun updateTimezoneOverride(
+        id: UUID,
+        organizationId: UUID,
+        timezoneOverride: String?,
+    ): Int {
+        val now = Instant.now()
+        return jdbcClient
+            .sql(
+                """
+                update tournament set timezone_override = :timezoneOverride, updated_at = :now
+                where id = :id and organization_id = :organizationId
+                """.trimIndent(),
+            ).param("timezoneOverride", timezoneOverride)
+            .param("now", Timestamp.from(now))
+            .param("id", id)
+            .param("organizationId", organizationId)
+            .update()
+    }
+
     private fun mapRow(
         rs: java.sql.ResultSet,
         rowNum: Int,
@@ -180,6 +202,7 @@ class TournamentRepository(
             endDate = rs.getDate("end_date")?.toLocalDate(),
             location = rs.getString("location"),
             contactEmail = rs.getString("contact_email"),
+            timezoneOverride = rs.getString("timezone_override"),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
         )

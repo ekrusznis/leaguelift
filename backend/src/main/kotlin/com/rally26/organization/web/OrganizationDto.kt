@@ -32,6 +32,20 @@ data class UpdateOrganizationRequest(
     val contactEmail: String? = null,
     @field:Size(max = 40)
     val contactPhone: String? = null,
+    @field:Size(max = 200)
+    val addressLine1: String? = null,
+    @field:Size(max = 200)
+    val addressLine2: String? = null,
+    @field:Size(max = 100)
+    val addressCity: String? = null,
+    @field:Size(max = 100)
+    val addressState: String? = null,
+    @field:Size(max = 20)
+    val addressPostalCode: String? = null,
+    @field:Size(max = 100)
+    val addressCountry: String? = null,
+    /** Phase 24 slice 24.5 (ADR-071): submitting this field IS the owner's confirmation act — the frontend never auto-submits a suggested value without an explicit click. */
+    val timezone: String? = null,
 )
 
 data class OrganizationResponse(
@@ -43,6 +57,13 @@ data class OrganizationResponse(
     val sports: List<String>,
     val contactEmail: String?,
     val contactPhone: String?,
+    val addressLine1: String?,
+    val addressLine2: String?,
+    val addressCity: String?,
+    val addressState: String?,
+    val addressPostalCode: String?,
+    val addressCountry: String?,
+    val timezone: String?,
     val createdAt: Instant,
     val updatedAt: Instant,
 )
@@ -57,6 +78,13 @@ fun Organization.toResponse() =
         sports = sports,
         contactEmail = contactEmail,
         contactPhone = contactPhone,
+        addressLine1 = addressLine1,
+        addressLine2 = addressLine2,
+        addressCity = addressCity,
+        addressState = addressState,
+        addressPostalCode = addressPostalCode,
+        addressCountry = addressCountry,
+        timezone = timezone,
         createdAt = createdAt,
         updatedAt = updatedAt,
     )
@@ -65,6 +93,7 @@ data class OnboardingProgressResponse(
     val profileComplete: Boolean,
     val hasAdditionalAdministrator: Boolean,
     val payoutsConnected: Boolean,
+    val timezoneConfirmed: Boolean,
 )
 
 fun OnboardingProgress.toResponse() =
@@ -72,6 +101,11 @@ fun OnboardingProgress.toResponse() =
         profileComplete = profileComplete,
         hasAdditionalAdministrator = hasAdditionalAdministrator,
         payoutsConnected = payoutsConnected,
+        timezoneConfirmed = timezoneConfirmed,
     )
+
+data class TimezoneSuggestionResponse(
+    val timezone: String?,
+)
 
 typealias OrganizationPageResponse = PageResponse<OrganizationResponse>

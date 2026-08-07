@@ -9,16 +9,19 @@ import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { TeamRoleAssignmentsSection } from "../authorization/TeamRoleAssignmentsSection";
 import { EntityBrandingPanel } from "../media/EntityBrandingPanel";
-import { useArchiveTeam, useCreateTeam, useTeams } from "./api";
+import { useArchiveTeam, useCreateTeam, useTeams, useUpdateTeamTimezone } from "./api";
 import { createTeamSchema, type CreateTeamFormValues } from "./schema";
 
 export function TeamList({ organizationId }: { organizationId: string }) {
 	const { data, isLoading, isError, refetch } = useTeams(organizationId);
 	const createTeam = useCreateTeam(organizationId);
 	const archiveTeam = useArchiveTeam(organizationId);
+	const updateTeamTimezone = useUpdateTeamTimezone(organizationId);
 	const [showForm, setShowForm] = useState(false);
 	const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
 	const [brandingTeamId, setBrandingTeamId] = useState<string | null>(null);
+	const [timezoneTeamId, setTimezoneTeamId] = useState<string | null>(null);
+	const [timezoneDraft, setTimezoneDraft] = useState("");
 
 	const {
 		register,
@@ -146,6 +149,20 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 									<Button
 										type="button"
 										variant="secondary"
+										onClick={() => {
+											if (timezoneTeamId === team.id) {
+												setTimezoneTeamId(null);
+											} else {
+												setTimezoneTeamId(team.id);
+												setTimezoneDraft(team.timezoneOverride ?? "");
+											}
+										}}
+									>
+										{timezoneTeamId === team.id ? "Hide timezone" : "Timezone"}
+									</Button>
+									<Button
+										type="button"
+										variant="secondary"
 										onClick={() => archiveTeam.mutate(team.id)}
 										disabled={archiveTeam.isPending}
 									>
@@ -161,6 +178,43 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 							{expandedTeamId === team.id && (
 								<div className="mt-3">
 									<TeamRoleAssignmentsSection organizationId={organizationId} teamId={team.id} />
+								</div>
+							)}
+							{timezoneTeamId === team.id && (
+								<div className="mt-3 flex flex-wrap items-end gap-2 rounded-md border border-slate-gray/20 bg-ice-white p-3">
+									<div className="flex flex-col gap-1">
+										<label htmlFor={`team-timezone-${team.id}`} className="text-sm font-medium text-navy">
+											Timezone override
+										</label>
+										<input
+											id={`team-timezone-${team.id}`}
+											type="text"
+											placeholder="Inherits organization default"
+											value={timezoneDraft}
+											onChange={(e) => setTimezoneDraft(e.target.value)}
+											className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+										/>
+									</div>
+									<Button
+										type="button"
+										onClick={() => updateTeamTimezone.mutate({ teamId: team.id, timezone: timezoneDraft.trim() || null })}
+										disabled={updateTeamTimezone.isPending}
+									>
+										Save
+									</Button>
+									{team.timezoneOverride && (
+										<Button
+											type="button"
+											variant="secondary"
+											onClick={() => {
+												setTimezoneDraft("");
+												updateTeamTimezone.mutate({ teamId: team.id, timezone: null });
+											}}
+											disabled={updateTeamTimezone.isPending}
+										>
+											Clear (inherit organization default)
+										</Button>
+									)}
 								</div>
 							)}
 						</li>

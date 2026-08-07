@@ -24,7 +24,7 @@ function jsonResponse(body: unknown, status = 200) {
 const emptyStorefronts: AthleteStorefrontPage = { items: [], page: 0, size: 100, totalElements: 0 };
 
 const team: TeamPage = {
-	items: [{ id: teamId, organizationId, name: "Riverside U10", sport: "Soccer", season: null, status: "ACTIVE", contactEmail: null, createdAt: now, updatedAt: now }],
+	items: [{ id: teamId, organizationId, name: "Riverside U10", sport: "Soccer", season: null, status: "ACTIVE", contactEmail: null, timezoneOverride: null, createdAt: now, updatedAt: now }],
 	page: 0,
 	size: 20,
 	totalElements: 1,

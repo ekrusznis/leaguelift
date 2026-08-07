@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/apiClient";
 import type { CreateTeamFormValues } from "./schema";
-import type { TeamPage } from "./types";
+import type { Team, TeamPage } from "./types";
 
 const teamsQueryKey = (organizationId: string) => ["organizations", organizationId, "teams"] as const;
 
@@ -36,6 +36,21 @@ export function useArchiveTeam(organizationId: string) {
 	return useMutation({
 		mutationFn: (teamId: string) =>
 			apiFetch(`/organizations/${organizationId}/teams/${teamId}`, { method: "DELETE" }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: teamsQueryKey(organizationId) });
+		},
+	});
+}
+
+/** Phase 24 slice 24.5 (ADR-071): a null timezone explicitly clears the override back to "inherit organization default." */
+export function useUpdateTeamTimezone(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ teamId, timezone }: { teamId: string; timezone: string | null }) =>
+			apiFetch<Team>(`/organizations/${organizationId}/teams/${teamId}/timezone`, {
+				method: "PUT",
+				body: { timezone },
+			}),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: teamsQueryKey(organizationId) });
 		},

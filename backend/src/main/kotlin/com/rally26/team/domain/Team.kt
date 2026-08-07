@@ -15,4 +15,6 @@ data class Team(
     val contactEmail: String?,
     val createdAt: Instant,
     val updatedAt: Instant,
+    /** Phase 24 slice 24.5 (ADR-071): null means "inherit organization default" — a real value overrides it. */
+    val timezoneOverride: String? = null,
 )

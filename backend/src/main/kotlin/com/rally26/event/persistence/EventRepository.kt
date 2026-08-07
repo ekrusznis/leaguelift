@@ -7,8 +7,10 @@ import com.rally26.event.domain.EventType
 import com.rally26.event.domain.EventVisibility
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
+import java.sql.Date
 import java.sql.Timestamp
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 private const val COLUMNS = """
@@ -16,7 +18,7 @@ private const val COLUMNS = """
 	event_type, title, description, status, start_at, end_at, arrival_at, meeting_at,
 	timezone, venue_name, address, latitude, longitude, area, meeting_point, directions_notes,
 	visibility, source_type, provider, connection_id, external_event_id, external_sync_hash,
-	source_updated_at, created_by_user_id, updated_by_user_id, created_at, updated_at
+	source_updated_at, created_by_user_id, updated_by_user_id, created_at, updated_at, all_day_date
 """
 
 @Repository
@@ -170,6 +172,8 @@ class EventRepository(
         sourceUpdatedAt: Instant? = null,
         /** MANUAL creation always starts DRAFT (matches [EventStatus] check constraint's default); CSV import (Phase 12 slice 2) starts TENTATIVE instead — the org already reviewed the source file before uploading it, so forcing a manual publish per imported row would be pure friction. */
         initialStatus: EventStatus = EventStatus.DRAFT,
+        /** Phase 24 slice 24.5 (ADR-071): mutually exclusive with [startAt] (DB check constraint) — a true all-day date, never zone-converted. */
+        allDayDate: LocalDate? = null,
     ): Event {
         val id = UUID.randomUUID()
         val now = Instant.now()
@@ -181,13 +185,13 @@ class EventRepository(
                 	 event_type, title, description, status, start_at, end_at, arrival_at, meeting_at,
                 	 timezone, venue_name, address, latitude, longitude, area, meeting_point, directions_notes,
                 	 visibility, source_type, provider, connection_id, external_event_id, external_sync_hash,
-                	 source_updated_at, created_by_user_id, updated_by_user_id, created_at, updated_at)
+                	 source_updated_at, created_by_user_id, updated_by_user_id, created_at, updated_at, all_day_date)
                 values
                 	(:id, :organizationId, :teamId, :tournamentId, :opponentTeamId, :opponentName,
                 	 :eventType, :title, :description, :initialStatus, :startAt, :endAt, :arrivalAt, :meetingAt,
                 	 :timezone, :venueName, :address, :latitude, :longitude, :area, :meetingPoint, :directionsNotes,
                 	 :visibility, :sourceType, :provider, :connectionId, :externalEventId, :externalSyncHash,
-                	 :sourceUpdatedAt, :createdByUserId, :createdByUserId, :now, :now)
+                	 :sourceUpdatedAt, :createdByUserId, :createdByUserId, :now, :now, :allDayDate)
                 """.trimIndent(),
             ).param("id", id)
             .param("organizationId", organizationId)
@@ -220,6 +224,7 @@ class EventRepository(
             .param("externalEventId", externalEventId)
             .param("externalSyncHash", externalSyncHash)
             .param("sourceUpdatedAt", sourceUpdatedAt?.let { Timestamp.from(it) })
+            .param("allDayDate", allDayDate?.let { Date.valueOf(it) })
             .update()
         return findById(id, organizationId)!!
     }
@@ -247,6 +252,8 @@ class EventRepository(
         updatedByUserId: UUID,
         externalSyncHash: String? = null,
         sourceUpdatedAt: Instant? = null,
+        /** Phase 24 slice 24.5 (ADR-071): coalesce-only, same as every other field here — can only ever be set on a row whose `start_at` etc. are already null (enforced at the [com.rally26.event.application.EventService] layer, not here). */
+        allDayDate: LocalDate? = null,
     ): Int {
         val now = Instant.now()
         return jdbcClient
@@ -271,6 +278,7 @@ class EventRepository(
                     opponent_name     = coalesce(:opponentName, opponent_name),
                     external_sync_hash = coalesce(:externalSyncHash, external_sync_hash),
                     source_updated_at = coalesce(:sourceUpdatedAt, source_updated_at),
+                    all_day_date      = coalesce(:allDayDate, all_day_date),
                     updated_by_user_id = :updatedByUserId,
                     updated_at        = :now
                 where id = :id and organization_id = :organizationId
@@ -293,6 +301,7 @@ class EventRepository(
             .param("opponentName", opponentName)
             .param("externalSyncHash", externalSyncHash)
             .param("sourceUpdatedAt", sourceUpdatedAt?.let { Timestamp.from(it) })
+            .param("allDayDate", allDayDate?.let { Date.valueOf(it) })
             .param("updatedByUserId", updatedByUserId)
             .param("now", Timestamp.from(now))
             .param("id", id)
@@ -381,5 +390,6 @@ class EventRepository(
             updatedByUserId = rs.getObject("updated_by_user_id", UUID::class.java),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
+            allDayDate = rs.getDate("all_day_date")?.toLocalDate(),
         )
 }

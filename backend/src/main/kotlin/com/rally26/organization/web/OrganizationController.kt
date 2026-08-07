@@ -64,6 +64,13 @@ class OrganizationController(
                 request.contactEmail,
                 request.contactPhone,
                 currentUser,
+                addressLine1 = request.addressLine1,
+                addressLine2 = request.addressLine2,
+                addressCity = request.addressCity,
+                addressState = request.addressState,
+                addressPostalCode = request.addressPostalCode,
+                addressCountry = request.addressCountry,
+                timezone = request.timezone,
             ).toResponse()
 
     @GetMapping("/{organizationId}/onboarding")
@@ -71,4 +78,10 @@ class OrganizationController(
         @PathVariable organizationId: UUID,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): OnboardingProgressResponse = organizationService.onboardingProgress(organizationId, currentUser).toResponse()
+
+    @GetMapping("/{organizationId}/timezone-suggestion")
+    fun timezoneSuggestion(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): TimezoneSuggestionResponse = TimezoneSuggestionResponse(organizationService.suggestTimezone(organizationId, currentUser))
 }

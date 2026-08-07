@@ -1,6 +1,7 @@
 package com.rally26.event.domain
 
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 enum class EventType { COMPETITION, TOURNAMENT, PRACTICE, MEETING, OTHER }
@@ -46,6 +47,8 @@ data class Event(
     val updatedByUserId: UUID,
     val createdAt: Instant,
     val updatedAt: Instant,
+    /** Phase 24 slice 24.5 (ADR-071): a true all-day date, never zone-converted. Mutually exclusive with [startAt] (DB check constraint). */
+    val allDayDate: LocalDate? = null,
 )
 
 /** A tournament child event may intentionally have TBD time/opponent/area until assigned — see DESIGN-DOC.md section 14.1A. */

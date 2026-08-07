@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
 import com.rally26.authorization.application.AuthorizationService
 import com.rally26.authorization.domain.Capabilities
+import com.rally26.common.error.FieldError
 import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
@@ -24,6 +25,7 @@ import com.rally26.participant.persistence.ParticipantRepository
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
+import com.rally26.timezone.application.TimeZoneService
 import com.rally26.tournament.persistence.TournamentRepository
 import io.mockk.every
 import io.mockk.just
@@ -31,6 +33,7 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
 import java.time.Instant
+import java.time.ZoneId
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -48,6 +51,21 @@ class EventServiceTest {
     private val calendarProvider = mockk<CalendarProvider>()
     private val mapsProvider = mockk<MapsProvider>()
     private val outboxWriter = mockk<OutboxWriter>()
+    private val timeZoneService =
+        mockk<TimeZoneService> {
+            every { requireValid(any()) } answers {
+                val tz = firstArg<String>()
+                try {
+                    ZoneId.of(tz)
+                } catch (e: Exception) {
+                    throw ValidationException(
+                        "Timezone must be a valid IANA time zone id (e.g. America/New_York).",
+                        listOf(FieldError("timezone", "Invalid time zone.")),
+                    )
+                }
+            }
+            every { resolveEffectiveZone(any(), any(), any()) } returns "America/New_York"
+        }
     private val service =
         EventService(
             eventRepository,
@@ -62,6 +80,7 @@ class EventServiceTest {
             mapsProvider,
             outboxWriter,
             ObjectMapper(),
+            timeZoneService,
         )
 
     private val orgId = UUID.randomUUID()
@@ -310,6 +329,166 @@ class EventServiceTest {
 
         assertEquals(created.id, result.id)
         verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "event.created", "event", created.id) }
+    }
+
+    @Test
+    fun `create succeeds for an all-day event with every instant field null`() {
+        every { authorizationService.requireTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_CREATE) } just runs
+        every { teamRepository.findById(teamId, orgId) } returns team()
+        val allDayDate = java.time.LocalDate.of(2026, 7, 4)
+        val created = sampleEvent().copy(allDayDate = allDayDate, startAt = null, endAt = null)
+        every {
+            eventRepository.insert(
+                orgId,
+                teamId,
+                null,
+                null,
+                null,
+                EventType.PRACTICE,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "America/New_York",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                EventVisibility.TEAM,
+                currentUser.userId,
+                allDayDate = allDayDate,
+            )
+        } returns created
+        every { auditService.record(currentUser.userId, orgId, "event.created", "event", created.id) } just runs
+
+        val result =
+            service.create(
+                orgId,
+                teamId,
+                null,
+                null,
+                null,
+                EventType.PRACTICE,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "America/New_York",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                EventVisibility.TEAM,
+                currentUser,
+                allDayDate = allDayDate,
+            )
+
+        assertEquals(allDayDate, result.allDayDate)
+    }
+
+    @Test
+    fun `create rejects an all-day date combined with a start time`() {
+        assertFailsWith<ValidationException> {
+            service.create(
+                orgId,
+                teamId,
+                null,
+                null,
+                null,
+                EventType.PRACTICE,
+                null,
+                null,
+                Instant.now(),
+                null,
+                null,
+                null,
+                "America/New_York",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                EventVisibility.TEAM,
+                currentUser,
+                allDayDate = java.time.LocalDate.of(2026, 7, 4),
+            )
+        }
+    }
+
+    @Test
+    fun `a later organization timezone change does not rewrite an already-created event's snapshot`() {
+        every { authorizationService.requireTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_CREATE) } just runs
+        every { teamRepository.findById(teamId, orgId) } returns team()
+        val firstEvent = sampleEvent()
+        every {
+            eventRepository.insert(
+                orgId,
+                teamId,
+                null,
+                null,
+                null,
+                EventType.PRACTICE,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "America/New_York",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                EventVisibility.TEAM,
+                currentUser.userId,
+            )
+        } returns firstEvent
+        every { auditService.record(currentUser.userId, orgId, "event.created", "event", firstEvent.id) } just runs
+
+        val result =
+            service.create(
+                orgId,
+                teamId,
+                null,
+                null,
+                null,
+                EventType.PRACTICE,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "America/New_York",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                EventVisibility.TEAM,
+                currentUser,
+            )
+
+        // The organization's default timezone changing afterward (simulated here by simply
+        // never re-reading it) must never retroactively alter this already-persisted snapshot.
+        assertEquals("America/New_York", result.timezone)
     }
 
     @Test
@@ -960,5 +1139,80 @@ class EventServiceTest {
         assertEquals(EventSourceType.MANUAL, result.sourceType)
         verify(exactly = 1) { eventRepository.detachFromSource(imported.id, orgId, currentUser.userId) }
         verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "event.detached_from_source", "event", imported.id) }
+    }
+
+    @Test
+    fun `update rejects an all-day date combined with a start time in the same call`() {
+        val before = sampleEvent(status = EventStatus.DRAFT)
+        every { eventRepository.findById(before.id, orgId) } returns before
+        every { authorizationService.requireTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_UPDATE) } just runs
+
+        assertFailsWith<ValidationException> {
+            service.update(
+                orgId,
+                before.id,
+                null,
+                null,
+                null,
+                Instant.now(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                currentUser,
+                allDayDate = java.time.LocalDate.of(2026, 7, 4),
+            )
+        }
+    }
+
+    @Test
+    fun `update rejects converting an already-timed event to all-day`() {
+        val before = sampleEvent(status = EventStatus.DRAFT).copy(startAt = Instant.now())
+        every { eventRepository.findById(before.id, orgId) } returns before
+        every { authorizationService.requireTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_UPDATE) } just runs
+
+        assertFailsWith<ValidationException> {
+            service.update(
+                orgId,
+                before.id,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                currentUser,
+                allDayDate = java.time.LocalDate.of(2026, 7, 4),
+            )
+        }
+    }
+
+    @Test
+    fun `resolveDefaultTimezone requires active membership and delegates to the effective-zone resolution`() {
+        every { membershipService.requireActiveMembership(orgId, currentUser) } returns managerMembership()
+        every { timeZoneService.resolveEffectiveZone(orgId, teamId, null) } returns "America/Chicago"
+
+        val result = service.resolveDefaultTimezone(orgId, teamId, null, currentUser)
+
+        assertEquals("America/Chicago", result)
+        verify(exactly = 1) { timeZoneService.resolveEffectiveZone(orgId, teamId, null) }
     }
 }

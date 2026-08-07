@@ -1,6 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, apiFetchBlob } from "../../lib/apiClient";
-import type { CreateEventInput, DirectionsResponse, EventRsvps, EventTemplate, Rally26Event, RsvpResponse, SaveEventTemplateInput } from "./types";
+import type {
+	CreateEventInput,
+	DirectionsResponse,
+	EventRsvps,
+	EventTemplate,
+	Rally26Event,
+	RsvpResponse,
+	SaveEventTemplateInput,
+	TimezoneDefault,
+} from "./types";
 
 export type EventScope =
 	| { type: "organization"; organizationId: string }
@@ -62,6 +71,25 @@ export function useCreateEvent(scope: EventScope) {
 	return useMutation({
 		mutationFn: (input: CreateEventInput) => apiFetch<Rally26Event>(createPath(scope), { method: "POST", body: input }),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: eventScopeKey(scope) }),
+	});
+}
+
+/**
+ * Phase 24 slice 24.5 (ADR-071): the create-event form's smart timezone default — team
+ * override -> tournament override -> organization default -> hard-coded fallback. The
+ * browser's own `Intl` timezone is only a last-resort client-side fallback if this call
+ * fails, never the sole source of truth.
+ */
+export function useEventTimezoneDefault(organizationId: string, teamId?: string, tournamentId?: string) {
+	const params = new URLSearchParams();
+	if (teamId) params.set("teamId", teamId);
+	if (tournamentId) params.set("tournamentId", tournamentId);
+	const query = params.toString();
+	return useQuery({
+		queryKey: ["organizations", organizationId, "events", "timezone-default", teamId ?? null, tournamentId ?? null],
+		queryFn: () =>
+			apiFetch<TimezoneDefault>(`/organizations/${organizationId}/events/timezone-default${query ? `?${query}` : ""}`),
+		enabled: !!organizationId,
 	});
 }
 

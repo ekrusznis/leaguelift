@@ -53,9 +53,19 @@ class EventController(
                 request.directionsNotes,
                 request.visibility,
                 currentUser,
+                allDayDate = request.allDayDate,
             )
         return event.toResponseWithNames(organizationId)
     }
+
+    @GetMapping("/organizations/{organizationId}/events/timezone-default")
+    fun timezoneDefault(
+        @PathVariable organizationId: UUID,
+        @RequestParam(required = false) teamId: UUID?,
+        @RequestParam(required = false) tournamentId: UUID?,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): TimezoneDefaultResponse =
+        TimezoneDefaultResponse(eventService.resolveDefaultTimezone(organizationId, teamId, tournamentId, currentUser))
 
     @GetMapping("/organizations/{organizationId}/events")
     fun listForOrganization(
@@ -101,6 +111,7 @@ class EventController(
                 request.opponentTeamId,
                 request.opponentName,
                 currentUser,
+                allDayDate = request.allDayDate,
             )
         return event.toResponseWithNames(organizationId)
     }
@@ -174,6 +185,7 @@ class EventController(
                 request.directionsNotes,
                 request.visibility,
                 currentUser,
+                allDayDate = request.allDayDate,
             )
         return event.toResponseWithNames(organizationId)
     }
@@ -226,6 +238,7 @@ class EventController(
                 request.directionsNotes,
                 request.visibility,
                 currentUser,
+                allDayDate = request.allDayDate,
             )
         return event.toResponseWithNames(organizationId)
     }

@@ -14,6 +14,9 @@ private val UTC_STAMP: DateTimeFormatter =
         .parseDefaulting(ChronoField.NANO_OF_SECOND, 0)
         .toFormatter()
 
+/** Phase 24 slice 24.5 (ADR-071): RFC 5545 `VALUE=DATE` — a plain calendar date, never zone-converted, so an all-day event's date can never shift regardless of which zone the reader/writer JVM defaults to. */
+private val DATE_STAMP: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd")
+
 /**
  * The only [CalendarProvider] implementation (Phase 10 slice 3, ADR-028) — RFC 5545
  * `VCALENDAR`/`VEVENT` text, no external dependency. Every timestamp is emitted in UTC
@@ -45,8 +48,13 @@ class IcsCalendarProvider : CalendarProvider {
         displayTitle: String,
     ): List<String> {
         val lines = mutableListOf("BEGIN:VEVENT", "UID:${event.id}@rally26.app", "DTSTAMP:${stamp(Instant.now())}")
-        event.startAt?.let { lines += fold("DTSTART:${stamp(it)}") }
-        event.endAt?.let { lines += fold("DTEND:${stamp(it)}") }
+        if (event.allDayDate != null) {
+            lines += fold("DTSTART;VALUE=DATE:${DATE_STAMP.format(event.allDayDate)}")
+            lines += fold("DTEND;VALUE=DATE:${DATE_STAMP.format(event.allDayDate.plusDays(1))}")
+        } else {
+            event.startAt?.let { lines += fold("DTSTART:${stamp(it)}") }
+            event.endAt?.let { lines += fold("DTEND:${stamp(it)}") }
+        }
         lines += fold("SUMMARY:${escape(displayTitle)}")
         val locationParts = listOfNotNull(event.venueName, event.area, event.address).filter { it.isNotBlank() }
         if (locationParts.isNotEmpty()) lines += fold("LOCATION:${escape(locationParts.joinToString(", "))}")

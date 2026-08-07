@@ -2,6 +2,7 @@ package com.rally26.organization.application
 
 import com.rally26.audit.application.AuditService
 import com.rally26.common.error.ConflictException
+import com.rally26.common.error.FieldError
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.membership.application.MembershipService
@@ -15,12 +16,15 @@ import com.rally26.organization.domain.OrganizationType
 import com.rally26.organization.persistence.OrganizationRepository
 import com.rally26.payout.domain.OrganizationPayoutAccount
 import com.rally26.payout.persistence.OrganizationPayoutAccountRepository
+import com.rally26.timezone.application.TimeZoneService
+import com.rally26.timezone.application.TimezoneSuggestionService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
 import java.time.Instant
+import java.time.ZoneId
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -32,8 +36,31 @@ class OrganizationServiceTest {
     private val auditService = mockk<AuditService>()
     private val payoutAccountRepository = mockk<OrganizationPayoutAccountRepository>()
     private val analyticsProvider = mockk<AnalyticsProvider>()
+    private val timeZoneService =
+        mockk<TimeZoneService> {
+            every { requireValid(any()) } answers {
+                val tz = firstArg<String>()
+                try {
+                    ZoneId.of(tz)
+                } catch (e: Exception) {
+                    throw ValidationException(
+                        "Timezone must be a valid IANA time zone id (e.g. America/New_York).",
+                        listOf(FieldError("timezone", "Invalid time zone.")),
+                    )
+                }
+            }
+        }
+    private val timezoneSuggestionService = mockk<TimezoneSuggestionService>()
     private val service =
-        OrganizationService(organizationRepository, membershipService, auditService, payoutAccountRepository, analyticsProvider)
+        OrganizationService(
+            organizationRepository,
+            membershipService,
+            auditService,
+            payoutAccountRepository,
+            analyticsProvider,
+            timeZoneService,
+            timezoneSuggestionService,
+        )
 
     private val currentUser = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")
 
@@ -121,7 +148,7 @@ class OrganizationServiceTest {
     }
 
     @Test
-    fun `onboarding is incomplete until profile, a second administrator, and payouts exist`() {
+    fun `onboarding is incomplete until profile, a second administrator, payouts, and timezone all exist`() {
         val organization = existingOrganization()
         every { membershipService.requireActiveMembership(organization.id, currentUser) } returns
             ownerMembership(organization.id, currentUser.userId)
@@ -134,11 +161,13 @@ class OrganizationServiceTest {
         assertEquals(false, progress.profileComplete)
         assertEquals(false, progress.hasAdditionalAdministrator)
         assertEquals(false, progress.payoutsConnected)
+        assertEquals(false, progress.timezoneConfirmed)
     }
 
     @Test
-    fun `onboarding is complete once profile, a second administrator, and payouts all exist`() {
-        val organization = existingOrganization().copy(sports = listOf("Soccer"), contactEmail = "ops@example.com")
+    fun `onboarding is complete once profile, a second administrator, payouts, and timezone all exist`() {
+        val organization =
+            existingOrganization().copy(sports = listOf("Soccer"), contactEmail = "ops@example.com", timezone = "America/New_York")
         every { membershipService.requireActiveMembership(organization.id, currentUser) } returns
             ownerMembership(organization.id, currentUser.userId)
         every { organizationRepository.findById(organization.id) } returns organization
@@ -150,6 +179,72 @@ class OrganizationServiceTest {
         assertEquals(true, progress.profileComplete)
         assertEquals(true, progress.hasAdditionalAdministrator)
         assertEquals(true, progress.payoutsConnected)
+        assertEquals(true, progress.timezoneConfirmed)
+    }
+
+    @Test
+    fun `suggestTimezone delegates to the heuristic using the organization's persisted address`() {
+        val organization = existingOrganization().copy(addressCountry = "US", addressState = "TX")
+        every { membershipService.requireActiveMembership(organization.id, currentUser) } returns
+            ownerMembership(organization.id, currentUser.userId)
+        every { organizationRepository.findById(organization.id) } returns organization
+        every { timezoneSuggestionService.suggest("US", "TX") } returns "America/Chicago"
+
+        assertEquals("America/Chicago", service.suggestTimezone(organization.id, currentUser))
+    }
+
+    @Test
+    fun `suggestTimezone returns null when no address is set yet`() {
+        val organization = existingOrganization()
+        every { membershipService.requireActiveMembership(organization.id, currentUser) } returns
+            ownerMembership(organization.id, currentUser.userId)
+        every { organizationRepository.findById(organization.id) } returns organization
+        every { timezoneSuggestionService.suggest(null, null) } returns null
+
+        assertEquals(null, service.suggestTimezone(organization.id, currentUser))
+    }
+
+    @Test
+    fun `updating with an invalid timezone is rejected`() {
+        val organization = existingOrganization()
+        every { membershipService.requireActiveMembership(organization.id, currentUser) } returns
+            ownerMembership(organization.id, currentUser.userId)
+        every { organizationRepository.findById(organization.id) } returns organization
+
+        assertFailsWith<ValidationException> {
+            service.update(organization.id, null, null, null, null, null, currentUser, timezone = "Not/AZone")
+        }
+    }
+
+    @Test
+    fun `confirming a valid timezone persists it and is audited`() {
+        val organization = existingOrganization()
+        val updated = organization.copy(timezone = "America/Denver")
+        every { membershipService.requireActiveMembership(organization.id, currentUser) } returns
+            ownerMembership(organization.id, currentUser.userId)
+        every { organizationRepository.findById(organization.id) } returnsMany listOf(organization, updated)
+        every {
+            organizationRepository.updateProfile(
+                organization.id,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "America/Denver",
+            )
+        } returns 1
+        every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+
+        val result = service.update(organization.id, null, null, null, null, null, currentUser, timezone = "America/Denver")
+
+        assertEquals("America/Denver", result.timezone)
     }
 
     private fun fullyConnectedPayoutAccount(organizationId: UUID) =

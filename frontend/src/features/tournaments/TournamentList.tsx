@@ -9,7 +9,7 @@ import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { TournamentRoleAssignmentsSection } from "../authorization/TournamentRoleAssignmentsSection";
 import { EntityBrandingPanel } from "../media/EntityBrandingPanel";
-import { useArchiveTournament, useCreateTournament, useTournaments } from "./api";
+import { useArchiveTournament, useCreateTournament, useTournaments, useUpdateTournamentTimezone } from "./api";
 import { createTournamentSchema, type CreateTournamentFormValues } from "./schema";
 
 function formatDateRange(startDate: string | null, endDate: string | null): string {
@@ -23,9 +23,12 @@ export function TournamentList({ organizationId }: { organizationId: string }) {
 	const { data, isLoading, isError, refetch } = useTournaments(organizationId);
 	const createTournament = useCreateTournament(organizationId);
 	const archiveTournament = useArchiveTournament(organizationId);
+	const updateTournamentTimezone = useUpdateTournamentTimezone(organizationId);
 	const [showForm, setShowForm] = useState(false);
 	const [expandedTournamentId, setExpandedTournamentId] = useState<string | null>(null);
 	const [brandingTournamentId, setBrandingTournamentId] = useState<string | null>(null);
+	const [timezoneTournamentId, setTimezoneTournamentId] = useState<string | null>(null);
+	const [timezoneDraft, setTimezoneDraft] = useState("");
 
 	const {
 		register,
@@ -177,6 +180,20 @@ export function TournamentList({ organizationId }: { organizationId: string }) {
 									<Button
 										type="button"
 										variant="secondary"
+										onClick={() => {
+											if (timezoneTournamentId === tournament.id) {
+												setTimezoneTournamentId(null);
+											} else {
+												setTimezoneTournamentId(tournament.id);
+												setTimezoneDraft(tournament.timezoneOverride ?? "");
+											}
+										}}
+									>
+										{timezoneTournamentId === tournament.id ? "Hide timezone" : "Timezone"}
+									</Button>
+									<Button
+										type="button"
+										variant="secondary"
 										onClick={() => archiveTournament.mutate(tournament.id)}
 										disabled={archiveTournament.isPending}
 									>
@@ -192,6 +209,45 @@ export function TournamentList({ organizationId }: { organizationId: string }) {
 							{expandedTournamentId === tournament.id && (
 								<div className="mt-3">
 									<TournamentRoleAssignmentsSection organizationId={organizationId} tournamentId={tournament.id} />
+								</div>
+							)}
+							{timezoneTournamentId === tournament.id && (
+								<div className="mt-3 flex flex-wrap items-end gap-2 rounded-md border border-slate-gray/20 bg-ice-white p-3">
+									<div className="flex flex-col gap-1">
+										<label htmlFor={`tournament-timezone-${tournament.id}`} className="text-sm font-medium text-navy">
+											Timezone override
+										</label>
+										<input
+											id={`tournament-timezone-${tournament.id}`}
+											type="text"
+											placeholder="Inherits organization default"
+											value={timezoneDraft}
+											onChange={(e) => setTimezoneDraft(e.target.value)}
+											className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+										/>
+									</div>
+									<Button
+										type="button"
+										onClick={() =>
+											updateTournamentTimezone.mutate({ tournamentId: tournament.id, timezone: timezoneDraft.trim() || null })
+										}
+										disabled={updateTournamentTimezone.isPending}
+									>
+										Save
+									</Button>
+									{tournament.timezoneOverride && (
+										<Button
+											type="button"
+											variant="secondary"
+											onClick={() => {
+												setTimezoneDraft("");
+												updateTournamentTimezone.mutate({ tournamentId: tournament.id, timezone: null });
+											}}
+											disabled={updateTournamentTimezone.isPending}
+										>
+											Clear (inherit organization default)
+										</Button>
+									)}
 								</div>
 							)}
 						</li>

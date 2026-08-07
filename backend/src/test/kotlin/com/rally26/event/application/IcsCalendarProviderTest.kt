@@ -6,6 +6,8 @@ import com.rally26.event.domain.EventStatus
 import com.rally26.event.domain.EventType
 import com.rally26.event.domain.EventVisibility
 import java.time.Instant
+import java.time.LocalDate
+import java.util.TimeZone
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -21,6 +23,7 @@ class IcsCalendarProviderTest {
         description: String? = null,
         meetingPoint: String? = null,
         directionsNotes: String? = null,
+        allDayDate: LocalDate? = null,
     ) = Event(
         id = UUID.randomUUID(),
         organizationId = UUID.randomUUID(),
@@ -55,6 +58,7 @@ class IcsCalendarProviderTest {
         updatedByUserId = UUID.randomUUID(),
         createdAt = Instant.now(),
         updatedAt = Instant.now(),
+        allDayDate = allDayDate,
     )
 
     @Test
@@ -104,6 +108,38 @@ class IcsCalendarProviderTest {
         val ics = provider.buildIcs(event(description = "Bring water, snacks; arrive early"), "Practice")
 
         assertTrue(ics.contains("DESCRIPTION:Bring water\\, snacks\\; arrive early"))
+    }
+
+    @Test
+    fun `an all-day event emits VALUE=DATE, not a UTC DATE-TIME`() {
+        val ics =
+            provider.buildIcs(event(startAt = null, endAt = null, allDayDate = LocalDate.of(2026, 7, 4)), "Independence Day Tournament")
+
+        assertTrue(ics.contains("DTSTART;VALUE=DATE:20260704"))
+        assertTrue(ics.contains("DTEND;VALUE=DATE:20260705"))
+        assertFalse(ics.contains("DTSTART:"))
+        assertFalse(ics.contains("DTEND:"))
+    }
+
+    @Test
+    fun `an all-day event's date never shifts regardless of the JVM's default timezone`() {
+        val originalDefault = TimeZone.getDefault()
+        try {
+            val allDayEvent = event(startAt = null, endAt = null, allDayDate = LocalDate.of(2026, 12, 31))
+
+            TimeZone.setDefault(TimeZone.getTimeZone("America/Los_Angeles"))
+            val westCoastIcs = provider.buildIcs(allDayEvent, "New Year's Eve Tournament")
+
+            TimeZone.setDefault(TimeZone.getTimeZone("Pacific/Kiritimati"))
+            val farEastIcs = provider.buildIcs(allDayEvent, "New Year's Eve Tournament")
+
+            assertTrue(westCoastIcs.contains("DTSTART;VALUE=DATE:20261231"))
+            assertTrue(farEastIcs.contains("DTSTART;VALUE=DATE:20261231"))
+            assertTrue(westCoastIcs.contains("DTEND;VALUE=DATE:20270101"))
+            assertTrue(farEastIcs.contains("DTEND;VALUE=DATE:20270101"))
+        } finally {
+            TimeZone.setDefault(originalDefault)
+        }
     }
 
     @Test

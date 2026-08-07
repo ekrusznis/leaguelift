@@ -20,6 +20,14 @@ export interface Organization {
 	sports: string[];
 	contactEmail: string | null;
 	contactPhone: string | null;
+	addressLine1: string | null;
+	addressLine2: string | null;
+	addressCity: string | null;
+	addressState: string | null;
+	addressPostalCode: string | null;
+	addressCountry: string | null;
+	/** Phase 24 slice 24.5 (ADR-071): an IANA time zone id, or null until the owner confirms one. */
+	timezone: string | null;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -35,6 +43,11 @@ export interface OnboardingProgress {
 	profileComplete: boolean;
 	hasAdditionalAdministrator: boolean;
 	payoutsConnected: boolean;
+	timezoneConfirmed: boolean;
+}
+
+export interface TimezoneSuggestion {
+	timezone: string | null;
 }
 
 export const INVITABLE_ROLES = [

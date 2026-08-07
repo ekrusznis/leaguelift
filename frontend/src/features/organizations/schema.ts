@@ -40,6 +40,14 @@ export const updateOrganizationProfileSchema = z.object({
 	sports: z.array(z.string()).min(1, "Select at least one sport."),
 	contactEmail: z.string().trim().email("Enter a valid email address."),
 	contactPhone: z.string().trim().max(40).optional().or(z.literal("")),
+	addressLine1: z.string().trim().max(200).optional().or(z.literal("")),
+	addressLine2: z.string().trim().max(200).optional().or(z.literal("")),
+	addressCity: z.string().trim().max(100).optional().or(z.literal("")),
+	addressState: z.string().trim().max(100).optional().or(z.literal("")),
+	addressPostalCode: z.string().trim().max(20).optional().or(z.literal("")),
+	addressCountry: z.string().trim().max(100).optional().or(z.literal("")),
+	/** Phase 24 slice 24.5 (ADR-071): submitting this field IS the owner's confirmation act — never auto-filled without a click. */
+	timezone: z.string().trim().max(100).optional().or(z.literal("")),
 });
 
 export type UpdateOrganizationProfileFormValues = z.infer<typeof updateOrganizationProfileSchema>;

@@ -30,6 +30,8 @@ export interface Rally26Event {
 	sourceType: string;
 	createdAt: string;
 	updatedAt: string;
+	/** Phase 24 slice 24.5 (ADR-071): a plain `YYYY-MM-DD` date, never zone-converted. When set, every instant field above is null. */
+	allDayDate: string | null;
 }
 
 export interface CreateEventInput {
@@ -51,6 +53,11 @@ export interface CreateEventInput {
 	meetingPoint?: string | null;
 	directionsNotes?: string | null;
 	visibility: EventVisibility;
+	allDayDate?: string | null;
+}
+
+export interface TimezoneDefault {
+	timezone: string;
 }
 
 export interface RsvpSummary {

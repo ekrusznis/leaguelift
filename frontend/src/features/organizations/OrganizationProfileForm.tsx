@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Button } from "../../components/Button";
-import { useUpdateOrganizationProfile } from "./api";
+import { useTimezoneSuggestion, useUpdateOrganizationProfile } from "./api";
 import { COMMON_SPORTS, updateOrganizationProfileSchema, type UpdateOrganizationProfileFormValues } from "./schema";
 import { ORGANIZATION_TYPES, type Organization } from "./types";
 
@@ -31,10 +31,21 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 			sports: organization.sports,
 			contactEmail: organization.contactEmail ?? "",
 			contactPhone: organization.contactPhone ?? "",
+			addressLine1: organization.addressLine1 ?? "",
+			addressLine2: organization.addressLine2 ?? "",
+			addressCity: organization.addressCity ?? "",
+			addressState: organization.addressState ?? "",
+			addressPostalCode: organization.addressPostalCode ?? "",
+			addressCountry: organization.addressCountry ?? "",
+			timezone: organization.timezone ?? "",
 		},
 	});
 	const updateProfile = useUpdateOrganizationProfile(organization.id);
 	const selectedSports = watch("sports");
+	const currentTimezone = watch("timezone");
+	const suggestion = useTimezoneSuggestion(organization.id, organization.timezone == null);
+	const suggestedTimezone = suggestion.data?.timezone ?? null;
+	const showSuggestionBanner = !!suggestedTimezone && currentTimezone !== suggestedTimezone;
 
 	const toggleSport = (sport: string) => {
 		const next = selectedSports.includes(sport)
@@ -146,6 +157,116 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 					{...register("contactPhone")}
 					className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 				/>
+			</div>
+
+			<fieldset className="flex flex-col gap-3">
+				<legend className="text-sm font-medium text-navy">Address (optional)</legend>
+				<div className="flex flex-col gap-1">
+					<label htmlFor="profile-address-line1" className="text-sm text-slate-gray">
+						Street address
+					</label>
+					<input
+						id="profile-address-line1"
+						type="text"
+						{...register("addressLine1")}
+						className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+					/>
+				</div>
+				<div className="flex flex-col gap-1">
+					<label htmlFor="profile-address-line2" className="text-sm text-slate-gray">
+						Street address line 2
+					</label>
+					<input
+						id="profile-address-line2"
+						type="text"
+						{...register("addressLine2")}
+						className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+					/>
+				</div>
+				<div className="flex flex-wrap gap-3">
+					<div className="flex flex-col gap-1">
+						<label htmlFor="profile-address-city" className="text-sm text-slate-gray">
+							City
+						</label>
+						<input
+							id="profile-address-city"
+							type="text"
+							{...register("addressCity")}
+							className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+						/>
+					</div>
+					<div className="flex flex-col gap-1">
+						<label htmlFor="profile-address-state" className="text-sm text-slate-gray">
+							State / province
+						</label>
+						<input
+							id="profile-address-state"
+							type="text"
+							placeholder="e.g. TX"
+							{...register("addressState")}
+							className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+						/>
+					</div>
+					<div className="flex flex-col gap-1">
+						<label htmlFor="profile-address-postal-code" className="text-sm text-slate-gray">
+							Postal code
+						</label>
+						<input
+							id="profile-address-postal-code"
+							type="text"
+							{...register("addressPostalCode")}
+							className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+						/>
+					</div>
+					<div className="flex flex-col gap-1">
+						<label htmlFor="profile-address-country" className="text-sm text-slate-gray">
+							Country
+						</label>
+						<input
+							id="profile-address-country"
+							type="text"
+							placeholder="e.g. US"
+							{...register("addressCountry")}
+							className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+						/>
+					</div>
+				</div>
+			</fieldset>
+
+			<div className="flex flex-col gap-1">
+				<label htmlFor="profile-timezone" className="text-sm font-medium text-navy">
+					Timezone
+				</label>
+				<input
+					id="profile-timezone"
+					type="text"
+					placeholder="e.g. America/New_York"
+					{...register("timezone")}
+					className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+				/>
+				<p className="text-xs text-slate-gray">
+					IANA time zone id. Used as the default for new events, teams, and tournaments that don't set their own
+					override.
+				</p>
+				{showSuggestionBanner && (
+					<div
+						role="status"
+						className="mt-1 flex flex-wrap items-center gap-2 rounded-md border border-championship-gold/40 bg-championship-gold/10 px-3 py-2 text-sm text-navy"
+					>
+						<span>
+							Suggested timezone based on your address: <strong>{suggestedTimezone}</strong>
+						</span>
+						<Button
+							type="button"
+							variant="secondary"
+							onClick={() =>
+								setValue("timezone", suggestedTimezone ?? "", { shouldDirty: true, shouldValidate: true })
+							}
+						>
+							Use this
+						</Button>
+					</div>
+				)}
 			</div>
 
 			{updateProfile.isError && (
