@@ -2,19 +2,25 @@ package com.rally26.subscription.application
 
 import com.rally26.audit.application.AuditService
 import com.rally26.common.error.ConflictException
+import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
+import com.rally26.common.web.PageRequest
+import com.rally26.common.web.PageResponse
 import com.rally26.config.FrontendProperties
 import com.rally26.identity.persistence.AppUserRepository
 import com.rally26.membership.application.MembershipService
 import com.rally26.onboarding.owner.persistence.OwnerOnboardingRepository
 import com.rally26.organization.domain.OrganizationStatus
 import com.rally26.organization.persistence.OrganizationRepository
+import com.rally26.subscription.domain.BillingRecoveryState
 import com.rally26.subscription.domain.OrganizationAccessDecision
 import com.rally26.subscription.domain.OrganizationSubscription
 import com.rally26.subscription.domain.OrganizationSubscriptionStatus
+import com.rally26.subscription.domain.PlatformOrganizationSubscription
 import com.rally26.subscription.domain.SubscriptionPlan
+import com.rally26.subscription.domain.billingRecoveryState
 import com.rally26.subscription.domain.organizationAccessDecision
 import com.rally26.subscription.domain.stripeSubscriptionStatus
 import com.rally26.subscription.infra.StripeSubscriptionBillingClient
@@ -27,6 +33,12 @@ import com.stripe.model.checkout.Session
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
+
+data class OrganizationBillingOverview(
+    val subscription: OrganizationSubscription,
+    val plan: SubscriptionPlan?,
+    val recoveryState: BillingRecoveryState,
+)
 
 @Service
 class OrganizationSubscriptionService(
@@ -54,6 +66,19 @@ class OrganizationSubscriptionService(
     ): OrganizationSubscription? {
         membershipService.requireOwnerRole(organizationId, currentUser)
         return subscriptionRepository.findByOrganizationId(organizationId)
+    }
+
+    fun getBillingOverview(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): OrganizationBillingOverview? {
+        membershipService.requireOwnerRole(organizationId, currentUser)
+        val subscription = subscriptionRepository.findByOrganizationId(organizationId) ?: return null
+        return OrganizationBillingOverview(
+            subscription = subscription,
+            plan = planRepository.findByCode(subscription.planCode),
+            recoveryState = billingRecoveryState(subscription.status),
+        )
     }
 
     /**
@@ -165,7 +190,7 @@ class OrganizationSubscriptionService(
                 ?: throw ConflictException("SUBSCRIPTION_CUSTOMER_MISSING", "The Stripe customer has not been created yet.")
         return stripeBillingClient.createBillingPortalSession(
             customerId = customerId,
-            returnUrl = "${frontendProperties.baseUrl}/app/organizations/$organizationId",
+            returnUrl = "${frontendProperties.baseUrl}/app/organizations/$organizationId/billing",
         )
     }
 
@@ -202,7 +227,13 @@ class OrganizationSubscriptionService(
                 ?: customerId?.let(subscriptionRepository::findByStripeCustomerId)
                 ?: return null
         val mapped = stripeSubscriptionStatus(subscription.status)
-        subscriptionRepository.syncExternalState(local.id, mapped, customerId, subscription.id)
+        subscriptionRepository.syncExternalState(
+            local.id,
+            mapped,
+            customerId,
+            subscription.id,
+            subscription.cancelAtPeriodEnd,
+        )
         applyOrganizationAccess(local.organizationId, mapped)
         auditService.record(
             actorUserId = null,
@@ -211,6 +242,55 @@ class OrganizationSubscriptionService(
             entityType = "organization_subscription",
             entityId = local.id,
             metadataJson = "{\"status\":\"${mapped.name}\"}",
+        )
+        return local.id
+    }
+
+    fun listForPlatformAdmin(
+        query: String?,
+        status: String?,
+        page: Int,
+        size: Int,
+        currentUser: CurrentUser,
+    ): PageResponse<PlatformOrganizationSubscription> {
+        if (!currentUser.platformAdministrator) {
+            throw ForbiddenException(
+                code = "PLATFORM_SUBSCRIPTION_ACCESS_DENIED",
+                message = "Platform subscription visibility requires Platform Administrator access.",
+            )
+        }
+        val request = PageRequest(page = page, size = size)
+        val normalizedQuery = query?.trim().orEmpty()
+        val normalizedStatus = status?.trim()?.uppercase().orEmpty()
+        val validStatuses = OrganizationSubscriptionStatus.entries.map { it.name }.toSet() + "NONE"
+        if (normalizedStatus.isNotEmpty() && normalizedStatus !in validStatuses) {
+            throw ValidationException("Unsupported subscription status filter: $normalizedStatus")
+        }
+        return PageResponse(
+            items =
+                subscriptionRepository.listForPlatformAdmin(
+                    query = normalizedQuery,
+                    status = normalizedStatus,
+                    offset = request.offset,
+                    limit = request.size,
+                ),
+            page = request.page,
+            size = request.size,
+            totalElements = subscriptionRepository.countForPlatformAdmin(normalizedQuery, normalizedStatus),
+        )
+    }
+
+    @Transactional
+    fun handleInvoicePaid(invoice: Invoice): UUID? {
+        val customerId = invoice.customer ?: return null
+        val local = subscriptionRepository.findByStripeCustomerId(customerId) ?: return null
+        subscriptionRepository.markPaymentSuccess(local.id)
+        auditService.record(
+            actorUserId = null,
+            organizationId = local.organizationId,
+            action = "organization_subscription.payment_succeeded",
+            entityType = "organization_subscription",
+            entityId = local.id,
         )
         return local.id
     }

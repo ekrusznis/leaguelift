@@ -124,6 +124,14 @@ class StripeWebhookController(
                         relatedEntityId = organizationSubscriptionService?.handleInvoicePaymentFailed(invoice)
                         WebhookProcessingStatus.PROCESSED
                     }
+                    "invoice.paid",
+                    "invoice.payment_succeeded",
+                    -> {
+                        val invoice = event.dataObjectDeserializer.deserializeUnsafe() as Invoice
+                        relatedEntityType = "organization_subscription"
+                        relatedEntityId = organizationSubscriptionService?.handleInvoicePaid(invoice)
+                        WebhookProcessingStatus.PROCESSED
+                    }
                     else -> WebhookProcessingStatus.IGNORED
                 }
             } catch (e: Exception) {
