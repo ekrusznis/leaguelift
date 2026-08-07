@@ -7,6 +7,8 @@ import com.rally26.common.web.CurrentUser
 import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.membership.persistence.MembershipRepository
+import com.rally26.organization.domain.OrganizationStatus
+import com.rally26.organization.persistence.OrganizationRepository
 import com.rally26.outbox.application.OutboxWriter
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -21,6 +23,7 @@ import java.util.UUID
 class MembershipService(
     private val membershipRepository: MembershipRepository,
     private val outboxWriter: OutboxWriter,
+    private val organizationRepository: OrganizationRepository? = null,
 ) {
     @Transactional
     fun grantOwner(
@@ -95,6 +98,7 @@ class MembershipService(
         currentUser: CurrentUser,
     ): Boolean {
         if (currentUser.platformAdministrator) return true
+        if (organizationRepository?.findById(organizationId)?.status == OrganizationStatus.DRAFT) return false
         val membership = membershipRepository.findActiveMembership(organizationId, currentUser.userId) ?: return false
         return membership.role == MembershipRole.OWNER || membership.role == MembershipRole.ADMINISTRATOR
     }
@@ -191,11 +195,19 @@ class MembershipService(
                     updatedAt = java.time.Instant.EPOCH,
                 )
         }
-        return membershipRepository.findActiveMembership(organizationId, currentUser.userId)
-            ?: throw ForbiddenException(
-                code = "ORGANIZATION_ACCESS_DENIED",
-                message = "You do not have access to this organization.",
+        val membership =
+            membershipRepository.findActiveMembership(organizationId, currentUser.userId)
+                ?: throw ForbiddenException(
+                    code = "ORGANIZATION_ACCESS_DENIED",
+                    message = "You do not have access to this organization.",
+                )
+        if (organizationRepository?.findById(organizationId)?.status == OrganizationStatus.DRAFT) {
+            throw ForbiddenException(
+                code = "ORGANIZATION_ONBOARDING_INCOMPLETE",
+                message = "Complete organization onboarding before using the organization workspace.",
             )
+        }
+        return membership
     }
 
     fun listMembers(

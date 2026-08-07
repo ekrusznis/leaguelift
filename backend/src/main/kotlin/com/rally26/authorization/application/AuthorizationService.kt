@@ -14,6 +14,8 @@ import com.rally26.household.persistence.HouseholdRepository
 import com.rally26.membership.application.MembershipService
 import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.persistence.MembershipRepository
+import com.rally26.organization.domain.OrganizationStatus
+import com.rally26.organization.persistence.OrganizationRepository
 import com.rally26.team.persistence.TeamRepository
 import com.rally26.tournament.persistence.TournamentRepository
 import org.springframework.stereotype.Service
@@ -46,6 +48,7 @@ class AuthorizationService(
     private val teamRepository: TeamRepository,
     private val tournamentRepository: TournamentRepository,
     private val householdRepository: HouseholdRepository,
+    private val organizationRepository: OrganizationRepository? = null,
 ) {
     // --- /me/contexts ---------------------------------------------------------------
 
@@ -74,7 +77,12 @@ class AuthorizationService(
                 )
         }
 
-        val memberships = membershipRepository.listActiveForUser(currentUser.userId)
+        val memberships =
+            membershipRepository
+                .listActiveForUser(currentUser.userId)
+                .filter { membership ->
+                    organizationRepository?.findById(membership.organizationId)?.status != OrganizationStatus.DRAFT
+                }
         for (membership in memberships) {
             contexts +=
                 AuthorizationContext(
@@ -517,6 +525,7 @@ class AuthorizationService(
         organizationId: UUID,
         currentUser: CurrentUser,
     ): Boolean {
+        if (organizationRepository?.findById(organizationId)?.status == OrganizationStatus.DRAFT) return false
         val membership = membershipRepository.findActiveMembership(organizationId, currentUser.userId) ?: return false
         return membership.role == MembershipRole.OWNER || membership.role == MembershipRole.ADMINISTRATOR
     }

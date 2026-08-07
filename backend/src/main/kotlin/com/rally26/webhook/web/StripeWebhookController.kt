@@ -5,9 +5,12 @@ import com.rally26.fundraising.application.ContributionService
 import com.rally26.order.application.OrderService
 import com.rally26.order.domain.ShippingAddress
 import com.rally26.sponsorship.application.SponsorshipService
+import com.rally26.subscription.application.OrganizationSubscriptionService
 import com.rally26.webhook.domain.WebhookProcessingStatus
 import com.rally26.webhook.persistence.WebhookEventRepository
 import com.stripe.exception.SignatureVerificationException
+import com.stripe.model.Invoice
+import com.stripe.model.Subscription
 import com.stripe.model.checkout.Session
 import com.stripe.net.Webhook
 import org.slf4j.LoggerFactory
@@ -25,14 +28,16 @@ private val log = LoggerFactory.getLogger(StripeWebhookController::class.java)
 private const val PROVIDER = "stripe"
 
 /**
- * Inbound Stripe webhook receiver (DESIGN-DOC.md section 17). Only
- * `checkout.session.completed` is consumed this slice, to confirm campaign
+ * Inbound Stripe webhook receiver (DESIGN-DOC.md section 17). Checkout completion
+ * confirms campaign
  * contributions (`fundraising/application/ContributionService.kt`), store
  * orders (`order/application/OrderService.kt`), and sponsorship purchases
  * (`sponsorship/application/SponsorshipService.kt`) — Stripe Connect account-status
  * webhooks remain Phase 5. A session's own metadata (`orderId`/`sponsorshipId`
  * present or not) disambiguates which one a given event is for, since all three use
- * the same event type. Processed synchronously inline (no outbox-consumer worker
+ * the same event type. Phase 24.6/26.1 also consumes organization-subscription and
+ * payment-failure events; signed subscription state is authoritative for activation.
+ * Processed synchronously inline (no outbox-consumer worker
  * exists yet, and doesn't need to for one lightweight event type): a genuine
  * processing failure returns 500 so Stripe's own automatic retry schedule covers
  * it, rather than us building a retry worker for this.
@@ -45,6 +50,7 @@ class StripeWebhookController(
     private val contributionService: ContributionService,
     private val orderService: OrderService,
     private val sponsorshipService: SponsorshipService,
+    private val organizationSubscriptionService: OrganizationSubscriptionService? = null,
 ) {
     @PostMapping
     fun receive(
@@ -78,10 +84,11 @@ class StripeWebhookController(
                         // — getObject() returns an empty Optional whenever the webhook
                         // event's own api_version differs from the one stripe-java was
                         // compiled against (Stripe's own documented workaround for this).
-                        // The Session fields this handler reads (id/paymentStatus/
-                        // paymentIntent/metadata/address) are stable across versions.
                         val session = event.dataObjectDeserializer.deserializeUnsafe() as Session
-                        if (session.metadata?.containsKey("orderId") == true) {
+                        if (session.metadata?.containsKey("organizationSubscriptionId") == true) {
+                            relatedEntityType = "organization_subscription"
+                            relatedEntityId = organizationSubscriptionService?.handleCheckoutCompleted(session)
+                        } else if (session.metadata?.containsKey("orderId") == true) {
                             relatedEntityType = "order"
                             relatedEntityId =
                                 orderService
@@ -100,6 +107,21 @@ class StripeWebhookController(
                             relatedEntityId =
                                 contributionService.confirmFromWebhook(session.id, session.paymentStatus, session.paymentIntent)?.id
                         }
+                        WebhookProcessingStatus.PROCESSED
+                    }
+                    "customer.subscription.created",
+                    "customer.subscription.updated",
+                    "customer.subscription.deleted",
+                    -> {
+                        val subscription = event.dataObjectDeserializer.deserializeUnsafe() as Subscription
+                        relatedEntityType = "organization_subscription"
+                        relatedEntityId = organizationSubscriptionService?.handleSubscriptionChanged(subscription)
+                        WebhookProcessingStatus.PROCESSED
+                    }
+                    "invoice.payment_failed" -> {
+                        val invoice = event.dataObjectDeserializer.deserializeUnsafe() as Invoice
+                        relatedEntityType = "organization_subscription"
+                        relatedEntityId = organizationSubscriptionService?.handleInvoicePaymentFailed(invoice)
                         WebhookProcessingStatus.PROCESSED
                     }
                     else -> WebhookProcessingStatus.IGNORED

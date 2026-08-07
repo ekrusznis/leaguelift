@@ -4,7 +4,7 @@ import com.stripe.StripeClient
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
-/** Builds the Stripe SDK client used by the payout module (ADR-005 — see `payout/infra/StripeConnectClient.kt` for the seam that wraps it). */
+/** Shared Stripe SDK client for payouts, Checkout commerce, and organization subscription billing. */
 @Configuration
 class StripeConfig(
     private val stripeProperties: StripeProperties,

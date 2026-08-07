@@ -34,10 +34,12 @@ class AuthController(
         val displayName = "${request.firstName} ${request.lastName}".trim()
         val accepted =
             passwordAuthenticationService.registerOwner(
-                request.email,
-                request.password,
-                displayName,
-                request.invitationToken,
+                email = request.email,
+                password = request.password,
+                displayName = displayName,
+                invitationToken = request.invitationToken,
+                acceptedTerms = request.agreeToTerms,
+                confirmedAdult = request.confirmAdult,
             )
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(RegistrationAcceptedResponse(email = accepted.email))
     }

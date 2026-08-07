@@ -1,5 +1,6 @@
 package com.rally26.identity.web
 
+import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
@@ -23,9 +24,16 @@ data class RegisterRequest(
      * through to the verification email so its link can redirect back to accepting the
      * invitation after verifying, instead of stranding a real invitation as permanently
      * unclaimed — see [com.rally26.identity.application.EmailVerificationService].
+     *
+     * Kept before the new legal-acceptance booleans so existing positional construction
+     * in tests/callers remains source-compatible.
      */
     @field:Size(max = 500)
     val invitationToken: String? = null,
+    @field:AssertTrue(message = "You must accept the Terms of Service and Privacy Policy.")
+    val agreeToTerms: Boolean = false,
+    @field:AssertTrue(message = "You must confirm that you are at least 18 years old.")
+    val confirmAdult: Boolean = false,
 )
 
 data class RegistrationAcceptedResponse(

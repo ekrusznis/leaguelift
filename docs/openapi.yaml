@@ -75,6 +75,10 @@ info:
     Customer-data requests require the support-access header on organization-prefixed
     routes and on resource-first team, tournament, household, participant, event, RSVP,
     and calendar routes carrying the target organizationId query parameter.
+    Phase 24.6 plus the founder-requested Phase 26 billing pull-forward adds resumable
+    owner onboarding, DRAFT organizations, backend-driven subscription plans, real Stripe
+    subscription Checkout/Product/Price/Customer creation, billing portal sessions, and
+    signed-webhook-authoritative organization activation.
     Endpoints are added milestone by milestone — do not add backend endpoints
     without updating this document in the same change (DESIGN-DOC.md section 26.4).
     Phase 17 now includes the Help Center/support foundation plus role-aware Action Center aggregation, one-way organization/team/tournament announcements,
@@ -97,7 +101,7 @@ info:
     is never serialized, direct participant-to-household order attribution (no attribution-code
     indirection), family-credit grant/reversal wiring on order confirm/refund, and a guardian
     dashboard recent-orders card (ADR-069).
-  version: "0.28.0"
+  version: "0.29.0"
 servers:
 - url: /api/v1
 tags:
@@ -134,6 +138,7 @@ tags:
 - name: integrations
 - name: platform-admin
 - name: onboarding
+- name: subscriptions
 - name: season-rollovers
 - name: help
 - name: support-cases
@@ -646,6 +651,141 @@ paths:
               schema:
                 $ref: "#/components/schemas/StatusResponse"
 
+  /owner-onboarding:
+    get:
+      tags: [onboarding]
+      summary: Resume the signed-in organization owner's durable onboarding state
+      operationId: getOwnerOnboarding
+      responses:
+        "200":
+          description: Current onboarding, draft organization, and subscription state
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OwnerOnboardingResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /owner-onboarding/plans:
+    get:
+      tags: [onboarding, subscriptions]
+      summary: List active backend-owned organization subscription plans
+      operationId: listOwnerOnboardingPlans
+      responses:
+        "200":
+          description: Active plan cards, including contact-only options
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/SubscriptionPlanResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /owner-onboarding/timezone-suggestion:
+    get:
+      tags: [onboarding]
+      summary: Suggest an IANA timezone from the entered country/state for owner confirmation
+      operationId: suggestOwnerOnboardingTimezone
+      parameters:
+      - {name: country, in: query, required: false, schema: {type: string}}
+      - {name: state, in: query, required: false, schema: {type: string}}
+      responses:
+        "200":
+          description: Suggestion only; null means Rally26 will not guess
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/TimezoneSuggestionResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /owner-onboarding/organization:
+    put:
+      tags: [onboarding]
+      summary: Create or update the owner's one DRAFT organization and advance to Plan
+      operationId: saveOwnerOnboardingOrganization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/SaveOwnerOrganizationRequest"}
+      responses:
+        "200":
+          description: Saved resumable onboarding state
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OwnerOnboardingResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /owner-onboarding/plan:
+    put:
+      tags: [onboarding, subscriptions]
+      summary: Select the backend-owned monthly plan for the draft organization
+      operationId: selectOwnerOnboardingPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/SelectOwnerPlanRequest"}
+      responses:
+        "200":
+          description: Plan saved; onboarding is ready for review/checkout
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/OwnerOnboardingResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /owner-onboarding/checkout:
+    post:
+      tags: [onboarding, subscriptions]
+      summary: Create or resume a real Stripe subscription Checkout session
+      description: >
+        Creates/reuses the Stripe Product, recurring Price, Customer, and an open
+        subscription-mode Checkout Session using the configured Stripe account. Browser
+        success never activates the organization; only signed subscription webhooks do.
+      operationId: startOwnerSubscriptionCheckout
+      responses:
+        "200":
+          description: Hosted Stripe Checkout destination
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/SubscriptionCheckoutResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /organizations/{organizationId}/subscription:
+    get:
+      tags: [subscriptions]
+      summary: Read the owner-visible organization subscription status
+      operationId: getOrganizationSubscription
+      parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Subscription state, or null before checkout starts
+          content:
+            application/json:
+              schema:
+                allOf: [{$ref: "#/components/schemas/OrganizationSubscriptionResponse"}]
+                nullable: true
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /organizations/{organizationId}/subscription/portal:
+    post:
+      tags: [subscriptions]
+      summary: Create a Stripe Billing Portal session for the organization owner
+      operationId: createOrganizationBillingPortal
+      parameters:
+      - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: Stripe-hosted billing-management URL
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BillingPortalResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
   /auth/register:
     post:
       tags: [auth]
@@ -9612,7 +9752,7 @@ components:
                 type: string
     RegisterRequest:
       type: object
-      required: [email, password, firstName, lastName]
+      required: [email, password, firstName, lastName, agreeToTerms, confirmAdult]
       properties:
         email:
           type: string
@@ -9627,6 +9767,115 @@ components:
         lastName:
           type: string
           maxLength: 60
+        invitationToken:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Preserves invitation activation after email verification; invitation registrations do not create owner onboarding.
+        agreeToTerms:
+          type: boolean
+          enum: [true]
+        confirmAdult:
+          type: boolean
+          enum: [true]
+    OwnerOnboardingResponse:
+      type: object
+      required: [id, currentStep]
+      properties:
+        id: {type: string, format: uuid}
+        currentStep: {type: string, enum: [ORGANIZATION, PLAN, REVIEW, CHECKOUT, COMPLETE]}
+        organization:
+          allOf: [{$ref: "#/components/schemas/OnboardingOrganizationResponse"}]
+          nullable: true
+        selectedPlanCode: {type: string, nullable: true}
+        selectedBillingFrequency: {type: string, enum: [MONTHLY], nullable: true}
+        checkoutSessionId: {type: string, nullable: true}
+        subscriptionStatus:
+          type: string
+          enum: [CHECKOUT_PENDING, TRIALING, ACTIVE, PAST_DUE, CANCELED, INCOMPLETE]
+          nullable: true
+        completedAt: {type: string, format: date-time, nullable: true}
+    OnboardingOrganizationResponse:
+      type: object
+      required: [id, name, slug, organizationType, status, sports]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        slug: {type: string}
+        organizationType: {$ref: "#/components/schemas/OrganizationType"}
+        status: {type: string, enum: [DRAFT, ACTIVE, SUSPENDED, ARCHIVED]}
+        sports:
+          type: array
+          items: {type: string}
+        contactEmail: {type: string, format: email, nullable: true}
+        contactPhone: {type: string, nullable: true}
+        addressLine1: {type: string, nullable: true}
+        addressLine2: {type: string, nullable: true}
+        addressCity: {type: string, nullable: true}
+        addressState: {type: string, nullable: true}
+        addressPostalCode: {type: string, nullable: true}
+        addressCountry: {type: string, nullable: true}
+        timezone: {type: string, nullable: true}
+    SaveOwnerOrganizationRequest:
+      type: object
+      required: [name, slug, organizationType, sports, contactEmail, addressLine1, addressCity, addressState, addressPostalCode, addressCountry, timezone]
+      properties:
+        name: {type: string, maxLength: 160}
+        slug: {type: string, maxLength: 63}
+        organizationType: {$ref: "#/components/schemas/OrganizationType"}
+        sports:
+          type: array
+          minItems: 1
+          items: {type: string}
+        contactEmail: {type: string, format: email}
+        contactPhone: {type: string, maxLength: 40, nullable: true}
+        addressLine1: {type: string, maxLength: 160}
+        addressLine2: {type: string, maxLength: 160, nullable: true}
+        addressCity: {type: string, maxLength: 100}
+        addressState: {type: string, maxLength: 100}
+        addressPostalCode: {type: string, maxLength: 30}
+        addressCountry: {type: string, minLength: 2, maxLength: 2}
+        timezone: {type: string, maxLength: 100}
+    SelectOwnerPlanRequest:
+      type: object
+      required: [planCode, billingFrequency]
+      properties:
+        planCode: {type: string}
+        billingFrequency: {type: string, enum: [MONTHLY]}
+    SubscriptionPlanResponse:
+      type: object
+      required: [code, name, description, contactOnly]
+      properties:
+        code: {type: string}
+        name: {type: string}
+        description: {type: string}
+        amountMinor: {type: integer, format: int64, nullable: true}
+        currency: {type: string, nullable: true}
+        billingInterval: {type: string, enum: [MONTHLY], nullable: true}
+        contactOnly: {type: boolean}
+    TimezoneSuggestionResponse:
+      type: object
+      properties:
+        timezone: {type: string, nullable: true}
+    SubscriptionCheckoutResponse:
+      type: object
+      required: [sessionId, checkoutUrl]
+      properties:
+        sessionId: {type: string}
+        checkoutUrl: {type: string, format: uri}
+    OrganizationSubscriptionResponse:
+      type: object
+      required: [id, organizationId, planCode, status]
+      properties:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        planCode: {type: string}
+        status: {type: string, enum: [CHECKOUT_PENDING, TRIALING, ACTIVE, PAST_DUE, CANCELED, INCOMPLETE]}
+    BillingPortalResponse:
+      type: object
+      required: [url]
+      properties:
+        url: {type: string, format: uri}
     RegistrationAcceptedResponse:
       type: object
       required: [email]
@@ -9784,7 +10033,7 @@ components:
           $ref: "#/components/schemas/OrganizationType"
         status:
           type: string
-          enum: [ACTIVE, SUSPENDED, ARCHIVED]
+          enum: [DRAFT, ACTIVE, SUSPENDED, ARCHIVED]
         sports:
           type: array
           items:

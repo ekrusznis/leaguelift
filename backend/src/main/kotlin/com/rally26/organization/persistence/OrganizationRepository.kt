@@ -58,7 +58,7 @@ class OrganizationRepository(
                        o.created_at, o.updated_at
                 from organization o
                 join organization_membership m on m.organization_id = o.id
-                where m.user_id = :userId and m.status = 'ACTIVE'
+                where m.user_id = :userId and m.status = 'ACTIVE' and o.status <> 'DRAFT'
                 order by o.created_at desc
                 offset :offset limit :limit
                 """.trimIndent(),
@@ -74,7 +74,7 @@ class OrganizationRepository(
                 """
                 select count(*) from organization o
                 join organization_membership m on m.organization_id = o.id
-                where m.user_id = :userId and m.status = 'ACTIVE'
+                where m.user_id = :userId and m.status = 'ACTIVE' and o.status <> 'DRAFT'
                 """.trimIndent(),
             ).param("userId", userId)
             .query(Long::class.java)
