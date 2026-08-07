@@ -117,6 +117,44 @@ class FulfillmentOperationsService(
         return fulfillmentRepository.findByOrder(orderId)!!
     }
 
+    /**
+     * Phase 24 slice 24.4 (ADR-070): system-initiated (verified Printify
+     * webhook, no [CurrentUser]) — organization is resolved from the
+     * fulfillment's own order row via [FulfillmentRepository.findByPrintifyOrderId],
+     * never taken from anything the webhook payload itself claims. Reuses the
+     * same [validateTransition] state machine [update] uses, so a webhook can
+     * never push a fulfillment through an impossible transition. Idempotent:
+     * a same-status replay (e.g. a redelivered webhook) is a no-op.
+     */
+    @Transactional
+    fun applyProviderStatusUpdate(
+        printifyOrderId: String,
+        newStatus: FulfillmentStatus,
+        carrier: String?,
+        trackingNumber: String?,
+        trackingUrl: String?,
+        note: String,
+    ): Fulfillment? {
+        val match = fulfillmentRepository.findByPrintifyOrderId(printifyOrderId) ?: return null
+        val existing = match.fulfillment
+        if (existing.status == newStatus) return existing
+        validateTransition(existing.status, newStatus)
+        fulfillmentRepository.updateOperationalState(
+            id = existing.id,
+            status = newStatus,
+            manualVendorId = null,
+            vendorOrderReference = existing.vendorOrderReference,
+            carrier = carrier ?: existing.carrier,
+            trackingNumber = trackingNumber ?: existing.trackingNumber,
+            trackingUrl = trackingUrl ?: existing.trackingUrl,
+            internalNotes = existing.internalNotes,
+            attentionReason = null,
+        )
+        historyRepository.insert(match.organizationId, existing.id, existing.status, newStatus, note, null)
+        auditService.record(null, match.organizationId, "fulfillment.updated_by_printify_webhook", "fulfillment", existing.id)
+        return fulfillmentRepository.findByOrder(existing.orderId)
+    }
+
     @Transactional
     fun requestReprint(
         organizationId: UUID,

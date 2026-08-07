@@ -37,6 +37,8 @@ data class Fulfillment(
     val deliveredAt: Instant?,
     val createdAt: Instant,
     val updatedAt: Instant,
+    /** Phase 24 slice 24.4 (ADR-070): snapshotted at draft-order creation time from the then-configured shop. Null for manual fulfillments. */
+    val printifyShopId: String? = null,
 )
 
 data class FulfillmentHistory(

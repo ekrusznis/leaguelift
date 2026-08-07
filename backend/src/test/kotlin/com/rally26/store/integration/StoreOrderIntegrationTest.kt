@@ -113,7 +113,10 @@ class StoreOrderIntegrationTest : AbstractIntegrationTest() {
             )
         assignReadyDesign(organization.id, product.id, owner)
 
-        every { printifyProductClient.createProduct("Team Hoodie", 12L, 5L, listOf(100L), 2500L, any(), "front") } returns
+        // Phase 24 slice 24.4 (ADR-070): ProductService now sends Printify an internal
+        // org/store traceability-prefixed title, never the raw product name.
+        val expectedPrintifyTitle = "[${organization.slug}/${store.slug}] Team Hoodie"
+        every { printifyProductClient.createProduct(expectedPrintifyTitle, 12L, 5L, listOf(100L), 2500L, any(), "front") } returns
             PrintifyProductResult(
                 "printify_product_1",
                 listOf(PrintifyProductVariantCost(100L, costMinor = 1200L, priceMinor = 2500L)),

@@ -9,7 +9,9 @@ import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.config.FrontendProperties
+import com.rally26.config.PrintifyProperties
 import com.rally26.credit.application.FamilyCreditService
+import com.rally26.integration.printify.application.PrintifyOwnershipPrefixService
 import com.rally26.integration.printify.infra.PrintifyDraftOrder
 import com.rally26.integration.printify.infra.PrintifyOrderClient
 import com.rally26.integration.printify.infra.PrintifyOrderLineItem
@@ -90,6 +92,8 @@ class OrderServiceTest {
     private val outboxWriter = mockk<OutboxWriter>()
     private val athleteStorefrontService = mockk<AthleteStorefrontService>()
     private val familyCreditService = mockk<FamilyCreditService>()
+    private val printifyOwnershipPrefixService = mockk<PrintifyOwnershipPrefixService>()
+    private val printifyProperties = PrintifyProperties(apiToken = "test-token", shopId = "shop_123")
     private val service =
         OrderService(
             orderRepository,
@@ -114,6 +118,8 @@ class OrderServiceTest {
             ObjectMapper(),
             athleteStorefrontService,
             familyCreditService,
+            printifyOwnershipPrefixService,
+            printifyProperties,
         )
     private val orgId = UUID.randomUUID()
 
@@ -234,7 +240,10 @@ class OrderServiceTest {
         } returns designAssignment
         every { mediaReadService.describe(designAssignment) } returns
             mockk { every { url } returns "https://signed.example.com/design.png" }
-        every { printifyOrderClient.createDraftOrder(order.id.toString(), any()) } returns PrintifyDraftOrder("printify_order_1")
+        every { printifyOwnershipPrefixService.orderExternalId(orgId, store.id, order.id) } returns
+            "riverside-soccer/spring-store:${order.id}"
+        every { printifyOrderClient.createDraftOrder("riverside-soccer/spring-store:${order.id}", any()) } returns
+            PrintifyDraftOrder("printify_order_1")
         val fulfillment = fulfillment(order.id, FulfillmentSource.PRINTIFY, FulfillmentStatus.DRAFT_CREATED, "printify_order_1")
         every {
             fulfillmentRepository.insert(
@@ -244,6 +253,7 @@ class OrderServiceTest {
                 "printify_order_1",
                 null,
                 null,
+                printifyShopId = "shop_123",
             )
         } returns fulfillment
         every { fulfillmentHistoryRepository.insert(orgId, fulfillment.id, null, FulfillmentStatus.DRAFT_CREATED, any(), null) } returns
@@ -308,8 +318,10 @@ class OrderServiceTest {
                 personalizationPlacement = PersonalizationPlacement.BACK,
             )
         } returns SwagCompositeResult("https://signed.example.com/front.png", "https://signed.example.com/back.png")
+        every { printifyOwnershipPrefixService.orderExternalId(orgId, store.id, order.id) } returns
+            "riverside-soccer/spring-store:${order.id}"
         val lineItems = slot<List<PrintifyOrderLineItem>>()
-        every { printifyOrderClient.createDraftOrder(order.id.toString(), capture(lineItems)) } returns
+        every { printifyOrderClient.createDraftOrder("riverside-soccer/spring-store:${order.id}", capture(lineItems)) } returns
             PrintifyDraftOrder("printify_order_1")
         val fulfillment = fulfillment(order.id, FulfillmentSource.PRINTIFY, FulfillmentStatus.DRAFT_CREATED, "printify_order_1")
         every {
@@ -320,6 +332,7 @@ class OrderServiceTest {
                 "printify_order_1",
                 null,
                 null,
+                printifyShopId = "shop_123",
             )
         } returns fulfillment
         every { fulfillmentHistoryRepository.insert(orgId, fulfillment.id, null, FulfillmentStatus.DRAFT_CREATED, any(), null) } returns
@@ -343,8 +356,17 @@ class OrderServiceTest {
         val confirmed = order.copy(status = OrderStatus.CONFIRMED, confirmedAt = Instant.now())
         stubConfirmation(order, confirmed, product, variant)
         val fulfillment = fulfillment(order.id, FulfillmentSource.MANUAL, FulfillmentStatus.READY, manualVendorId = vendorId)
-        every { fulfillmentRepository.insert(order.id, FulfillmentSource.MANUAL, FulfillmentStatus.READY, null, vendorId, null) } returns
-            fulfillment
+        every {
+            fulfillmentRepository.insert(
+                order.id,
+                FulfillmentSource.MANUAL,
+                FulfillmentStatus.READY,
+                null,
+                vendorId,
+                null,
+                printifyShopId = null,
+            )
+        } returns fulfillment
         every { fulfillmentHistoryRepository.insert(orgId, fulfillment.id, null, FulfillmentStatus.READY, any(), null) } returns
             history(fulfillment)
 
@@ -352,9 +374,17 @@ class OrderServiceTest {
 
         assertEquals(OrderStatus.CONFIRMED, result?.status)
         verify(exactly = 0) { printifyOrderClient.createDraftOrder(any(), any()) }
-        verify(
-            exactly = 1,
-        ) { fulfillmentRepository.insert(order.id, FulfillmentSource.MANUAL, FulfillmentStatus.READY, null, vendorId, null) }
+        verify(exactly = 1) {
+            fulfillmentRepository.insert(
+                order.id,
+                FulfillmentSource.MANUAL,
+                FulfillmentStatus.READY,
+                null,
+                vendorId,
+                null,
+                printifyShopId = null,
+            )
+        }
     }
 
     @Test
@@ -375,7 +405,9 @@ class OrderServiceTest {
         } returns designAssignment
         every { mediaReadService.describe(designAssignment) } returns
             mockk { every { url } returns "https://signed.example.com/design.png" }
-        every { printifyOrderClient.createDraftOrder(order.id.toString(), any()) } throws
+        every { printifyOwnershipPrefixService.orderExternalId(orgId, store.id, order.id) } returns
+            "riverside-soccer/spring-store:${order.id}"
+        every { printifyOrderClient.createDraftOrder("riverside-soccer/spring-store:${order.id}", any()) } throws
             org.springframework.web.client
                 .RestClientException("Printify is unreachable")
         val fulfillment = fulfillment(order.id, FulfillmentSource.PRINTIFY, FulfillmentStatus.FAILED, lastError = "Printify is unreachable")
@@ -387,6 +419,7 @@ class OrderServiceTest {
                 null,
                 null,
                 "Printify is unreachable",
+                printifyShopId = null,
             )
         } returns fulfillment
         every { fulfillmentHistoryRepository.insert(orgId, fulfillment.id, null, FulfillmentStatus.FAILED, any(), null) } returns
@@ -405,7 +438,17 @@ class OrderServiceTest {
         val confirmed = order.copy(status = OrderStatus.CONFIRMED, confirmedAt = Instant.now())
         stubConfirmation(order, confirmed, product, variant)
         val fulfillment = fulfillment(order.id, FulfillmentSource.MANUAL, FulfillmentStatus.READY)
-        every { fulfillmentRepository.insert(order.id, FulfillmentSource.MANUAL, FulfillmentStatus.READY, null, null, null) } returns
+        every {
+            fulfillmentRepository.insert(
+                order.id,
+                FulfillmentSource.MANUAL,
+                FulfillmentStatus.READY,
+                null,
+                null,
+                null,
+                printifyShopId = null,
+            )
+        } returns
             fulfillment
         every { fulfillmentHistoryRepository.insert(orgId, fulfillment.id, null, FulfillmentStatus.READY, any(), null) } returns
             history(fulfillment)
@@ -904,7 +947,17 @@ class OrderServiceTest {
         val confirmed = order.copy(status = OrderStatus.CONFIRMED, confirmedAt = Instant.now())
         stubConfirmation(order, confirmed, product, variant)
         val fulfillment = fulfillment(order.id, FulfillmentSource.MANUAL, FulfillmentStatus.READY, manualVendorId = vendorId)
-        every { fulfillmentRepository.insert(order.id, FulfillmentSource.MANUAL, FulfillmentStatus.READY, null, vendorId, null) } returns
+        every {
+            fulfillmentRepository.insert(
+                order.id,
+                FulfillmentSource.MANUAL,
+                FulfillmentStatus.READY,
+                null,
+                vendorId,
+                null,
+                printifyShopId = null,
+            )
+        } returns
             fulfillment
         every { fulfillmentHistoryRepository.insert(orgId, fulfillment.id, null, FulfillmentStatus.READY, any(), null) } returns
             history(fulfillment)
@@ -928,7 +981,17 @@ class OrderServiceTest {
         val confirmed = order.copy(status = OrderStatus.CONFIRMED, confirmedAt = Instant.now())
         stubConfirmation(order, confirmed, product, variant)
         val fulfillment = fulfillment(order.id, FulfillmentSource.MANUAL, FulfillmentStatus.READY, manualVendorId = vendorId)
-        every { fulfillmentRepository.insert(order.id, FulfillmentSource.MANUAL, FulfillmentStatus.READY, null, vendorId, null) } returns
+        every {
+            fulfillmentRepository.insert(
+                order.id,
+                FulfillmentSource.MANUAL,
+                FulfillmentStatus.READY,
+                null,
+                vendorId,
+                null,
+                printifyShopId = null,
+            )
+        } returns
             fulfillment
         every { fulfillmentHistoryRepository.insert(orgId, fulfillment.id, null, FulfillmentStatus.READY, any(), null) } returns
             history(fulfillment)

@@ -10,7 +10,9 @@ import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.config.FrontendProperties
+import com.rally26.config.PrintifyProperties
 import com.rally26.credit.application.FamilyCreditService
+import com.rally26.integration.printify.application.PrintifyOwnershipPrefixService
 import com.rally26.integration.printify.infra.PrintifyOrderClient
 import com.rally26.integration.printify.infra.PrintifyOrderLineItem
 import com.rally26.ledger.application.LedgerService
@@ -113,6 +115,8 @@ class OrderService(
     private val objectMapper: ObjectMapper,
     private val athleteStorefrontService: AthleteStorefrontService,
     private val familyCreditService: FamilyCreditService,
+    private val printifyOwnershipPrefixService: PrintifyOwnershipPrefixService,
+    private val printifyProperties: PrintifyProperties,
 ) {
     @Transactional
     fun createCheckoutSession(
@@ -466,7 +470,7 @@ class OrderService(
             auditService.record(null, order.organizationId, "order.confirmed", "order", order.id)
             val items = orderItemRepository.findByOrder(order.id)
             ledgerService.recordConfirmedOrder(order.copy(status = OrderStatus.CONFIRMED), items)
-            createInitialFulfillment(order.id, order.organizationId)
+            createInitialFulfillment(order.id, order.organizationId, order.storeId)
             val totalMinor = items.sumOf { it.unitPriceMinor * it.quantity }
             if (order.supporterEmail != null) {
                 outboxWriter.write(
@@ -586,6 +590,7 @@ class OrderService(
     private fun createInitialFulfillment(
         orderId: UUID,
         organizationId: UUID,
+        storeId: UUID,
     ) {
         val items = orderItemRepository.findByOrder(orderId)
         val resolved =
@@ -681,7 +686,11 @@ class OrderService(
                         printAreaImagesByPosition = printAreaImagesByPosition,
                     )
                 }
-            val draftOrder = printifyOrderClient.createDraftOrder(orderId.toString(), lineItems)
+            // Phase 24 slice 24.4 (ADR-070): internal org/store traceability prefix on
+            // the external_id Printify sees — never shown to a buyer or admin in our
+            // own UI.
+            val externalId = printifyOwnershipPrefixService.orderExternalId(organizationId, storeId, orderId)
+            val draftOrder = printifyOrderClient.createDraftOrder(externalId, lineItems)
             val fulfillment =
                 fulfillmentRepository.insert(
                     orderId,
@@ -690,6 +699,7 @@ class OrderService(
                     draftOrder.printifyOrderId,
                     null,
                     null,
+                    printifyShopId = printifyProperties.shopId,
                 )
             fulfillmentHistoryRepository.insert(
                 organizationId,

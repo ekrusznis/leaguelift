@@ -4,6 +4,8 @@ import com.rally26.audit.application.AuditService
 import com.rally26.authorization.application.AuthorizationService
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
+import com.rally26.config.PrintifyProperties
+import com.rally26.integration.printify.application.PrintifyOwnershipPrefixService
 import com.rally26.integration.printify.application.VendorSelectionService
 import com.rally26.integration.printify.infra.PrintifyCatalogClient
 import com.rally26.integration.printify.infra.PrintifyImageClient
@@ -61,6 +63,8 @@ class ProductServiceTest {
     private val printifyCatalogClient = mockk<PrintifyCatalogClient>()
     private val printifyImageClient = mockk<PrintifyImageClient>()
     private val printifyProductClient = mockk<PrintifyProductClient>()
+    private val printifyOwnershipPrefixService = mockk<PrintifyOwnershipPrefixService>()
+    private val printifyProperties = PrintifyProperties(apiToken = "test-token", shopId = "shop_123")
     private val vendorSelectionService = mockk<VendorSelectionService>()
     private val markupRuleService = mockk<MarkupRuleService>()
     private val spacesClient = mockk<SpacesClient>()
@@ -79,6 +83,8 @@ class ProductServiceTest {
             printifyCatalogClient,
             printifyImageClient,
             printifyProductClient,
+            printifyOwnershipPrefixService,
+            printifyProperties,
             vendorSelectionService,
             markupRuleService,
             spacesClient,
@@ -144,8 +150,18 @@ class ProductServiceTest {
         every { printifyImageClient.uploadImage("product-design.png", any()) } returns
             PrintifyUploadedImage("printify_img_1", "product-design.png")
         every { productRepository.updatePrintifyImageId(product.id, orgId, "printify_img_1") } returns 1
+        every { printifyOwnershipPrefixService.productTitle(orgId, product.storeId, "Team Hoodie") } returns
+            "[riverside-soccer/team-store] Team Hoodie"
         every {
-            printifyProductClient.createProduct("Team Hoodie", 12L, 5L, listOf(100L), 2500L, "printify_img_1", "front")
+            printifyProductClient.createProduct(
+                "[riverside-soccer/team-store] Team Hoodie",
+                12L,
+                5L,
+                listOf(100L),
+                2500L,
+                "printify_img_1",
+                "front",
+            )
         } returns
             PrintifyProductResult(
                 "printify_product_1",
@@ -153,7 +169,26 @@ class ProductServiceTest {
                 emptyList(),
             )
         every { printifyCatalogClient.listVariants(12L, 5L) } returns emptyList()
-        every { productVariantRepository.insertPrintify(orgId, product.id, "M / Navy", 5L, 100L, "USD", 1200L, 2500L) } returns
+        every {
+            productVariantRepository.insertPrintify(
+                orgId,
+                product.id,
+                "M / Navy",
+                5L,
+                100L,
+                "USD",
+                1200L,
+                2500L,
+                printAreaWidthPx = null,
+                printAreaHeightPx = null,
+                backPrintAreaWidthPx = null,
+                backPrintAreaHeightPx = null,
+                mockupFrontUrl = null,
+                mockupBackUrl = null,
+                printifyProductId = "printify_product_1",
+                printifyShopId = "shop_123",
+            )
+        } returns
             productVariant(product.id, CatalogSource.PRINTIFY, 1200L, 2500L)
         every { auditService.record(any(), any(), any(), any(), any()) } just runs
 
@@ -161,7 +196,26 @@ class ProductServiceTest {
 
         verify(exactly = 1) { printifyImageClient.uploadImage(any(), any()) }
         verify(exactly = 1) { productRepository.updatePrintifyImageId(product.id, orgId, "printify_img_1") }
-        verify(exactly = 1) { productVariantRepository.insertPrintify(orgId, product.id, "M / Navy", 5L, 100L, "USD", 1200L, 2500L) }
+        verify(exactly = 1) {
+            productVariantRepository.insertPrintify(
+                orgId,
+                product.id,
+                "M / Navy",
+                5L,
+                100L,
+                "USD",
+                1200L,
+                2500L,
+                printAreaWidthPx = null,
+                printAreaHeightPx = null,
+                backPrintAreaWidthPx = null,
+                backPrintAreaHeightPx = null,
+                mockupFrontUrl = null,
+                mockupBackUrl = null,
+                printifyProductId = "printify_product_1",
+                printifyShopId = "shop_123",
+            )
+        }
     }
 
     @Test

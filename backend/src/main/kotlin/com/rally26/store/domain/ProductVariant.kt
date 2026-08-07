@@ -28,6 +28,10 @@ data class ProductVariant(
     /** Real photorealistic Printify mockup images (this variant's color, design already composited), captured free from the same cost-discovery create-product call. Stable CDN URLs, not presigned. */
     val mockupFrontUrl: String? = null,
     val mockupBackUrl: String? = null,
+    /** Phase 24 slice 24.4 (ADR-070): Printify's own external product id for this variant (each variant is its own distinct Printify "product" — see ProductService.createVariant). Null for manual variants. */
+    val printifyProductId: String? = null,
+    /** Snapshotted at creation time from the then-configured shop, so historical rows keep pointing at the shop they were actually created under even after a future token/shop rotation. Null for manual variants. */
+    val printifyShopId: String? = null,
     val createdAt: Instant,
     val updatedAt: Instant,
 )

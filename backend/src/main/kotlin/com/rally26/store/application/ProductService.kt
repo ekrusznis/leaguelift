@@ -7,7 +7,9 @@ import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
+import com.rally26.config.PrintifyProperties
 import com.rally26.integration.printify.application.EligiblePrintProvider
+import com.rally26.integration.printify.application.PrintifyOwnershipPrefixService
 import com.rally26.integration.printify.application.VendorSelectionService
 import com.rally26.integration.printify.infra.PrintifyBlueprint
 import com.rally26.integration.printify.infra.PrintifyCatalogClient
@@ -65,6 +67,8 @@ class ProductService(
     private val printifyCatalogClient: PrintifyCatalogClient,
     private val printifyImageClient: PrintifyImageClient,
     private val printifyProductClient: PrintifyProductClient,
+    private val printifyOwnershipPrefixService: PrintifyOwnershipPrefixService,
+    private val printifyProperties: PrintifyProperties,
     private val vendorSelectionService: VendorSelectionService,
     private val markupRuleService: MarkupRuleService,
     private val spacesClient: SpacesClient,
@@ -359,10 +363,14 @@ class ProductService(
         // (confirmed live against the real Printify sandbox, 2026-08-05). When the
         // caller omits a price, submit a placeholder; the real markup-computed price
         // below is what actually gets stored and charged.
+        // Phase 24 slice 24.4 (ADR-070): internal org/store traceability prefix on
+        // the title Printify sees in its own dashboard — never shown to a buyer or
+        // admin in our own UI (see ProductVariantResponse, which never exposes this).
+        val printifyTitle = printifyOwnershipPrefixService.productTitle(organizationId, product.storeId, product.name)
         val result =
             withPrintifyErrorTranslation {
                 printifyProductClient.createProduct(
-                    title = product.name,
+                    title = printifyTitle,
                     blueprintId = blueprintId,
                     printProviderId = printifyPrintProviderId,
                     printifyVariantIds = listOf(printifyVariantId),
@@ -417,6 +425,8 @@ class ProductService(
                 backPrintAreaHeightPx = backPlaceholder?.height,
                 mockupFrontUrl = mockupFrontUrl,
                 mockupBackUrl = mockupBackUrl,
+                printifyProductId = result.printifyProductId,
+                printifyShopId = printifyProperties.shopId,
             )
         auditService.record(currentUser.userId, organizationId, "product_variant.created", "product_variant", variant.id)
         return variant

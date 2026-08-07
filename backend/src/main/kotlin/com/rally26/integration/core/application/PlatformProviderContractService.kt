@@ -90,7 +90,10 @@ class PlatformProviderContractService(
                     capability(
                         "Shipment webhooks",
                         ProviderContractCapabilityStatus.SCAFFOLDED,
-                        "Signature, replay, and normalized status contracts are ready; official payload fixtures remain Phase 20.",
+                        "Phase 24.4 (ADR-070): a real signature-verified, deduped receiver exists (PrintifyWebhookController) and " +
+                            "maps sent-to-production/shipment events onto real Fulfillment states, but has no live traffic today — " +
+                            "OrderService never submits orders to production yet — and the exact payload/signature-header shape is " +
+                            "still unverified against Printify's live docs.",
                     ),
                     capability(
                         "Token rotation",

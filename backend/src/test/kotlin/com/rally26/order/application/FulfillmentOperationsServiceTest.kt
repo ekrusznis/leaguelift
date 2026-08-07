@@ -18,6 +18,7 @@ import com.rally26.order.domain.OrderStatus
 import com.rally26.order.persistence.FulfillmentHistoryRepository
 import com.rally26.order.persistence.FulfillmentRepository
 import com.rally26.order.persistence.FulfillmentReprintRepository
+import com.rally26.order.persistence.FulfillmentWithOrganization
 import com.rally26.order.persistence.OrderRepository
 import com.rally26.store.application.ManualVendorService
 import io.mockk.every
@@ -196,6 +197,91 @@ class FulfillmentOperationsServiceTest {
         assertFailsWith<ValidationException> {
             service.updateReprint(orgId, orderId, shipped.id, FulfillmentReprintStatus.IN_PRODUCTION, null, null, null, null, null, user)
         }
+    }
+
+    @Test
+    fun `applyProviderStatusUpdate returns null for an unknown printifyOrderId`() {
+        every { fulfillmentRepository.findByPrintifyOrderId("printify_order_unknown") } returns null
+
+        val result =
+            service.applyProviderStatusUpdate("printify_order_unknown", FulfillmentStatus.SHIPPED, null, null, null, "Shipped.")
+
+        assertEquals(null, result)
+        verify(exactly = 0) { fulfillmentRepository.updateOperationalState(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `applyProviderStatusUpdate applies a valid transition, resolving organization from the fulfillment's own order`() {
+        val existing = fulfillment(FulfillmentSource.PRINTIFY, FulfillmentStatus.DRAFT_CREATED).copy(printifyOrderId = "printify_order_1")
+        val updated = existing.copy(status = FulfillmentStatus.SHIPPED, statusChangedAt = Instant.now())
+        every { fulfillmentRepository.findByPrintifyOrderId("printify_order_1") } returns FulfillmentWithOrganization(existing, orgId)
+        every {
+            fulfillmentRepository.updateOperationalState(
+                id = existing.id,
+                status = FulfillmentStatus.SHIPPED,
+                manualVendorId = null,
+                vendorOrderReference = null,
+                carrier = "USPS",
+                trackingNumber = "1Z999",
+                trackingUrl = null,
+                internalNotes = null,
+                attentionReason = null,
+            )
+        } returns 1
+        every {
+            historyRepository.insert(orgId, existing.id, FulfillmentStatus.DRAFT_CREATED, FulfillmentStatus.SHIPPED, any(), null)
+        } returns
+            FulfillmentHistory(
+                UUID.randomUUID(),
+                orgId,
+                existing.id,
+                FulfillmentStatus.DRAFT_CREATED,
+                FulfillmentStatus.SHIPPED,
+                "Updated by Printify webhook.",
+                null,
+                Instant.now(),
+            )
+        every { auditService.record(null, orgId, "fulfillment.updated_by_printify_webhook", "fulfillment", existing.id) } just runs
+        every { fulfillmentRepository.findByOrder(existing.orderId) } returns updated
+
+        val result =
+            service.applyProviderStatusUpdate(
+                "printify_order_1",
+                FulfillmentStatus.SHIPPED,
+                "USPS",
+                "1Z999",
+                null,
+                "Updated by Printify webhook.",
+            )
+
+        assertEquals(FulfillmentStatus.SHIPPED, result?.status)
+        verify(exactly = 1) {
+            historyRepository.insert(orgId, existing.id, FulfillmentStatus.DRAFT_CREATED, FulfillmentStatus.SHIPPED, any(), null)
+        }
+        verify(exactly = 1) { auditService.record(null, orgId, "fulfillment.updated_by_printify_webhook", "fulfillment", existing.id) }
+    }
+
+    @Test
+    fun `applyProviderStatusUpdate rejects an impossible transition`() {
+        val existing = fulfillment(FulfillmentSource.PRINTIFY, FulfillmentStatus.DELIVERED).copy(printifyOrderId = "printify_order_1")
+        every { fulfillmentRepository.findByPrintifyOrderId("printify_order_1") } returns FulfillmentWithOrganization(existing, orgId)
+
+        assertFailsWith<ValidationException> {
+            service.applyProviderStatusUpdate("printify_order_1", FulfillmentStatus.IN_PRODUCTION, null, null, null, "note")
+        }
+        verify(exactly = 0) { fulfillmentRepository.updateOperationalState(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `applyProviderStatusUpdate is a no-op when replayed with the same status`() {
+        val existing = fulfillment(FulfillmentSource.PRINTIFY, FulfillmentStatus.SHIPPED).copy(printifyOrderId = "printify_order_1")
+        every { fulfillmentRepository.findByPrintifyOrderId("printify_order_1") } returns FulfillmentWithOrganization(existing, orgId)
+
+        val result = service.applyProviderStatusUpdate("printify_order_1", FulfillmentStatus.SHIPPED, null, null, null, "note")
+
+        assertEquals(existing, result)
+        verify(exactly = 0) { fulfillmentRepository.updateOperationalState(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { historyRepository.insert(any(), any(), any(), any(), any(), any()) }
     }
 
     private fun stubManagerAndOrder() {

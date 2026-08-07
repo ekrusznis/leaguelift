@@ -9,11 +9,17 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
+/** Phase 24 slice 24.4 (ADR-070): pairs a fulfillment with its order's real organization id, resolved via the org-safe `findByPrintifyOrderId` join. */
+data class FulfillmentWithOrganization(
+    val fulfillment: Fulfillment,
+    val organizationId: UUID,
+)
+
 private const val FULFILLMENT_COLUMNS = """
     f.id, f.order_id, f.source, f.status, f.printify_order_id, f.manual_vendor_id,
     mv.name as manual_vendor_name, f.vendor_order_reference, f.carrier, f.tracking_number,
     f.tracking_url, f.internal_notes, f.attention_reason, f.last_error, f.status_changed_at,
-    f.shipped_at, f.delivered_at, f.created_at, f.updated_at
+    f.shipped_at, f.delivered_at, f.created_at, f.updated_at, f.printify_shop_id
 """
 
 @Repository
@@ -40,6 +46,7 @@ class FulfillmentRepository(
         printifyOrderId: String?,
         manualVendorId: UUID?,
         lastError: String?,
+        printifyShopId: String? = null,
     ): Fulfillment {
         val id = UUID.randomUUID()
         val now = Instant.now()
@@ -49,10 +56,10 @@ class FulfillmentRepository(
                 """
                 insert into fulfillment
                 	(id, order_id, source, status, printify_order_id, manual_vendor_id, last_error,
-                	 attention_reason, status_changed_at, created_at, updated_at)
+                	 attention_reason, printify_shop_id, status_changed_at, created_at, updated_at)
                 values
                 	(:id, :orderId, :source, :status, :printifyOrderId, :manualVendorId, :lastError,
-                	 :attentionReason, :now, :now, :now)
+                	 :attentionReason, :printifyShopId, :now, :now, :now)
                 """.trimIndent(),
             ).param("id", id)
             .param("orderId", orderId)
@@ -62,6 +69,7 @@ class FulfillmentRepository(
             .param("manualVendorId", manualVendorId)
             .param("lastError", lastError)
             .param("attentionReason", attentionReason)
+            .param("printifyShopId", printifyShopId)
             .param("now", Timestamp.from(now))
             .update()
         return findByOrder(orderId)!!
@@ -117,6 +125,26 @@ class FulfillmentRepository(
             .update()
     }
 
+    /** Phase 24 slice 24.4 (ADR-070): the Printify webhook's org-safe resolution path — resolves by our own DB-unique `printify_order_id` (minted by us at draft-creation time), joined to the order for its real organization id. Never resolves organization from anything a webhook payload claims. */
+    fun findByPrintifyOrderId(printifyOrderId: String): FulfillmentWithOrganization? =
+        jdbcClient
+            .sql(
+                """
+                select $FULFILLMENT_COLUMNS, o.organization_id as order_organization_id
+                from fulfillment f
+                left join manual_vendor mv on mv.id = f.manual_vendor_id
+                join "order" o on o.id = f.order_id
+                where f.printify_order_id = :printifyOrderId
+                """.trimIndent(),
+            ).param("printifyOrderId", printifyOrderId)
+            .query {
+                rs,
+                rowNum,
+                ->
+                FulfillmentWithOrganization(mapRow(rs, rowNum), rs.getObject("order_organization_id", UUID::class.java))
+            }.optional()
+            .orElse(null)
+
     fun countExceptionsByOrganization(organizationId: UUID): Long =
         jdbcClient
             .sql(
@@ -155,5 +183,6 @@ class FulfillmentRepository(
             deliveredAt = rs.getTimestamp("delivered_at")?.toInstant(),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
+            printifyShopId = rs.getString("printify_shop_id"),
         )
 }
