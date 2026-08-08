@@ -42,6 +42,9 @@ class IdentityResolutionRepository(
                     "select id from organization_membership where user_id = :id for update",
                     "select id from role_assignment where user_id = :id for update",
                     "select id from guardian_relationship where user_id = :id for update",
+                    "select id from message_thread_member where user_id = :id for update",
+                    "select id from message_recipient where user_id = :id for update",
+                    "select id from announcement_recipient where user_id = :id for update",
                     "select id from email_verification_token where user_id = :id for update",
                     "select id from password_reset_token where user_id = :id for update",
                 ).forEach { sql ->
@@ -266,6 +269,109 @@ class IdentityResolutionRepository(
             .param("id", id)
             .update()
 
+    fun activeMessageThreadMemberships(userId: UUID): List<MessageThreadMembershipRow> =
+        jdbcClient
+            .sql(
+                """
+                select id, organization_id, thread_id, member_type, household_id, participant_id, access_reason, can_reply
+                from message_thread_member
+                where user_id = :userId and left_at is null
+                order by thread_id, id
+                """.trimIndent(),
+            ).param("userId", userId)
+            .query { rs, _ ->
+                MessageThreadMembershipRow(
+                    id = rs.getObject("id", UUID::class.java),
+                    organizationId = rs.getObject("organization_id", UUID::class.java),
+                    threadId = rs.getObject("thread_id", UUID::class.java),
+                    memberType = rs.getString("member_type"),
+                    householdId = rs.getObject("household_id", UUID::class.java),
+                    participantId = rs.getObject("participant_id", UUID::class.java),
+                    accessReason = rs.getString("access_reason"),
+                    canReply = rs.getBoolean("can_reply"),
+                )
+            }.list()
+
+    fun moveMessageThreadMembership(
+        id: UUID,
+        targetUserId: UUID,
+    ): Int =
+        jdbcClient
+            .sql("update message_thread_member set user_id = :targetUserId where id = :id and left_at is null")
+            .param("targetUserId", targetUserId)
+            .param("id", id)
+            .update()
+
+    fun closeMessageThreadMembership(
+        id: UUID,
+        now: Instant,
+    ): Int =
+        jdbcClient
+            .sql("update message_thread_member set left_at = :now where id = :id and left_at is null")
+            .param("now", Timestamp.from(now))
+            .param("id", id)
+            .update()
+
+    fun visibleMessageRecipients(userId: UUID): List<InAppRecipientRow> =
+        jdbcClient
+            .sql(
+                """
+                select id, message_id as parent_id
+                from message_recipient
+                where user_id = :userId and in_app_visible = true
+                order by message_id, id
+                """.trimIndent(),
+            ).param("userId", userId)
+            .query { rs, _ ->
+                InAppRecipientRow(
+                    id = rs.getObject("id", UUID::class.java),
+                    parentId = rs.getObject("parent_id", UUID::class.java),
+                )
+            }.list()
+
+    fun moveVisibleMessageRecipient(
+        id: UUID,
+        targetUserId: UUID,
+        now: Instant,
+    ): Int =
+        jdbcClient
+            .sql(
+                "update message_recipient set user_id = :targetUserId, updated_at = :now where id = :id and in_app_visible = true",
+            ).param("targetUserId", targetUserId)
+            .param("now", Timestamp.from(now))
+            .param("id", id)
+            .update()
+
+    fun visibleAnnouncementRecipients(userId: UUID): List<InAppRecipientRow> =
+        jdbcClient
+            .sql(
+                """
+                select id, announcement_id as parent_id
+                from announcement_recipient
+                where user_id = :userId and in_app_visible = true
+                order by announcement_id, id
+                """.trimIndent(),
+            ).param("userId", userId)
+            .query { rs, _ ->
+                InAppRecipientRow(
+                    id = rs.getObject("id", UUID::class.java),
+                    parentId = rs.getObject("parent_id", UUID::class.java),
+                )
+            }.list()
+
+    fun moveVisibleAnnouncementRecipient(
+        id: UUID,
+        targetUserId: UUID,
+        now: Instant,
+    ): Int =
+        jdbcClient
+            .sql(
+                "update announcement_recipient set user_id = :targetUserId, updated_at = :now where id = :id and in_app_visible = true",
+            ).param("targetUserId", targetUserId)
+            .param("now", Timestamp.from(now))
+            .param("id", id)
+            .update()
+
     fun invalidateAuthenticationTokens(
         userId: UUID,
         now: Instant,
@@ -369,6 +475,29 @@ data class GuardianRelationshipRow(
     val organizationId: UUID,
     val householdId: UUID,
     val householdAdultId: UUID,
+)
+
+data class MessageThreadMembershipRow(
+    val id: UUID,
+    val organizationId: UUID,
+    val threadId: UUID,
+    val memberType: String,
+    val householdId: UUID?,
+    val participantId: UUID?,
+    val accessReason: String,
+    val canReply: Boolean,
+) {
+    fun sameAccessAs(other: MessageThreadMembershipRow): Boolean =
+        memberType == other.memberType &&
+            householdId == other.householdId &&
+            participantId == other.participantId &&
+            accessReason == other.accessReason &&
+            canReply == other.canReply
+}
+
+data class InAppRecipientRow(
+    val id: UUID,
+    val parentId: UUID,
 )
 
 data class ResolutionRecord(

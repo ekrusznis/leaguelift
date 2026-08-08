@@ -400,6 +400,7 @@ class DuplicateIdentityRepository(
         columnName: String,
     ): Boolean =
         (tableName == "audit_event" && columnName == "actor_user_id") ||
+            (tableName == "message_entry" && columnName == "sender_user_id") ||
             (tableName == "role_assignment" && columnName == "granted_by") ||
             columnName.endsWith("_by_user_id")
 

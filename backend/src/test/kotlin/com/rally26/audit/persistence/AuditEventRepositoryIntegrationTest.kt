@@ -27,14 +27,12 @@ class AuditEventRepositoryIntegrationTest : AbstractIntegrationTest() {
                 .query(String::class.java)
                 .single()
         assertEquals("p", relkind)
-
         val partitionExists =
             jdbcClient
                 .sql("select exists(select 1 from pg_class where relname = 'audit_event_2026_08')")
                 .query(Boolean::class.java)
                 .single()
         assertTrue(partitionExists)
-
         val eventId = UUID.randomUUID()
         jdbcClient
             .sql(
@@ -49,7 +47,6 @@ class AuditEventRepositoryIntegrationTest : AbstractIntegrationTest() {
             ).param("id", eventId)
             .param("entityId", UUID.randomUUID())
             .update()
-
         val physicalTable =
             jdbcClient
                 .sql("select tableoid::regclass::text from audit_event where id = :id")
@@ -121,7 +118,6 @@ class AuditEventRepositoryIntegrationTest : AbstractIntegrationTest() {
             ).param("id", eventId)
             .param("entityId", UUID.randomUUID())
             .update()
-
         assertFailsWith<DataAccessException> {
             jdbcClient
                 .sql("update audit_event set summary = 'changed' where id = :id")
@@ -159,11 +155,10 @@ class AuditEventRepositoryIntegrationTest : AbstractIntegrationTest() {
         jdbcClient
             .sql(
                 """
-                insert into app_user (id, external_subject, email, display_name, status)
-                values (:id, :subject, :email, 'Audit Test User', 'ACTIVE')
+                insert into app_user (id, email, display_name, status)
+                values (:id, :email, 'Audit Test User', 'ACTIVE')
                 """.trimIndent(),
             ).param("id", id)
-            .param("subject", "audit-test-$id")
             .param("email", email)
             .update()
         return id

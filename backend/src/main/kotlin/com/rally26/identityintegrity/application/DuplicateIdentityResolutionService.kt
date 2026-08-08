@@ -231,6 +231,12 @@ class DuplicateIdentityResolutionService(
         var rolesDeduplicated = 0
         var guardiansMoved = 0
         var guardiansDeduplicated = 0
+        var messageThreadMembershipsMoved = 0
+        var messageThreadMembershipsDeduplicated = 0
+        var messageRecipientAccessMoved = 0
+        var messageRecipientAccessAlreadyPresent = 0
+        var announcementRecipientAccessMoved = 0
+        var announcementRecipientAccessAlreadyPresent = 0
         val recovery =
             mutableMapOf<String, Any>(
                 "sourceStatusBefore" to sourceStatus,
@@ -240,6 +246,12 @@ class DuplicateIdentityResolutionService(
                 "revokedRoleAssignmentIds" to mutableListOf<String>(),
                 "movedGuardianRelationshipIds" to mutableListOf<String>(),
                 "revokedGuardianRelationshipIds" to mutableListOf<String>(),
+                "movedMessageThreadMembershipIds" to mutableListOf<String>(),
+                "closedMessageThreadMembershipIds" to mutableListOf<String>(),
+                "movedMessageRecipientIds" to mutableListOf<String>(),
+                "preservedMessageRecipientIdsWithTargetAccess" to mutableListOf<String>(),
+                "movedAnnouncementRecipientIds" to mutableListOf<String>(),
+                "preservedAnnouncementRecipientIdsWithTargetAccess" to mutableListOf<String>(),
                 "authTokensReactivatedOnRecovery" to false,
             )
 
@@ -292,6 +304,50 @@ class DuplicateIdentityResolutionService(
             }
         }
 
+        val targetThreadMemberships = repository.activeMessageThreadMemberships(target.id).associateBy { it.threadId }
+        repository.activeMessageThreadMemberships(source.id).forEach { row ->
+            val targetRow = targetThreadMemberships[row.threadId]
+            when {
+                targetRow == null -> {
+                    if (repository.moveMessageThreadMembership(row.id, target.id) != 1) conflictDuringMutation()
+                    messageThreadMembershipsMoved++
+                    recovery.list("movedMessageThreadMembershipIds").add(row.id.toString())
+                }
+                row.sameAccessAs(targetRow) -> {
+                    if (repository.closeMessageThreadMembership(row.id, now) != 1) conflictDuringMutation()
+                    messageThreadMembershipsDeduplicated++
+                    recovery.list("closedMessageThreadMembershipIds").add(row.id.toString())
+                }
+                else -> conflictDuringMutation()
+            }
+        }
+
+        val targetMessageIds = repository.visibleMessageRecipients(target.id).mapTo(mutableSetOf()) { it.parentId }
+        repository.visibleMessageRecipients(source.id).forEach { row ->
+            if (row.parentId in targetMessageIds) {
+                messageRecipientAccessAlreadyPresent++
+                recovery.list("preservedMessageRecipientIdsWithTargetAccess").add(row.id.toString())
+            } else {
+                if (repository.moveVisibleMessageRecipient(row.id, target.id, now) != 1) conflictDuringMutation()
+                targetMessageIds += row.parentId
+                messageRecipientAccessMoved++
+                recovery.list("movedMessageRecipientIds").add(row.id.toString())
+            }
+        }
+
+        val targetAnnouncementIds = repository.visibleAnnouncementRecipients(target.id).mapTo(mutableSetOf()) { it.parentId }
+        repository.visibleAnnouncementRecipients(source.id).forEach { row ->
+            if (row.parentId in targetAnnouncementIds) {
+                announcementRecipientAccessAlreadyPresent++
+                recovery.list("preservedAnnouncementRecipientIdsWithTargetAccess").add(row.id.toString())
+            } else {
+                if (repository.moveVisibleAnnouncementRecipient(row.id, target.id, now) != 1) conflictDuringMutation()
+                targetAnnouncementIds += row.parentId
+                announcementRecipientAccessMoved++
+                recovery.list("movedAnnouncementRecipientIds").add(row.id.toString())
+            }
+        }
+
         val invalidatedTokens = repository.invalidateAuthenticationTokens(source.id, now)
         if (repository.retireSourceUser(source.id, target.id, now) != 1) conflictDuringMutation()
         recovery["retiredSourceUserId"] = source.id.toString()
@@ -306,6 +362,12 @@ class DuplicateIdentityResolutionService(
                     roleAssignmentsDeduplicated = rolesDeduplicated,
                     guardianRelationshipsMoved = guardiansMoved,
                     guardianRelationshipsDeduplicated = guardiansDeduplicated,
+                    messageThreadMembershipsMoved = messageThreadMembershipsMoved,
+                    messageThreadMembershipsDeduplicated = messageThreadMembershipsDeduplicated,
+                    messageRecipientAccessMoved = messageRecipientAccessMoved,
+                    messageRecipientAccessAlreadyPresent = messageRecipientAccessAlreadyPresent,
+                    announcementRecipientAccessMoved = announcementRecipientAccessMoved,
+                    announcementRecipientAccessAlreadyPresent = announcementRecipientAccessAlreadyPresent,
                     authTokensInvalidated = invalidatedTokens,
                 ),
             recovery = recovery,

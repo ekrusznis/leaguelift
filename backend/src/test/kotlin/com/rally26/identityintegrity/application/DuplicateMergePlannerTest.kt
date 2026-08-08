@@ -120,6 +120,27 @@ class DuplicateMergePlannerTest {
     }
 
     @Test
+    fun `known messaging access dependencies are handled by the explicit merge path`() {
+        val orgId = UUID.randomUUID()
+        val source = userWithMembership(orgId)
+        val dependencies =
+            listOf(
+                IdentityDependency("message_thread_member", "user_id", 2, historical = false),
+                IdentityDependency("message_recipient", "user_id", 4, historical = false),
+                IdentityDependency("announcement_recipient", "user_id", 1, historical = false),
+                IdentityDependency("message_entry", "sender_user_id", 3, historical = true),
+            )
+
+        val preview = DuplicateMergePlanner.plan(source, identity(DuplicateIdentityKind.APP_USER), dependencies)
+
+        assertTrue(preview.canProceedToMutationSlice)
+        assertTrue(preview.plan.any { it.code == "RESOLVE_message_thread_member_user_id" })
+        assertTrue(preview.plan.any { it.code == "RESOLVE_message_recipient_user_id" })
+        assertTrue(preview.plan.any { it.code == "RESOLVE_announcement_recipient_user_id" })
+        assertTrue(preview.plan.any { it.code == "PRESERVE_message_entry_sender_user_id" })
+    }
+
+    @Test
     fun `missing shared evidence blocks direct mutation request`() {
         val orgId = UUID.randomUUID()
         val source = userWithMembership(orgId).copy(email = "source@example.com")

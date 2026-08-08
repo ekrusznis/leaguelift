@@ -10120,7 +10120,7 @@ components:
         confirmedTargetEmail: {type: string, format: email}
     IdentityResolutionOutcomeResponse:
       type: object
-      required: [membershipsMoved, membershipsDeduplicated, roleAssignmentsMoved, roleAssignmentsDeduplicated, guardianRelationshipsMoved, guardianRelationshipsDeduplicated, guardianRelationshipCreated, authTokensInvalidated]
+      required: [membershipsMoved, membershipsDeduplicated, roleAssignmentsMoved, roleAssignmentsDeduplicated, guardianRelationshipsMoved, guardianRelationshipsDeduplicated, messageThreadMembershipsMoved, messageThreadMembershipsDeduplicated, messageRecipientAccessMoved, messageRecipientAccessAlreadyPresent, announcementRecipientAccessMoved, announcementRecipientAccessAlreadyPresent, guardianRelationshipCreated, authTokensInvalidated]
       properties:
         membershipsMoved: {type: integer, minimum: 0}
         membershipsDeduplicated: {type: integer, minimum: 0}
@@ -10128,6 +10128,12 @@ components:
         roleAssignmentsDeduplicated: {type: integer, minimum: 0}
         guardianRelationshipsMoved: {type: integer, minimum: 0}
         guardianRelationshipsDeduplicated: {type: integer, minimum: 0}
+        messageThreadMembershipsMoved: {type: integer, minimum: 0}
+        messageThreadMembershipsDeduplicated: {type: integer, minimum: 0}
+        messageRecipientAccessMoved: {type: integer, minimum: 0}
+        messageRecipientAccessAlreadyPresent: {type: integer, minimum: 0}
+        announcementRecipientAccessMoved: {type: integer, minimum: 0}
+        announcementRecipientAccessAlreadyPresent: {type: integer, minimum: 0}
         guardianRelationshipCreated: {type: boolean}
         authTokensInvalidated: {type: integer, minimum: 0}
     IdentityResolutionReceiptResponse:

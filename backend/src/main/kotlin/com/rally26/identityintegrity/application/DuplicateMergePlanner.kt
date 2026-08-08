@@ -339,6 +339,9 @@ object DuplicateMergePlanner {
             "organization_membership" to "user_id",
             "role_assignment" to "user_id",
             "guardian_relationship" to "user_id",
+            "message_thread_member" to "user_id",
+            "message_recipient" to "user_id",
+            "announcement_recipient" to "user_id",
         )
     private val INVALIDATED_DEPENDENCIES =
         setOf(

@@ -61,6 +61,12 @@ export interface IdentityResolutionOutcome {
 	roleAssignmentsDeduplicated: number;
 	guardianRelationshipsMoved: number;
 	guardianRelationshipsDeduplicated: number;
+	messageThreadMembershipsMoved: number;
+	messageThreadMembershipsDeduplicated: number;
+	messageRecipientAccessMoved: number;
+	messageRecipientAccessAlreadyPresent: number;
+	announcementRecipientAccessMoved: number;
+	announcementRecipientAccessAlreadyPresent: number;
 	guardianRelationshipCreated: boolean;
 	authTokensInvalidated: number;
 }
