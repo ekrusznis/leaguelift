@@ -34,6 +34,7 @@ export type NavDestination =
 	| { type: "organizations" }
 	| { type: "platform-organizations" }
 	| { type: "platform-users" }
+	| { type: "platform-duplicate-identities" }
 	| { type: "platform-operations" }
 	| { type: "platform-audit" }
 	| { type: "platform-support-sessions" }
@@ -148,6 +149,7 @@ export const NAV_REGISTRY: NavRegistryItem[] = [
 	{ id: "platform.organizations", label: "Organizations", icon: <BuildingIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_ORG_VIEW], destination: { type: "platform-organizations" } },
 	{ id: "platform.subscriptions", label: "Subscriptions", icon: <DollarIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_ORG_VIEW], destination: { type: "platform-subscriptions" } },
 	{ id: "platform.users", label: "Users", icon: <UserIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_USER_VIEW], destination: { type: "platform-users" } },
+	{ id: "platform.data-integrity", label: "Data Integrity", icon: <ShieldIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_USER_VIEW], destination: { type: "platform-duplicate-identities" } },
 	{ id: "platform.operations", label: "Integration Operations", icon: <ShieldIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_INTEGRATION_VIEW], destination: { type: "platform-operations" } },
 	{ id: "platform.reports", label: "Reports", icon: <ChartIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_AUDIT_VIEW], destination: { type: "platform-reports" } },
 	{ id: "platform.audit", label: "Audit", icon: <FileTextIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_AUDIT_VIEW], destination: { type: "platform-audit" } },
@@ -167,6 +169,7 @@ function resolveDestination(destination: NavDestination, context: NavRouteContex
 		case "organizations": return appPaths.organizations();
 		case "platform-organizations": return appPaths.platformOrganizations();
 		case "platform-users": return appPaths.platformUsers();
+		case "platform-duplicate-identities": return appPaths.platformDuplicateIdentities();
 		case "platform-operations": return appPaths.platformOperations();
 		case "platform-audit": return appPaths.platformAudit();
 		case "platform-support-sessions": return appPaths.platformSupportSessions();

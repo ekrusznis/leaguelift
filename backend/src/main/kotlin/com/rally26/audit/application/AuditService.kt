@@ -1,13 +1,19 @@
 package com.rally26.audit.application
 
+import com.rally26.audit.domain.AuditActorType
+import com.rally26.audit.domain.AuditResult
 import com.rally26.audit.persistence.AuditEventRepository
 import org.springframework.stereotype.Service
 import java.util.UUID
 
 /**
- * Records immutable audit events. Audit records are never updated or deleted
- * (DESIGN-DOC.md sections 14.1, 26.4 — audit history must be preservable/immutable).
- * Called from within the same transaction as the state change being audited.
+ * Records immutable audit events inside the same transaction as the state change being audited.
+ *
+ * The original six-argument call shape remains source-compatible. Phase 27 callers can opt into
+ * explicit team/household/participant/target-user scope as domains are upgraded to richer history.
+ *
+ * Derived defaults are resolved inside the method rather than in the Kotlin signature. This keeps
+ * legacy MockK six-argument stubs deterministic while preserving USER/SYSTEM actor and summary behavior.
  */
 @Service
 class AuditService(
@@ -20,7 +26,30 @@ class AuditService(
         entityType: String,
         entityId: UUID,
         metadataJson: String = "{}",
+        teamId: UUID? = null,
+        householdId: UUID? = null,
+        participantId: UUID? = null,
+        targetUserId: UUID? = null,
+        actorType: AuditActorType? = null,
+        result: AuditResult = AuditResult.SUCCESS,
+        summary: String? = null,
+        correlationId: UUID? = null,
     ) {
-        auditEventRepository.insert(actorUserId, organizationId, action, entityType, entityId, metadataJson)
+        auditEventRepository.insert(
+            actorUserId = actorUserId,
+            organizationId = organizationId,
+            action = action,
+            entityType = entityType,
+            entityId = entityId,
+            metadataJson = metadataJson,
+            teamId = teamId,
+            householdId = householdId,
+            participantId = participantId,
+            targetUserId = targetUserId,
+            actorType = actorType ?: if (actorUserId == null) AuditActorType.SYSTEM else AuditActorType.USER,
+            result = result,
+            summary = summary ?: action,
+            correlationId = correlationId,
+        )
     }
 }

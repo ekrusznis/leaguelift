@@ -12,10 +12,12 @@ import { EventDetailPage } from "../features/events/EventDetailPage";
 import { EventsPage } from "../features/events/EventsPage";
 import { PersonalIntegrationsPage } from "../features/integrations/PersonalIntegrationsPage";
 import { MessagesPage } from "../features/messaging/MessagesPage";
+import { AuditHistoryPage } from "../features/auditHistory/AuditHistoryPage";
 import { OrganizationBillingPage } from "../features/subscriptionBilling/OrganizationBillingPage";
 import { PlatformSubscriptionsPage } from "../features/subscriptionBilling/PlatformSubscriptionsPage";
 import { PlatformAdminConsoleLayout } from "../features/platformAdmin/PlatformAdminConsoleLayout";
 import { PlatformAuditPage } from "../features/platformAdmin/PlatformAuditPage";
+import { PlatformDuplicateIdentitiesPage } from "../features/platformAdmin/PlatformDuplicateIdentitiesPage";
 import { PlatformOperationsPage } from "../features/platformAdmin/PlatformOperationsPage";
 import { PlatformOrganizationConsolePage } from "../features/platformAdmin/PlatformOrganizationConsolePage";
 import { PlatformOrganizationsPage } from "../features/platformAdmin/PlatformOrganizationsPage";
@@ -103,6 +105,7 @@ export function AppRoutes() {
 					<Route path="action-center" element={<ActionCenterPage />} />
 					<Route path="announcements" element={<AnnouncementsPage />} />
 					<Route path="messages" element={<MessagesPage />} />
+					<Route path="history" element={<AuditHistoryPage />} />
 					<Route path="integrations" element={<PersonalIntegrationsPage />} />
 					<Route path="help" element={<HelpCenterPage authenticated />} />
 					<Route path="help/support" element={<SupportRequestPage authenticated />} />
@@ -125,6 +128,7 @@ export function AppRoutes() {
 					<Route path="organizations" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformOrganizationsPage />)} />
 					<Route path="organizations/:organizationId" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformOrganizationConsolePage />)} />
 					<Route path="users" element={platformGuard(Capabilities.PLATFORM_USER_VIEW, <PlatformUsersPage />)} />
+					<Route path="data-integrity/duplicates" element={platformGuard(Capabilities.PLATFORM_USER_VIEW, <PlatformDuplicateIdentitiesPage />)} />
 					<Route path="operations" element={platformGuard(Capabilities.PLATFORM_INTEGRATION_VIEW, <PlatformOperationsPage />)} />
 					<Route path="reports" element={platformGuard(Capabilities.PLATFORM_AUDIT_VIEW, <PlatformReportsPage />)} />
 					<Route path="audit" element={platformGuard(Capabilities.PLATFORM_AUDIT_VIEW, <PlatformAuditPage />)} />

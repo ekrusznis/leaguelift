@@ -101,7 +101,7 @@ info:
     is never serialized, direct participant-to-household order attribution (no attribution-code
     indirection), family-credit grant/reversal wiring on order confirm/refund, and a guardian
     dashboard recent-orders card (ADR-069).
-  version: "0.36.0"
+  version: "0.38.0"
 servers:
 - url: /api/v1
 tags:
@@ -132,6 +132,7 @@ tags:
 - name: authorization
 - name: documents
 - name: activity
+- name: audit-history
 - name: search
 - name: reporting
 - name: events
@@ -147,6 +148,42 @@ tags:
 - name: announcements
 - name: offline-finance
 paths:
+  /audit-history:
+    get:
+      tags: [audit-history]
+      summary: List immutable role-scoped audit history
+      description: >
+        Visibility is enforced by current Rally26 relationships in SQL: athletes receive self/participant-scoped history;
+        guardians receive self plus linked household/participant history; team staff receive assigned-team history;
+        owners/administrators receive their organizations; Platform Administrators receive platform-wide history.
+      operationId: listAuditHistory
+      parameters:
+      - {name: from, in: query, required: false, schema: {type: string, format: date-time}}
+      - {name: to, in: query, required: false, schema: {type: string, format: date-time}}
+      - {name: action, in: query, required: false, schema: {type: string, maxLength: 120}}
+      - {name: result, in: query, required: false, schema: {$ref: "#/components/schemas/AuditResult"}}
+      - {name: keyword, in: query, required: false, schema: {type: string, maxLength: 200}}
+      - name: user
+        in: query
+        required: false
+        description: User or participant display-name filter. Available to guardian and higher scopes; never widens visibility.
+        schema: {type: string, maxLength: 120}
+      - {name: organizationId, in: query, required: false, schema: {type: string, format: uuid}}
+      - {name: teamId, in: query, required: false, schema: {type: string, format: uuid}}
+      - {name: sortBy, in: query, required: false, schema: {$ref: "#/components/schemas/AuditHistorySortField"}}
+      - {name: direction, in: query, required: false, schema: {$ref: "#/components/schemas/AuditHistorySortDirection"}}
+      - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
+      - {name: cursor, in: query, required: false, schema: {type: string}}
+      responses:
+        "200":
+          description: Role-scoped immutable audit history page
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AuditHistoryPageResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+
   /me/action-center:
     get:
       tags: [action-center]
@@ -9685,6 +9722,46 @@ paths:
       responses:
         '201': {description: Athlete conversation created, content: {application/json: {schema: {$ref: '#/components/schemas/MessageThreadResponse'}}}}
 
+  /platform/admin/data-integrity/duplicates:
+    get:
+      summary: List duplicate identity candidate groups
+      description: Platform Admin-only normalized email/phone duplicate scan across app users and unlinked guardian shells. The scan itself is read-only; resolution uses the separate preview-bound POST endpoint.
+      parameters:
+        - {name: query, in: query, required: false, schema: {type: string, maxLength: 200}}
+        - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
+      responses:
+        '200': {description: Duplicate identity candidates, content: {application/json: {schema: {$ref: '#/components/schemas/DuplicateCandidateListResponse'}}}}
+        '403': {description: Platform user-view capability required}
+  /platform/admin/data-integrity/duplicates/preview:
+    get:
+      summary: Build a duplicate resolution preview
+      description: Inventories source dependencies, revalidates shared normalized duplicate evidence, identifies one safe support-session organization scope, and returns a deterministic preview hash plus plan items/blockers.
+      parameters:
+        - {name: sourceKind, in: query, required: true, schema: {type: string, enum: [APP_USER, GUARDIAN_SHELL]}}
+        - {name: sourceId, in: query, required: true, schema: {type: string, format: uuid}}
+        - {name: targetKind, in: query, required: true, schema: {type: string, enum: [APP_USER, GUARDIAN_SHELL]}}
+        - {name: targetId, in: query, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Resolution preview, content: {application/json: {schema: {$ref: '#/components/schemas/DuplicateMergePreviewResponse'}}}}
+        '400': {description: Invalid source/target pair}
+        '403': {description: Platform user-view capability required}
+        '404': {description: Identity not found}
+  /platform/admin/data-integrity/duplicates/resolve:
+    post:
+      summary: Execute an audited duplicate identity resolution
+      description: Platform Admin-only mutation. Requires PLATFORM_USER_MANAGE and PLATFORM_SUPPORT_ACCESS, an active support session for the preview's single organization scope, a current preview hash, an action reason, and typed confirmation of the surviving target email. The server locks and rebuilds the preview before writing; stale or newly blocked plans fail atomically.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ResolveDuplicateIdentityRequest'}
+      responses:
+        '200': {description: Completed or idempotently replayed resolution receipt, content: {application/json: {schema: {$ref: '#/components/schemas/IdentityResolutionReceiptResponse'}}}}
+        '400': {description: Invalid confirmation, reason, preview hash, or source/target pair}
+        '403': {description: Platform manage/support capability or active support-session scope required}
+        '404': {description: Identity not found}
+        '409': {description: Preview stale, resolution blocked, source already resolved differently, or relationships changed during mutation}
+
 components:
   securitySchemes:
     bearerAuth:
@@ -9933,6 +10010,198 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
   schemas:
+    DuplicateIdentityRefResponse:
+      type: object
+      required: [kind, id]
+      properties:
+        kind: {type: string, enum: [APP_USER, GUARDIAN_SHELL]}
+        id: {type: string, format: uuid}
+    DuplicateMembershipResponse:
+      type: object
+      required: [organizationId, organizationName, role, status]
+      properties:
+        organizationId: {type: string, format: uuid}
+        organizationName: {type: string}
+        role: {type: string}
+        status: {type: string}
+    DuplicateRoleAssignmentResponse:
+      type: object
+      required: [organizationId, contextType, resourceId, role]
+      properties:
+        organizationId: {type: string, format: uuid}
+        contextType: {type: string}
+        resourceId: {type: string, format: uuid}
+        role: {type: string}
+    DuplicateGuardianLinkResponse:
+      type: object
+      required: [organizationId, householdId, householdAdultId]
+      properties:
+        organizationId: {type: string, format: uuid}
+        householdId: {type: string, format: uuid}
+        householdAdultId: {type: string, format: uuid}
+    DuplicateIdentityResponse:
+      type: object
+      required: [ref, displayName, status, createdAt, platformAdministrator, memberships, externalIds, roleAssignments, guardianLinks]
+      properties:
+        ref: {$ref: '#/components/schemas/DuplicateIdentityRefResponse'}
+        displayName: {type: string}
+        email: {type: string, nullable: true}
+        phone: {type: string, nullable: true}
+        status: {type: string}
+        createdAt: {type: string, format: date-time}
+        organizationId: {type: string, format: uuid, nullable: true}
+        organizationName: {type: string, nullable: true}
+        householdId: {type: string, format: uuid, nullable: true}
+        householdName: {type: string, nullable: true}
+        linkedUserId: {type: string, format: uuid, nullable: true}
+        platformAdministrator: {type: boolean}
+        memberships: {type: array, items: {$ref: '#/components/schemas/DuplicateMembershipResponse'}}
+        externalIds: {type: array, items: {type: string}}
+        roleAssignments: {type: array, items: {$ref: '#/components/schemas/DuplicateRoleAssignmentResponse'}}
+        guardianLinks: {type: array, items: {$ref: '#/components/schemas/DuplicateGuardianLinkResponse'}}
+        mergedIntoUserId: {type: string, format: uuid, nullable: true}
+    DuplicateCandidateGroupResponse:
+      type: object
+      required: [matchType, normalizedValue, identities]
+      properties:
+        matchType: {type: string, enum: [EMAIL, PHONE]}
+        normalizedValue: {type: string}
+        identities: {type: array, minItems: 2, items: {$ref: '#/components/schemas/DuplicateIdentityResponse'}}
+    DuplicateCandidateListResponse:
+      type: object
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/DuplicateCandidateGroupResponse'}}
+    IdentityDependencyResponse:
+      type: object
+      required: [tableName, columnName, count, historical]
+      properties:
+        tableName: {type: string}
+        columnName: {type: string}
+        count: {type: integer, format: int64}
+        historical: {type: boolean}
+    DuplicateMatchEvidenceResponse:
+      type: object
+      required: [matchType, normalizedValue]
+      properties:
+        matchType: {type: string, enum: [EMAIL, PHONE]}
+        normalizedValue: {type: string}
+    MergePlanItemResponse:
+      type: object
+      required: [code, severity, summary]
+      properties:
+        code: {type: string}
+        severity: {type: string, enum: [INFO, WARNING, BLOCKER]}
+        summary: {type: string}
+    DuplicateMergePreviewResponse:
+      type: object
+      required: [source, target, strategy, canProceedToMutationSlice, dependencies, sharedEvidence, plan, previewHash]
+      properties:
+        source: {$ref: '#/components/schemas/DuplicateIdentityResponse'}
+        target: {$ref: '#/components/schemas/DuplicateIdentityResponse'}
+        strategy: {type: string, enum: [LINK_SHELL_TO_EXISTING_USER, MERGE_USER_ACCOUNTS, REVIEW_SHELLS_SEPARATELY, KEEP_SEPARATE]}
+        canProceedToMutationSlice: {type: boolean}
+        dependencies: {type: array, items: {$ref: '#/components/schemas/IdentityDependencyResponse'}}
+        sharedEvidence: {type: array, items: {$ref: '#/components/schemas/DuplicateMatchEvidenceResponse'}}
+        plan: {type: array, items: {$ref: '#/components/schemas/MergePlanItemResponse'}}
+        requiredSupportOrganizationId: {type: string, format: uuid, nullable: true}
+        previewHash: {type: string, pattern: '^[0-9a-f]{64}$'}
+    ResolveDuplicateIdentityRequest:
+      type: object
+      required: [sourceKind, sourceId, targetKind, targetId, previewHash, supportAccessId, reason, confirmedTargetEmail]
+      properties:
+        sourceKind: {type: string, enum: [APP_USER, GUARDIAN_SHELL]}
+        sourceId: {type: string, format: uuid}
+        targetKind: {type: string, enum: [APP_USER, GUARDIAN_SHELL]}
+        targetId: {type: string, format: uuid}
+        previewHash: {type: string, pattern: '^[0-9a-fA-F]{64}$'}
+        supportAccessId: {type: string, format: uuid}
+        reason: {type: string, minLength: 10, maxLength: 500}
+        confirmedTargetEmail: {type: string, format: email}
+    IdentityResolutionOutcomeResponse:
+      type: object
+      required: [membershipsMoved, membershipsDeduplicated, roleAssignmentsMoved, roleAssignmentsDeduplicated, guardianRelationshipsMoved, guardianRelationshipsDeduplicated, messageThreadMembershipsMoved, messageThreadMembershipsDeduplicated, messageRecipientAccessMoved, messageRecipientAccessAlreadyPresent, announcementRecipientAccessMoved, announcementRecipientAccessAlreadyPresent, guardianRelationshipCreated, authTokensInvalidated]
+      properties:
+        membershipsMoved: {type: integer, minimum: 0}
+        membershipsDeduplicated: {type: integer, minimum: 0}
+        roleAssignmentsMoved: {type: integer, minimum: 0}
+        roleAssignmentsDeduplicated: {type: integer, minimum: 0}
+        guardianRelationshipsMoved: {type: integer, minimum: 0}
+        guardianRelationshipsDeduplicated: {type: integer, minimum: 0}
+        messageThreadMembershipsMoved: {type: integer, minimum: 0}
+        messageThreadMembershipsDeduplicated: {type: integer, minimum: 0}
+        messageRecipientAccessMoved: {type: integer, minimum: 0}
+        messageRecipientAccessAlreadyPresent: {type: integer, minimum: 0}
+        announcementRecipientAccessMoved: {type: integer, minimum: 0}
+        announcementRecipientAccessAlreadyPresent: {type: integer, minimum: 0}
+        guardianRelationshipCreated: {type: boolean}
+        authTokensInvalidated: {type: integer, minimum: 0}
+    IdentityResolutionReceiptResponse:
+      type: object
+      required: [operationId, operationType, status, source, target, organizationId, supportAccessId, previewHash, completedAt, outcome]
+      properties:
+        operationId: {type: string, format: uuid}
+        operationType: {type: string, enum: [LINK_GUARDIAN_SHELL, MERGE_APP_USERS]}
+        status: {type: string, enum: [COMPLETED, ROLLED_BACK]}
+        source: {$ref: '#/components/schemas/DuplicateIdentityRefResponse'}
+        target: {$ref: '#/components/schemas/DuplicateIdentityRefResponse'}
+        organizationId: {type: string, format: uuid}
+        supportAccessId: {type: string, format: uuid}
+        previewHash: {type: string, pattern: '^[0-9a-f]{64}$'}
+        completedAt: {type: string, format: date-time}
+        outcome: {$ref: '#/components/schemas/IdentityResolutionOutcomeResponse'}
+
+    AuditResult:
+      type: string
+      enum: [SUCCESS, FAILURE, DENIED, PARTIAL]
+    AuditHistorySortField:
+      type: string
+      enum: [DATE, ACTION, RESULT]
+      default: DATE
+    AuditHistorySortDirection:
+      type: string
+      enum: [ASC, DESC]
+      default: DESC
+    AuditHistoryFilterAccessResponse:
+      type: object
+      required: [canFilterUser, canFilterTeam, canFilterOrganization]
+      properties:
+        canFilterUser: {type: boolean}
+        canFilterTeam: {type: boolean}
+        canFilterOrganization: {type: boolean}
+    AuditHistoryItemResponse:
+      type: object
+      required: [id, occurredAt, action, result, summary, actorType, entityType, entityId]
+      properties:
+        id: {type: string, format: uuid}
+        occurredAt: {type: string, format: date-time}
+        action: {type: string}
+        result: {$ref: "#/components/schemas/AuditResult"}
+        summary: {type: string}
+        actorType: {type: string, enum: [USER, SYSTEM, PROVIDER]}
+        actorUserId: {type: string, format: uuid, nullable: true}
+        actorDisplayName: {type: string, nullable: true}
+        targetUserId: {type: string, format: uuid, nullable: true}
+        targetDisplayName: {type: string, nullable: true}
+        organizationId: {type: string, format: uuid, nullable: true}
+        organizationName: {type: string, nullable: true}
+        teamId: {type: string, format: uuid, nullable: true}
+        teamName: {type: string, nullable: true}
+        householdId: {type: string, format: uuid, nullable: true}
+        householdName: {type: string, nullable: true}
+        participantId: {type: string, format: uuid, nullable: true}
+        participantDisplayName: {type: string, nullable: true}
+        entityType: {type: string}
+        entityId: {type: string, format: uuid}
+    AuditHistoryPageResponse:
+      type: object
+      required: [items, filterAccess]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/AuditHistoryItemResponse"}
+        nextCursor: {type: string, nullable: true}
+        filterAccess: {$ref: "#/components/schemas/AuditHistoryFilterAccessResponse"}
 
     SupportAudience:
       type: string
