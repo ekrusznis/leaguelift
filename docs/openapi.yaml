@@ -9722,6 +9722,31 @@ paths:
       responses:
         '201': {description: Athlete conversation created, content: {application/json: {schema: {$ref: '#/components/schemas/MessageThreadResponse'}}}}
 
+  /platform/admin/data-integrity/duplicates:
+    get:
+      summary: List read-only duplicate identity candidate groups
+      description: Platform Admin-only normalized email/phone duplicate scan across app users and unlinked guardian shells. No mutation occurs.
+      parameters:
+        - {name: query, in: query, required: false, schema: {type: string, maxLength: 200}}
+        - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
+      responses:
+        '200': {description: Duplicate identity candidates, content: {application/json: {schema: {$ref: '#/components/schemas/DuplicateCandidateListResponse'}}}}
+        '403': {description: Platform user-view capability required}
+  /platform/admin/data-integrity/duplicates/preview:
+    get:
+      summary: Build a read-only duplicate resolution preview
+      description: Inventories source identity dependencies and returns deterministic plan items/blockers. Phase 27.3 exposes no merge or link mutation endpoint.
+      parameters:
+        - {name: sourceKind, in: query, required: true, schema: {type: string, enum: [APP_USER, GUARDIAN_SHELL]}}
+        - {name: sourceId, in: query, required: true, schema: {type: string, format: uuid}}
+        - {name: targetKind, in: query, required: true, schema: {type: string, enum: [APP_USER, GUARDIAN_SHELL]}}
+        - {name: targetId, in: query, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Dry-run resolution preview, content: {application/json: {schema: {$ref: '#/components/schemas/DuplicateMergePreviewResponse'}}}}
+        '400': {description: Invalid source/target pair}
+        '403': {description: Platform user-view capability required}
+        '404': {description: Identity not found}
+
 components:
   securitySchemes:
     bearerAuth:
@@ -9970,6 +9995,75 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
   schemas:
+    DuplicateIdentityRefResponse:
+      type: object
+      required: [kind, id]
+      properties:
+        kind: {type: string, enum: [APP_USER, GUARDIAN_SHELL]}
+        id: {type: string, format: uuid}
+    DuplicateMembershipResponse:
+      type: object
+      required: [organizationId, organizationName, role, status]
+      properties:
+        organizationId: {type: string, format: uuid}
+        organizationName: {type: string}
+        role: {type: string}
+        status: {type: string}
+    DuplicateIdentityResponse:
+      type: object
+      required: [ref, displayName, status, createdAt, platformAdministrator, memberships, externalIds]
+      properties:
+        ref: {$ref: '#/components/schemas/DuplicateIdentityRefResponse'}
+        displayName: {type: string}
+        email: {type: string, nullable: true}
+        phone: {type: string, nullable: true}
+        status: {type: string}
+        createdAt: {type: string, format: date-time}
+        organizationId: {type: string, format: uuid, nullable: true}
+        organizationName: {type: string, nullable: true}
+        householdId: {type: string, format: uuid, nullable: true}
+        householdName: {type: string, nullable: true}
+        linkedUserId: {type: string, format: uuid, nullable: true}
+        platformAdministrator: {type: boolean}
+        memberships: {type: array, items: {$ref: '#/components/schemas/DuplicateMembershipResponse'}}
+        externalIds: {type: array, items: {type: string}}
+    DuplicateCandidateGroupResponse:
+      type: object
+      required: [matchType, normalizedValue, identities]
+      properties:
+        matchType: {type: string, enum: [EMAIL, PHONE]}
+        normalizedValue: {type: string}
+        identities: {type: array, minItems: 2, items: {$ref: '#/components/schemas/DuplicateIdentityResponse'}}
+    DuplicateCandidateListResponse:
+      type: object
+      required: [items]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/DuplicateCandidateGroupResponse'}}
+    IdentityDependencyResponse:
+      type: object
+      required: [tableName, columnName, count, historical]
+      properties:
+        tableName: {type: string}
+        columnName: {type: string}
+        count: {type: integer, format: int64}
+        historical: {type: boolean}
+    MergePlanItemResponse:
+      type: object
+      required: [code, severity, summary]
+      properties:
+        code: {type: string}
+        severity: {type: string, enum: [INFO, WARNING, BLOCKER]}
+        summary: {type: string}
+    DuplicateMergePreviewResponse:
+      type: object
+      required: [source, target, strategy, canProceedToMutationSlice, dependencies, plan]
+      properties:
+        source: {$ref: '#/components/schemas/DuplicateIdentityResponse'}
+        target: {$ref: '#/components/schemas/DuplicateIdentityResponse'}
+        strategy: {type: string, enum: [LINK_SHELL_TO_EXISTING_USER, MERGE_USER_ACCOUNTS, REVIEW_SHELLS_SEPARATELY, KEEP_SEPARATE]}
+        canProceedToMutationSlice: {type: boolean}
+        dependencies: {type: array, items: {$ref: '#/components/schemas/IdentityDependencyResponse'}}
+        plan: {type: array, items: {$ref: '#/components/schemas/MergePlanItemResponse'}}
 
     AuditResult:
       type: string
