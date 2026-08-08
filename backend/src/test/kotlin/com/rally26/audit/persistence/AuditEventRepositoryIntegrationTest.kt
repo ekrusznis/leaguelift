@@ -136,7 +136,10 @@ class AuditEventRepositoryIntegrationTest : AbstractIntegrationTest() {
         }
     }
 
-    private fun insertOrganization(name: String, slug: String): UUID {
+    private fun insertOrganization(
+        name: String,
+        slug: String,
+    ): UUID {
         val id = UUID.randomUUID()
         jdbcClient
             .sql(
@@ -166,7 +169,10 @@ class AuditEventRepositoryIntegrationTest : AbstractIntegrationTest() {
         return id
     }
 
-    private fun insertTeam(organizationId: UUID, name: String): UUID {
+    private fun insertTeam(
+        organizationId: UUID,
+        name: String,
+    ): UUID {
         val id = UUID.randomUUID()
         jdbcClient
             .sql(
@@ -181,7 +187,10 @@ class AuditEventRepositoryIntegrationTest : AbstractIntegrationTest() {
         return id
     }
 
-    private fun insertHousehold(organizationId: UUID, displayName: String): UUID {
+    private fun insertHousehold(
+        organizationId: UUID,
+        displayName: String,
+    ): UUID {
         val id = UUID.randomUUID()
         jdbcClient
             .sql(

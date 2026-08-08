@@ -101,7 +101,7 @@ info:
     is never serialized, direct participant-to-household order attribution (no attribution-code
     indirection), family-credit grant/reversal wiring on order confirm/refund, and a guardian
     dashboard recent-orders card (ADR-069).
-  version: "0.36.0"
+  version: "0.37.0"
 servers:
 - url: /api/v1
 tags:
@@ -132,6 +132,7 @@ tags:
 - name: authorization
 - name: documents
 - name: activity
+- name: audit-history
 - name: search
 - name: reporting
 - name: events
@@ -147,6 +148,42 @@ tags:
 - name: announcements
 - name: offline-finance
 paths:
+  /audit-history:
+    get:
+      tags: [audit-history]
+      summary: List immutable role-scoped audit history
+      description: >
+        Visibility is enforced by current Rally26 relationships in SQL: athletes receive self/participant-scoped history;
+        guardians receive self plus linked household/participant history; team staff receive assigned-team history;
+        owners/administrators receive their organizations; Platform Administrators receive platform-wide history.
+      operationId: listAuditHistory
+      parameters:
+      - {name: from, in: query, required: false, schema: {type: string, format: date-time}}
+      - {name: to, in: query, required: false, schema: {type: string, format: date-time}}
+      - {name: action, in: query, required: false, schema: {type: string, maxLength: 120}}
+      - {name: result, in: query, required: false, schema: {$ref: "#/components/schemas/AuditResult"}}
+      - {name: keyword, in: query, required: false, schema: {type: string, maxLength: 200}}
+      - name: user
+        in: query
+        required: false
+        description: User or participant display-name filter. Available to guardian and higher scopes; never widens visibility.
+        schema: {type: string, maxLength: 120}
+      - {name: organizationId, in: query, required: false, schema: {type: string, format: uuid}}
+      - {name: teamId, in: query, required: false, schema: {type: string, format: uuid}}
+      - {name: sortBy, in: query, required: false, schema: {$ref: "#/components/schemas/AuditHistorySortField"}}
+      - {name: direction, in: query, required: false, schema: {$ref: "#/components/schemas/AuditHistorySortDirection"}}
+      - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
+      - {name: cursor, in: query, required: false, schema: {type: string}}
+      responses:
+        "200":
+          description: Role-scoped immutable audit history page
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AuditHistoryPageResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+
   /me/action-center:
     get:
       tags: [action-center]
@@ -9933,6 +9970,58 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
   schemas:
+
+    AuditResult:
+      type: string
+      enum: [SUCCESS, FAILURE, DENIED, PARTIAL]
+    AuditHistorySortField:
+      type: string
+      enum: [DATE, ACTION, RESULT]
+      default: DATE
+    AuditHistorySortDirection:
+      type: string
+      enum: [ASC, DESC]
+      default: DESC
+    AuditHistoryFilterAccessResponse:
+      type: object
+      required: [canFilterUser, canFilterTeam, canFilterOrganization]
+      properties:
+        canFilterUser: {type: boolean}
+        canFilterTeam: {type: boolean}
+        canFilterOrganization: {type: boolean}
+    AuditHistoryItemResponse:
+      type: object
+      required: [id, occurredAt, action, result, summary, actorType, entityType, entityId]
+      properties:
+        id: {type: string, format: uuid}
+        occurredAt: {type: string, format: date-time}
+        action: {type: string}
+        result: {$ref: "#/components/schemas/AuditResult"}
+        summary: {type: string}
+        actorType: {type: string, enum: [USER, SYSTEM, PROVIDER]}
+        actorUserId: {type: string, format: uuid, nullable: true}
+        actorDisplayName: {type: string, nullable: true}
+        targetUserId: {type: string, format: uuid, nullable: true}
+        targetDisplayName: {type: string, nullable: true}
+        organizationId: {type: string, format: uuid, nullable: true}
+        organizationName: {type: string, nullable: true}
+        teamId: {type: string, format: uuid, nullable: true}
+        teamName: {type: string, nullable: true}
+        householdId: {type: string, format: uuid, nullable: true}
+        householdName: {type: string, nullable: true}
+        participantId: {type: string, format: uuid, nullable: true}
+        participantDisplayName: {type: string, nullable: true}
+        entityType: {type: string}
+        entityId: {type: string, format: uuid}
+    AuditHistoryPageResponse:
+      type: object
+      required: [items, filterAccess]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/AuditHistoryItemResponse"}
+        nextCursor: {type: string, nullable: true}
+        filterAccess: {$ref: "#/components/schemas/AuditHistoryFilterAccessResponse"}
 
     SupportAudience:
       type: string

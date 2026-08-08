@@ -12,6 +12,7 @@ import { EventDetailPage } from "../features/events/EventDetailPage";
 import { EventsPage } from "../features/events/EventsPage";
 import { PersonalIntegrationsPage } from "../features/integrations/PersonalIntegrationsPage";
 import { MessagesPage } from "../features/messaging/MessagesPage";
+import { AuditHistoryPage } from "../features/auditHistory/AuditHistoryPage";
 import { OrganizationBillingPage } from "../features/subscriptionBilling/OrganizationBillingPage";
 import { PlatformSubscriptionsPage } from "../features/subscriptionBilling/PlatformSubscriptionsPage";
 import { PlatformAdminConsoleLayout } from "../features/platformAdmin/PlatformAdminConsoleLayout";
@@ -103,6 +104,7 @@ export function AppRoutes() {
 					<Route path="action-center" element={<ActionCenterPage />} />
 					<Route path="announcements" element={<AnnouncementsPage />} />
 					<Route path="messages" element={<MessagesPage />} />
+					<Route path="history" element={<AuditHistoryPage />} />
 					<Route path="integrations" element={<PersonalIntegrationsPage />} />
 					<Route path="help" element={<HelpCenterPage authenticated />} />
 					<Route path="help/support" element={<SupportRequestPage authenticated />} />
