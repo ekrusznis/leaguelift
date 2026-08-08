@@ -11,6 +11,9 @@ import java.util.UUID
  *
  * The original six-argument call shape remains source-compatible. Phase 27 callers can opt into
  * explicit team/household/participant/target-user scope as domains are upgraded to richer history.
+ *
+ * Derived defaults are resolved inside the method rather than in the Kotlin signature. This keeps
+ * legacy MockK six-argument stubs deterministic while preserving USER/SYSTEM actor and summary behavior.
  */
 @Service
 class AuditService(
@@ -27,9 +30,9 @@ class AuditService(
         householdId: UUID? = null,
         participantId: UUID? = null,
         targetUserId: UUID? = null,
-        actorType: AuditActorType = if (actorUserId == null) AuditActorType.SYSTEM else AuditActorType.USER,
+        actorType: AuditActorType? = null,
         result: AuditResult = AuditResult.SUCCESS,
-        summary: String = action,
+        summary: String? = null,
         correlationId: UUID? = null,
     ) {
         auditEventRepository.insert(
@@ -43,9 +46,9 @@ class AuditService(
             householdId = householdId,
             participantId = participantId,
             targetUserId = targetUserId,
-            actorType = actorType,
+            actorType = actorType ?: if (actorUserId == null) AuditActorType.SYSTEM else AuditActorType.USER,
             result = result,
-            summary = summary,
+            summary = summary ?: action,
             correlationId = correlationId,
         )
     }

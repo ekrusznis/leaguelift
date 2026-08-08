@@ -9,6 +9,7 @@ import com.rally26.audit.domain.AuditHistorySortField
 import com.rally26.audit.domain.AuditResult
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
+import java.time.ZoneOffset
 import java.util.UUID
 
 @Repository
@@ -68,11 +69,11 @@ class AuditHistoryRepository(
 
         query.from?.let {
             where += "e.created_at >= :fromInstant"
-            params["fromInstant"] = it
+            params["fromInstant"] = it.atOffset(ZoneOffset.UTC)
         }
         query.to?.let {
             where += "e.created_at < :toInstant"
-            params["toInstant"] = it
+            params["toInstant"] = it.atOffset(ZoneOffset.UTC)
         }
         query.action?.takeIf { it.isNotBlank() }?.let {
             where += "lower(e.action) = lower(:action)"
@@ -100,7 +101,7 @@ class AuditHistoryRepository(
         }
         query.cursor?.let { cursor ->
             where += cursorClause(query.sortBy, query.direction)
-            params["cursorCreatedAt"] = cursor.createdAt
+            params["cursorCreatedAt"] = cursor.createdAt.atOffset(ZoneOffset.UTC)
             params["cursorId"] = cursor.id
             if (query.sortBy != AuditHistorySortField.DATE) params["cursorSortValue"] = cursor.sortValue
         }

@@ -29,20 +29,44 @@ class AuditHistoryRepositoryIntegrationTest : AbstractIntegrationTest() {
         val fixture = createFixture()
 
         val owner = historyRepository.search(fixture.ownerUser, false, AuditHistoryQuery(size = 50))
-        assertEquals(setOf("ORG_A", "TEAM_A", "HOUSEHOLD_A", "GUARDIAN_SELF"), owner.map { it.action }.toSet())
+        assertEquals(
+            setOf(fixture.orgAAction, fixture.teamAAction, fixture.householdAAction, fixture.guardianSelfAction),
+            owner.map { it.action }.toSet(),
+        )
 
         val coach = historyRepository.search(fixture.coachUser, false, AuditHistoryQuery(size = 50))
-        assertEquals(setOf("TEAM_A", "HOUSEHOLD_A"), coach.map { it.action }.toSet())
+        assertEquals(setOf(fixture.teamAAction, fixture.householdAAction), coach.map { it.action }.toSet())
 
         val guardian = historyRepository.search(fixture.guardianUser, false, AuditHistoryQuery(size = 50))
-        assertEquals(setOf("HOUSEHOLD_A", "GUARDIAN_SELF"), guardian.map { it.action }.toSet())
+        assertEquals(setOf(fixture.householdAAction, fixture.guardianSelfAction), guardian.map { it.action }.toSet())
 
         val athlete = historyRepository.search(fixture.athleteUser, false, AuditHistoryQuery(size = 50))
-        assertEquals(setOf("HOUSEHOLD_A", "ATHLETE_SELF"), athlete.map { it.action }.toSet())
+        assertEquals(setOf(fixture.householdAAction, fixture.athleteSelfAction), athlete.map { it.action }.toSet())
 
-        val platform = historyRepository.search(fixture.ownerUser, true, AuditHistoryQuery(size = 50))
-        assertEquals(6, platform.size)
-        assertTrue(platform.any { it.action == "ORG_B" })
+        // AbstractIntegrationTest intentionally reuses one PostgreSQL container for the entire suite.
+        // Platform Admin history is platform-wide, so never assert a global row count against the shared database.
+        // Use organization filters only to isolate this fixture; platform visibility still must cross both organizations.
+        val platformOrgA =
+            historyRepository.search(
+                fixture.ownerUser,
+                true,
+                AuditHistoryQuery(organizationId = fixture.organizationA, size = 50),
+            )
+        assertEquals(
+            setOf(fixture.orgAAction, fixture.teamAAction, fixture.householdAAction, fixture.guardianSelfAction),
+            platformOrgA.map { it.action }.toSet(),
+        )
+
+        val platformOrgB =
+            historyRepository.search(
+                fixture.ownerUser,
+                true,
+                AuditHistoryQuery(organizationId = fixture.organizationB, size = 50),
+            )
+        assertEquals(
+            setOf(fixture.athleteSelfAction, fixture.orgBAction),
+            platformOrgB.map { it.action }.toSet(),
+        )
     }
 
     @Test
@@ -91,39 +115,43 @@ class AuditHistoryRepositoryIntegrationTest : AbstractIntegrationTest() {
             historyRepository.search(
                 fixture.guardianUser,
                 false,
-                AuditHistoryQuery(keyword = "athlete profile", size = 50),
+                AuditHistoryQuery(keyword = "athlete profile", organizationId = fixture.organizationA, size = 50),
             )
-        assertEquals(listOf("HOUSEHOLD_A"), keyword.map { it.action })
+        assertEquals(listOf(fixture.householdAAction), keyword.map { it.action })
 
         val user =
             historyRepository.search(
                 fixture.guardianUser,
                 false,
-                AuditHistoryQuery(userQuery = "Athlete $TEST_LAST_NAME", size = 50),
+                AuditHistoryQuery(userQuery = "Athlete $TEST_LAST_NAME", organizationId = fixture.organizationA, size = 50),
             )
-        assertEquals(listOf("HOUSEHOLD_A"), user.map { it.action })
+        assertEquals(listOf(fixture.householdAAction), user.map { it.action })
 
         val result =
             historyRepository.search(
                 fixture.ownerUser,
                 false,
-                AuditHistoryQuery(result = AuditResult.DENIED, size = 50),
+                AuditHistoryQuery(result = AuditResult.DENIED, organizationId = fixture.organizationA, size = 50),
             )
-        assertEquals(listOf("GUARDIAN_SELF"), result.map { it.action })
+        assertEquals(listOf(fixture.guardianSelfAction), result.map { it.action })
 
         val action =
             historyRepository.search(
                 fixture.ownerUser,
                 false,
-                AuditHistoryQuery(action = "TEAM_A", size = 50),
+                AuditHistoryQuery(action = fixture.teamAAction, organizationId = fixture.organizationA, size = 50),
             )
-        assertEquals(listOf("TEAM_A"), action.map { it.action })
+        assertEquals(listOf(fixture.teamAAction), action.map { it.action })
 
         val futureOnly =
             historyRepository.search(
                 fixture.ownerUser,
                 false,
-                AuditHistoryQuery(from = Instant.now().plusSeconds(3600), size = 50),
+                AuditHistoryQuery(
+                    from = Instant.now().plusSeconds(3600),
+                    organizationId = fixture.organizationA,
+                    size = 50,
+                ),
             )
         assertTrue(futureOnly.isEmpty())
 
@@ -134,6 +162,7 @@ class AuditHistoryRepositoryIntegrationTest : AbstractIntegrationTest() {
                 AuditHistoryQuery(
                     sortBy = AuditHistorySortField.ACTION,
                     direction = AuditHistorySortDirection.ASC,
+                    organizationId = fixture.organizationA,
                     size = 2,
                 ),
             )
@@ -147,6 +176,7 @@ class AuditHistoryRepositoryIntegrationTest : AbstractIntegrationTest() {
                 AuditHistoryQuery(
                     sortBy = AuditHistorySortField.ACTION,
                     direction = AuditHistorySortDirection.ASC,
+                    organizationId = fixture.organizationA,
                     size = 2,
                     cursor =
                         com.rally26.audit.domain.AuditHistoryCursor(
@@ -174,6 +204,12 @@ class AuditHistoryRepositoryIntegrationTest : AbstractIntegrationTest() {
         val householdA = insertHousehold(organizationA, "History Household A $token")
         val adultA = insertAdult(organizationA, householdA, "Guardian", token)
         val participantA = insertParticipant(organizationA, householdA, "Athlete", TEST_LAST_NAME)
+        val orgAAction = "ORG_A_$token"
+        val teamAAction = "TEAM_A_$token"
+        val householdAAction = "HOUSEHOLD_A_$token"
+        val guardianSelfAction = "GUARDIAN_SELF_$token"
+        val athleteSelfAction = "ATHLETE_SELF_$token"
+        val orgBAction = "ORG_B_$token"
 
         insertMembership(organizationA, owner, "OWNER")
         insertRoleAssignment(organizationA, coach, "TEAM", teamA, "COACH_READ")
@@ -183,17 +219,17 @@ class AuditHistoryRepositoryIntegrationTest : AbstractIntegrationTest() {
         auditEventRepository.insert(
             outsider,
             organizationA,
-            "ORG_A",
+            orgAAction,
             "ORGANIZATION",
             organizationA,
             "{}",
             summary = "Organization profile changed",
         )
-        auditEventRepository.insert(outsider, organizationA, "TEAM_A", "TEAM", teamA, "{}", summary = "Team schedule changed")
+        auditEventRepository.insert(outsider, organizationA, teamAAction, "TEAM", teamA, "{}", summary = "Team schedule changed")
         auditEventRepository.insert(
             outsider,
             organizationA,
-            "HOUSEHOLD_A",
+            householdAAction,
             "PARTICIPANT",
             participantA,
             "{}",
@@ -206,7 +242,7 @@ class AuditHistoryRepositoryIntegrationTest : AbstractIntegrationTest() {
         auditEventRepository.insert(
             guardian,
             organizationA,
-            "GUARDIAN_SELF",
+            guardianSelfAction,
             "USER",
             guardian,
             "{}",
@@ -214,18 +250,31 @@ class AuditHistoryRepositoryIntegrationTest : AbstractIntegrationTest() {
             result = AuditResult.DENIED,
             summary = "Guardian preference change denied",
         )
-        auditEventRepository.insert(athlete, organizationB, "ATHLETE_SELF", "USER", athlete, "{}", summary = "Athlete signed in")
+        auditEventRepository.insert(athlete, organizationB, athleteSelfAction, "USER", athlete, "{}", summary = "Athlete signed in")
         auditEventRepository.insert(
             outsider,
             organizationB,
-            "ORG_B",
+            orgBAction,
             "ORGANIZATION",
             organizationB,
             "{}",
             summary = "Other organization changed",
         )
 
-        return Fixture(organizationA, organizationB, owner, coach, guardian, athlete)
+        return Fixture(
+            organizationA = organizationA,
+            organizationB = organizationB,
+            ownerUser = owner,
+            coachUser = coach,
+            guardianUser = guardian,
+            athleteUser = athlete,
+            orgAAction = orgAAction,
+            teamAAction = teamAAction,
+            householdAAction = householdAAction,
+            guardianSelfAction = guardianSelfAction,
+            athleteSelfAction = athleteSelfAction,
+            orgBAction = orgBAction,
+        )
     }
 
     private fun insertOrganization(
@@ -249,9 +298,8 @@ class AuditHistoryRepositoryIntegrationTest : AbstractIntegrationTest() {
         UUID.randomUUID().also { id ->
             jdbcClient
                 .sql(
-                    "insert into app_user (id, external_subject, email, display_name, status) values (:id, :subject, :email, :displayName, 'ACTIVE')",
+                    "insert into app_user (id, email, display_name, status) values (:id, :email, :displayName, 'ACTIVE')",
                 ).param("id", id)
-                .param("subject", "history-$id")
                 .param("email", email)
                 .param("displayName", displayName)
                 .update()
@@ -394,6 +442,12 @@ class AuditHistoryRepositoryIntegrationTest : AbstractIntegrationTest() {
         val coachUser: UUID,
         val guardianUser: UUID,
         val athleteUser: UUID,
+        val orgAAction: String,
+        val teamAAction: String,
+        val householdAAction: String,
+        val guardianSelfAction: String,
+        val athleteSelfAction: String,
+        val orgBAction: String,
     )
 
     private companion object {
