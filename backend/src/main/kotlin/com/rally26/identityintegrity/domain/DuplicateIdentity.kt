@@ -23,6 +23,19 @@ data class DuplicateOrganizationMembership(
     val status: String,
 )
 
+data class DuplicateRoleAssignment(
+    val organizationId: UUID,
+    val contextType: String,
+    val resourceId: UUID,
+    val role: String,
+)
+
+data class DuplicateGuardianLink(
+    val organizationId: UUID,
+    val householdId: UUID,
+    val householdAdultId: UUID,
+)
+
 data class DuplicateIdentitySummary(
     val ref: IdentityRef,
     val displayName: String,
@@ -38,6 +51,14 @@ data class DuplicateIdentitySummary(
     val platformAdministrator: Boolean,
     val memberships: List<DuplicateOrganizationMembership>,
     val externalIds: List<String>,
+    val roleAssignments: List<DuplicateRoleAssignment> = emptyList(),
+    val guardianLinks: List<DuplicateGuardianLink> = emptyList(),
+    val mergedIntoUserId: UUID? = null,
+)
+
+data class DuplicateMatchEvidence(
+    val matchType: DuplicateMatchType,
+    val normalizedValue: String,
 )
 
 data class DuplicateCandidateGroup(
@@ -65,5 +86,8 @@ data class DuplicateMergePreview(
     val strategy: DuplicateResolutionStrategy,
     val canProceedToMutationSlice: Boolean,
     val dependencies: List<IdentityDependency>,
+    val sharedEvidence: List<DuplicateMatchEvidence>,
     val plan: List<MergePlanItem>,
+    val requiredSupportOrganizationId: UUID? = null,
+    val previewHash: String = "",
 )

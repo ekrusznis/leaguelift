@@ -36,8 +36,13 @@ class DuplicateIdentityService(
         targetId: UUID,
     ): DuplicateMergePreview {
         authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_USER_VIEW)
-        val sourceRef = IdentityRef(sourceKind, sourceId)
-        val targetRef = IdentityRef(targetKind, targetId)
+        return buildPreview(IdentityRef(sourceKind, sourceId), IdentityRef(targetKind, targetId))
+    }
+
+    internal fun buildPreview(
+        sourceRef: IdentityRef,
+        targetRef: IdentityRef,
+    ): DuplicateMergePreview {
         require(sourceRef != targetRef) { "Source and target identities must be different." }
         val source =
             repository.findIdentity(sourceRef)
@@ -45,7 +50,11 @@ class DuplicateIdentityService(
         val target =
             repository.findIdentity(targetRef)
                 ?: throw NotFoundException("DUPLICATE_IDENTITY_NOT_FOUND", "Target identity not found.")
-        val dependencies = repository.dependencyInventory(sourceRef)
-        return DuplicateMergePlanner.plan(source, target, dependencies)
+        return DuplicateMergePlanner.plan(
+            source = source,
+            target = target,
+            dependencies = repository.dependencyInventory(sourceRef),
+            sharedEvidence = repository.sharedMatchEvidence(sourceRef, targetRef),
+        )
     }
 }

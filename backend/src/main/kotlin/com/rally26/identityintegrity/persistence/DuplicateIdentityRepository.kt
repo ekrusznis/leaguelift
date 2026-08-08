@@ -1,10 +1,13 @@
 package com.rally26.identityintegrity.persistence
 
 import com.rally26.identityintegrity.domain.DuplicateCandidateGroup
+import com.rally26.identityintegrity.domain.DuplicateGuardianLink
 import com.rally26.identityintegrity.domain.DuplicateIdentityKind
 import com.rally26.identityintegrity.domain.DuplicateIdentitySummary
+import com.rally26.identityintegrity.domain.DuplicateMatchEvidence
 import com.rally26.identityintegrity.domain.DuplicateMatchType
 import com.rally26.identityintegrity.domain.DuplicateOrganizationMembership
+import com.rally26.identityintegrity.domain.DuplicateRoleAssignment
 import com.rally26.identityintegrity.domain.IdentityDependency
 import com.rally26.identityintegrity.domain.IdentityRef
 import org.springframework.jdbc.core.simple.JdbcClient
@@ -37,12 +40,62 @@ class DuplicateIdentityRepository(
             DuplicateIdentityKind.GUARDIAN_SHELL -> findGuardianShell(ref.id)
         }
 
-    fun dependencyInventory(ref: IdentityRef): List<IdentityDependency> {
-        val targetTable =
+    fun sharedMatchEvidence(
+        source: IdentityRef,
+        target: IdentityRef,
+    ): List<DuplicateMatchEvidence> {
+        val targetKeys = matchEvidence(target).toSet()
+        return matchEvidence(source)
+            .filter { it in targetKeys }
+            .distinct()
+            .sortedWith(compareBy({ it.matchType.name }, { it.normalizedValue }))
+    }
+
+    private fun matchEvidence(ref: IdentityRef): List<DuplicateMatchEvidence> {
+        val sql =
             when (ref.kind) {
-                DuplicateIdentityKind.APP_USER -> "app_user"
-                DuplicateIdentityKind.GUARDIAN_SHELL -> "household_adult"
+                DuplicateIdentityKind.APP_USER ->
+                    """
+                    select 'EMAIL' as match_type, lower(trim(u.email)) as match_key
+                    from app_user u
+                    where u.id = :id and nullif(trim(u.email), '') is not null
+                    union
+                    select 'EMAIL', lower(trim(ha.email))
+                    from guardian_relationship gr
+                    join household_adult ha on ha.id = gr.household_adult_id
+                    where gr.user_id = :id and gr.status = 'ACTIVE' and nullif(trim(ha.email), '') is not null
+                    union
+                    select 'PHONE', regexp_replace(ha.phone, '[^0-9]', '', 'g')
+                    from guardian_relationship gr
+                    join household_adult ha on ha.id = gr.household_adult_id
+                    where gr.user_id = :id and gr.status = 'ACTIVE'
+                      and length(regexp_replace(coalesce(ha.phone, ''), '[^0-9]', '', 'g')) >= 7
+                    """.trimIndent()
+                DuplicateIdentityKind.GUARDIAN_SHELL ->
+                    """
+                    select 'EMAIL' as match_type, lower(trim(ha.email)) as match_key
+                    from household_adult ha
+                    where ha.id = :id and nullif(trim(ha.email), '') is not null
+                    union
+                    select 'PHONE', regexp_replace(ha.phone, '[^0-9]', '', 'g')
+                    from household_adult ha
+                    where ha.id = :id
+                      and length(regexp_replace(coalesce(ha.phone, ''), '[^0-9]', '', 'g')) >= 7
+                    """.trimIndent()
             }
+        return jdbcClient
+            .sql(sql)
+            .param("id", ref.id)
+            .query { rs, _ ->
+                DuplicateMatchEvidence(
+                    matchType = DuplicateMatchType.valueOf(rs.getString("match_type")),
+                    normalizedValue = rs.getString("match_key"),
+                )
+            }.list()
+    }
+
+    fun dependencyInventory(ref: IdentityRef): List<IdentityDependency> {
+        val targetTable = if (ref.kind == DuplicateIdentityKind.APP_USER) "app_user" else "household_adult"
         return foreignKeyColumns(targetTable)
             .mapNotNull { (tableName, columnName) ->
                 if (!SAFE_IDENTIFIER.matches(tableName) || !SAFE_IDENTIFIER.matches(columnName)) return@mapNotNull null
@@ -50,7 +103,7 @@ class DuplicateIdentityRepository(
                     jdbcClient
                         .sql("select count(*) from \"$tableName\" where \"$columnName\" = :id")
                         .param("id", ref.id)
-                        .query(Long::class.java)
+                        .query { rs, _ -> rs.getLong(1) }
                         .single()
                 if (count == 0L) {
                     null
@@ -59,7 +112,7 @@ class DuplicateIdentityRepository(
                         tableName = tableName,
                         columnName = columnName,
                         count = count,
-                        historical = tableName == "audit_event" && columnName == "actor_user_id",
+                        historical = isHistoricalReference(tableName, columnName),
                     )
                 }
             }.sortedWith(compareBy({ it.tableName }, { it.columnName }))
@@ -80,15 +133,17 @@ class DuplicateIdentityRepository(
             ), identity_key as (
                 select 'APP_USER' as kind, u.id as identity_id, 'EMAIL' as match_type, lower(trim(u.email)) as match_key
                 from app_user u
-                where nullif(trim(u.email), '') is not null
+                where u.merged_into_user_id is null and nullif(trim(u.email), '') is not null
                 union
                 select 'APP_USER', gr.user_id, 'EMAIL', lower(trim(ha.email))
                 from guardian_relationship gr
+                join app_user u on u.id = gr.user_id and u.merged_into_user_id is null
                 join household_adult ha on ha.id = gr.household_adult_id
                 where gr.status = 'ACTIVE' and nullif(trim(ha.email), '') is not null
                 union
                 select 'APP_USER', gr.user_id, 'PHONE', regexp_replace(ha.phone, '[^0-9]', '', 'g')
                 from guardian_relationship gr
+                join app_user u on u.id = gr.user_id and u.merged_into_user_id is null
                 join household_adult ha on ha.id = gr.household_adult_id
                 where gr.status = 'ACTIVE'
                   and length(regexp_replace(coalesce(ha.phone, ''), '[^0-9]', '', 'g')) >= 7
@@ -126,17 +181,18 @@ class DuplicateIdentityRepository(
     ): List<IdentityRef> {
         val sql =
             when (matchType) {
-                DuplicateMatchType.EMAIL -> {
+                DuplicateMatchType.EMAIL ->
                     """
                     with active_guardian_link as (
                         select household_adult_id, user_id from guardian_relationship where status = 'ACTIVE'
                     )
                     select distinct 'APP_USER' as kind, u.id
                     from app_user u
-                    where lower(trim(u.email)) = :matchKey
+                    where u.merged_into_user_id is null and lower(trim(u.email)) = :matchKey
                     union
                     select distinct 'APP_USER', gr.user_id
                     from guardian_relationship gr
+                    join app_user u on u.id = gr.user_id and u.merged_into_user_id is null
                     join household_adult ha on ha.id = gr.household_adult_id
                     where gr.status = 'ACTIVE' and lower(trim(ha.email)) = :matchKey
                     union
@@ -145,15 +201,14 @@ class DuplicateIdentityRepository(
                     left join active_guardian_link gr on gr.household_adult_id = ha.id
                     where gr.user_id is null and ha.status = 'ACTIVE' and lower(trim(ha.email)) = :matchKey
                     """.trimIndent()
-                }
-
-                DuplicateMatchType.PHONE -> {
+                DuplicateMatchType.PHONE ->
                     """
                     with active_guardian_link as (
                         select household_adult_id, user_id from guardian_relationship where status = 'ACTIVE'
                     )
                     select distinct 'APP_USER' as kind, gr.user_id as id
                     from guardian_relationship gr
+                    join app_user u on u.id = gr.user_id and u.merged_into_user_id is null
                     join household_adult ha on ha.id = gr.household_adult_id
                     where gr.status = 'ACTIVE' and regexp_replace(coalesce(ha.phone, ''), '[^0-9]', '', 'g') = :matchKey
                     union
@@ -163,7 +218,6 @@ class DuplicateIdentityRepository(
                     where gr.user_id is null and ha.status = 'ACTIVE'
                       and regexp_replace(coalesce(ha.phone, ''), '[^0-9]', '', 'g') = :matchKey
                     """.trimIndent()
-                }
             }
         return jdbcClient
             .sql(sql)
@@ -177,12 +231,12 @@ class DuplicateIdentityRepository(
             jdbcClient
                 .sql(
                     """
-                    select u.id, u.display_name, u.email, u.status, u.created_at,
+                    select u.id, u.display_name, u.email, u.status, u.created_at, u.merged_into_user_id,
                            (select ha.phone
                             from guardian_relationship gr join household_adult ha on ha.id = gr.household_adult_id
                             where gr.user_id = u.id and gr.status = 'ACTIVE' and nullif(trim(ha.phone), '') is not null
                             order by ha.created_at, ha.id limit 1) as phone,
-                           exists(select 1 from role_assignment ra where ra.user_id = u.id and ra.context_type = 'PLATFORM' and ra.role = 'PLATFORM_ADMINISTRATOR' and ra.status = 'ACTIVE') as platform_admin
+                           exists(select 1 from role_assignment ra where ra.user_id = u.id and ra.context_type = 'PLATFORM' and ra.role = 'PLATFORM_ADMIN') as platform_admin
                     from app_user u where u.id = :id
                     """.trimIndent(),
                 ).param("id", userId)
@@ -202,10 +256,16 @@ class DuplicateIdentityRepository(
                         platformAdministrator = rs.getBoolean("platform_admin"),
                         memberships = emptyList(),
                         externalIds = emptyList(),
+                        mergedIntoUserId = rs.getObject("merged_into_user_id", UUID::class.java),
                     )
                 }.optional()
                 .orElse(null) ?: return null
-        return base.copy(memberships = memberships(userId), externalIds = userExternalIds(userId))
+        return base.copy(
+            memberships = memberships(userId),
+            externalIds = userExternalIds(userId),
+            roleAssignments = roleAssignments(userId),
+            guardianLinks = guardianLinks(userId),
+        )
     }
 
     private fun findGuardianShell(adultId: UUID): DuplicateIdentitySummary? =
@@ -214,14 +274,13 @@ class DuplicateIdentityRepository(
                 """
                 select ha.id, concat_ws(' ', ha.first_name, ha.last_name) as display_name, ha.email, ha.phone, ha.status, ha.created_at,
                        ha.organization_id, o.name as organization_name, ha.household_id, h.display_name as household_name,
-                       gr.user_id as linked_user_id,
+                       (select gr.user_id from guardian_relationship gr where gr.household_adult_id = ha.id and gr.status = 'ACTIVE' order by gr.created_at, gr.id limit 1) as linked_user_id,
                        coalesce((select array_agg(oi.external_id order by oi.external_id)
                                  from onboarding_import_identity oi
                                  where oi.entity_type = 'GUARDIAN' and oi.entity_id = ha.id), array[]::text[]) as external_ids
                 from household_adult ha
                 join organization o on o.id = ha.organization_id
                 join household h on h.id = ha.household_id
-                left join guardian_relationship gr on gr.household_adult_id = ha.id and gr.status = 'ACTIVE'
                 where ha.id = :id
                 """.trimIndent(),
             ).param("id", adultId)
@@ -264,6 +323,43 @@ class DuplicateIdentityRepository(
                 )
             }.list()
 
+    private fun roleAssignments(userId: UUID): List<DuplicateRoleAssignment> =
+        jdbcClient
+            .sql(
+                """
+                select organization_id, context_type, resource_id, role
+                from role_assignment
+                where user_id = :userId and status = 'ACTIVE' and context_type <> 'PLATFORM'
+                order by organization_id, context_type, resource_id, role
+                """.trimIndent(),
+            ).param("userId", userId)
+            .query { rs, _ ->
+                DuplicateRoleAssignment(
+                    organizationId = rs.getObject("organization_id", UUID::class.java),
+                    contextType = rs.getString("context_type"),
+                    resourceId = rs.getObject("resource_id", UUID::class.java),
+                    role = rs.getString("role"),
+                )
+            }.list()
+
+    private fun guardianLinks(userId: UUID): List<DuplicateGuardianLink> =
+        jdbcClient
+            .sql(
+                """
+                select organization_id, household_id, household_adult_id
+                from guardian_relationship
+                where user_id = :userId and status = 'ACTIVE'
+                order by organization_id, household_id, household_adult_id
+                """.trimIndent(),
+            ).param("userId", userId)
+            .query { rs, _ ->
+                DuplicateGuardianLink(
+                    organizationId = rs.getObject("organization_id", UUID::class.java),
+                    householdId = rs.getObject("household_id", UUID::class.java),
+                    householdAdultId = rs.getObject("household_adult_id", UUID::class.java),
+                )
+            }.list()
+
     private fun userExternalIds(userId: UUID): List<String> =
         jdbcClient
             .sql(
@@ -275,8 +371,9 @@ class DuplicateIdentityRepository(
                 order by oi.external_id
                 """.trimIndent(),
             ).param("userId", userId)
-            .query(String::class.java)
+            .query { rs, _ -> rs.getString("external_id") }
             .list()
+            .filterNotNull()
 
     private fun foreignKeyColumns(targetTable: String): List<Pair<String, String>> =
         jdbcClient
@@ -297,6 +394,14 @@ class DuplicateIdentityRepository(
             ).param("targetTable", targetTable)
             .query { rs, _ -> rs.getString("table_name") to rs.getString("column_name") }
             .list()
+
+    private fun isHistoricalReference(
+        tableName: String,
+        columnName: String,
+    ): Boolean =
+        (tableName == "audit_event" && columnName == "actor_user_id") ||
+            (tableName == "role_assignment" && columnName == "granted_by") ||
+            columnName.endsWith("_by_user_id")
 
     companion object {
         private val SAFE_IDENTIFIER = Regex("^[a-z][a-z0-9_]*$")
