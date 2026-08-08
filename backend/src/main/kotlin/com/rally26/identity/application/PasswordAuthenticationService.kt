@@ -103,6 +103,11 @@ class PasswordAuthenticationService(
                 message = "Verify your email before signing in.",
             )
         }
+        // Suspended accounts include Phase 27.4 merged source identities. Do not let
+        // their retained credential hash become an alternate sign-in path.
+        if (appUser.status != AppUserStatus.ACTIVE) {
+            throw invalidCredentials()
+        }
         val hash = appUser.passwordHash ?: throw invalidCredentials()
         if (!passwordEncoder.matches(password, hash)) {
             throw invalidCredentials()

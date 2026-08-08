@@ -2,6 +2,7 @@ package com.rally26.config
 
 import com.rally26.authorization.persistence.RoleAssignmentRepository
 import com.rally26.common.web.CurrentUser
+import com.rally26.identity.domain.AppUserStatus
 import com.rally26.identity.persistence.AppUserRepository
 import org.springframework.core.convert.converter.Converter
 import org.springframework.security.authentication.AbstractAuthenticationToken
@@ -33,6 +34,11 @@ class JwtCurrentUserConverter(
         val appUser =
             appUserRepository.findById(userId)
                 ?: throw IllegalArgumentException("Token subject $userId has no app_user record")
+        // Account status is loaded from the database on every request. This immediately
+        // invalidates JWTs belonging to a suspended/merged source identity.
+        if (appUser.status != AppUserStatus.ACTIVE) {
+            throw IllegalArgumentException("Token subject $userId is not an active app_user")
+        }
         val currentUser =
             CurrentUser(
                 userId = appUser.id,

@@ -49,6 +49,7 @@ export const appPaths = {
 	platformOrganizations: () => "/app/platform/organizations",
 	platformOrganization: (organizationId: string) => `/app/platform/organizations/${organizationId}`,
 	platformUsers: () => "/app/platform/users",
+	platformDuplicateIdentities: () => "/app/platform/data-integrity/duplicates",
 	platformOperations: () => "/app/platform/operations",
 	platformReports: () => "/app/platform/reports",
 	platformAudit: () => "/app/platform/audit",

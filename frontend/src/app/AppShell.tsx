@@ -31,10 +31,10 @@ export function AppShell() {
 		...(isPlatformAdmin && supportAccess.data
 			? [{ to: `/app/platform/organizations/${supportAccess.data.organizationId}`, label: "Organization Console" }]
 			: []),
+		{ to: "/app/history", label: "History" },
 		{ to: "/app/integrations", label: "My Integrations" },
 		{ to: "/app/help", label: "Help" },
 	];
-
 	return (
 		<div className="flex min-h-screen flex-col bg-ice-white">
 			<a
