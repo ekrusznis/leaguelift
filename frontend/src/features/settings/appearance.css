@@ -1,0 +1,57 @@
+/*
+ * Phase 28.1 app-shell dark appearance.
+ *
+ * Rally26's current Tailwind palette uses the same named colors for foreground
+ * and background utilities, so a global palette-token swap would invert some
+ * components incorrectly. These targeted surface/foreground overrides let the
+ * existing UI consume the account-level theme without redesigning every feature.
+ */
+html[data-rally26-theme="dark"] body {
+	background: #020617;
+	color: #e2e8f0;
+}
+
+html[data-rally26-theme="dark"] .bg-ice-white {
+	background-color: #0f172a !important;
+}
+
+html[data-rally26-theme="dark"] .bg-white {
+	background-color: #111827 !important;
+}
+
+html[data-rally26-theme="dark"] .bg-slate-50 {
+	background-color: #1e293b !important;
+}
+
+html[data-rally26-theme="dark"] .text-navy,
+html[data-rally26-theme="dark"] .text-navy-900 {
+	color: #f8fafc !important;
+}
+
+html[data-rally26-theme="dark"] .text-slate-gray,
+html[data-rally26-theme="dark"] .text-slate-500,
+html[data-rally26-theme="dark"] .text-slate-600,
+html[data-rally26-theme="dark"] .text-slate-700 {
+	color: #cbd5e1 !important;
+}
+
+html[data-rally26-theme="dark"] .border-slate-100,
+html[data-rally26-theme="dark"] .border-slate-200,
+html[data-rally26-theme="dark"] .border-slate-300,
+html[data-rally26-theme="dark"] .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html[data-rally26-theme="dark"] .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+	border-color: #334155 !important;
+}
+
+html[data-rally26-theme="dark"] input,
+html[data-rally26-theme="dark"] select,
+html[data-rally26-theme="dark"] textarea {
+	background-color: #0f172a;
+	color: #f8fafc;
+	border-color: #475569;
+}
+
+html[data-rally26-theme="dark"] input::placeholder,
+html[data-rally26-theme="dark"] textarea::placeholder {
+	color: #94a3b8;
+}

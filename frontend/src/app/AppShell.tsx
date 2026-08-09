@@ -33,6 +33,7 @@ export function AppShell() {
 			: []),
 		{ to: "/app/history", label: "History" },
 		{ to: "/app/integrations", label: "My Integrations" },
+		{ to: "/app/settings", label: "Settings" },
 		{ to: "/app/help", label: "Help" },
 	];
 	return (
