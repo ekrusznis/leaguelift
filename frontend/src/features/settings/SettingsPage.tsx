@@ -1,3 +1,4 @@
+import type { ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import { ErrorState } from "../../components/states/ErrorState";
@@ -48,9 +49,11 @@ export function SettingsPage() {
 	const notifications = useNotificationPreferences();
 	const updateNotification = useUpdateNotificationTopic();
 	const updateSmsConsent = useUpdateSmsConsent();
+	const appearancePreferences = preferences.data;
+	const notificationPreferences = notifications.data;
 
 	function selectAppearance(appearance: AppearancePreference) {
-		if (appearance === preferences.data?.appearance || update.isPending) return;
+		if (appearance === appearancePreferences?.appearance || update.isPending) return;
 		update.mutate({ appearance });
 	}
 
@@ -98,11 +101,11 @@ export function SettingsPage() {
 				</div>
 				{preferences.isLoading && <div className="mt-4"><LoadingState label="Loading appearance preference…" /></div>}
 				{preferences.isError && <div className="mt-4"><ErrorState message="Could not load your settings." onRetry={() => preferences.refetch()} /></div>}
-				{preferences.data && (
+				{appearancePreferences && (
 					<fieldset className="mt-4 grid gap-3 sm:grid-cols-3" disabled={update.isPending}>
 						<legend className="sr-only">Appearance</legend>
 						{APPEARANCE_OPTIONS.map((option) => {
-							const selected = preferences.data.appearance === option.value;
+							const selected = appearancePreferences.appearance === option.value;
 							return (
 								<label key={option.value} className={`cursor-pointer rounded-xl border p-4 ${selected ? "border-victory-green bg-victory-green/5" : "border-slate-200 bg-ice-white"}`}>
 									<input type="radio" name="appearance" value={option.value} checked={selected} onChange={() => selectAppearance(option.value)} className="mr-2" />
@@ -127,14 +130,14 @@ export function SettingsPage() {
 				</div>
 				{notifications.isLoading && <div className="mt-4"><LoadingState label="Loading notification preferences…" /></div>}
 				{notifications.isError && <div className="mt-4"><ErrorState message="Could not load notification preferences." onRetry={() => notifications.refetch()} /></div>}
-				{notifications.data && (
+				{notificationPreferences && (
 					<div className="mt-5 space-y-5">
 						<label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-ice-white p-4">
 							<input
 								type="checkbox"
-								checked={notifications.data.smsConsent}
+								checked={notificationPreferences.smsConsent}
 								disabled={updateSmsConsent.isPending}
-								onChange={(event) => updateSmsConsent.mutate({ consented: event.target.checked })}
+								onChange={(event: ChangeEvent<HTMLInputElement>) => updateSmsConsent.mutate({ consented: event.target.checked })}
 								className="mt-1"
 							/>
 							<span>
@@ -149,7 +152,7 @@ export function SettingsPage() {
 									<tr><th className="px-4 py-3">Topic</th><th className="px-4 py-3">In-app</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">SMS</th></tr>
 								</thead>
 								<tbody className="divide-y divide-slate-200 bg-white">
-									{notifications.data.topics.map((preference) => {
+									{notificationPreferences.topics.map((preference) => {
 										const label = TOPIC_LABELS[preference.topic];
 										return (
 											<tr key={preference.topic}>
@@ -159,8 +162,8 @@ export function SettingsPage() {
 														<select
 															aria-label={`${label.title} ${channel}`}
 															value={preference[channel]}
-															disabled={updateNotification.isPending || (channel === "sms" && !notifications.data.smsConsent)}
-															onChange={(event) => updateTopic(preference, channel, event.target.value as NotificationPreferenceState)}
+															disabled={updateNotification.isPending || (channel === "sms" && !notificationPreferences.smsConsent)}
+															onChange={(event: ChangeEvent<HTMLSelectElement>) => updateTopic(preference, channel, event.target.value as NotificationPreferenceState)}
 															className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-navy-900"
 														>
 															{STATE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -178,7 +181,7 @@ export function SettingsPage() {
 							<h3 className="font-semibold text-navy-900">Always on</h3>
 							<p className="mt-1 text-sm text-slate-600">These required communications are not controlled by optional notification preferences.</p>
 							<ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
-								{notifications.data.requiredCommunications.map((item) => <li key={item.key}>{item.label}</li>)}
+								{notificationPreferences.requiredCommunications.map((item) => <li key={item.key}>{item.label}</li>)}
 							</ul>
 						</div>
 					</div>
@@ -199,10 +202,6 @@ export function SettingsPage() {
 				</div>
 			</section>
 
-			<section className="rounded-xl border border-dashed border-slate-300 bg-ice-white p-5">
-				<h2 className="font-heading text-lg font-semibold text-navy-900">Coming next in Phase 28</h2>
-				<p className="mt-1 text-sm text-slate-600">Slice 28.4 is planning-only for future payment choice and household financing. It will define the Phase 31 contract without adding provider credentials, SDKs, live buttons, or false connected states.</p>
-			</section>
 		</div>
 	);
 }

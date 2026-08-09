@@ -49,4 +49,30 @@ describe("organizationSettingsGroups", () => {
 		expect(text).not.toContain("waiver");
 		expect(text).not.toContain("eligibility settings");
 	});
+	it("keeps every organization-scoped link inside the requested organization", () => {
+		const organizationId = "org-closeout-1";
+		const links = organizationSettingsGroups(organizationId, {
+			canManageOrganization: true,
+			canManagePayouts: true,
+		}).flatMap((group) => group.links);
+
+		for (const link of links) {
+			if (!link.to.startsWith("/app/organizations/")) continue;
+			expect(link.to).toMatch(new RegExp(`^/app/organizations/${organizationId}(?:/|$)`));
+		}
+	});
+
+	it("does not let payout-only access reach unrelated organization management routes", () => {
+		const text = JSON.stringify(organizationSettingsGroups("org-closeout-2", {
+			canManageOrganization: false,
+			canManagePayouts: true,
+		}));
+
+		expect(text).not.toContain("/fees");
+		expect(text).not.toContain("financial-operations");
+		expect(text).not.toContain("/members");
+		expect(text).not.toContain("/billing");
+		expect(text).not.toContain("/integrations");
+	});
+
 });
