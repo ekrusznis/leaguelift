@@ -101,7 +101,7 @@ info:
     is never serialized, direct participant-to-household order attribution (no attribution-code
     indirection), family-credit grant/reversal wiring on order confirm/refund, and a guardian
     dashboard recent-orders card (ADR-069).
-  version: "0.38.0"
+  version: "0.39.0"
 servers:
 - url: /api/v1
 tags:
@@ -9754,6 +9754,64 @@ paths:
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
 
+  /me/notification-preferences:
+    get:
+      tags: [settings]
+      summary: Get the signed-in user's optional notification preferences
+      description: Returns all typed optional topics, current individual SMS consent, and the required communication categories that cannot be disabled.
+      operationId: getMyNotificationPreferences
+      responses:
+        "200":
+          description: Notification preferences
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/NotificationPreferencesResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+
+  /me/notification-preferences/{topic}:
+    patch:
+      tags: [settings]
+      summary: Update one optional notification topic
+      operationId: updateMyNotificationTopic
+      parameters:
+        - name: topic
+          in: path
+          required: true
+          schema: {$ref: "#/components/schemas/NotificationTopic"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/UpdateNotificationTopicRequest"}
+      responses:
+        "200":
+          description: Updated notification preferences
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/NotificationPreferencesResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+
+  /me/sms-consent:
+    patch:
+      tags: [settings]
+      summary: Grant or revoke the signed-in user's optional SMS consent
+      description: Individual account consent is an independent prerequisite. Organization or household settings cannot grant it on the user's behalf.
+      operationId: updateMySmsConsent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/UpdateSmsConsentRequest"}
+      responses:
+        "200":
+          description: Updated notification preferences
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/NotificationPreferencesResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+
   /platform/admin/data-integrity/duplicates:
     get:
       summary: List duplicate identity candidate groups
@@ -10057,6 +10115,54 @@ components:
       required: [appearance]
       properties:
         appearance: {$ref: "#/components/schemas/AppearancePreference"}
+    NotificationTopic:
+      type: string
+      enum: [EVENTS_SCHEDULE, RSVP, FEES_PAYMENTS, DOCUMENTS_ELIGIBILITY, ANNOUNCEMENTS, FUNDRAISING, SWAG_SHOP_ORDERS, MESSAGES, SUPPORT]
+    NotificationPreferenceState:
+      type: string
+      enum: [DEFAULT, ENABLED, DISABLED]
+      description: DEFAULT uses Rally26's channel policy and any applicable legacy household compatibility guard.
+    NotificationTopicPreferenceResponse:
+      type: object
+      required: [topic, inApp, email, sms]
+      properties:
+        topic: {$ref: "#/components/schemas/NotificationTopic"}
+        inApp: {$ref: "#/components/schemas/NotificationPreferenceState"}
+        email: {$ref: "#/components/schemas/NotificationPreferenceState"}
+        sms: {$ref: "#/components/schemas/NotificationPreferenceState"}
+    RequiredCommunicationResponse:
+      type: object
+      required: [key, label]
+      properties:
+        key: {type: string}
+        label: {type: string}
+    NotificationPreferencesResponse:
+      type: object
+      required: [smsConsent, topics, requiredCommunications]
+      properties:
+        smsConsent:
+          type: boolean
+          description: Current individual account-level consent for optional SMS. Consent alone does not enable a topic.
+        topics:
+          type: array
+          items: {$ref: "#/components/schemas/NotificationTopicPreferenceResponse"}
+        requiredCommunications:
+          type: array
+          items: {$ref: "#/components/schemas/RequiredCommunicationResponse"}
+    UpdateNotificationTopicRequest:
+      type: object
+      additionalProperties: false
+      required: [inApp, email, sms]
+      properties:
+        inApp: {$ref: "#/components/schemas/NotificationPreferenceState"}
+        email: {$ref: "#/components/schemas/NotificationPreferenceState"}
+        sms: {$ref: "#/components/schemas/NotificationPreferenceState"}
+    UpdateSmsConsentRequest:
+      type: object
+      additionalProperties: false
+      required: [consented]
+      properties:
+        consented: {type: boolean}
     DuplicateIdentityRefResponse:
       type: object
       required: [kind, id]
