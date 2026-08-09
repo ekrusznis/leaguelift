@@ -28,6 +28,9 @@ import com.rally26.messaging.domain.MyBroadcastMessage
 import com.rally26.messaging.domain.MyMessageThread
 import com.rally26.messaging.persistence.MessageRepository
 import com.rally26.outbox.application.OutboxWriter
+import com.rally26.settings.application.NotificationDeliveryResolver
+import com.rally26.settings.domain.NotificationDeliveryDecision
+import com.rally26.settings.domain.NotificationTopic
 import com.rally26.team.persistence.TeamRepository
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.stereotype.Service
@@ -48,6 +51,7 @@ class BroadcastMessageService(
     private val objectMapper: ObjectMapper,
     private val clock: Clock,
     private val safeSportService: MessageSafeSportService? = null,
+    private val notificationDeliveryResolver: NotificationDeliveryResolver? = null,
 ) {
     fun listForManagement(
         organizationId: UUID,
@@ -175,14 +179,36 @@ class BroadcastMessageService(
                 resolvedRecipients,
             ) ?: resolvedRecipients
         val recipients = BroadcastRecipientPolicy.merge(policyFiltered)
+        val resolvedDeliveries =
+            recipients.mapValues { (_, candidate) ->
+                val delivery =
+                    notificationDeliveryResolver?.resolve(
+                        userId = candidate.userId,
+                        householdId = candidate.householdId,
+                        topic = NotificationTopic.MESSAGES,
+                        candidateEmail = candidate.email,
+                        candidatePhone = candidate.phone,
+                    ) ?: NotificationDeliveryDecision(
+                        inApp = candidate.userId != null,
+                        email = candidate.email,
+                        sms = candidate.phone,
+                    )
+                candidate to delivery
+            }
         val eligible =
-            recipients.filterValues { candidate ->
-                candidate.userId != null ||
-                    (candidate.accessReason == MessageAccessReason.TARGETED && thread.emailEnabled && !candidate.email.isNullOrBlank()) ||
-                    (candidate.accessReason == MessageAccessReason.TARGETED && thread.smsEnabled && !candidate.phone.isNullOrBlank())
+            resolvedDeliveries.filterValues { (candidate, delivery) ->
+                val requiredGuardianVisibility =
+                    candidate.accessReason == MessageAccessReason.GUARDIAN_VISIBILITY && candidate.userId != null
+                val externalDelivery = candidate.accessReason == MessageAccessReason.TARGETED
+                requiredGuardianVisibility ||
+                    delivery.inApp ||
+                    (externalDelivery && thread.emailEnabled && !delivery.email.isNullOrBlank()) ||
+                    (externalDelivery && thread.smsEnabled && !delivery.sms.isNullOrBlank())
             }
         if (eligible.isEmpty()) {
-            throw ValidationException("No eligible recipients have an in-app, email, or opted-in SMS destination for this message.")
+            throw ValidationException(
+                "No eligible recipients have an enabled in-app, email, or consented SMS destination for this message.",
+            )
         }
 
         val now = Instant.now(clock)
@@ -195,28 +221,31 @@ class BroadcastMessageService(
             }
 
         var inserted = 0
-        for ((key, candidate) in eligible) {
-            val inApp = candidate.userId != null
+        for ((key, resolved) in eligible) {
+            val (candidate, delivery) = resolved
+            val requiredGuardianVisibility =
+                candidate.accessReason == MessageAccessReason.GUARDIAN_VISIBILITY && candidate.userId != null
+            val inApp = requiredGuardianVisibility || delivery.inApp
             val externalDelivery = candidate.accessReason == MessageAccessReason.TARGETED
             val emailStatus =
-                if (externalDelivery &&
-                    thread.emailEnabled &&
-                    !candidate.email.isNullOrBlank()
-                ) {
+                if (externalDelivery && thread.emailEnabled && !delivery.email.isNullOrBlank()) {
                     DeliveryStatus.PENDING
                 } else {
                     DeliveryStatus.NONE
                 }
             val smsStatus =
-                if (externalDelivery &&
-                    thread.smsEnabled &&
-                    !candidate.phone.isNullOrBlank()
-                ) {
+                if (externalDelivery && thread.smsEnabled && !delivery.sms.isNullOrBlank()) {
                     DeliveryStatus.PENDING
                 } else {
                     DeliveryStatus.NONE
                 }
-            inserted += repository.insertRecipient(message.id, organizationId, key, candidate, inApp, emailStatus, smsStatus)
+            val snapshotCandidate =
+                if (externalDelivery) {
+                    candidate.copy(email = delivery.email, phone = delivery.sms)
+                } else {
+                    candidate.copy(email = null, phone = null)
+                }
+            inserted += repository.insertRecipient(message.id, organizationId, key, snapshotCandidate, inApp, emailStatus, smsStatus)
         }
         if (inserted == 0) {
             // This can only happen on an idempotent race; the winning transaction owns the recipient snapshot.

@@ -60,8 +60,9 @@ export function MessagesPage() {
 	const [selectedInboxThreadId, setSelectedInboxThreadId] = useState<string>();
 	const inboxThreadId = selectedInboxThreadId ?? inbox.data?.items[0]?.thread.id;
 	const selectedInboxItem = inbox.data?.items.find((item) => item.thread.id === inboxThreadId) ?? inbox.data?.items[0];
+	const selectedInboxIsConversation = selectedInboxItem?.thread.threadType === "CONVERSATION" || selectedInboxItem?.thread.threadType === "ATHLETE_CONVERSATION";
 	const inboxMessages = useMyThreadMessages(inboxThreadId);
-	const inboxMembers = useMyThreadMembers(inboxThreadId, selectedInboxItem?.thread.threadType === "CONVERSATION");
+	const inboxMembers = useMyThreadMembers(inboxThreadId, selectedInboxIsConversation);
 	const markRead = useMarkMessageRead();
 	const reply = useReplyToConversation();
 	const [replyBody, setReplyBody] = useState("");
@@ -197,13 +198,13 @@ export function MessagesPage() {
 							{inbox.data.items.map((item) => (
 								<li key={item.thread.id}><button type="button" onClick={() => setSelectedInboxThreadId(item.thread.id)} className={`w-full rounded-lg border p-3 text-left ${inboxThreadId === item.thread.id ? "border-victory-green bg-victory-green/5" : "border-slate-gray/20 bg-ice-white"}`}>
 									<div className="flex items-start justify-between gap-2"><span className="font-semibold text-navy">{item.thread.title}</span>{item.unreadCount > 0 && <span className="rounded-full bg-victory-green px-2 py-0.5 text-xs font-semibold text-white">{item.unreadCount}</span>}</div>
-									<p className="mt-1 text-xs text-slate-gray">{item.thread.threadType === "CONVERSATION" ? "Conversation" : "Broadcast"} · {item.thread.scopeName ?? item.thread.scopeType} · {formatDate(item.lastMessageAt)}</p>
+									<p className="mt-1 text-xs text-slate-gray">{item.thread.threadType === "ATHLETE_CONVERSATION" ? "Athlete conversation" : item.thread.threadType === "CONVERSATION" ? "Conversation" : "Broadcast"} · {item.thread.scopeName ?? item.thread.scopeType} · {formatDate(item.lastMessageAt)}</p>
 									<p className="mt-2 line-clamp-2 text-sm text-slate-gray">{item.lastMessagePreview}</p>
 								</button></li>
 							))}
 						</ul>
 						<div className="min-w-0 rounded-lg border border-slate-gray/20 p-4">
-							{selectedInboxItem?.thread.threadType === "CONVERSATION" && inboxMembers.data && <div className="mb-4 border-b border-slate-gray/20 pb-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-gray">Conversation members</p><div className="mt-2 flex flex-wrap gap-2">{inboxMembers.data.map((member) => <span key={member.userId} className="rounded-full bg-ice-white px-3 py-1 text-xs text-navy">{member.displayName}{member.accessReason === "GUARDIAN_VISIBILITY" ? " · guardian observer" : ""}</span>)}</div></div>}
+							{selectedInboxIsConversation && inboxMembers.data && <div className="mb-4 border-b border-slate-gray/20 pb-3"><p className="text-xs font-semibold uppercase tracking-wide text-slate-gray">Conversation members</p><div className="mt-2 flex flex-wrap gap-2">{inboxMembers.data.map((member) => <span key={member.userId} className="rounded-full bg-ice-white px-3 py-1 text-xs text-navy">{member.displayName}{member.accessReason === "GUARDIAN_VISIBILITY" ? " · guardian observer" : ""}</span>)}</div></div>}
 							{inboxMessages.isLoading && <LoadingState label="Loading thread messages…" />}
 							{inboxMessages.isError && <ErrorState message="Could not load this thread." onRetry={() => inboxMessages.refetch()} />}
 							{inboxMessages.data && <ul className="flex flex-col gap-3" aria-label="Messages in selected thread">{inboxMessages.data.items.map(({ message, readAt, accessReason }) => (
@@ -212,10 +213,10 @@ export function MessagesPage() {
 								</li>
 							))}</ul>}
 							{selectedInboxItem?.thread.safetyLockedAt && <p role="status" className="mt-4 rounded-md border border-slate-gray/30 bg-ice-white p-3 text-sm font-semibold text-navy">This thread is temporarily locked for safety review. New messages are paused.</p>}
-							{selectedInboxItem?.thread.threadType === "CONVERSATION" && selectedInboxItem.thread.status === "OPEN" && !selectedInboxItem.thread.safetyLockedAt && selectedInboxItem.canReply && (
+							{selectedInboxItem && selectedInboxIsConversation && selectedInboxItem.thread.status === "OPEN" && !selectedInboxItem.thread.safetyLockedAt && selectedInboxItem.canReply && (
 								<form onSubmit={(event) => void submitReply(event)} className="mt-4 border-t border-slate-gray/20 pt-4"><label htmlFor="conversation-reply" className="text-sm font-medium text-navy">Reply</label><textarea id="conversation-reply" value={replyBody} onChange={(event) => setReplyBody(event.target.value)} required maxLength={5000} rows={4} className="mt-1 w-full rounded-md border border-slate-gray/30 px-3 py-2" /><div className="mt-3"><Button type="submit" disabled={reply.isPending || !replyBody.trim()}>{reply.isPending ? "Sending…" : "Send reply"}</Button></div></form>
 							)}
-							{selectedInboxItem?.thread.threadType === "CONVERSATION" && !selectedInboxItem.canReply && <p className="mt-4 border-t border-slate-gray/20 pt-4 text-sm text-slate-gray">You have read-only guardian visibility for this conversation.</p>}
+							{selectedInboxItem && selectedInboxIsConversation && !selectedInboxItem.canReply && <p className="mt-4 border-t border-slate-gray/20 pt-4 text-sm text-slate-gray">You have read-only guardian visibility for this conversation.</p>}
 						</div>
 					</div>
 				)}
@@ -223,6 +224,7 @@ export function MessagesPage() {
 
 			<MyMessageReportsPanel />
 			<GuardianMessageSafetyControls />
+			<AthleteMessagingComposer onCreated={(threadId) => setSelectedInboxThreadId(threadId)} />
 
 			{teamScopes.length > 0 && <section aria-labelledby="new-conversation-heading" className="rounded-xl border border-slate-gray/20 bg-pure-white p-5">
 				<h2 id="new-conversation-heading" className="font-heading text-xl font-semibold text-navy">Start a family conversation</h2>
@@ -254,7 +256,7 @@ export function MessagesPage() {
 					<div className="min-w-0 rounded-lg border border-slate-gray/20 p-4">{selectedManagedThread && <div className="flex flex-wrap items-start justify-between gap-3"><div><h4 className="font-heading font-semibold text-navy">{selectedManagedThread.title}</h4><p className="mt-1 text-xs text-slate-gray">{selectedManagedThread.threadType === "ATHLETE_CONVERSATION" ? `${selectedManagedThread.recipientCount} athlete/guardian members` : selectedManagedThread.threadType === "CONVERSATION" ? `${selectedManagedThread.recipientCount} conversation members` : `${AUDIENCE_LABELS[selectedManagedThread.audience]} · ${selectedManagedThread.recipientCount} unique snapshotted recipients`}</p>{selectedManagedThread.safetyLockedAt && <p className="mt-1 text-xs font-semibold text-navy">Safety-locked · new messages paused</p>}</div>{selectedManagedThread.status === "OPEN" && <Button type="button" variant="secondary" disabled={archiveThread.isPending} onClick={() => archiveThread.mutate({ organizationId: selectedManagedThread.organizationId, threadId: selectedManagedThread.id })}>Archive thread</Button>}</div>}
 						{managedMessages.isLoading && <LoadingState label="Loading sent messages…" />}{managedMessages.isError && <ErrorState message="Could not load sent messages." onRetry={() => managedMessages.refetch()} />}{managedMessages.data && <ul className="mt-4 flex flex-col gap-3">{managedMessages.data.items.map((message) => <li key={message.id} className="rounded-lg bg-ice-white p-3"><p className="text-xs text-slate-gray">{message.senderDisplayName} · {formatDate(message.sentAt)}</p><p className="mt-2 whitespace-pre-wrap text-sm text-navy">{message.body}</p><p className="mt-2 text-xs text-slate-gray">{message.recipientCount} recipients · Email {message.emailSentCount} sent / {message.emailFailedCount} failed · SMS {message.smsSentCount} sent / {message.smsFailedCount} failed</p></li>)}</ul>}
 						{selectedManagedThread?.threadType === "BROADCAST" && selectedManagedThread.status === "OPEN" && !selectedManagedThread.safetyLockedAt && <form onSubmit={(event) => void sendBroadcastUpdate(event)} className="mt-4 border-t border-slate-gray/20 pt-4"><label htmlFor="broadcast-message-body" className="text-sm font-medium text-navy">Send update</label><textarea id="broadcast-message-body" value={messageBody} onChange={(event) => setMessageBody(event.target.value)} required maxLength={5000} rows={5} className="mt-1 w-full rounded-md border border-slate-gray/30 px-3 py-2" /><div className="mt-3"><Button type="submit" disabled={sendBroadcast.isPending || !messageBody.trim()}>{sendBroadcast.isPending ? "Sending…" : "Send to current audience"}</Button></div></form>}
-						{selectedManagedThread?.threadType === "CONVERSATION" && <p className="mt-4 border-t border-slate-gray/20 pt-4 text-sm text-slate-gray">Conversation replies are sent from each member's inbox. Managers can review and archive the thread here.</p>}
+						{selectedManagedThread && selectedManagedThread.threadType !== "BROADCAST" && <p className="mt-4 border-t border-slate-gray/20 pt-4 text-sm text-slate-gray">Conversation replies are sent from each member's inbox. Managers can review and archive the thread here.</p>}
 					</div></div>}
 				<ManagedMessageSafetyPanel scope={selectedScope} />
 				{notice && <p role="status" className="mt-4 text-sm text-slate-gray">{notice}</p>}
