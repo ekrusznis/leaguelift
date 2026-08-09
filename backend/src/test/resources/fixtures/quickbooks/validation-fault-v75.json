@@ -1,0 +1,14 @@
+{
+  "Fault": {
+    "Error": [
+      {
+        "Message": "Required parameter missing",
+        "Detail": "A required accounting reference was not supplied.",
+        "code": "2020",
+        "element": "AccountRef"
+      }
+    ],
+    "type": "ValidationFault"
+  },
+  "time": "2026-08-09T14:00:03-04:00"
+}

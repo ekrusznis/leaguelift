@@ -1,0 +1,15 @@
+{
+  "CompanyInfo": {
+    "Id": "934145000000001",
+    "CompanyName": "Rally26 Contract Sandbox",
+    "Country": "US",
+    "SyncToken": "3",
+    "MetaData": {
+      "CreateTime": "2026-08-01T12:00:00-04:00",
+      "LastUpdatedTime": "2026-08-08T18:30:00-04:00"
+    },
+    "LegalName": "Rally26 Contract Sandbox LLC",
+    "FutureSchemaField": "ignored-by-contract"
+  },
+  "time": "2026-08-09T14:00:00-04:00"
+}

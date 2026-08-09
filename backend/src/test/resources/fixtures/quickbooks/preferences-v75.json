@@ -1,0 +1,15 @@
+{
+  "Preferences": {
+    "CurrencyPrefs": {
+      "MultiCurrencyEnabled": false,
+      "HomeCurrency": {
+        "value": "USD",
+        "name": "United States Dollar"
+      }
+    },
+    "TaxPrefs": {
+      "UsingSalesTax": true
+    }
+  },
+  "time": "2026-08-09T14:00:01-04:00"
+}
