@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
+import { OrganizationSettingsDirectory } from "./OrganizationSettingsDirectory";
 import {
 	useNotificationPreferences,
 	useUpdateNotificationTopic,
@@ -186,6 +187,8 @@ export function SettingsPage() {
 				{updateSmsConsent.isError && <p role="alert" className="mt-3 text-sm font-medium text-rose-700">Could not update SMS consent.</p>}
 			</section>
 
+			<OrganizationSettingsDirectory />
+
 			<section className="rounded-xl border border-slate-200 bg-white p-5" aria-labelledby="settings-links-heading">
 				<h2 id="settings-links-heading" className="font-heading text-xl font-semibold text-navy-900">Account tools</h2>
 				<p className="mt-1 text-sm text-slate-600">Settings links to existing modules instead of duplicating their data or permissions.</p>
@@ -198,7 +201,7 @@ export function SettingsPage() {
 
 			<section className="rounded-xl border border-dashed border-slate-300 bg-ice-white p-5">
 				<h2 className="font-heading text-lg font-semibold text-navy-900">Coming next in Phase 28</h2>
-				<p className="mt-1 text-sm text-slate-600">Slice 28.3 consolidates capability-filtered organization settings and adds only organization defaults that existing domain services actually consume.</p>
+				<p className="mt-1 text-sm text-slate-600">Slice 28.4 is planning-only for future payment choice and household financing. It will define the Phase 31 contract without adding provider credentials, SDKs, live buttons, or false connected states.</p>
 			</section>
 		</div>
 	);
