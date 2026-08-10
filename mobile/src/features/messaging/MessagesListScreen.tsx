@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
@@ -8,18 +9,30 @@ import { PlatformStatusSpacer } from '@/components/platform-status-spacer';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Brand, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 import { useMyMessageThreads } from './api';
 
-/** Shared "Messages" tab across every persona — /me/message-threads is caller-scoped, not coach-specific (ADR-103). */
-export function MessagesListScreen() {
+/**
+ * Shared "Messages" tab across every persona — /me/message-threads is caller-scoped,
+ * not coach-specific (ADR-103). `onNewConversation` is optional and only passed by the
+ * Athlete persona (ADR-104), whose peer-to-peer conversation creation has no equivalent
+ * for Coach (broadcasts) or Parent (no self-initiated conversations at all).
+ */
+export function MessagesListScreen({ onNewConversation }: { onNewConversation?: () => void } = {}) {
   const threadsQuery = useMyMessageThreads();
+  const theme = useTheme();
 
   return (
     <ThemedView style={styles.container}>
       <PlatformStatusSpacer />
       <View style={styles.header}>
         <ThemedText type="smallBold">Messages</ThemedText>
+        {onNewConversation && (
+          <Pressable hitSlop={8} onPress={onNewConversation}>
+            <Ionicons name="add-circle-outline" size={24} color={theme.text} />
+          </Pressable>
+        )}
       </View>
 
       {threadsQuery.isLoading && <LoadingState label="Loading messages…" />}
@@ -70,6 +83,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
   },

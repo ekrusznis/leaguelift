@@ -24,6 +24,16 @@ export function useHouseholdEvents(organizationId: string | null, householdId: s
   });
 }
 
+/** GET /participants/{participantId}/events?organizationId= — an athlete's own real schedule (used for both self and guardian-picked athletes). */
+export function useParticipantEvents(organizationId: string | null, participantId: string | null) {
+  return useQuery({
+    queryKey: ['participants', participantId, 'events', organizationId],
+    queryFn: ({ signal }) =>
+      apiFetch<EventResponse[]>(`/participants/${participantId}/events?organizationId=${organizationId}&size=100`, { signal }),
+    enabled: !!organizationId && !!participantId,
+  });
+}
+
 export function useEvent(organizationId: string | null, eventId: string | null) {
   return useQuery({
     queryKey: ['organizations', organizationId, 'events', eventId],

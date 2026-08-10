@@ -37,10 +37,11 @@ export default function RootLayout() {
   );
 }
 
-/** Only these roles have a built experience so far (ADR-103) — everything else lands on /role-not-available. */
+/** Only these roles have a built experience so far (ADR-104) — everything else lands on /role-not-available. */
 const ROLE_HOME: Partial<Record<DashboardRole, string>> = {
   COACH: '/',
   PARENT: '/parent',
+  ATHLETE: '/athlete',
 };
 
 /**
@@ -84,11 +85,14 @@ function RootNavigator() {
           <Stack.Screen name="role-not-available" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="parent/(tabs)" />
+          <Stack.Screen name="athlete/(tabs)" />
           <Stack.Screen name="event-details" options={{ presentation: 'card' }} />
           <Stack.Screen name="announcements" options={{ presentation: 'card' }} />
           <Stack.Screen name="announcement-details" options={{ presentation: 'card' }} />
           <Stack.Screen name="documents" options={{ presentation: 'card' }} />
           <Stack.Screen name="fee-details" options={{ presentation: 'card' }} />
+          <Stack.Screen name="guardians" options={{ presentation: 'card' }} />
+          <Stack.Screen name="athlete/new-conversation" options={{ presentation: 'card' }} />
           <Stack.Screen name="messages/[threadId]" options={{ presentation: 'card' }} />
           <Stack.Screen name="settings" options={{ presentation: 'card' }} />
         </Stack>

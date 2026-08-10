@@ -55,3 +55,30 @@ export interface MyBroadcastMessageResponse {
   readAt: string | null;
   accessReason: 'TARGETED' | 'GUARDIAN_VISIBILITY';
 }
+
+/** Athlete-only peer-messaging endpoints, all under /me/messaging/* (ConversationMessageService). */
+export interface AthleteMessagingTeamResponse {
+  organizationId: string;
+  teamId: string;
+  teamName: string;
+  /** False when the org's SafeSport review gate isn't APPROVED+enabled yet — not an error, just not-yet-available. */
+  athleteMessagingEnabled: boolean;
+}
+
+export interface ConversationContactResponse {
+  userId: string;
+  recipientType: string;
+  householdId: string | null;
+  participantId: string | null;
+  displayName: string;
+}
+
+export interface CreateAthleteConversationRequest {
+  organizationId: string;
+  teamId: string;
+  idempotencyKey: string;
+  title: string;
+  targetUserIds: string[];
+  initialMessageIdempotencyKey: string;
+  initialMessage: string;
+}

@@ -4,7 +4,15 @@ import { apiFetch } from '@/lib/apiClient';
 import { generateIdempotencyKey } from '@/lib/idempotency';
 import type { PageResponse } from '@/lib/types';
 
-import type { BroadcastMessageResponse, MyBroadcastMessageResponse, MyMessageThreadResponse } from './types';
+import type {
+  AthleteMessagingTeamResponse,
+  BroadcastMessageResponse,
+  ConversationContactResponse,
+  CreateAthleteConversationRequest,
+  MessageThreadResponse,
+  MyBroadcastMessageResponse,
+  MyMessageThreadResponse,
+} from './types';
 
 /** GET /me/message-threads — caller's inbox across every team/org thread they can see (ADR-102). */
 export function useMyMessageThreads() {
@@ -42,6 +50,45 @@ export function useMarkMessageRead() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (messageId: string) => apiFetch(`/me/messages/${messageId}/read`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['me', 'message-threads'] });
+    },
+  });
+}
+
+/** GET /me/messaging/athlete-teams — every team the caller is an active athlete on, each flagged with its own SafeSport gate state. */
+export function useAthleteMessagingTeams(enabled: boolean) {
+  return useQuery({
+    queryKey: ['me', 'messaging', 'athlete-teams'],
+    queryFn: ({ signal }) => apiFetch<AthleteMessagingTeamResponse[]>('/me/messaging/athlete-teams', { signal }),
+    enabled,
+  });
+}
+
+/**
+ * GET /me/messaging/athlete-contacts — eligible peer contacts for one team. Only call
+ * for a team whose athleteMessagingEnabled is true; the backend 409s
+ * (ATHLETE_MESSAGING_REVIEW_REQUIRED) otherwise, and can still 403
+ * (ATHLETE_MESSAGING_RESTRICTED) if a guardian has restricted this athlete on the team.
+ */
+export function useAthleteContacts(organizationId: string | null, teamId: string | null) {
+  return useQuery({
+    queryKey: ['me', 'messaging', 'athlete-contacts', organizationId, teamId],
+    queryFn: ({ signal }) =>
+      apiFetch<ConversationContactResponse[]>(
+        `/me/messaging/athlete-contacts?organizationId=${organizationId}&teamId=${teamId}`,
+        { signal },
+      ),
+    enabled: !!organizationId && !!teamId,
+    retry: false,
+  });
+}
+
+export function useCreateAthleteConversation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: CreateAthleteConversationRequest) =>
+      apiFetch<MessageThreadResponse>('/me/messaging/athlete-conversations', { method: 'POST', body: request }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['me', 'message-threads'] });
     },

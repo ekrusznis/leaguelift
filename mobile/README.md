@@ -11,14 +11,17 @@ Full plan: `DESIGN-DOC.md` §14.1N (Phase 33 — planning) and §14.1's Phase 36
 (reserved — real implementation/build). Detailed projection:
 `docs/PHASE33-MOBILE-APPLICATION-PLANNING-PROJECTION.md`.
 
-**Status:** two personas are real and backend-wired — **Coach** (ADR-102) and
-**Parent/Guardian** (ADR-103). Real login for any Rally26 role; only `COACH`/`PARENT`
-reach a built experience, everything else lands on an honest `/role-not-available`
-screen. Secure token storage, real loading/error/empty states throughout, no mock data
-anywhere. Coach lives at `/` (5 tabs: Home/Calendar/Teams/Messages/More), Parent at
-`/parent` (5 tabs: Home/Calendar/Payments/Messages/More) — Messages, Announcements,
-Settings, and Event Details/RSVP are shared screens, not duplicated per persona.
-Athlete and Owner persona variants are not built yet.
+**Status:** three personas are real and backend-wired — **Coach** (ADR-102),
+**Parent/Guardian** (ADR-103), and **Athlete** (ADR-104). Real login for any Rally26
+role; only `COACH`/`PARENT`/`ATHLETE` reach a built experience, everything else lands
+on an honest `/role-not-available` screen. Secure token storage, real loading/error/
+empty states throughout, no mock data anywhere. Coach lives at `/` (5 tabs:
+Home/Calendar/Teams/Messages/More), Parent at `/parent` (5 tabs: Home/Calendar/
+Payments/Messages/More), Athlete at `/athlete` (4 tabs: Home/Calendar/Messages/More —
+no Teams tab, since athletes get a real backend 403 on teammate-roster viewing, and no
+Payments tab, since athletes hold no financial capability at all) — Messages,
+Announcements, Settings, and Event Details/RSVP are shared screens, not duplicated per
+persona. Owner persona is not built yet (explicitly last per founder sequencing).
 
 ## Structure
 
@@ -57,7 +60,8 @@ Shared across every persona:
 | `/onboarding` | First-launch walkthrough | 3-slide carousel, AsyncStorage-gated, shared via `OnboardingContext` so the root gate sees updates immediately |
 | `/role-not-available` | Non-built roles | Real `GET /me/dashboard-context`; any role without a built persona lands here with a working sign-out |
 | `/messages/[threadId]` | Thread detail | Real messages + working send (respects `canReply`) + mark-read |
-| `/event-details?id=` | Event Details | Real event + real RSVP summary; guardians linked to the household get an Attending/Maybe/Can't Go picker per athlete; Edit is an honest "not available yet" toast; Share uses RN's real Share sheet |
+| `/guardians` | My Guardians (Athlete only) | Real `/me/dashboard/athlete/guardians` |
+| `/event-details?id=` | Event Details | Real event + real RSVP summary; guardians linked to the household get an Attending/Maybe/Can't Go picker per athlete, and an athlete viewing their own event gets the same picker for themself (`source` resolves to `SELF` automatically, resolved via `GET /me/contexts`); Edit is an honest "not available yet" toast; Share uses RN's real Share sheet |
 | `/announcements` | Announcements | Real `/me/announcements`, All/Unread filter, mark-read on open |
 | `/announcement-details?id=` | Announcement detail | Full body, not truncated |
 | `/settings` | Settings | Real appearance/notification-preference/SMS-consent, real Log Out via `ConfirmDialog` |
@@ -80,7 +84,16 @@ Parent/Guardian persona (`/parent`, ADR-103) — 5 tabs: Home/Calendar/Payments/
 | `/fee-details?id=` | Fee Details | Per-fee payment history |
 | `/documents` | Documents | Real household document list + acknowledge (plain upload/ack flow — not Phase 31 eligibility/waivers, which doesn't exist on the backend) |
 
-Athlete and Owner variants aren't built yet — no reference mockup exists for either.
+Athlete persona (`/athlete`, ADR-104) — 4 tabs: Home/Calendar/Messages/More:
+
+| Route | Screen | Data |
+|---|---|---|
+| `/athlete/(tabs)` → `index` | Dashboard | Real `/me/dashboard/athlete/overview` + `/teams`, plus own upcoming schedule via `/participants/{id}/events` |
+| `/athlete/(tabs)` → `calendar` | Calendar | Real own-schedule month-grid, same math as Coach/Parent |
+| `/athlete/(tabs)` → `messages` | Messages | Shared thread list + a "New Conversation" action unique to Athlete |
+| `/athlete/new-conversation` | New Conversation | Real SafeSport-gated flow: pick an enabled team → eligible contacts → compose, via `/me/messaging/athlete-teams`/`athlete-contacts`/`athlete-conversations` |
+
+Owner variant isn't built yet — deliberately last per founder sequencing (it has more surface area than the other three combined).
 
 ## Local development
 

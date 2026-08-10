@@ -9,7 +9,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useToast } from '@/components/toast';
-import { useDashboardContext } from '@/features/dashboard/api';
+import { useContexts, useDashboardContext } from '@/features/dashboard/api';
 import { useEvent, useEventRsvps, useSubmitRsvp } from '@/features/events/api';
 import type { EventType, SubmittableRsvpStatus } from '@/features/events/types';
 import { useMyAthletes } from '@/features/household/api';
@@ -44,6 +44,7 @@ export default function EventDetailsScreen() {
   const eventQuery = useEvent(organizationId, id ?? null);
   const rsvpsQuery = useEventRsvps(organizationId, id ?? null);
   const athletesQuery = useMyAthletes(organizationId, householdId);
+  const contextsQuery = useContexts(true);
   const submitRsvp = useSubmitRsvp(organizationId, id ?? '');
 
   async function onShare() {
@@ -89,7 +90,11 @@ export default function EventDetailsScreen() {
 
   const event = eventQuery.data;
   const summary = rsvpsQuery.data?.summary;
-  const athletes = householdId ? (athletesQuery.data ?? []) : [];
+  const selfAthleteContext = contextsQuery.data?.find((c) => c.contextType === 'ATHLETE') ?? null;
+  const athletes: { participantId: string; name: string }[] = [
+    ...(householdId ? (athletesQuery.data ?? []) : []),
+    ...(selfAthleteContext?.resourceId ? [{ participantId: selfAthleteContext.resourceId, name: 'You' }] : []),
+  ];
 
   return (
     <ThemedView style={styles.container}>
