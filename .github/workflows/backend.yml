@@ -26,7 +26,7 @@ jobs:
           java-version: "17" # was 21 — see docs/adr/ADR-013-java-17-baseline.md
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Compile
         run: ./gradlew --no-daemon compileKotlin compileTestKotlin
