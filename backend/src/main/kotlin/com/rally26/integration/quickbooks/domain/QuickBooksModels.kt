@@ -64,6 +64,40 @@ data class QuickBooksAccount(
     val active: Boolean,
 )
 
+enum class QuickBooksMappingValidationSummary { NOT_RUN, PASSED, NEEDS_ATTENTION }
+
+enum class QuickBooksActivationStage {
+    NOT_CONFIGURED,
+    SCAFFOLDED,
+    COMPANY_CONTEXT_REQUIRED,
+    MAPPINGS_REQUIRED,
+    MAPPING_REVALIDATION_REQUIRED,
+    CREDENTIALS_REQUIRED,
+    SANDBOX_VERIFICATION_REQUIRED,
+    ACCOUNTING_APPROVAL_REQUIRED,
+    WRITE_POLICY_APPROVAL_REQUIRED,
+    ACTIVATION_READY,
+    ACTIVE,
+}
+
+enum class QuickBooksActivationGateStatus { SATISFIED, PENDING, BLOCKED_BY_PHASE_POLICY }
+
+data class QuickBooksActivationGate(
+    val code: String,
+    val label: String,
+    val status: QuickBooksActivationGateStatus,
+    val detail: String,
+    val satisfiedAt: Instant?,
+)
+
+data class QuickBooksActivationReadiness(
+    val stage: QuickBooksActivationStage,
+    val activationAllowed: Boolean,
+    val credentialedProviderVerified: Boolean,
+    val providerWritesEnabled: Boolean,
+    val gates: List<QuickBooksActivationGate>,
+)
+
 data class QuickBooksConnectionSetting(
     val connectionId: UUID,
     val realmId: String?,
@@ -74,6 +108,13 @@ data class QuickBooksConnectionSetting(
     val defaultCurrency: String?,
     val lastCompanyReadAt: Instant?,
     val lastAccountsReadAt: Instant?,
+    val lastMappingValidationAt: Instant?,
+    val lastMappingValidationStatus: QuickBooksMappingValidationSummary,
+    val credentialVerifiedAt: Instant?,
+    val sandboxVerifiedAt: Instant?,
+    val accountingApprovedAt: Instant?,
+    val writePolicyApprovedAt: Instant?,
+    val writePolicyVersion: String?,
     val createdAt: Instant,
     val updatedAt: Instant,
 )

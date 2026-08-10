@@ -30,6 +30,7 @@ class QuickBooksServiceTest {
     private val provider = mockk<QuickBooksProviderClient>()
     private val mappingPolicy = QuickBooksAccountingMappingPolicy()
     private val postingIntentPolicy = QuickBooksPostingIntentPolicy()
+    private val readinessPolicy = QuickBooksActivationReadinessPolicy()
     private val sync = mockk<IntegrationSyncService>()
     private val membership = mockk<MembershipService>(relaxed = true)
     private val audit = mockk<AuditService>(relaxed = true)
@@ -41,6 +42,7 @@ class QuickBooksServiceTest {
             provider,
             mappingPolicy,
             postingIntentPolicy,
+            readinessPolicy,
             sync,
             membership,
             audit,

@@ -66,14 +66,16 @@ class QuickBooksFailurePolicyTest {
 
     @Test
     fun `validation and duplicate business keys are not automatically retried`() {
-        val validation = policy.retryDecision(
-            QuickBooksProviderOperationKind.CREATE,
-            policy.classify(400, validationFault("6000")),
-        )
-        val duplicate = policy.retryDecision(
-            QuickBooksProviderOperationKind.CREATE,
-            policy.classify(400, validationFault("6140")),
-        )
+        val validation =
+            policy.retryDecision(
+                QuickBooksProviderOperationKind.CREATE,
+                policy.classify(400, validationFault("6000")),
+            )
+        val duplicate =
+            policy.retryDecision(
+                QuickBooksProviderOperationKind.CREATE,
+                policy.classify(400, validationFault("6140")),
+            )
 
         assertEquals(QuickBooksRetryDisposition.DO_NOT_RETRY, validation.disposition)
         assertFalse(validation.retryable)

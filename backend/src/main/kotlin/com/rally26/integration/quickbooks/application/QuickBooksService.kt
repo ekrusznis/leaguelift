@@ -16,6 +16,7 @@ import com.rally26.integration.core.domain.IntegrationSyncSummary
 import com.rally26.integration.core.domain.IntegrationSyncTrigger
 import com.rally26.integration.quickbooks.domain.QuickBooksAccount
 import com.rally26.integration.quickbooks.domain.QuickBooksAccountMapping
+import com.rally26.integration.quickbooks.domain.QuickBooksActivationReadiness
 import com.rally26.integration.quickbooks.domain.QuickBooksConnectionSetting
 import com.rally26.integration.quickbooks.domain.QuickBooksEnvironment
 import com.rally26.integration.quickbooks.domain.QuickBooksExportBatch
@@ -41,6 +42,7 @@ data class QuickBooksOverview(
     val setting: QuickBooksConnectionSetting?,
     val mappings: List<QuickBooksAccountMapping>,
     val recentBatches: List<QuickBooksExportBatch>,
+    val activationReadiness: QuickBooksActivationReadiness,
     val providerWritesEnabled: Boolean,
     val accountingReviewRequired: Boolean,
 )
@@ -53,6 +55,7 @@ class QuickBooksService(
     private val providerClient: QuickBooksProviderClient,
     private val mappingPolicy: QuickBooksAccountingMappingPolicy,
     private val postingIntentPolicy: QuickBooksPostingIntentPolicy,
+    private val readinessPolicy: QuickBooksActivationReadinessPolicy,
     private val syncService: IntegrationSyncService,
     private val membershipService: MembershipService,
     private val auditService: AuditService,
@@ -64,13 +67,23 @@ class QuickBooksService(
         membershipService.requireManagerRole(organizationId, currentUser)
         val catalog = quickBooksCatalog(organizationId, currentUser)
         val connectionId = catalog.connection?.id
+        val setting = connectionId?.let(repository::findSetting)
+        val mappings = connectionId?.let(repository::listMappings).orEmpty()
+        val providerWritesEnabled = false
         return QuickBooksOverview(
             catalog = catalog,
-            setting = connectionId?.let(repository::findSetting),
-            mappings = connectionId?.let(repository::listMappings).orEmpty(),
+            setting = setting,
+            mappings = mappings,
             recentBatches = repository.listBatches(organizationId),
-            providerWritesEnabled = false,
-            accountingReviewRequired = true,
+            activationReadiness =
+                readinessPolicy.evaluate(
+                    hasConnectionRecord = connectionId != null,
+                    setting = setting,
+                    mappings = mappings,
+                    providerWritesEnabled = providerWritesEnabled,
+                ),
+            providerWritesEnabled = providerWritesEnabled,
+            accountingReviewRequired = setting?.accountingApprovedAt == null,
         )
     }
 
@@ -158,11 +171,18 @@ class QuickBooksService(
         organizationId: UUID,
         connectionId: UUID,
         currentUser: CurrentUser,
-    ): List<QuickBooksMappingValidation> =
-        mappingPolicy.validateMappings(
-            repository.listMappings(connectionId),
-            listAccounts(organizationId, connectionId, currentUser),
+    ): List<QuickBooksMappingValidation> {
+        val diagnostics =
+            mappingPolicy.validateMappings(
+                repository.listMappings(connectionId),
+                listAccounts(organizationId, connectionId, currentUser),
+            )
+        repository.markMappingValidation(
+            connectionId,
+            diagnostics.all { it.status in NON_BLOCKING_MAPPING_STATUSES },
         )
+        return diagnostics
+    }
 
     @Transactional
     fun saveMapping(
@@ -235,6 +255,10 @@ class QuickBooksService(
             )
         val counts = repository.countExportCandidates(organizationId, periodStart, periodEnd)
         val mappingDiagnostics = mappingPolicy.validateMappings(repository.listMappings(connectionId), accounts)
+        repository.markMappingValidation(
+            connectionId,
+            mappingDiagnostics.all { it.status in NON_BLOCKING_MAPPING_STATUSES },
+        )
         val missing =
             mappingDiagnostics
                 .filter { it.status == QuickBooksMappingValidationStatus.MISSING }

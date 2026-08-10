@@ -45,22 +45,61 @@ class QuickBooksFailurePolicy {
 
         val category =
             when {
-                httpStatus == 401 || faultType.equals("AuthenticationFault", ignoreCase = true) ->
+                httpStatus == 401 || faultType.equals("AuthenticationFault", ignoreCase = true) -> {
                     QuickBooksFailureCategory.AUTHENTICATION
-                httpStatus == 403 || faultType.equals("AuthorizationFault", ignoreCase = true) ->
+                }
+
+                httpStatus == 403 || faultType.equals("AuthorizationFault", ignoreCase = true) -> {
                     QuickBooksFailureCategory.AUTHORIZATION
-                httpStatus == 429 -> QuickBooksFailureCategory.THROTTLED
-                code == "5010" -> QuickBooksFailureCategory.STALE_OBJECT
-                code in MISSING_REFERENCE_CODES -> QuickBooksFailureCategory.MISSING_REFERENCE
-                code == "600" -> QuickBooksFailureCategory.DUPLICATE_REQUEST_ID
-                code in DUPLICATE_BUSINESS_KEY_CODES -> QuickBooksFailureCategory.DUPLICATE_BUSINESS_KEY
-                code in CLOSED_PERIOD_CODES -> QuickBooksFailureCategory.CLOSED_PERIOD
-                code in COMPANY_STATUS_CODES -> QuickBooksFailureCategory.COMPANY_STATUS
-                httpStatus != null && httpStatus >= 500 -> QuickBooksFailureCategory.TRANSIENT_SYSTEM
-                faultType.equals("SystemFault", ignoreCase = true) -> QuickBooksFailureCategory.TRANSIENT_SYSTEM
-                httpStatus != null && httpStatus in 400..499 -> QuickBooksFailureCategory.VALIDATION
-                faultType.equals("ValidationFault", ignoreCase = true) -> QuickBooksFailureCategory.VALIDATION
-                else -> QuickBooksFailureCategory.UNKNOWN
+                }
+
+                httpStatus == 429 -> {
+                    QuickBooksFailureCategory.THROTTLED
+                }
+
+                code == "5010" -> {
+                    QuickBooksFailureCategory.STALE_OBJECT
+                }
+
+                code in MISSING_REFERENCE_CODES -> {
+                    QuickBooksFailureCategory.MISSING_REFERENCE
+                }
+
+                code == "600" -> {
+                    QuickBooksFailureCategory.DUPLICATE_REQUEST_ID
+                }
+
+                code in DUPLICATE_BUSINESS_KEY_CODES -> {
+                    QuickBooksFailureCategory.DUPLICATE_BUSINESS_KEY
+                }
+
+                code in CLOSED_PERIOD_CODES -> {
+                    QuickBooksFailureCategory.CLOSED_PERIOD
+                }
+
+                code in COMPANY_STATUS_CODES -> {
+                    QuickBooksFailureCategory.COMPANY_STATUS
+                }
+
+                httpStatus != null && httpStatus >= 500 -> {
+                    QuickBooksFailureCategory.TRANSIENT_SYSTEM
+                }
+
+                faultType.equals("SystemFault", ignoreCase = true) -> {
+                    QuickBooksFailureCategory.TRANSIENT_SYSTEM
+                }
+
+                httpStatus != null && httpStatus in 400..499 -> {
+                    QuickBooksFailureCategory.VALIDATION
+                }
+
+                faultType.equals("ValidationFault", ignoreCase = true) -> {
+                    QuickBooksFailureCategory.VALIDATION
+                }
+
+                else -> {
+                    QuickBooksFailureCategory.UNKNOWN
+                }
             }
 
         return QuickBooksProviderFailure(category, httpStatus, faultType, code, message, intuitTid)
@@ -71,72 +110,92 @@ class QuickBooksFailurePolicy {
         failure: QuickBooksProviderFailure,
     ): QuickBooksRetryDecision =
         when (failure.category) {
-            QuickBooksFailureCategory.AUTHENTICATION ->
+            QuickBooksFailureCategory.AUTHENTICATION -> {
                 decision(
                     QuickBooksRetryDisposition.REFRESH_AUTH,
                     retryable = true,
                     reason = "Refresh the current OAuth token once; do not repeat the write with stale credentials.",
                 )
-            QuickBooksFailureCategory.AUTHORIZATION ->
+            }
+
+            QuickBooksFailureCategory.AUTHORIZATION -> {
                 decision(
                     QuickBooksRetryDisposition.MANUAL_REVIEW,
                     reason = "The QuickBooks user or app no longer has the required authorization; reconnect or repair access.",
                 )
-            QuickBooksFailureCategory.THROTTLED ->
+            }
+
+            QuickBooksFailureCategory.THROTTLED -> {
                 decision(
                     QuickBooksRetryDisposition.RETRY_SAME_REQUEST_AFTER_DELAY,
                     retryable = true,
                     minimumDelaySeconds = INTUIT_THROTTLE_RETRY_SECONDS,
                     reason = "QuickBooks throttled the request; wait at least 60 seconds and reuse the exact same request ID and payload.",
                 )
-            QuickBooksFailureCategory.STALE_OBJECT ->
+            }
+
+            QuickBooksFailureCategory.STALE_OBJECT -> {
                 decision(
                     QuickBooksRetryDisposition.REFRESH_ENTITY_THEN_REBUILD,
                     retryable = true,
                     readbackStrategy = QuickBooksReadbackStrategy.READ_BY_ENTITY_ID,
                     reason = "Read the latest entity/SyncToken and rebuild the update before any new write attempt.",
                 )
-            QuickBooksFailureCategory.MISSING_REFERENCE ->
+            }
+
+            QuickBooksFailureCategory.MISSING_REFERENCE -> {
                 decision(
                     QuickBooksRetryDisposition.REFRESH_REFERENCE_DATA,
                     retryable = true,
                     reason = "Refresh referenced QuickBooks objects and mappings before rebuilding the request.",
                 )
-            QuickBooksFailureCategory.DUPLICATE_REQUEST_ID ->
+            }
+
+            QuickBooksFailureCategory.DUPLICATE_REQUEST_ID -> {
                 decision(
                     QuickBooksRetryDisposition.READBACK_REQUIRED,
                     retryable = false,
                     readbackStrategy = readbackStrategy(operationKind),
                     reason = "Treat a duplicate request ID as an idempotency/readback event, not as permission to issue a new write.",
                 )
+            }
+
             QuickBooksFailureCategory.TRANSIENT_SYSTEM,
             QuickBooksFailureCategory.AMBIGUOUS_TRANSPORT,
-            ->
+            -> {
                 decision(
                     QuickBooksRetryDisposition.READBACK_THEN_RETRY_SAME_REQUEST,
                     retryable = true,
                     readbackStrategy = readbackStrategy(operationKind),
-                    reason = "The write outcome may be ambiguous. Read back first; retry only if absent, with the same request ID and identical payload.",
+                    reason =
+                        "The write outcome may be ambiguous. " +
+                            "Read back first; retry only if absent, with the same request ID and identical payload.",
                 )
-            QuickBooksFailureCategory.VALIDATION ->
+            }
+
+            QuickBooksFailureCategory.VALIDATION -> {
                 decision(
                     QuickBooksRetryDisposition.DO_NOT_RETRY,
                     reason = "Fix the request or accounting data before creating a new provider request identity.",
                 )
+            }
+
             QuickBooksFailureCategory.DUPLICATE_BUSINESS_KEY,
             QuickBooksFailureCategory.CLOSED_PERIOD,
             QuickBooksFailureCategory.COMPANY_STATUS,
             QuickBooksFailureCategory.UNKNOWN,
-            ->
+            -> {
                 decision(
                     QuickBooksRetryDisposition.MANUAL_REVIEW,
                     reason = "Do not automatically repeat this financial write; owner/accounting or provider-state review is required.",
                 )
+            }
         }
 
     private fun readbackStrategy(operationKind: QuickBooksProviderOperationKind): QuickBooksReadbackStrategy =
         when (operationKind) {
             QuickBooksProviderOperationKind.CREATE -> QuickBooksReadbackStrategy.QUERY_BY_STABLE_REFERENCE
+
             QuickBooksProviderOperationKind.UPDATE,
             QuickBooksProviderOperationKind.DELETE,
             -> QuickBooksReadbackStrategy.READ_BY_ENTITY_ID

@@ -35,8 +35,8 @@ function rankCompatibility(value: string): number {
 export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: string }) {
 	const query = useQuickBooksOverview(organizationId);
 	const connectionId = query.data?.catalog.connection?.id ?? null;
-	const connected = ["CONNECTED", "DEGRADED"].includes(query.data?.catalog.connection?.status ?? "");
-	const accountsQuery = useOwnerQuickBooksAccounts(organizationId, connectionId, connected);
+	const providerReadAvailable = ["CONNECTED", "DEGRADED"].includes(query.data?.catalog.connection?.status ?? "");
+	const accountsQuery = useOwnerQuickBooksAccounts(organizationId, connectionId, providerReadAvailable);
 	const rulesQuery = useQuickBooksMappingRules(organizationId);
 	const validationQuery = useQuickBooksMappingValidation(organizationId, connectionId, false);
 	const refreshCompany = useRefreshQuickBooksCompany(organizationId, connectionId);
@@ -75,8 +75,8 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 		return <ErrorState message="Could not load QuickBooks readiness." onRetry={() => query.refetch()} />;
 	}
 
-	const { catalog, setting, recentBatches } = query.data;
-	const status = catalog.connection?.status ?? catalog.readiness;
+	const { catalog, setting, recentBatches, activationReadiness } = query.data;
+	const status = activationReadiness.stage;
 
 	async function save(type: OwnerQuickBooksMappingType) {
 		const accountId = selectedAccounts[type];
@@ -108,7 +108,7 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 						QuickBooks Online readiness
 					</h3>
 					<p className="mt-1 text-sm text-slate-500">
-						Owner/admin accounting setup. Phase 29 supports reviewed custom mappings and export previews only; provider writes stay disabled.
+						Owner/admin accounting setup. Readiness is gate-based: saved connection metadata never proves live Intuit verification or write activation.
 					</p>
 				</div>
 				<span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
@@ -118,12 +118,17 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 
 			<div className="mt-4 grid gap-4 md:grid-cols-2">
 				<div className="rounded-lg border border-slate-200 p-4">
-					<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Connected company</p>
+					<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">QuickBooks company context</p>
 					<p className="mt-2 font-medium text-navy-900">{setting?.companyName ?? "No company authorized"}</p>
 					<p className="mt-1 text-sm text-slate-500">
 						{setting?.realmId ? `Realm ${setting.realmId}` : catalog.activationRequirement}
 					</p>
-					{connected && (
+					<p className="mt-2 text-xs text-slate-500">
+						{activationReadiness.credentialedProviderVerified
+							? "Credentialed Intuit verification is recorded."
+							: "No credentialed Intuit verification is claimed yet; realm/company metadata alone is only setup context."}
+					</p>
+					{providerReadAvailable && (
 						<div className="mt-3 flex flex-wrap gap-2">
 							<Button
 								type="button"
@@ -153,6 +158,37 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 				</div>
 			</div>
 
+			<div className="mt-5 rounded-lg border border-slate-200 p-4">
+				<div className="flex flex-wrap items-start justify-between gap-3">
+					<div>
+						<h4 className="font-medium text-navy-900">Activation readiness gates</h4>
+						<p className="mt-1 text-sm text-slate-500">
+							These gates distinguish local setup from verified provider access. Phase 29 cannot satisfy or bypass the future credential, sandbox, accounting-approval, or write-policy gates.
+						</p>
+					</div>
+					<span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+						{activationReadiness.activationAllowed ? "Activation allowed" : "Activation blocked"}
+					</span>
+				</div>
+				<ul className="mt-3 grid gap-2 md:grid-cols-2">
+					{activationReadiness.gates.map((gate) => (
+						<li key={gate.code} className="rounded-md bg-slate-50 p-3 text-xs text-slate-600">
+							<div className="flex items-start justify-between gap-2">
+								<span className="font-semibold text-navy-900">{gate.label}</span>
+								<span className="font-semibold">
+									{gate.status === "SATISFIED"
+										? "Satisfied"
+										: gate.status === "BLOCKED_BY_PHASE_POLICY"
+											? "Phase 29 blocked"
+											: "Pending"}
+								</span>
+							</div>
+							<p className="mt-1">{gate.detail}</p>
+						</li>
+					))}
+				</ul>
+			</div>
+
 			<div className="mt-5">
 				<div className="flex flex-wrap items-start justify-between gap-3">
 					<div>
@@ -161,7 +197,7 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 							Choose the accounts your organization already uses. Rally26 recommends compatible account types, but the owner/accountant controls the final mapping.
 						</p>
 					</div>
-					{connected && (
+					{providerReadAvailable && (
 						<Button
 							type="button"
 							variant="secondary"
@@ -174,7 +210,7 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 				</div>
 				{accountsQuery.isError && (
 					<p role="alert" className="mt-2 text-sm text-error-red">
-						Could not read the connected company&apos;s chart of accounts.
+						Could not read the authorized company&apos;s chart of accounts.
 					</p>
 				)}
 				{rulesQuery.isError && (
@@ -226,7 +262,7 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 										setSelectedAccounts((current) => ({ ...current, [type]: event.target.value }));
 										setWarningAcknowledgements((current) => ({ ...current, [type]: false }));
 									}}
-									disabled={!connected || accountsQuery.isLoading}
+									disabled={!providerReadAvailable || accountsQuery.isLoading}
 									className="mt-2 min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-navy-900 disabled:bg-slate-50"
 								>
 									<option value="">{existing ? existing.externalAccountName : "Choose an account"}</option>
@@ -280,7 +316,7 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 										variant="secondary"
 										onClick={() => void save(type)}
 										disabled={
-											!connected ||
+											!providerReadAvailable ||
 											!selected ||
 											saveMapping.isPending ||
 											compatibility === "BLOCKED" ||
@@ -325,7 +361,7 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 					<Button
 						type="button"
 						onClick={() => void runPreview()}
-						disabled={!connected || previewExport.isPending || !periodStart || !periodEnd}
+						disabled={!providerReadAvailable || previewExport.isPending || !periodStart || !periodEnd}
 					>
 						{previewExport.isPending ? "Previewing…" : "Preview export"}
 					</Button>

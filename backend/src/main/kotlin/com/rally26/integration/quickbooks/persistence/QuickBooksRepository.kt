@@ -11,6 +11,7 @@ import com.rally26.integration.quickbooks.domain.QuickBooksExportPolicy
 import com.rally26.integration.quickbooks.domain.QuickBooksExportStatus
 import com.rally26.integration.quickbooks.domain.QuickBooksMappingCompatibility
 import com.rally26.integration.quickbooks.domain.QuickBooksMappingType
+import com.rally26.integration.quickbooks.domain.QuickBooksMappingValidationSummary
 import com.rally26.integration.quickbooks.domain.QuickBooksProviderOperationKind
 import com.rally26.integration.quickbooks.domain.QuickBooksProviderOperationStatus
 import com.rally26.integration.quickbooks.domain.QuickBooksProviderRequestPlan
@@ -52,7 +53,8 @@ class QuickBooksRepository(
                 on conflict (connection_id) do update
                 set realm_id = excluded.realm_id, company_name = excluded.company_name,
                     environment = excluded.environment, default_currency = excluded.default_currency,
-                    last_company_read_at = now(), updated_at = now()
+                    last_company_read_at = now(), last_mapping_validation_at = null,
+                    last_mapping_validation_status = 'NEEDS_ATTENTION', updated_at = now()
                 """.trimIndent(),
             ).param("connectionId", connectionId)
             .param("realmId", realmId.take(200))
@@ -72,10 +74,40 @@ class QuickBooksRepository(
                      last_accounts_read_at, created_at, updated_at)
                 values (:connectionId, 'SANDBOX', 'READ_ONLY', 'ACCRUAL', now(), now(), now())
                 on conflict (connection_id) do update
-                set last_accounts_read_at = now(), updated_at = now()
+                set last_accounts_read_at = now(), last_mapping_validation_at = null,
+                    last_mapping_validation_status = 'NEEDS_ATTENTION', updated_at = now()
                 """.trimIndent(),
             ).param("connectionId", connectionId)
             .update()
+    }
+
+    fun markMappingValidation(
+        connectionId: UUID,
+        passed: Boolean,
+    ) {
+        jdbcClient
+            .sql(
+                """
+                insert into quickbooks_connection_setting
+                    (connection_id, environment, export_policy, accounting_basis,
+                     last_mapping_validation_at, last_mapping_validation_status, created_at, updated_at)
+                values
+                    (:connectionId, 'SANDBOX', 'READ_ONLY', 'ACCRUAL',
+                     now(), :status, now(), now())
+                on conflict (connection_id) do update
+                set last_mapping_validation_at = now(),
+                    last_mapping_validation_status = excluded.last_mapping_validation_status,
+                    updated_at = now()
+                """.trimIndent(),
+            ).param("connectionId", connectionId)
+            .param(
+                "status",
+                if (passed) {
+                    QuickBooksMappingValidationSummary.PASSED.name
+                } else {
+                    QuickBooksMappingValidationSummary.NEEDS_ATTENTION.name
+                },
+            ).update()
     }
 
     fun listMappings(connectionId: UUID): List<QuickBooksAccountMapping> =
@@ -300,6 +332,13 @@ class QuickBooksRepository(
         rs.getString("default_currency"),
         rs.getTimestamp("last_company_read_at")?.toInstant(),
         rs.getTimestamp("last_accounts_read_at")?.toInstant(),
+        rs.getTimestamp("last_mapping_validation_at")?.toInstant(),
+        QuickBooksMappingValidationSummary.valueOf(rs.getString("last_mapping_validation_status")),
+        rs.getTimestamp("credential_verified_at")?.toInstant(),
+        rs.getTimestamp("sandbox_verified_at")?.toInstant(),
+        rs.getTimestamp("accounting_approved_at")?.toInstant(),
+        rs.getTimestamp("write_policy_approved_at")?.toInstant(),
+        rs.getString("write_policy_version"),
         rs.getTimestamp("created_at").toInstant(),
         rs.getTimestamp("updated_at").toInstant(),
     )
@@ -375,7 +414,9 @@ class QuickBooksRepository(
     private companion object {
         const val SETTING_COLUMNS =
             "connection_id, realm_id, company_name, environment, export_policy, accounting_basis, default_currency, " +
-                "last_company_read_at, last_accounts_read_at, created_at, updated_at"
+                "last_company_read_at, last_accounts_read_at, last_mapping_validation_at, last_mapping_validation_status, " +
+                "credential_verified_at, sandbox_verified_at, accounting_approved_at, write_policy_approved_at, " +
+                "write_policy_version, created_at, updated_at"
         const val MAPPING_COLUMNS =
             "id, connection_id, mapping_type, external_account_id, external_account_name, " +
                 "external_account_fully_qualified_name, external_account_type, external_account_sub_type, " +

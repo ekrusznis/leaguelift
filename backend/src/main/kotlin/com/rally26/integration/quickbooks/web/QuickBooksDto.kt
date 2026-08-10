@@ -5,6 +5,7 @@ import com.rally26.integration.core.web.toResponse
 import com.rally26.integration.quickbooks.application.QuickBooksOverview
 import com.rally26.integration.quickbooks.domain.QuickBooksAccount
 import com.rally26.integration.quickbooks.domain.QuickBooksAccountMapping
+import com.rally26.integration.quickbooks.domain.QuickBooksActivationReadiness
 import com.rally26.integration.quickbooks.domain.QuickBooksConnectionSetting
 import com.rally26.integration.quickbooks.domain.QuickBooksExportBatch
 import com.rally26.integration.quickbooks.domain.QuickBooksExportPreview
@@ -22,6 +23,7 @@ data class QuickBooksOverviewResponse(
     val setting: QuickBooksConnectionSettingResponse?,
     val mappings: List<QuickBooksAccountMappingResponse>,
     val recentBatches: List<QuickBooksExportBatchResponse>,
+    val activationReadiness: QuickBooksActivationReadinessResponse,
     val providerWritesEnabled: Boolean,
     val accountingReviewRequired: Boolean,
 )
@@ -36,7 +38,30 @@ data class QuickBooksConnectionSettingResponse(
     val defaultCurrency: String?,
     val lastCompanyReadAt: Instant?,
     val lastAccountsReadAt: Instant?,
+    val lastMappingValidationAt: Instant?,
+    val lastMappingValidationStatus: String,
+    val credentialVerifiedAt: Instant?,
+    val sandboxVerifiedAt: Instant?,
+    val accountingApprovedAt: Instant?,
+    val writePolicyApprovedAt: Instant?,
+    val writePolicyVersion: String?,
     val updatedAt: Instant,
+)
+
+data class QuickBooksActivationGateResponse(
+    val code: String,
+    val label: String,
+    val status: String,
+    val detail: String,
+    val satisfiedAt: Instant?,
+)
+
+data class QuickBooksActivationReadinessResponse(
+    val stage: String,
+    val activationAllowed: Boolean,
+    val credentialedProviderVerified: Boolean,
+    val providerWritesEnabled: Boolean,
+    val gates: List<QuickBooksActivationGateResponse>,
 )
 
 data class QuickBooksAccountResponse(
@@ -152,6 +177,7 @@ fun QuickBooksOverview.toResponse() =
         setting?.toResponse(),
         mappings.map { it.toResponse() },
         recentBatches.map { it.toResponse() },
+        activationReadiness.toResponse(),
         providerWritesEnabled,
         accountingReviewRequired,
     )
@@ -167,7 +193,31 @@ fun QuickBooksConnectionSetting.toResponse() =
         defaultCurrency,
         lastCompanyReadAt,
         lastAccountsReadAt,
+        lastMappingValidationAt,
+        lastMappingValidationStatus.name,
+        credentialVerifiedAt,
+        sandboxVerifiedAt,
+        accountingApprovedAt,
+        writePolicyApprovedAt,
+        writePolicyVersion,
         updatedAt,
+    )
+
+fun QuickBooksActivationReadiness.toResponse() =
+    QuickBooksActivationReadinessResponse(
+        stage.name,
+        activationAllowed,
+        credentialedProviderVerified,
+        providerWritesEnabled,
+        gates.map {
+            QuickBooksActivationGateResponse(
+                it.code,
+                it.label,
+                it.status.name,
+                it.detail,
+                it.satisfiedAt,
+            )
+        },
     )
 
 fun QuickBooksAccount.toResponse() =

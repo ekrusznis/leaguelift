@@ -101,7 +101,7 @@ info:
     is never serialized, direct participant-to-household order attribution (no attribution-code
     indirection), family-credit grant/reversal wiring on order confirm/refund, and a guardian
     dashboard recent-orders card (ADR-069).
-  version: "0.39.0"
+  version: "0.39.1"
 servers:
 - url: /api/v1
 tags:
@@ -17111,7 +17111,39 @@ components:
         defaultCurrency: {type: string, nullable: true}
         lastCompanyReadAt: {type: string, format: date-time, nullable: true}
         lastAccountsReadAt: {type: string, format: date-time, nullable: true}
+        lastMappingValidationAt: {type: string, format: date-time, nullable: true}
+        lastMappingValidationStatus: {type: string, enum: [NOT_RUN, PASSED, NEEDS_ATTENTION]}
+        credentialVerifiedAt: {type: string, format: date-time, nullable: true}
+        sandboxVerifiedAt: {type: string, format: date-time, nullable: true}
+        accountingApprovedAt: {type: string, format: date-time, nullable: true}
+        writePolicyApprovedAt: {type: string, format: date-time, nullable: true}
+        writePolicyVersion: {type: string, nullable: true}
         updatedAt: {type: string, format: date-time}
+    QuickBooksActivationGateResponse:
+      type: object
+      required: [code, label, status, detail]
+      properties:
+        code: {type: string}
+        label: {type: string}
+        status: {type: string, enum: [SATISFIED, PENDING, BLOCKED_BY_PHASE_POLICY]}
+        detail: {type: string}
+        satisfiedAt: {type: string, format: date-time, nullable: true}
+    QuickBooksActivationReadinessResponse:
+      type: object
+      required: [stage, activationAllowed, credentialedProviderVerified, providerWritesEnabled, gates]
+      properties:
+        stage:
+          type: string
+          enum:
+            [NOT_CONFIGURED, SCAFFOLDED, COMPANY_CONTEXT_REQUIRED, MAPPINGS_REQUIRED,
+             MAPPING_REVALIDATION_REQUIRED, CREDENTIALS_REQUIRED, SANDBOX_VERIFICATION_REQUIRED,
+             ACCOUNTING_APPROVAL_REQUIRED, WRITE_POLICY_APPROVAL_REQUIRED, ACTIVATION_READY, ACTIVE]
+        activationAllowed: {type: boolean}
+        credentialedProviderVerified: {type: boolean}
+        providerWritesEnabled: {type: boolean}
+        gates:
+          type: array
+          items: {$ref: '#/components/schemas/QuickBooksActivationGateResponse'}
     QuickBooksAccountResponse:
       type: object
       required: [id, name, accountType, active]
@@ -17212,6 +17244,7 @@ components:
         recentBatches:
           type: array
           items: {$ref: '#/components/schemas/QuickBooksExportBatchResponse'}
+        activationReadiness: {$ref: '#/components/schemas/QuickBooksActivationReadinessResponse'}
         providerWritesEnabled: {type: boolean}
         accountingReviewRequired: {type: boolean}
     UpdateQuickBooksMappingRequest:
