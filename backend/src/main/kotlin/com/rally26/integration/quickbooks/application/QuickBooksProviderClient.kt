@@ -7,10 +7,10 @@ import com.rally26.integration.quickbooks.domain.QuickBooksCompany
 import org.springframework.stereotype.Component
 
 /**
- * Official QuickBooks HTTP calls are intentionally absent in Phase 19. The seam is
- * complete and deterministic in local/test; all other environments fail closed until
- * an Intuit app, sandbox company, scopes, response contracts, and accounting policy
- * are verified in Phase 20.
+ * Official QuickBooks HTTP calls remain intentionally absent during Phase 29. The seam is
+ * deterministic in local/test; non-stub environments fail closed until a later explicitly
+ * approved credentialed activation supplies an Intuit app, sandbox verification, scopes,
+ * accounting review, and write policy.
  */
 interface QuickBooksProviderClient {
     fun readCompany(
@@ -42,15 +42,59 @@ class ScaffoldQuickBooksProviderClient(
     ): List<QuickBooksAccount> {
         requireStub(accessToken)
         return listOf(
-            QuickBooksAccount("qb-income-sales", "Merchandise Sales", "Income", true),
-            QuickBooksAccount("qb-income-contributions", "Contributions", "Other Income", true),
-            QuickBooksAccount("qb-income-sponsorships", "Sponsorship Income", "Income", true),
-            QuickBooksAccount("qb-refunds", "Refunds and Allowances", "Income", true),
-            QuickBooksAccount("qb-fees-receivable", "Program Fees Receivable", "Accounts Receivable", true),
-            QuickBooksAccount("qb-bank-clearing", "Rally26 Clearing", "Bank", true),
-            QuickBooksAccount("qb-payout-clearing", "Payout Clearing", "Other Current Asset", true),
+            account("qb-income-fees", "Program Fee Income", "Income", "ServiceFeeIncome", "Revenue"),
+            account("qb-income-sales", "Merchandise Sales", "Income", "SalesOfProductIncome", "Revenue"),
+            account(
+                "qb-income-contributions",
+                "Contributions",
+                "Other Income",
+                "OtherMiscellaneousIncome",
+                "Revenue",
+            ),
+            account("qb-income-sponsorships", "Sponsorship Income", "Income", "ServiceFeeIncome", "Revenue"),
+            account("qb-refunds", "Refunds and Allowances", "Income", "DiscountsRefundsGiven", "Revenue"),
+            account(
+                "qb-fees-receivable",
+                "Program Fees Receivable",
+                "Accounts Receivable",
+                "AccountsReceivable",
+                "Asset",
+            ),
+            account("qb-bank-clearing", "Rally26 Clearing", "Bank", "Checking", "Asset"),
+            account(
+                "qb-payout-clearing",
+                "Payout Clearing",
+                "Other Current Asset",
+                "OtherCurrentAssets",
+                "Asset",
+            ),
+            account(
+                "qb-inactive-income",
+                "Legacy Program Income",
+                "Income",
+                "ServiceFeeIncome",
+                "Revenue",
+                active = false,
+            ),
         )
     }
+
+    private fun account(
+        id: String,
+        name: String,
+        accountType: String,
+        accountSubType: String,
+        classification: String,
+        active: Boolean = true,
+    ) = QuickBooksAccount(
+        id = id,
+        name = name,
+        fullyQualifiedName = name,
+        accountType = accountType,
+        accountSubType = accountSubType,
+        classification = classification,
+        active = active,
+    )
 
     private fun requireStub(accessToken: String) {
         if (!properties.stubMode || !accessToken.startsWith("stub-access-")) {

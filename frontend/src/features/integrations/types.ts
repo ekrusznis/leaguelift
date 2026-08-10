@@ -117,7 +117,7 @@ export interface GoogleCalendarSetting {
 	selectedCalendarId: string | null;
 	selectedCalendarName: string | null;
 	selectedCalendarTimezone: string | null;
-	syncDirection: "RALLY26_TO_GOOGLE";
+	syncDirection: "LEAGUELIFT_TO_GOOGLE";
 	automaticSyncEnabled: false;
 	lastCalendarListedAt: string | null;
 	createdAt: string;
@@ -181,10 +181,18 @@ export interface QuickBooksConnectionSetting {
 	defaultCurrency: string | null;
 	lastCompanyReadAt: string | null;
 	lastAccountsReadAt: string | null;
+	lastMappingValidationAt: string | null;
+	lastMappingValidationStatus: "NOT_RUN" | "PASSED" | "NEEDS_ATTENTION";
+	credentialVerifiedAt: string | null;
+	sandboxVerifiedAt: string | null;
+	accountingApprovedAt: string | null;
+	writePolicyApprovedAt: string | null;
+	writePolicyVersion: string | null;
 	updatedAt: string;
 }
 
 export type QuickBooksMappingType =
+	| "PROGRAM_FEE_INCOME"
 	| "SALES_INCOME"
 	| "CONTRIBUTION_INCOME"
 	| "SPONSORSHIP_INCOME"
@@ -239,11 +247,41 @@ export interface QuickBooksExportBatch {
 	completedAt: string | null;
 }
 
+export type QuickBooksActivationStage =
+	| "NOT_CONFIGURED"
+	| "SCAFFOLDED"
+	| "COMPANY_CONTEXT_REQUIRED"
+	| "MAPPINGS_REQUIRED"
+	| "MAPPING_REVALIDATION_REQUIRED"
+	| "CREDENTIALS_REQUIRED"
+	| "SANDBOX_VERIFICATION_REQUIRED"
+	| "ACCOUNTING_APPROVAL_REQUIRED"
+	| "WRITE_POLICY_APPROVAL_REQUIRED"
+	| "ACTIVATION_READY"
+	| "ACTIVE";
+
+export interface QuickBooksActivationGate {
+	code: string;
+	label: string;
+	status: "SATISFIED" | "PENDING" | "BLOCKED_BY_PHASE_POLICY";
+	detail: string;
+	satisfiedAt: string | null;
+}
+
+export interface QuickBooksActivationReadiness {
+	stage: QuickBooksActivationStage;
+	activationAllowed: boolean;
+	credentialedProviderVerified: boolean;
+	providerWritesEnabled: boolean;
+	gates: QuickBooksActivationGate[];
+}
+
 export interface QuickBooksOverview {
 	catalog: IntegrationCatalogItem;
 	setting: QuickBooksConnectionSetting | null;
 	mappings: QuickBooksAccountMapping[];
 	recentBatches: QuickBooksExportBatch[];
+	activationReadiness: QuickBooksActivationReadiness;
 	providerWritesEnabled: boolean;
 	accountingReviewRequired: boolean;
 }

@@ -28,10 +28,25 @@ class QuickBooksServiceTest {
     private val oauth = mockk<IntegrationOAuthService>()
     private val repository = mockk<QuickBooksRepository>()
     private val provider = mockk<QuickBooksProviderClient>()
+    private val mappingPolicy = QuickBooksAccountingMappingPolicy()
+    private val postingIntentPolicy = QuickBooksPostingIntentPolicy()
+    private val readinessPolicy = QuickBooksActivationReadinessPolicy()
     private val sync = mockk<IntegrationSyncService>()
     private val membership = mockk<MembershipService>(relaxed = true)
     private val audit = mockk<AuditService>(relaxed = true)
-    private val service = QuickBooksService(catalog, oauth, repository, provider, sync, membership, audit)
+    private val service =
+        QuickBooksService(
+            catalog,
+            oauth,
+            repository,
+            provider,
+            mappingPolicy,
+            postingIntentPolicy,
+            readinessPolicy,
+            sync,
+            membership,
+            audit,
+        )
     private val organizationId = UUID.randomUUID()
     private val currentUser = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")
 
@@ -51,6 +66,17 @@ class QuickBooksServiceTest {
         verify(exactly = 0) { provider.listAccounts(any(), any()) }
     }
 
+    @Test
+    fun `mapping and posting definitions remain local and do not touch provider`() {
+        val mappings = service.mappingDefinitions(organizationId, currentUser)
+        val intents = service.postingIntentDefinitions(organizationId, currentUser)
+
+        assertTrue(mappings.isNotEmpty())
+        assertTrue(intents.isNotEmpty())
+        verify(exactly = 0) { provider.readCompany(any(), any()) }
+        verify(exactly = 0) { provider.listAccounts(any(), any()) }
+    }
+
     private fun definition() =
         IntegrationProviderDefinition(
             IntegrationProvider.QUICKBOOKS_ONLINE,
@@ -62,7 +88,7 @@ class QuickBooksServiceTest {
             IntegrationReadiness.NOT_CONFIGURED,
             IntegrationAdapterMode.OAUTH_SCAFFOLD,
             "Accounting scaffold",
-            "Phase 20 credentials",
+            "Later credentialed activation",
             emptyList(),
             20,
             true,

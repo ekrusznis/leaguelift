@@ -327,33 +327,8 @@ Additional, unreserved decisions:
 - ADR-054: Phase 19 generalized provider catalog, encrypted owner-scoped connection/OAuth foundation, deterministic stubs, and fail-closed runtime guards (2026-08-01)
 - ADR-055: Phase 19 personal/organization/platform integration placement and disabled Google Calendar scaffold with ICS fallback (2026-08-02)
 - ADR-056: Phase 19 QuickBooks/sports-data provider scaffolds, durable sync/issue history, platform-provider contract hardening, and disabled-by-default completion (2026-08-02)
-- ADR-057: Product renamed from LeagueLift to Rally26 (leaguelift.io -> rally26.com), full codebase/package/domain sweep (2026-08-03)
-- ADR-058: Resend hosted visual templates for the four auth-lifecycle emails
-  (verify-email, password-reset, invitation, and a new welcome email sent on first
-  membership grant with a role-scoped feature list), replacing inline HTML for those
-  four; an `EMAIL_VERIFICATION_ALREADY_USED` conflict code closing both a UX
-  false-negative and a real consume-token race; an explicit Sign In / Create Account
-  choice on the invitation-acceptance page with a `next` redirect back to it; a
-  dark-background form-label contrast fix on three auth pages; and a scroll-to-top
-  fix for client-side route navigation (2026-08-04)
-- ADR-059: Book a Demo removed and `/contact` redirected to a new landing-page Contact
-  Us section reusing the existing `support_case` backend; a new `SmtpEmailProvider`
-  (Google Workspace SMTP, app-password auth) plus Mustache plain-text templating for
-  human-authored support correspondence (contact-us and in-app ticket creation), kept
-  deliberately separate from Resend, which stays reserved for automated lifecycle
-  notifications — including a new `support.case.status_changed` Resend-templated
-  email sent on real status transitions (2026-08-04)
-- ADR-060: `MembershipRole.FINANCE_MANAGER` removed and merged into `ADMINISTRATOR`,
-  closing a real capability bug found by a code-level audit of the four org-facing
-  dashboard roles — Finance Manager had drifted to the exact same organization
-  capabilities as Viewer despite being documented as having real financial-operations
-  authority (refunds, offline records, reconciliation), which Administrator already
-  had; migration V43 converts existing rows before narrowing the role check constraints
-  (2026-08-04)
-- ADR-061: Deferred a dedicated staging environment to a later, post-release phase —
-  the existing production droplet (ADR-008) serves as the sole environment through
-  initial launch. Reconciles `DESIGN-DOC.md`'s Phase 21/§19.1/§19.2/§14.4 sections,
-  which still described the original dual-DigitalOcean-stack target, against ADR-008's
-  already-accepted single-droplet decision; a real staging environment (its own
-  droplet, its own self-hosted Postgres) remains the plan, just sequenced after launch
-  (2026-08-04)
+- ADR-092: Phase 29.1 QuickBooks Accounting API contract foundation, minor-version-pinned synthetic fixtures, and fail-closed transport mapping (2026-08-09)
+- ADR-093: Phase 29.2 owner-customizable QuickBooks accounting-role mappings, compatibility/revalidation policy, posting-intent preview rules, and V69 review metadata (2026-08-09)
+- ADR-094: Phase 29.3 deterministic QuickBooks provider-operation identity, durable retry/readback metadata, error classification, and fail-closed write client (2026-08-09)
+- ADR-095: Phase 29.4 truthful QuickBooks activation-readiness gates, future approval evidence, and non-misleading UI state (2026-08-09)
+- ADR-096: Phase 29.5 QuickBooks authorization/audit/privacy closeout, Help forward-correction, and operational gate checklist (2026-08-09)
