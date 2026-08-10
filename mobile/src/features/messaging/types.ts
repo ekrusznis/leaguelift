@@ -82,3 +82,14 @@ export interface CreateAthleteConversationRequest {
   initialMessageIdempotencyKey: string;
   initialMessage: string;
 }
+
+/** Owner/manager-tier broadcast compose (ADR-105) — POST /organizations/{orgId}/message-threads creates an OPEN thread; sending the first message is a separate call. */
+export interface CreateMessageThreadRequest {
+  scopeType: MessageThreadScope;
+  scopeId?: string;
+  idempotencyKey: string;
+  title: string;
+  audience: MessageThreadAudience;
+  emailEnabled?: boolean;
+  smsEnabled?: boolean;
+}

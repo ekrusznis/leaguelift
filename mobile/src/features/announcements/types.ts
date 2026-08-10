@@ -34,3 +34,15 @@ export interface MyAnnouncementResponse {
   announcement: AnnouncementResponse;
   readAt: string | null;
 }
+
+/** Owner/manager-tier compose (ADR-105) — POST /organizations/{orgId}/announcements creates a DRAFT; publish is a separate explicit step. */
+export interface SaveAnnouncementRequest {
+  scopeType: AnnouncementScope;
+  scopeId?: string;
+  idempotencyKey: string;
+  title: string;
+  body: string;
+  audience: AnnouncementAudience;
+  emailEnabled?: boolean;
+  smsEnabled?: boolean;
+}

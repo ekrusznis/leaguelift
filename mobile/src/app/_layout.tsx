@@ -37,11 +37,18 @@ export default function RootLayout() {
   );
 }
 
-/** Only these roles have a built experience so far (ADR-104) — everything else lands on /role-not-available. */
+/**
+ * Only these roles have a built experience so far (ADR-105) — everything else lands
+ * on /role-not-available. `role: 'OWNER'` covers MembershipRole.OWNER/ADMINISTRATOR/
+ * VIEWER alike (all three route to the same dashboard-context role server-side) — the
+ * Owner screens themselves gate mutating actions on the real membership role/
+ * capabilities from /me/contexts, not on this route having been reached at all.
+ */
 const ROLE_HOME: Partial<Record<DashboardRole, string>> = {
   COACH: '/',
   PARENT: '/parent',
   ATHLETE: '/athlete',
+  OWNER: '/owner',
 };
 
 /**
@@ -86,6 +93,7 @@ function RootNavigator() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="parent/(tabs)" />
           <Stack.Screen name="athlete/(tabs)" />
+          <Stack.Screen name="owner/(tabs)" />
           <Stack.Screen name="event-details" options={{ presentation: 'card' }} />
           <Stack.Screen name="announcements" options={{ presentation: 'card' }} />
           <Stack.Screen name="announcement-details" options={{ presentation: 'card' }} />
@@ -93,6 +101,14 @@ function RootNavigator() {
           <Stack.Screen name="fee-details" options={{ presentation: 'card' }} />
           <Stack.Screen name="guardians" options={{ presentation: 'card' }} />
           <Stack.Screen name="athlete/new-conversation" options={{ presentation: 'card' }} />
+          <Stack.Screen name="owner/team-detail" options={{ presentation: 'card' }} />
+          <Stack.Screen name="owner/reports" options={{ presentation: 'card' }} />
+          <Stack.Screen name="owner/payout" options={{ presentation: 'card' }} />
+          <Stack.Screen name="owner/announcements-manage" options={{ presentation: 'card' }} />
+          <Stack.Screen name="owner/announcement-compose" options={{ presentation: 'card' }} />
+          <Stack.Screen name="owner/broadcasts-manage" options={{ presentation: 'card' }} />
+          <Stack.Screen name="owner/broadcast-compose" options={{ presentation: 'card' }} />
+          <Stack.Screen name="owner/broadcast-detail" options={{ presentation: 'card' }} />
           <Stack.Screen name="messages/[threadId]" options={{ presentation: 'card' }} />
           <Stack.Screen name="settings" options={{ presentation: 'card' }} />
         </Stack>

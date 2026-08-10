@@ -11,17 +11,20 @@ Full plan: `DESIGN-DOC.md` §14.1N (Phase 33 — planning) and §14.1's Phase 36
 (reserved — real implementation/build). Detailed projection:
 `docs/PHASE33-MOBILE-APPLICATION-PLANNING-PROJECTION.md`.
 
-**Status:** three personas are real and backend-wired — **Coach** (ADR-102),
-**Parent/Guardian** (ADR-103), and **Athlete** (ADR-104). Real login for any Rally26
-role; only `COACH`/`PARENT`/`ATHLETE` reach a built experience, everything else lands
-on an honest `/role-not-available` screen. Secure token storage, real loading/error/
-empty states throughout, no mock data anywhere. Coach lives at `/` (5 tabs:
-Home/Calendar/Teams/Messages/More), Parent at `/parent` (5 tabs: Home/Calendar/
-Payments/Messages/More), Athlete at `/athlete` (4 tabs: Home/Calendar/Messages/More —
-no Teams tab, since athletes get a real backend 403 on teammate-roster viewing, and no
-Payments tab, since athletes hold no financial capability at all) — Messages,
-Announcements, Settings, and Event Details/RSVP are shared screens, not duplicated per
-persona. Owner persona is not built yet (explicitly last per founder sequencing).
+**Status:** all four personas are real and backend-wired — **Coach** (ADR-102),
+**Parent/Guardian** (ADR-103), **Athlete** (ADR-104), and **Owner** (ADR-105). Real
+login for any Rally26 role; `COACH`/`PARENT`/`ATHLETE`/`OWNER` all reach a built
+experience, everything else (e.g. `TOURNAMENT_ADMIN`, `PLATFORM_ADMIN`) lands on an
+honest `/role-not-available` screen. Secure token storage, real loading/error/empty
+states throughout, no mock data anywhere. Coach lives at `/` (5 tabs: Home/Calendar/
+Teams/Messages/More), Parent at `/parent` (5 tabs: Home/Calendar/Payments/Messages/
+More), Athlete at `/athlete` (4 tabs: Home/Calendar/Messages/More — no Teams tab, since
+athletes get a real backend 403 on teammate-roster viewing, and no Payments tab, since
+athletes hold no financial capability at all), Owner at `/owner` (4 tabs: Home/Teams/
+Members/More — `role: 'OWNER'` covers `MembershipRole.OWNER`/`ADMINISTRATOR`/`VIEWER`
+alike server-side, so mutating actions rely on the backend's own manager-tier gate
+rather than being hidden client-side) — Messages, Announcements, Settings, and Event
+Details/RSVP are shared screens, not duplicated per persona.
 
 ## Structure
 
@@ -93,7 +96,27 @@ Athlete persona (`/athlete`, ADR-104) — 4 tabs: Home/Calendar/Messages/More:
 | `/athlete/(tabs)` → `messages` | Messages | Shared thread list + a "New Conversation" action unique to Athlete |
 | `/athlete/new-conversation` | New Conversation | Real SafeSport-gated flow: pick an enabled team → eligible contacts → compose, via `/me/messaging/athlete-teams`/`athlete-contacts`/`athlete-conversations` |
 
-Owner variant isn't built yet — deliberately last per founder sequencing (it has more surface area than the other three combined).
+Owner persona (`/owner`, ADR-105) — 4 tabs: Home/Teams/Members/More:
+
+| Route | Screen | Data |
+|---|---|---|
+| `/owner/(tabs)` → `index` | Dashboard | Real summary/financial-overview/team-performance/upcoming-events/recent-activity/reports-snapshot cards — no "attention required" or "onboarding progress" cards, both unconditionally hardcoded server-side |
+| `/owner/(tabs)` → `teams` | Teams | Real org-wide team list, read-only this slice |
+| `/owner/team-detail?id=` | Team Detail | Read-only team fields (sport/season/age group/level/colors/status) |
+| `/owner/(tabs)` → `members` | Members | Real member list + role update/revoke; mutations rely on the backend's manager-tier 403, not a client-side hide |
+| `/owner/reports` | Reports | Real revenue/fee-collections/refunds reports, trailing 30 days (server default) |
+| `/owner/payout` | Payout Account | Real Stripe Connect status + balance, read-only — no onboarding-link/transfer actions this slice (money-movement, deferred) |
+| `/owner/announcements-manage` | Announcements (manage) | Real list + publish; distinct from the shared recipient-facing `/announcements` |
+| `/owner/announcement-compose` | New Announcement | Creates a DRAFT (org-scoped only this slice); publish is a separate step from the list |
+| `/owner/broadcasts-manage` | Broadcasts (manage) | Real thread list |
+| `/owner/broadcast-compose` | New Broadcast | Creates an org-scoped thread, then hands off to Broadcast Detail to send the first message |
+| `/owner/broadcast-detail?threadId=` | Broadcast Detail | Real management-scoped message list + send |
+
+**Deferred, not attempted this slice** (see ADR-105): Swag Shop, QuickBooks/org
+integrations, sponsorships, Rally26 subscription billing, fundraising campaign
+*management* (reads are real), payout `transfer`/`onboarding-link` actions, org
+profile/credit-settings edit forms, Documents (owner-side), team/tournament
+create/edit/archive, and team-scoped (vs. org-scoped) announcements/broadcasts.
 
 ## Local development
 
