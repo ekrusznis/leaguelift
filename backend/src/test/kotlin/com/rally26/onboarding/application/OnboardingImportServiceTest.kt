@@ -83,7 +83,7 @@ class OnboardingImportServiceTest {
         assertEquals(0, preview.errorRows)
         assertEquals(4, preview.createCount)
         assertTrue(preview.rows.all { it.action == OnboardingPreviewAction.CREATE })
-        verify(exactly = 0) { teamRepository.insert(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { teamRepository.insert(any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -250,7 +250,9 @@ class OnboardingImportServiceTest {
         val team = Team(UUID.randomUUID(), organizationId, "U14 Blue", "Volleyball", "2026-2027", TeamStatus.ACTIVE, null, now, now)
         val csv = "record_type,external_id,name,sport,season\nTEAM,team-blue,U14 Blue,Volleyball,2026-2027\n"
         val preview = service.preview(organizationId, "pilot.csv", csv, user)
-        every { teamRepository.insert(organizationId, "U14 Blue", "Volleyball", "2026-2027", null) } returns team
+        every {
+            teamRepository.insert(organizationId, "U14 Blue", "Volleyball", "2026-2027", null, null, null, null)
+        } returns team
         every {
             identityRepository.insert(organizationId, OnboardingRecordType.TEAM, "team-blue", team.id, user.userId)
         } returns

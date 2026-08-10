@@ -58,6 +58,9 @@ data class PublicPageResponse(
     val updatedAt: Instant,
     val logo: PublicPageMediaResponse? = null,
     val cover: PublicPageMediaResponse? = null,
+    /** Phase 35 (ADR-099): resolved (always non-null) team colors for a TEAM page; Rally26 defaults for every other page type. */
+    val primaryColor: String = com.rally26.team.domain.Team.DEFAULT_PRIMARY_COLOR,
+    val secondaryColor: String = com.rally26.team.domain.Team.DEFAULT_SECONDARY_COLOR,
 )
 
 fun MediaDescriptor.toPublicPageMediaResponse() =
@@ -73,6 +76,8 @@ fun MediaDescriptor.toPublicPageMediaResponse() =
 fun PublicPage.toResponse(
     logo: MediaDescriptor? = null,
     cover: MediaDescriptor? = null,
+    primaryColor: String = com.rally26.team.domain.Team.DEFAULT_PRIMARY_COLOR,
+    secondaryColor: String = com.rally26.team.domain.Team.DEFAULT_SECONDARY_COLOR,
 ) = PublicPageResponse(
     id = id,
     organizationId = organizationId,
@@ -87,6 +92,8 @@ fun PublicPage.toResponse(
     updatedAt = updatedAt,
     logo = logo?.toPublicPageMediaResponse(),
     cover = cover?.toPublicPageMediaResponse(),
+    primaryColor = primaryColor,
+    secondaryColor = secondaryColor,
 )
 
 typealias PublicPagePageResponse = PageResponse<PublicPageResponse>

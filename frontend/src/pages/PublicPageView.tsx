@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 import { ErrorState } from "../components/states/ErrorState";
 import { LoadingState } from "../components/states/LoadingState";
@@ -25,23 +26,36 @@ export function PublicPageView() {
 		);
 	}
 
+	const teamColorStyle = {
+		"--team-color-1": page.primaryColor,
+		"--team-color-2": page.secondaryColor,
+	} as CSSProperties;
+
 	return (
-		<div className="flex min-h-screen flex-col bg-ice-white">
+		<div className="flex min-h-screen flex-col bg-ice-white" style={teamColorStyle}>
 			<main className="flex-1">
 			{page.cover ? (
-				<div className="h-52 w-full overflow-hidden bg-navy sm:h-72">
+				<div className="h-52 w-full overflow-hidden sm:h-72" style={{ backgroundColor: "var(--team-color-1)" }}>
 					<img src={page.cover.url} alt={page.cover.altText ?? `${page.title} cover`} className="size-full object-cover" />
 				</div>
 			) : (
-				<div className="h-28 bg-gradient-to-r from-navy to-navy-800 sm:h-40" aria-hidden="true" />
+				<div
+					className="h-28 sm:h-40"
+					style={{ background: "linear-gradient(to right, var(--team-color-1), var(--team-color-2))" }}
+					aria-hidden="true"
+				/>
 			)}
 			<div className="mx-auto -mt-10 flex max-w-2xl flex-col gap-6 px-4 pb-12 sm:-mt-12">
 				<div className="rounded-xl bg-pure-white p-6 shadow-sm">
 					<div className="flex flex-wrap items-center gap-4">
 						{page.logo ? (
-							<img src={page.logo.url} alt={page.logo.altText ?? `${page.title} logo`} className="size-20 rounded-xl bg-navy-900 object-contain p-2" />
+							<img src={page.logo.url} alt={page.logo.altText ?? `${page.title} logo`} className="size-20 rounded-xl object-contain p-2" style={{ backgroundColor: "var(--team-color-1)" }} />
 						) : (
-							<span className="flex size-20 items-center justify-center rounded-xl bg-navy-900 font-heading text-xl font-bold text-white" aria-hidden="true">
+							<span
+								className="flex size-20 items-center justify-center rounded-xl font-heading text-xl font-bold text-white"
+								style={{ backgroundColor: "var(--team-color-1)" }}
+								aria-hidden="true"
+							>
 								{page.title.slice(0, 2).toUpperCase()}
 							</span>
 						)}

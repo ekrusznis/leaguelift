@@ -1,8 +1,10 @@
 package com.rally26.team.web
 
+import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageResponse
 import com.rally26.team.application.TeamService
+import com.rally26.team.domain.TeamGenderCategory
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -19,6 +21,12 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
+
+private fun genderCategory(value: String?): TeamGenderCategory? =
+    value?.let {
+        runCatching { TeamGenderCategory.valueOf(it) }
+            .getOrElse { throw ValidationException("Unknown gender category.") }
+    }
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/teams")
@@ -51,6 +59,9 @@ class TeamController(
                 request.sport,
                 request.season,
                 request.contactEmail,
+                request.ageGroup,
+                genderCategory(request.genderCategory),
+                request.level,
                 currentUser,
             )
         return ResponseEntity.status(HttpStatus.CREATED).body(team.toResponse())
@@ -78,6 +89,9 @@ class TeamController(
                 request.sport,
                 request.season,
                 request.contactEmail,
+                request.ageGroup,
+                genderCategory(request.genderCategory),
+                request.level,
                 currentUser,
             ).toResponse()
 
@@ -96,4 +110,15 @@ class TeamController(
         @RequestBody request: UpdateTeamTimezoneRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): TeamResponse = teamService.updateTimezoneOverride(organizationId, teamId, request.timezone, currentUser).toResponse()
+
+    @PatchMapping("/{teamId}/colors")
+    fun updateColors(
+        @PathVariable organizationId: UUID,
+        @PathVariable teamId: UUID,
+        @RequestBody request: UpdateTeamColorsRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): TeamResponse =
+        teamService
+            .updateColors(organizationId, teamId, request.primaryColor, request.secondaryColor, currentUser)
+            .toResponse()
 }

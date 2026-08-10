@@ -11,6 +11,17 @@ import { TeamRoleAssignmentsSection } from "../authorization/TeamRoleAssignments
 import { EntityBrandingPanel } from "../media/EntityBrandingPanel";
 import { useArchiveTeam, useCreateTeam, useTeams, useUpdateTeamTimezone } from "./api";
 import { createTeamSchema, type CreateTeamFormValues } from "./schema";
+import { TeamColorsPanel } from "./TeamColorsPanel";
+
+const GENDER_CATEGORY_OPTIONS = [
+	{ value: "", label: "Not specified" },
+	{ value: "BOYS", label: "Boys" },
+	{ value: "GIRLS", label: "Girls" },
+	{ value: "COED", label: "Coed" },
+	{ value: "MENS", label: "Men's" },
+	{ value: "WOMENS", label: "Women's" },
+	{ value: "OPEN", label: "Open" },
+] as const;
 
 export function TeamList({ organizationId }: { organizationId: string }) {
 	const { data, isLoading, isError, refetch } = useTeams(organizationId);
@@ -22,6 +33,7 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 	const [brandingTeamId, setBrandingTeamId] = useState<string | null>(null);
 	const [timezoneTeamId, setTimezoneTeamId] = useState<string | null>(null);
 	const [timezoneDraft, setTimezoneDraft] = useState("");
+	const [colorsTeamId, setColorsTeamId] = useState<string | null>(null);
 
 	const {
 		register,
@@ -30,7 +42,7 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 		formState: { errors, isSubmitting },
 	} = useForm<CreateTeamFormValues>({
 		resolver: zodResolver(createTeamSchema),
-		defaultValues: { name: "", sport: "", season: "", contactEmail: "" },
+		defaultValues: { name: "", sport: "", season: "", contactEmail: "", ageGroup: "", genderCategory: "", level: "" },
 	});
 
 	const onSubmit = handleSubmit(async (values) => {
@@ -99,6 +111,46 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
 						</div>
+						<div className="flex flex-col gap-1">
+							<label htmlFor="team-age-group" className="text-sm font-medium text-navy">
+								Age group
+							</label>
+							<input
+								id="team-age-group"
+								type="text"
+								placeholder="e.g. 12U"
+								{...register("ageGroup")}
+								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+							/>
+						</div>
+						<div className="flex flex-col gap-1">
+							<label htmlFor="team-gender-category" className="text-sm font-medium text-navy">
+								Gender
+							</label>
+							<select
+								id="team-gender-category"
+								{...register("genderCategory")}
+								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+							>
+								{GENDER_CATEGORY_OPTIONS.map((option) => (
+									<option key={option.value} value={option.value}>
+										{option.label}
+									</option>
+								))}
+							</select>
+						</div>
+						<div className="flex flex-col gap-1">
+							<label htmlFor="team-level" className="text-sm font-medium text-navy">
+								Level
+							</label>
+							<input
+								id="team-level"
+								type="text"
+								placeholder="e.g. A, Varsity"
+								{...register("level")}
+								className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+							/>
+						</div>
 					</div>
 					<div className="flex justify-end gap-2">
 						<Button type="button" variant="secondary" onClick={() => { reset(); setShowForm(false); }}>
@@ -126,6 +178,9 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 									<p className="text-sm text-slate-gray">
 										{team.sport}
 										{team.season ? ` · ${team.season}` : ""}
+										{team.ageGroup ? ` · ${team.ageGroup}` : ""}
+										{team.genderCategory ? ` · ${GENDER_CATEGORY_OPTIONS.find((o) => o.value === team.genderCategory)?.label ?? team.genderCategory}` : ""}
+										{team.level ? ` · ${team.level}` : ""}
 									</p>
 								</div>
 								<div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -159,6 +214,13 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 										}}
 									>
 										{timezoneTeamId === team.id ? "Hide timezone" : "Timezone"}
+									</Button>
+									<Button
+										type="button"
+										variant="secondary"
+										onClick={() => setColorsTeamId(colorsTeamId === team.id ? null : team.id)}
+									>
+										{colorsTeamId === team.id ? "Hide colors" : "Colors"}
 									</Button>
 									<Button
 										type="button"
@@ -215,6 +277,11 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 											Clear (inherit organization default)
 										</Button>
 									)}
+								</div>
+							)}
+							{colorsTeamId === team.id && (
+								<div className="mt-3">
+									<TeamColorsPanel organizationId={organizationId} team={team} />
 								</div>
 							)}
 						</li>

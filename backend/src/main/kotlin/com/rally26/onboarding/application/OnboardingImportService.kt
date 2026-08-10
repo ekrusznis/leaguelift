@@ -631,7 +631,7 @@ class OnboardingImportService(
         val contactEmail = normalizedEmail(row.fields["contact_email"])
         val existingId = row.existingEntityId
         if (existingId == null) {
-            return teamRepository.insert(organizationId, name, sport, season, contactEmail).id
+            return teamRepository.insert(organizationId, name, sport, season, contactEmail, null, null, null).id
         }
         val existing =
             teamRepository
@@ -639,7 +639,7 @@ class OnboardingImportService(
                 ?.takeIf { it.status == TeamStatus.ACTIVE }
                 ?: throw ValidationException("The matched team no longer exists or is inactive.")
         if (row.action == OnboardingPreviewAction.MATCH_EXISTING) return existing.id
-        teamRepository.update(existing.id, organizationId, name, sport, season, contactEmail)
+        teamRepository.update(existing.id, organizationId, name, sport, season, contactEmail, null, null, null)
         return existing.id
     }
 

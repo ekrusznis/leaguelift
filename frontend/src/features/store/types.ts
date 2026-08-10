@@ -154,6 +154,9 @@ export interface PublicStore {
 	name: string;
 	slug: string;
 	products: PublicProduct[];
+	/** Phase 35 (ADR-099): resolved (always non-null) team colors — Rally26 defaults when the store has no team or the team has no override. */
+	primaryColor: string;
+	secondaryColor: string;
 }
 
 export type OrderStatus = "PENDING" | "CONFIRMED" | "CANCELED" | "REFUNDED";

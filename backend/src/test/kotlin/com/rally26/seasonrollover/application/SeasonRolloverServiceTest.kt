@@ -102,7 +102,7 @@ class SeasonRolloverServiceTest {
             service.execute(organizationId, command, "0".repeat(64), user)
         }
 
-        verify(exactly = 0) { teamService.create(any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { teamService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -112,7 +112,7 @@ class SeasonRolloverServiceTest {
         val preview = service.preview(organizationId, command, user)
         every { repository.findRunByHash(organizationId, preview.confirmationHash) } returns null
         every {
-            teamService.create(organizationId, "U15 Blue", "Volleyball", "2027-2028", "coach@example.com", user)
+            teamService.create(organizationId, "U15 Blue", "Volleyball", "2027-2028", "coach@example.com", null, null, null, user)
         } returns destination
         every { repository.copyRoster(organizationId, source.id, destination.id) } returns 1
         every { repository.copyStaff(organizationId, source.id, destination.id, user.userId) } returns 1
@@ -193,7 +193,7 @@ class SeasonRolloverServiceTest {
         assertEquals(run.id, result.runId)
         assertEquals(12, result.rosterCopiedCount)
         verify(exactly = 0) { repository.copyRoster(any(), any(), any()) }
-        verify(exactly = 0) { teamService.create(any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { teamService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     private fun allowManager() {
