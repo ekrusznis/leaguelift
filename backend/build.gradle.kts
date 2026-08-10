@@ -49,7 +49,7 @@ dependencies {
 
     implementation("io.micrometer:micrometer-registry-prometheus")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5")
-    implementation(platform("software.amazon.awssdk:bom:2.29.52"))
+    implementation(platform("software.amazon.awssdk:bom:2.51.2"))
     implementation("software.amazon.awssdk:s3")
     implementation("software.amazon.awssdk:url-connection-client")
     implementation("com.stripe:stripe-java:29.0.0")
