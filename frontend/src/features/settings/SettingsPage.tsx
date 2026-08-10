@@ -99,7 +99,7 @@ export function SettingsPage() {
 					<h2 id="appearance-settings-heading" className="font-heading text-xl font-semibold text-navy-900">Appearance</h2>
 					<p className="mt-1 text-sm text-slate-600">Choose how Rally26 looks on authenticated pages.</p>
 				</div>
-				{preferences.isLoading && <div className="mt-4"><LoadingState label="Loading appearance preference…" /></div>}
+				{preferences.isPending && <div className="mt-4"><LoadingState label="Loading appearance preference…" /></div>}
 				{preferences.isError && <div className="mt-4"><ErrorState message="Could not load your settings." onRetry={() => preferences.refetch()} /></div>}
 				{appearancePreferences && (
 					<fieldset className="mt-4 grid gap-3 sm:grid-cols-3" disabled={update.isPending}>
@@ -128,7 +128,7 @@ export function SettingsPage() {
 						Optional in-app and email notifications default on. SMS defaults off and requires your individual consent plus an explicit topic setting.
 					</p>
 				</div>
-				{notifications.isLoading && <div className="mt-4"><LoadingState label="Loading notification preferences…" /></div>}
+				{notifications.isPending && <div className="mt-4"><LoadingState label="Loading notification preferences…" /></div>}
 				{notifications.isError && <div className="mt-4"><ErrorState message="Could not load notification preferences." onRetry={() => notifications.refetch()} /></div>}
 				{notificationPreferences && (
 					<div className="mt-5 space-y-5">

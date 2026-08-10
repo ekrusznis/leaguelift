@@ -332,3 +332,4 @@ Additional, unreserved decisions:
 - ADR-094: Phase 29.3 deterministic QuickBooks provider-operation identity, durable retry/readback metadata, error classification, and fail-closed write client (2026-08-09)
 - ADR-095: Phase 29.4 truthful QuickBooks activation-readiness gates, future approval evidence, and non-misleading UI state (2026-08-09)
 - ADR-096: Phase 29.5 QuickBooks authorization/audit/privacy closeout, Help forward-correction, and operational gate checklist (2026-08-09)
+- ADR-097: Phase 30 QA stabilization and regression fixes across Phases 24-29 — missing frontend module, dropped registration-consent fields, dashboard-routing/React Router gaps, unwrapped Stripe exception, unpersisted auth session (2026-08-10)

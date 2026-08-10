@@ -15,6 +15,8 @@ export interface RegisterParams {
 	password: string;
 	/** Set when registration was reached from an invitation-accept link, so the verification email can redirect back to it. */
 	invitationToken?: string;
+	agreeToTerms: boolean;
+	confirmAdult: boolean;
 }
 
 export interface AuthState {

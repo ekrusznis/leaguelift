@@ -17,6 +17,9 @@ import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.membership.persistence.MembershipRepository
+import com.rally26.onboarding.owner.domain.OwnerOnboarding
+import com.rally26.onboarding.owner.domain.OwnerOnboardingStep
+import com.rally26.onboarding.owner.persistence.OwnerOnboardingRepository
 import io.mockk.every
 import io.mockk.mockk
 import java.time.Instant
@@ -30,8 +33,15 @@ class DashboardContextServiceTest {
     private val householdRepository = mockk<HouseholdRepository>()
     private val roleAssignmentRepository = mockk<RoleAssignmentRepository>()
     private val guardianRelationshipRepository = mockk<GuardianRelationshipRepository>()
+    private val ownerOnboardingRepository = mockk<OwnerOnboardingRepository>()
     private val service =
-        DashboardContextService(membershipRepository, householdRepository, roleAssignmentRepository, guardianRelationshipRepository)
+        DashboardContextService(
+            membershipRepository,
+            householdRepository,
+            roleAssignmentRepository,
+            guardianRelationshipRepository,
+            ownerOnboardingRepository,
+        )
 
     private val currentUser = CurrentUser(UUID.randomUUID(), "person@example.com", "Person")
 
@@ -180,10 +190,42 @@ class DashboardContextServiceTest {
             emptyList()
         every { guardianRelationshipRepository.findActiveForUser(currentUser.userId) } returns emptyList()
         every { householdRepository.findActiveAdultByEmail(currentUser.email) } returns null
+        every { ownerOnboardingRepository.findByOwnerUserId(currentUser.userId) } returns null
 
         val result = service.resolve(currentUser)
 
         assertEquals(DashboardRole.ATHLETE, result.role)
+        assertNull(result.organizationId)
+        assertNull(result.householdId)
+    }
+
+    @Test
+    fun `an owner mid-onboarding with no organization yet resolves to OWNER dashboard instead of the ATHLETE fallback`() {
+        every { membershipRepository.findAnyActiveMembershipForUser(currentUser.userId) } returns null
+        every { roleAssignmentRepository.findActiveForUserAndContext(currentUser.userId, RoleAssignmentContextType.TEAM) } returns
+            emptyList()
+        every { roleAssignmentRepository.findActiveForUserAndContext(currentUser.userId, RoleAssignmentContextType.TOURNAMENT) } returns
+            emptyList()
+        every { guardianRelationshipRepository.findActiveForUser(currentUser.userId) } returns emptyList()
+        every { householdRepository.findActiveAdultByEmail(currentUser.email) } returns null
+        every { ownerOnboardingRepository.findByOwnerUserId(currentUser.userId) } returns
+            OwnerOnboarding(
+                id = UUID.randomUUID(),
+                ownerUserId = currentUser.userId,
+                organizationId = null,
+                currentStep = OwnerOnboardingStep.ORGANIZATION,
+                selectedPlanCode = null,
+                selectedBillingFrequency = null,
+                checkoutSessionId = null,
+                checkoutStartedAt = null,
+                completedAt = null,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            )
+
+        val result = service.resolve(currentUser)
+
+        assertEquals(DashboardRole.OWNER, result.role)
         assertNull(result.organizationId)
         assertNull(result.householdId)
     }

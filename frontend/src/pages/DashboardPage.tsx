@@ -1,3 +1,4 @@
+import { Navigate } from "react-router-dom";
 import { AthleteDashboard } from "../dashboard/roles/AthleteDashboard";
 import { CoachDashboard } from "../dashboard/roles/CoachDashboard";
 import { OwnerDashboard } from "../dashboard/roles/OwnerDashboard";
@@ -33,7 +34,7 @@ export function DashboardPage() {
 
 	switch (data.role) {
 		case "OWNER":
-			return data.organizationId ? <OwnerDashboard organizationId={data.organizationId} /> : <UnauthorizedState message="No organization found for your account." />;
+			return data.organizationId ? <OwnerDashboard organizationId={data.organizationId} /> : <Navigate to="/app/onboarding" replace />;
 		case "COACH":
 			return data.organizationId ? <CoachDashboard organizationId={data.organizationId} /> : <UnauthorizedState message="No organization found for your account." />;
 		case "PARENT":

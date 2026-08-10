@@ -71,6 +71,8 @@ export function RegisterPage() {
 			email: values.email,
 			password: values.password,
 			invitationToken,
+			agreeToTerms: values.agreeToTerms,
+			confirmAdult: values.confirmAdult,
 		});
 		if (result.success) {
 			track("registration_succeeded");

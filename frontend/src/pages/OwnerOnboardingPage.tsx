@@ -28,6 +28,29 @@ const ORGANIZATION_TYPES = [
 
 const STEP_ORDER = ["Account", "Organization", "Plan", "Review & Checkout"];
 
+// Curated, not free text: shared naming keeps team/tournament sport filters and
+// reporting consistent instead of accumulating typo variants ("Soccer" vs "soccer").
+const SPORT_OPTIONS = [
+	"Baseball",
+	"Basketball",
+	"Cheerleading",
+	"Cross Country",
+	"Field Hockey",
+	"Football",
+	"Golf",
+	"Gymnastics",
+	"Ice Hockey",
+	"Lacrosse",
+	"Soccer",
+	"Softball",
+	"Swimming",
+	"Tennis",
+	"Track and Field",
+	"Volleyball",
+	"Wrestling",
+	"Other",
+] as const;
+
 function slugify(value: string) {
 	return value
 		.toLowerCase()
@@ -85,7 +108,6 @@ export function OwnerOnboardingPage() {
 		addressCountry: "US",
 		timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York",
 	}));
-	const [sportsText, setSportsText] = useState("");
 	const [slugTouched, setSlugTouched] = useState(false);
 	const [timezoneSuggestion, setTimezoneSuggestion] = useState<string | null>(null);
 
@@ -110,7 +132,6 @@ export function OwnerOnboardingPage() {
 				addressCountry: org.addressCountry ?? "US",
 				timezone: org.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? "America/New_York",
 			});
-			setSportsText(org.sports.join(", "));
 			setSlugTouched(true);
 		}
 	};
@@ -147,6 +168,13 @@ export function OwnerOnboardingPage() {
 		setOrganizationForm((current) => ({ ...current, [key]: value }));
 	};
 
+	const toggleSport = (sport: string) => {
+		setOrganizationForm((current) => ({
+			...current,
+			sports: current.sports.includes(sport) ? current.sports.filter((item) => item !== sport) : [...current.sports, sport],
+		}));
+	};
+
 	const suggestTimezone = async () => {
 		setError(null);
 		try {
@@ -162,8 +190,7 @@ export function OwnerOnboardingPage() {
 		setSaving(true);
 		setError(null);
 		try {
-			const sports = sportsText.split(",").map((item) => item.trim()).filter(Boolean);
-			const next = await saveOnboardingOrganization({ ...organizationForm, sports });
+			const next = await saveOnboardingOrganization(organizationForm);
 			setOnboarding(next);
 			navigate("/app/onboarding/plan");
 		} catch (err) {
@@ -248,7 +275,17 @@ export function OwnerOnboardingPage() {
 						<label className="text-sm font-semibold text-slate-700">Organization name<input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={organizationForm.name} onChange={(e) => { updateField("name", e.target.value); if (!slugTouched) updateField("slug", slugify(e.target.value)); }} /></label>
 						<label className="text-sm font-semibold text-slate-700">Organization URL<input disabled={Boolean(onboarding?.organization)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 disabled:bg-slate-100" value={organizationForm.slug} onChange={(e) => { setSlugTouched(true); updateField("slug", slugify(e.target.value)); }} /></label>
 						<label className="text-sm font-semibold text-slate-700">Organization type<select className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={organizationForm.organizationType} onChange={(e) => updateField("organizationType", e.target.value)}>{ORGANIZATION_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-						<label className="text-sm font-semibold text-slate-700">Sports <span className="font-normal text-slate-500">(comma separated)</span><input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={sportsText} onChange={(e) => setSportsText(e.target.value)} placeholder="Volleyball, Soccer" /></label>
+						<div className="sm:col-span-2">
+							<span className="text-sm font-semibold text-slate-700">Sports</span>
+							<div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3">
+								{SPORT_OPTIONS.map((sport) => (
+									<label key={sport} className="flex items-center gap-2 text-sm text-slate-700">
+										<input type="checkbox" checked={organizationForm.sports.includes(sport)} onChange={() => toggleSport(sport)} className="size-4 rounded border-slate-300" />
+										{sport}
+									</label>
+								))}
+							</div>
+						</div>
 						<label className="text-sm font-semibold text-slate-700">Contact email<input type="email" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={organizationForm.contactEmail} onChange={(e) => updateField("contactEmail", e.target.value)} /></label>
 						<label className="text-sm font-semibold text-slate-700">Contact phone<input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={organizationForm.contactPhone ?? ""} onChange={(e) => updateField("contactPhone", e.target.value)} /></label>
 						<label className="text-sm font-semibold text-slate-700 sm:col-span-2">Address<input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" value={organizationForm.addressLine1} onChange={(e) => updateField("addressLine1", e.target.value)} /></label>

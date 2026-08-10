@@ -15,7 +15,7 @@ export const notificationPreferencesQueryKey = ["me", "notification-preferences"
 export function useUserPreferences() {
 	return useQuery({
 		queryKey: userPreferencesQueryKey,
-		queryFn: () => apiFetch<UserPreferences>("/me/preferences"),
+		queryFn: ({ signal }) => apiFetch<UserPreferences>("/me/preferences", { signal }),
 	});
 }
 
@@ -33,7 +33,7 @@ export function useUpdateUserPreferences() {
 export function useNotificationPreferences() {
 	return useQuery({
 		queryKey: notificationPreferencesQueryKey,
-		queryFn: () => apiFetch<NotificationPreferences>("/me/notification-preferences"),
+		queryFn: ({ signal }) => apiFetch<NotificationPreferences>("/me/notification-preferences", { signal }),
 	});
 }
 

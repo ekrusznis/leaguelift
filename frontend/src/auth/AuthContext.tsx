@@ -8,6 +8,39 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 interface Session {
 	accessToken: string;
 	expiresAt: number;
+	user: AuthUser;
+}
+
+const SESSION_STORAGE_KEY = "rally26.session";
+
+/**
+ * Persisted only for the current browser tab/window's lifetime (sessionStorage, not
+ * localStorage) — a still-valid access token survives a page reload or a link opened
+ * in the same tab, but signing out of the browser entirely still requires signing back
+ * in, and the token is never sent anywhere it wasn't already going as a bearer header.
+ */
+function readStoredSession(): Session | null {
+	try {
+		const raw = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+		if (!raw) return null;
+		const parsed = JSON.parse(raw) as Session;
+		if (!parsed.accessToken || !parsed.expiresAt || Date.now() >= parsed.expiresAt) {
+			window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+			return null;
+		}
+		return parsed;
+	} catch {
+		window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+		return null;
+	}
+}
+
+function writeStoredSession(session: Session) {
+	window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+}
+
+function clearStoredSession() {
+	window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
 }
 
 /**
@@ -18,14 +51,16 @@ interface Session {
  * same way production does, using either a real registration or one of the seeded
  * dashboard-role accounts (`db/seed/V9000__dev_seed_dashboard_role_users.sql`).
  *
- * Session lifetime is the access token's `expiresIn` — there is no persisted session
- * across a page reload and no refresh-token support yet, so a reload requires signing
- * in again.
+ * Session lifetime is the access token's `expiresIn`. The token is cached in
+ * `sessionStorage` so a page reload or a link opened in the same tab restores an
+ * already-valid session instead of forcing sign-in again; an expired or missing token
+ * still requires signing in, and there is no refresh-token support yet.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
-	const [status, setStatus] = useState<AuthState["status"]>("unauthenticated");
-	const [user, setUser] = useState<AuthUser | null>(null);
-	const sessionRef = useRef<Session | null>(null);
+	const initialSession = useRef(readStoredSession()).current;
+	const [status, setStatus] = useState<AuthState["status"]>(initialSession ? "authenticated" : "unauthenticated");
+	const [user, setUser] = useState<AuthUser | null>(initialSession?.user ?? null);
+	const sessionRef = useRef<Session | null>(initialSession);
 
 	useEffect(() => {
 		registerAccessTokenGetter(async () => {
@@ -36,11 +71,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	}, []);
 
 	const establishSession = (response: authApi.AuthApiResponse): AuthResult => {
-		sessionRef.current = {
+		const authUser: AuthUser = { displayName: response.user.displayName, email: response.user.email };
+		const session: Session = {
 			accessToken: response.accessToken,
 			expiresAt: Date.now() + response.expiresIn * 1000,
+			user: authUser,
 		};
-		setUser({ displayName: response.user.displayName, email: response.user.email });
+		sessionRef.current = session;
+		writeStoredSession(session);
+		setUser(authUser);
 		setStatus("authenticated");
 		return { success: true };
 	};
@@ -67,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			},
 			logout: () => {
 				sessionRef.current = null;
+				clearStoredSession();
 				setUser(null);
 				setStatus("unauthenticated");
 			},

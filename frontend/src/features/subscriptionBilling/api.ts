@@ -5,7 +5,7 @@ import type { BillingPortalResponse, OrganizationSubscription, PageResponse, Pla
 export function useOrganizationSubscription(organizationId: string | undefined) {
 	return useQuery({
 		queryKey: ["organization-subscription", organizationId],
-		queryFn: () => apiFetch<OrganizationSubscription | null>(`/organizations/${organizationId}/subscription`),
+		queryFn: ({ signal }) => apiFetch<OrganizationSubscription | null>(`/organizations/${organizationId}/subscription`, { signal }),
 		enabled: !!organizationId,
 	});
 }

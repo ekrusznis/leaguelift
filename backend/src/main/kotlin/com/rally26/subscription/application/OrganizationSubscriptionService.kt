@@ -4,6 +4,7 @@ import com.rally26.audit.application.AuditService
 import com.rally26.common.error.ConflictException
 import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
+import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageRequest
@@ -27,9 +28,11 @@ import com.rally26.subscription.infra.StripeSubscriptionBillingClient
 import com.rally26.subscription.infra.StripeSubscriptionCheckout
 import com.rally26.subscription.persistence.OrganizationSubscriptionRepository
 import com.rally26.subscription.persistence.SubscriptionPlanRepository
+import com.stripe.exception.StripeException
 import com.stripe.model.Invoice
 import com.stripe.model.Subscription
 import com.stripe.model.checkout.Session
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -52,6 +55,8 @@ class OrganizationSubscriptionService(
     private val frontendProperties: FrontendProperties,
     private val auditService: AuditService,
 ) {
+    private val log = LoggerFactory.getLogger(OrganizationSubscriptionService::class.java)
+
     fun listPlans(): List<SubscriptionPlan> = planRepository.listActive()
 
     fun getPlan(code: String): SubscriptionPlan =
@@ -112,68 +117,76 @@ class OrganizationSubscriptionService(
             throw ValidationException("Only monthly subscription billing is currently supported.")
         }
 
-        val assets = stripeBillingClient.ensurePlanAssets(plan)
-        if (plan.stripeProductId != assets.productId || plan.stripePriceId != assets.priceId) {
-            planRepository.saveStripeIds(plan.code, assets.productId, assets.priceId)
-        }
+        try {
+            val assets = stripeBillingClient.ensurePlanAssets(plan)
+            if (plan.stripeProductId != assets.productId || plan.stripePriceId != assets.priceId) {
+                planRepository.saveStripeIds(plan.code, assets.productId, assets.priceId)
+            }
 
-        var local = subscriptionRepository.findByOrganizationIdForUpdate(organizationId)
-        if (local == null) {
-            local = subscriptionRepository.insert(organizationId, plan.code)
-        } else {
-            if (local.status in
-                setOf(
-                    OrganizationSubscriptionStatus.ACTIVE,
-                    OrganizationSubscriptionStatus.TRIALING,
-                    OrganizationSubscriptionStatus.PAST_DUE,
+            var local = subscriptionRepository.findByOrganizationIdForUpdate(organizationId)
+            if (local == null) {
+                local = subscriptionRepository.insert(organizationId, plan.code)
+            } else {
+                if (local.status in
+                    setOf(
+                        OrganizationSubscriptionStatus.ACTIVE,
+                        OrganizationSubscriptionStatus.TRIALING,
+                        OrganizationSubscriptionStatus.PAST_DUE,
+                    )
+                ) {
+                    throw ConflictException(
+                        "SUBSCRIPTION_ALREADY_ACTIVE",
+                        "Use billing management for an existing active or recoverable subscription instead of creating a duplicate.",
+                    )
+                }
+                if (local.planCode != plan.code) {
+                    subscriptionRepository.updatePlan(local.id, plan.code)
+                    local = local.copy(planCode = plan.code)
+                }
+            }
+
+            local.stripeCheckoutSessionId?.let { existingSessionId ->
+                stripeBillingClient.retrieveOpenCheckout(existingSessionId)?.let { return it }
+            }
+
+            val customerId =
+                local.stripeCustomerId ?: run {
+                    val owner =
+                        appUserRepository.findById(currentUser.userId)
+                            ?: throw NotFoundException("USER_NOT_FOUND", "The owner account could not be found.")
+                    val created = stripeBillingClient.createCustomer(organizationId, organization.name, owner.email)
+                    subscriptionRepository.saveCustomerId(local.id, created)
+                    created
+                }
+            val generation = local.checkoutGeneration + 1
+            val checkout =
+                stripeBillingClient.createSubscriptionCheckout(
+                    localSubscriptionId = local.id,
+                    organizationId = organizationId,
+                    customerId = customerId,
+                    priceId = assets.priceId,
+                    planCode = plan.code,
+                    successUrl = "${frontendProperties.baseUrl}/app/onboarding/review?checkout=success&session_id={CHECKOUT_SESSION_ID}",
+                    cancelUrl = "${frontendProperties.baseUrl}/app/onboarding/review?checkout=cancelled",
+                    generation = generation,
                 )
-            ) {
-                throw ConflictException(
-                    "SUBSCRIPTION_ALREADY_ACTIVE",
-                    "Use billing management for an existing active or recoverable subscription instead of creating a duplicate.",
-                )
-            }
-            if (local.planCode != plan.code) {
-                subscriptionRepository.updatePlan(local.id, plan.code)
-                local = local.copy(planCode = plan.code)
-            }
-        }
-
-        local.stripeCheckoutSessionId?.let { existingSessionId ->
-            stripeBillingClient.retrieveOpenCheckout(existingSessionId)?.let { return it }
-        }
-
-        val customerId =
-            local.stripeCustomerId ?: run {
-                val owner =
-                    appUserRepository.findById(currentUser.userId)
-                        ?: throw NotFoundException("USER_NOT_FOUND", "The owner account could not be found.")
-                val created = stripeBillingClient.createCustomer(organizationId, organization.name, owner.email)
-                subscriptionRepository.saveCustomerId(local.id, created)
-                created
-            }
-        val generation = local.checkoutGeneration + 1
-        val checkout =
-            stripeBillingClient.createSubscriptionCheckout(
-                localSubscriptionId = local.id,
+            subscriptionRepository.saveCheckoutSession(local.id, checkout.sessionId, generation)
+            auditService.record(
+                actorUserId = currentUser.userId,
                 organizationId = organizationId,
-                customerId = customerId,
-                priceId = assets.priceId,
-                planCode = plan.code,
-                successUrl = "${frontendProperties.baseUrl}/app/onboarding/review?checkout=success&session_id={CHECKOUT_SESSION_ID}",
-                cancelUrl = "${frontendProperties.baseUrl}/app/onboarding/review?checkout=cancelled",
-                generation = generation,
+                action = "organization_subscription.checkout_started",
+                entityType = "organization_subscription",
+                entityId = local.id,
+                metadataJson = "{\"planCode\":\"${plan.code}\"}",
             )
-        subscriptionRepository.saveCheckoutSession(local.id, checkout.sessionId, generation)
-        auditService.record(
-            actorUserId = currentUser.userId,
-            organizationId = organizationId,
-            action = "organization_subscription.checkout_started",
-            entityType = "organization_subscription",
-            entityId = local.id,
-            metadataJson = "{\"planCode\":\"${plan.code}\"}",
-        )
-        return checkout
+            return checkout
+        } catch (e: StripeException) {
+            log.warn("Stripe subscription checkout failed for organization {}: {}", organizationId, e.message, e)
+            throw ServiceUnavailableException(
+                "SUBSCRIPTION_PROVIDER_UNAVAILABLE",
+                "Payments provider is not available right now. If this is local/staging, confirm STRIPE_SECRET_KEY is set.",
+            )
+        }
     }
 
     @Transactional

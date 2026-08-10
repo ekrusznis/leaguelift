@@ -74,10 +74,21 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 	}
 
 	const contentType = response.headers.get("content-type") ?? "";
-	const payload = contentType.includes("application/json") ? await response.json() : undefined;
+	// A nullable-returning endpoint (e.g. "no subscription exists yet") can produce a 200 with a
+	// genuinely empty body rather than the JSON literal "null" — response.json() throws on empty
+	// input, so that case is caught and resolves to null (not undefined: React Query's useQuery
+	// throws "Query data cannot be undefined" if a queryFn ever resolves to undefined).
+	let payload: unknown = null;
+	if (contentType.includes("application/json")) {
+		try {
+			payload = await response.json();
+		} catch {
+			payload = null;
+		}
+	}
 
 	if (!response.ok) {
-		const errorBody: ApiErrorBody = payload ?? {
+		const errorBody: ApiErrorBody = (payload as ApiErrorBody | null) ?? {
 			code: "UNKNOWN_ERROR",
 			message: "An unexpected error occurred.",
 			requestId: "unknown",

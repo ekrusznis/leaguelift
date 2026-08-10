@@ -1,4 +1,4 @@
-# Rally26 Phase 32 — Native Mobile Application Planning & Product Specification
+# Rally26 Phase 33 — Native Mobile Application Planning & Product Specification
 
 **Status:** Projected / planning-only
 **Target platforms:** iOS, iPadOS, Android phones, Android tablets, foldables/windowed Android
@@ -8,7 +8,7 @@
 
 ## Purpose
 
-Phase 32 does not ship the production mobile application. It produces the complete, implementation-ready mobile product and architecture specification so the subsequent implementation phase can build Android and iOS clients without inventing UX, API semantics, authorization rules, offline behavior, or native capability boundaries as it goes.
+Phase 33 does not ship the production mobile application. It produces the complete, implementation-ready mobile product and architecture specification so the subsequent implementation phase can build Android and iOS clients without inventing UX, API semantics, authorization rules, offline behavior, or native capability boundaries as it goes.
 
 The mobile client must reuse Rally26's existing backend business rules. Spring Boot remains the authorization, privacy, money, audit, eligibility, messaging-safety, and organization-isolation boundary. Native code may improve presentation and device capabilities; it must not recreate server authorization in a second source of truth.
 
@@ -24,7 +24,7 @@ infra/          deployment/runtime infrastructure
 docs/           shared architecture, ADRs, product contracts
 ```
 
-Phase 32 must decide and document:
+Phase 33 must decide and document:
 
 - Expo/React Native project bootstrap and supported runtime/version policy at implementation time;
 - Expo Router/native navigation structure and route/deep-link mapping;
@@ -42,7 +42,7 @@ Do not implement the mobile app as a WebView wrapper around the existing Vite ap
 
 Every production screen must adapt to the **available application window**, not to a hard-coded phone model.
 
-Phase 32 must specify every screen in at least these presentation states:
+Phase 33 must specify every screen in at least these presentation states:
 
 1. compact phone portrait;
 2. large phone / compact landscape;
@@ -65,7 +65,7 @@ The specification must define:
 
 A tablet is not a stretched phone. Wide layouts should use the additional space for useful context, side-by-side information, persistent navigation, or master/detail views where that improves the workflow.
 
-## Phase 32 planning slices
+## Phase 33 planning slices
 
 ### 32.0 — Mobile architecture and web-route parity inventory
 
@@ -166,7 +166,7 @@ At minimum the inventory must cover these Rally26 product families:
 - fundraising/campaigns and contribution operations
 - sponsorship management
 - Swag Shop catalog, products, orders, fulfillment/reprints
-- documents and, once Phase 30 exists, eligibility/waiver administration
+- documents and, once Phase 31 exists, eligibility/waiver administration
 - integrations
 - billing/subscription
 - reconciliation, History and administration/support-aware screens
@@ -184,7 +184,7 @@ At minimum the inventory must cover these Rally26 product families:
 - linked athletes/participants
 - fees, payment plans, credits and payment history
 - schedule/RSVP
-- documents and Phase 30 waiver/eligibility completion
+- documents and Phase 31 waiver/eligibility completion
 - announcements/messages
 - fundraising links
 - Swag Shop/orders
@@ -197,7 +197,7 @@ At minimum the inventory must cover these Rally26 product families:
 - own profile/correction flow
 - messages under the Phase 25 safety policy
 - storefront/fundraising destinations
-- Phase 30 eligibility status without exposing restricted document contents
+- Phase 31 eligibility status without exposing restricted document contents
 
 **Platform Administrator**
 - platform dashboard
@@ -245,7 +245,7 @@ Financial mutation, payment-provider confirmation, credential/security changes, 
 
 ### 32.5 — Spring Boot API/mobile contract gap analysis
 
-The mobile application uses the same business APIs and authorization service as web. Phase 32 must list every required API change rather than creating an untracked mobile backend.
+The mobile application uses the same business APIs and authorization service as web. Phase 33 must list every required API change rather than creating an untracked mobile backend.
 
 Expected mobile-specific seams to evaluate include:
 
@@ -275,7 +275,7 @@ Produce a mobile-specific threat/privacy review for:
 - notification content shown on lock screens;
 - guardian/athlete household isolation;
 - Phase 25 SafeSport messaging behavior;
-- Phase 30 waiver/document privacy;
+- Phase 31 waiver/document privacy;
 - payment/provider browser returns;
 - Platform Support session boundaries;
 - accessibility across VoiceOver/TalkBack, dynamic type/font scaling, contrast, focus and switch/keyboard navigation where applicable.
@@ -297,11 +297,11 @@ Specify the complete delivery model before production code begins:
 - rollback/update policy, including which changes require a new native binary;
 - implementation sequencing and estimates/slices for the subsequent mobile build phase.
 
-Phase 32 ends with a founder-approved implementation backlog. It does not count as a shipped mobile application.
+Phase 33 ends with a founder-approved implementation backlog. It does not count as a shipped mobile application.
 
 ## UI specification standard for every screen
 
-Every page spec produced in Phase 32 must use the same template:
+Every page spec produced in Phase 33 must use the same template:
 
 ```text
 Screen:
@@ -332,7 +332,7 @@ Acceptance tests:
 
 This makes the planning artifact directly usable as the implementation contract instead of a collection of mockups without behavior definitions.
 
-## Phase 32 acceptance criteria
+## Phase 33 acceptance criteria
 
 1. Every current Rally26 web route/workflow appears in the parity matrix with an explicit mobile disposition.
 2. Every `NATIVE_FULL`/`NATIVE_ADAPTED` screen has phone and tablet/wide UI specifications plus loading/empty/error/offline/authorization states.
@@ -341,10 +341,10 @@ This makes the planning artifact directly usable as the implementation contract 
 5. Deep links and notification destinations cannot bypass current-user authorization checks.
 6. Push is modeled independently from in-app/email/SMS and requires both account policy and device permission where optional.
 7. Mobile local persistence is data-classified; sensitive/high-risk mutations are not silently queued offline.
-8. Existing Phase 25 youth messaging safety, Phase 27 audit/history scoping, Phase 28 preferences, Phase 30 eligibility/privacy, and Phase 31 payment/provider boundaries are represented in the native design.
+8. Existing Phase 25 youth messaging safety, Phase 27 audit/history scoping, Phase 28 preferences, Phase 31 eligibility/privacy, and Phase 32 payment/provider boundaries are represented in the native design.
 9. Android and iOS build/signing/testing/store-release ownership is documented.
 10. The phase produces an approved, slice-by-slice implementation backlog before production mobile development starts.
 
-## Current technology assumptions to re-verify when Phase 32 begins
+## Current technology assumptions to re-verify when Phase 33 begins
 
-At the time this projection was recorded (2026-08-09), current official React Native guidance recommends responsive layouts based on the changing application window, and Expo provides native routing/deep-link, push-notification, Android/iOS build, update, and store-submission tooling. Exact Expo SDK/React Native versions and store requirements are intentionally not pinned in this projection; Phase 32 must re-verify them when implementation planning starts.
+At the time this projection was recorded (2026-08-09), current official React Native guidance recommends responsive layouts based on the changing application window, and Expo provides native routing/deep-link, push-notification, Android/iOS build, update, and store-submission tooling. Exact Expo SDK/React Native versions and store requirements are intentionally not pinned in this projection; Phase 33 must re-verify them when implementation planning starts.

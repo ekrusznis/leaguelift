@@ -168,7 +168,7 @@ export function AuditHistoryPage({
 						</select>
 					</label>
 					<label className="text-sm font-medium text-slate-700 sm:col-span-2">Keyword
-						<input value={draft.keyword} onChange={(event) => setDraft({ ...draft, keyword: event.target.value })} placeholder="Summary, action, actor, team, organization…" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+						<input value={draft.keyword} onChange={(event) => setDraft({ ...draft, keyword: event.target.value })} placeholder="Summary, action, user, team, organization…" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
 					</label>
 					{access?.canFilterUser && (
 						<label className="text-sm font-medium text-slate-700">User
@@ -212,7 +212,7 @@ export function AuditHistoryPage({
 					<div className="overflow-x-auto">
 						<table className="min-w-full divide-y divide-slate-200 text-left text-sm">
 							<thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-								<tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Action / summary</th><th className="px-4 py-3">Result</th><th className="px-4 py-3">Actor</th><th className="px-4 py-3">Scope</th></tr>
+								<tr><th className="px-4 py-3">Date</th><th className="px-4 py-3">Action / summary</th><th className="px-4 py-3">Result</th><th className="px-4 py-3">User</th><th className="px-4 py-3">Scope</th></tr>
 							</thead>
 							<tbody className="divide-y divide-slate-100">
 								{history.data.items.map((item) => (

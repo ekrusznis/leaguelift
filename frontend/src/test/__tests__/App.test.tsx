@@ -23,7 +23,7 @@ describe("App", () => {
 		it("redirects to sign-in when there is no session", async () => {
 			window.history.pushState({}, "", "/app");
 			render(<App />);
-			expect(await screen.findByText(/please sign in to continue/i)).toBeInTheDocument();
+			expect(await screen.findByRole("heading", { name: /welcome back/i })).toBeInTheDocument();
 		});
 
 		describe("once signed in", () => {

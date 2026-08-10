@@ -9,6 +9,7 @@ import com.rally26.dashboard.domain.DashboardRole
 import com.rally26.household.persistence.HouseholdRepository
 import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.persistence.MembershipRepository
+import com.rally26.onboarding.owner.persistence.OwnerOnboardingRepository
 import org.springframework.stereotype.Service
 
 /**
@@ -33,7 +34,11 @@ import org.springframework.stereotype.Service
  *    Admin dashboard (a tournament-only admin).
  * 5. Real `guardian_relationship`, then the interim household_adult email match ->
  *    Parent dashboard.
- * 6. Otherwise -> Athlete dashboard (explicit `role_assignment(PARTICIPANT)` self-link
+ * 6. A real `owner_onboarding` record with no organization yet (Phase 24.6/26 — an
+ *    owner who verified their email but hasn't finished the Organization/Plan/Checkout
+ *    wizard) -> Owner dashboard with a null organizationId, so the frontend routes them
+ *    into `/app/onboarding` instead of the Athlete fallback below.
+ * 7. Otherwise -> Athlete dashboard (explicit `role_assignment(PARTICIPANT)` self-link
  *    if one exists, else the same fallback as before — DESIGN-DOC.md section 4.6: no
  *    general participant-login concept exists, so this remains a deliberate fallback).
  */
@@ -43,6 +48,7 @@ class DashboardContextService(
     private val householdRepository: HouseholdRepository,
     private val roleAssignmentRepository: RoleAssignmentRepository,
     private val guardianRelationshipRepository: GuardianRelationshipRepository,
+    private val ownerOnboardingRepository: OwnerOnboardingRepository,
 ) {
     fun resolve(currentUser: CurrentUser): DashboardContext {
         if (currentUser.platformAdministrator) {
@@ -107,6 +113,11 @@ class DashboardContextService(
         val adult = householdRepository.findActiveAdultByEmail(currentUser.email)
         if (adult != null) {
             return DashboardContext(DashboardRole.PARENT, organizationId = adult.organizationId, householdId = adult.householdId)
+        }
+
+        val ownerOnboarding = ownerOnboardingRepository.findByOwnerUserId(currentUser.userId)
+        if (ownerOnboarding != null) {
+            return DashboardContext(DashboardRole.OWNER, organizationId = ownerOnboarding.organizationId, householdId = null)
         }
 
         return DashboardContext(DashboardRole.ATHLETE, organizationId = null, householdId = null)

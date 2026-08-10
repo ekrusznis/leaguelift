@@ -1,4 +1,5 @@
 import { screen } from "@testing-library/react";
+import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../test/testUtils";
 import { DashboardPage } from "../DashboardPage";
@@ -65,11 +66,17 @@ describe("DashboardPage", () => {
 		expect(await screen.findByRole("heading", { name: /welcome/i })).toBeInTheDocument();
 	});
 
-	it("shows an unauthorized state when Owner context is missing an organizationId", async () => {
+	it("redirects to owner onboarding when Owner context is missing an organizationId", async () => {
 		mockDashboardContext("OWNER", { organizationId: null });
-		renderWithProviders(<DashboardPage />);
+		renderWithProviders(
+			<Routes>
+				<Route path="/app" element={<DashboardPage />} />
+				<Route path="/app/onboarding" element={<div>Onboarding wizard placeholder</div>} />
+			</Routes>,
+			{ route: "/app" },
+		);
 
-		expect(await screen.findByText(/no organization found/i)).toBeInTheDocument();
+		expect(await screen.findByText(/onboarding wizard placeholder/i)).toBeInTheDocument();
 	});
 
 	it("routes to the Tournament Admin dashboard", async () => {
