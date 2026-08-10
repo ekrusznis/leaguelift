@@ -53,3 +53,41 @@ class ScaffoldSportsEngineProviderClient(
         )
     }
 }
+
+@Component
+class ScaffoldTeamSnapProviderClient(
+    private val properties: IntegrationProperties,
+) : SportsDataProviderClient {
+    override fun supports(provider: IntegrationProvider): Boolean = provider == IntegrationProvider.TEAMSNAP
+
+    override fun fetchSnapshot(
+        provider: IntegrationProvider,
+        accessToken: String,
+    ): List<SportsDataExternalRecord> {
+        if (!supports(provider) || !properties.stubMode || !accessToken.startsWith("stub-access-")) {
+            throw ServiceUnavailableException(
+                "TEAMSNAP_CLIENT_NOT_ACTIVATED",
+                "TeamSnap is scaffolded but has not been activated against a registered and verified developer application.",
+            )
+        }
+        return listOf(
+            SportsDataExternalRecord(
+                SportsDataEntityType.ORGANIZATION,
+                "ts-org-1",
+                null,
+                "Rally26 Test Club",
+                mapOf("sport" to "SOCCER"),
+            ),
+            SportsDataExternalRecord(SportsDataEntityType.TEAM, "ts-team-1", "ts-org-1", "12U Coed", mapOf("season" to "2026")),
+            SportsDataExternalRecord(
+                SportsDataEntityType.EVENT,
+                "ts-event-1",
+                "ts-team-1",
+                "League Match",
+                mapOf(
+                    "startAt" to "2026-09-19T15:00:00Z",
+                ),
+            ),
+        )
+    }
+}

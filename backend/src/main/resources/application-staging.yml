@@ -136,6 +136,13 @@ rally26:
         authorization-uri: ${SPORTSENGINE_AUTHORIZATION_URI:}
         token-uri: ${SPORTSENGINE_TOKEN_URI:}
         revocation-uri: ${SPORTSENGINE_REVOCATION_URI:}
+      teamsnap:
+        enabled: ${TEAMSNAP_INTEGRATION_ENABLED:false}
+        client-id: ${TEAMSNAP_CLIENT_ID:}
+        client-secret: ${TEAMSNAP_CLIENT_SECRET:}
+        authorization-uri: ${TEAMSNAP_AUTHORIZATION_URI:}
+        token-uri: ${TEAMSNAP_TOKEN_URI:}
+        revocation-uri: ${TEAMSNAP_REVOCATION_URI:}
 
   # Phase 17 support-case routing. The mailbox is public configuration; real delivery activation is Phase 20.
   support:

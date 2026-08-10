@@ -32,7 +32,6 @@ data class SportsDataOverview(
     val providers: List<IntegrationCatalogItem>,
     val recentRuns: List<com.rally26.integration.sportsdata.domain.SportsDataImportRun>,
     val directProviderImportEnabled: Boolean,
-    val reviewedFileImportAvailable: Boolean,
 )
 
 @Service
@@ -58,7 +57,6 @@ class SportsDataService(
             providers,
             repository.listRuns(organizationId),
             directProviderImportEnabled = false,
-            reviewedFileImportAvailable = true,
         )
     }
 
@@ -69,35 +67,14 @@ class SportsDataService(
         currentUser: CurrentUser,
     ): SportsDataPreview {
         val access = oauthService.accessTokenForOrganizationConnection(organizationId, connectionId, currentUser)
-        if (access.connection.provider != IntegrationProvider.SPORTSENGINE) {
+        if (access.connection.provider !in SUPPORTED_PROVIDERS) {
             throw NotFoundException("SPORTS_DATA_CONNECTION_NOT_FOUND", "The sports-data connection could not be found.")
         }
         val client =
             providerClients.firstOrNull { it.supports(access.connection.provider) }
                 ?: throw ValidationException("This sports-data provider client is not configured.")
         val records = client.fetchSnapshot(access.connection.provider, access.accessToken)
-        return preview(
-            organizationId,
-            connectionId,
-            access.connection.provider,
-            SportsDataSourceMode.OAUTH,
-            records,
-            currentUser,
-        )
-    }
-
-    @Transactional
-    fun previewFile(
-        organizationId: UUID,
-        provider: IntegrationProvider,
-        records: List<SportsDataExternalRecord>,
-        currentUser: CurrentUser,
-    ): SportsDataPreview {
-        membershipService.requireManagerRole(organizationId, currentUser)
-        if (provider !in setOf(IntegrationProvider.GAMECHANGER, IntegrationProvider.MAXPREPS)) {
-            throw ValidationException("Reviewed file previews are available only for partner-pending GameChanger and MaxPreps workflows.")
-        }
-        return preview(organizationId, null, provider, SportsDataSourceMode.FILE_IMPORT, records, currentUser)
+        return preview(organizationId, connectionId, access.connection.provider, records, currentUser)
     }
 
     fun issues(
@@ -118,7 +95,6 @@ class SportsDataService(
         organizationId: UUID,
         connectionId: UUID?,
         provider: IntegrationProvider,
-        sourceMode: SportsDataSourceMode,
         records: List<SportsDataExternalRecord>,
         currentUser: CurrentUser,
     ): SportsDataPreview {
@@ -184,7 +160,7 @@ class SportsDataService(
                 connectionId,
                 provider,
                 IntegrationSyncDirection.READ,
-                if (sourceMode == SportsDataSourceMode.OAUTH) IntegrationSyncTrigger.STUB else IntegrationSyncTrigger.MANUAL,
+                IntegrationSyncTrigger.STUB,
                 "sports-preview:$provider:$previewHash",
                 currentUser,
             )
@@ -194,7 +170,7 @@ class SportsDataService(
                 connectionId,
                 syncRun.id,
                 provider,
-                sourceMode,
+                SportsDataSourceMode.OAUTH,
                 status,
                 records.size,
                 validCount,
@@ -238,11 +214,8 @@ class SportsDataService(
             records.take(100),
             directImportEnabled = false,
             message =
-                if (provider == IntegrationProvider.SPORTSENGINE) {
-                    "Provider records were mapped into a review-only preview. Direct import remains disabled until the official SportsEngine contract is verified."
-                } else {
-                    "The partner-pending file was validated. Use the existing reviewed CSV/ICS workflows; this scaffold does not create a direct provider connection."
-                },
+                "Provider records were mapped into a review-only preview. Direct import remains disabled until Rally26 " +
+                    "has a registered and verified developer application for ${providerDisplayName(provider)}.",
         )
     }
 
@@ -251,6 +224,13 @@ class SportsDataService(
             .getInstance("SHA-256")
             .digest(value.toByteArray())
             .joinToString("") { "%02x".format(it) }
+
+    private fun providerDisplayName(provider: IntegrationProvider): String =
+        when (provider) {
+            IntegrationProvider.SPORTSENGINE -> "SportsEngine"
+            IntegrationProvider.TEAMSNAP -> "TeamSnap"
+            else -> provider.name
+        }
 
     private data class PendingIssue(
         val row: Int,
@@ -262,6 +242,6 @@ class SportsDataService(
     )
 
     private companion object {
-        val SUPPORTED_PROVIDERS = setOf(IntegrationProvider.SPORTSENGINE, IntegrationProvider.GAMECHANGER, IntegrationProvider.MAXPREPS)
+        val SUPPORTED_PROVIDERS = setOf(IntegrationProvider.SPORTSENGINE, IntegrationProvider.TEAMSNAP)
     }
 }

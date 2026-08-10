@@ -29,6 +29,7 @@ class DeterministicStubIntegrationAdapter : IntegrationAuthorizationAdapter {
             IntegrationProvider.GOOGLE_CALENDAR,
             IntegrationProvider.QUICKBOOKS_ONLINE,
             IntegrationProvider.SPORTSENGINE,
+            IntegrationProvider.TEAMSNAP,
         )
 
     override fun supports(provider: IntegrationProvider): Boolean = provider in supported
