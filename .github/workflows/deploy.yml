@@ -86,7 +86,7 @@ jobs:
           strip_components: 2
 
       - name: Write .env and deploy
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ vars.DO_DROPLET_HOST }}
           username: ${{ vars.DO_DROPLET_USER || 'rally26' }}
@@ -136,7 +136,7 @@ jobs:
             docker image prune -f
 
       - name: Health check
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ vars.DO_DROPLET_HOST }}
           username: ${{ vars.DO_DROPLET_USER || 'rally26' }}
