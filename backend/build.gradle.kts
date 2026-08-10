@@ -48,7 +48,7 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
 
     implementation("io.micrometer:micrometer-registry-prometheus")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0")
     implementation(platform("software.amazon.awssdk:bom:2.29.52"))
     implementation("software.amazon.awssdk:s3")
     implementation("software.amazon.awssdk:url-connection-client")
