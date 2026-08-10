@@ -9127,7 +9127,7 @@ paths:
               schema: {$ref: '#/components/schemas/QuickBooksExportPreviewResponse'}
   /organizations/{organizationId}/integrations/sports-data:
     get:
-      summary: Get SportsEngine, GameChanger, and MaxPreps scaffold readiness
+      summary: Get SportsEngine and TeamSnap scaffold readiness
       parameters:
       - $ref: '#/components/parameters/OrganizationIdParam'
       responses:
@@ -9138,29 +9138,13 @@ paths:
               schema: {$ref: '#/components/schemas/SportsDataOverviewResponse'}
   /organizations/{organizationId}/integrations/sports-data/connections/{connectionId}/preview:
     post:
-      summary: Build a review-only preview from a configured SportsEngine adapter
+      summary: Build a review-only preview from a configured SportsEngine or TeamSnap adapter
       parameters:
       - $ref: '#/components/parameters/OrganizationIdParam'
       - name: connectionId
         in: path
         required: true
         schema: {type: string, format: uuid}
-      responses:
-        '200':
-          description: Mapping preview
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/SportsDataPreviewResponse'}
-  /organizations/{organizationId}/integrations/sports-data/file-preview:
-    post:
-      summary: Validate a partner-pending sports-data file payload without importing
-      parameters:
-      - $ref: '#/components/parameters/OrganizationIdParam'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/SportsDataFilePreviewRequest'}
       responses:
         '200':
           description: Mapping preview
@@ -16837,7 +16821,7 @@ components:
 
     IntegrationProvider:
       type: string
-      enum: [GOOGLE_CALENDAR, QUICKBOOKS_ONLINE, SPORTSENGINE, GAMECHANGER, MAXPREPS, ICS_FEED, CSV_IMPORT, STRIPE, PRINTIFY, RESEND, TWILIO,
+      enum: [GOOGLE_CALENDAR, QUICKBOOKS_ONLINE, SPORTSENGINE, TEAMSNAP, ICS_FEED, CSV_IMPORT, STRIPE, PRINTIFY, RESEND, TWILIO,
         DIGITALOCEAN_SPACES, GOOGLE_MAPS]
     IntegrationReadiness:
       type: string
@@ -17280,23 +17264,6 @@ components:
           items: {$ref: '#/components/schemas/QuickBooksMappingValidationResponse'}
         exportAllowed: {type: boolean}
         reason: {type: string}
-    SportsDataExternalRecordRequest:
-      type: object
-      required: [entityType, externalId]
-      properties:
-        entityType: {type: string}
-        externalId: {type: string}
-        externalParentId: {type: string, nullable: true}
-        name: {type: string, nullable: true}
-        payload: {type: object, additionalProperties: {type: string, nullable: true}}
-    SportsDataFilePreviewRequest:
-      type: object
-      required: [provider, records]
-      properties:
-        provider: {type: string, enum: [GAMECHANGER, MAXPREPS]}
-        records:
-          type: array
-          items: {$ref: '#/components/schemas/SportsDataExternalRecordRequest'}
     SportsDataImportRunResponse:
       type: object
       properties:
@@ -17345,7 +17312,6 @@ components:
           type: array
           items: {$ref: '#/components/schemas/SportsDataImportRunResponse'}
         directProviderImportEnabled: {type: boolean}
-        reviewedFileImportAvailable: {type: boolean}
     IntegrationSyncRunResponse:
       type: object
       properties:

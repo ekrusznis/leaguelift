@@ -2,11 +2,13 @@ package com.rally26.team.application
 
 import com.rally26.audit.application.AuditService
 import com.rally26.common.error.ConflictException
+import com.rally26.common.error.FieldError
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.membership.application.MembershipService
 import com.rally26.team.domain.Team
+import com.rally26.team.domain.TeamGenderCategory
 import com.rally26.team.persistence.TeamRepository
 import com.rally26.timezone.application.TimeZoneService
 import org.springframework.dao.DuplicateKeyException
@@ -58,12 +60,15 @@ class TeamService(
         sport: String,
         season: String?,
         contactEmail: String?,
+        ageGroup: String?,
+        genderCategory: TeamGenderCategory?,
+        level: String?,
         currentUser: CurrentUser,
     ): Team {
         membershipService.requireManagerRole(organizationId, currentUser)
         validateContactEmail(contactEmail)
         return try {
-            val team = teamRepository.insert(organizationId, name, sport, season, contactEmail)
+            val team = teamRepository.insert(organizationId, name, sport, season, contactEmail, ageGroup, genderCategory, level)
             auditService.record(
                 actorUserId = currentUser.userId,
                 organizationId = organizationId,
@@ -85,6 +90,9 @@ class TeamService(
         sport: String?,
         season: String?,
         contactEmail: String?,
+        ageGroup: String?,
+        genderCategory: TeamGenderCategory?,
+        level: String?,
         currentUser: CurrentUser,
     ): Team {
         membershipService.requireManagerRole(organizationId, currentUser)
@@ -92,7 +100,7 @@ class TeamService(
             ?: throw NotFoundException("TEAM_NOT_FOUND", "The team could not be found.")
         validateContactEmail(contactEmail)
         return try {
-            teamRepository.update(teamId, organizationId, name, sport, season, contactEmail)
+            teamRepository.update(teamId, organizationId, name, sport, season, contactEmail, ageGroup, genderCategory, level)
             auditService.record(
                 actorUserId = currentUser.userId,
                 organizationId = organizationId,
@@ -147,14 +155,48 @@ class TeamService(
         return teamRepository.findById(teamId, organizationId)!!
     }
 
+    /** Phase 35 (ADR-099): null explicitly clears that color back to Rally26's default brand color — same explicit-set convention as [updateTimezoneOverride]. */
+    @Transactional
+    fun updateColors(
+        organizationId: UUID,
+        teamId: UUID,
+        primaryColor: String?,
+        secondaryColor: String?,
+        currentUser: CurrentUser,
+    ): Team {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        teamRepository.findById(teamId, organizationId)
+            ?: throw NotFoundException("TEAM_NOT_FOUND", "The team could not be found.")
+        requireValidHexColor("primaryColor", primaryColor)
+        requireValidHexColor("secondaryColor", secondaryColor)
+        teamRepository.updateColors(teamId, organizationId, primaryColor, secondaryColor)
+        auditService.record(
+            actorUserId = currentUser.userId,
+            organizationId = organizationId,
+            action = "team.colors_updated",
+            entityType = "team",
+            entityId = teamId,
+        )
+        return teamRepository.findById(teamId, organizationId)!!
+    }
+
+    private fun requireValidHexColor(
+        field: String,
+        value: String?,
+    ) {
+        if (value != null && !Team.HEX_COLOR_PATTERN.matches(value)) {
+            throw ValidationException(
+                "Team colors must be a 6-digit hex value like #0B1F33.",
+                listOf(FieldError(field, "Must be a 6-digit hex color like #0B1F33.")),
+            )
+        }
+    }
+
     private fun validateContactEmail(email: String?) {
         if (email != null && !EMAIL_PATTERN.matches(email)) {
             throw ValidationException(
                 "Contact email is not a valid email address.",
-                listOf(
-                    com.rally26.common.error
-                        .FieldError("contactEmail", "Invalid email format."),
-                ),
+                listOf(FieldError("contactEmail", "Invalid email format.")),
             )
         }
     }

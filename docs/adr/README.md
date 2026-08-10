@@ -333,3 +333,5 @@ Additional, unreserved decisions:
 - ADR-095: Phase 29.4 truthful QuickBooks activation-readiness gates, future approval evidence, and non-misleading UI state (2026-08-09)
 - ADR-096: Phase 29.5 QuickBooks authorization/audit/privacy closeout, Help forward-correction, and operational gate checklist (2026-08-09)
 - ADR-097: Phase 30 QA stabilization and regression fixes across Phases 24-29 — missing frontend module, dropped registration-consent fields, dashboard-routing/React Router gaps, unwrapped Stripe exception, unpersisted auth session (2026-08-10)
+- ADR-098: Phase 34 sports-data integration catalog narrowing — remove MaxPreps/GameChanger (no real developer-API path), add TeamSnap (real OAuth2 API), retire the GameChanger/MaxPreps file-import preview scaffold (2026-08-10)
+- ADR-099: Phase 35 structured team identity and team colors — age group/gender category/level fields, widened team-name uniqueness, resolved team colors with a live preview mockup, wired into the Swag Shop storefront and public team page (2026-08-10)

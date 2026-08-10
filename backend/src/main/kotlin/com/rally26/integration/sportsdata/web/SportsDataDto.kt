@@ -3,7 +3,6 @@ package com.rally26.integration.sportsdata.web
 import com.rally26.integration.core.web.IntegrationCatalogResponse
 import com.rally26.integration.core.web.toResponse
 import com.rally26.integration.sportsdata.application.SportsDataOverview
-import com.rally26.integration.sportsdata.domain.SportsDataEntityType
 import com.rally26.integration.sportsdata.domain.SportsDataExternalRecord
 import com.rally26.integration.sportsdata.domain.SportsDataImportIssue
 import com.rally26.integration.sportsdata.domain.SportsDataImportRun
@@ -15,20 +14,6 @@ data class SportsDataOverviewResponse(
     val providers: List<IntegrationCatalogResponse>,
     val recentRuns: List<SportsDataImportRunResponse>,
     val directProviderImportEnabled: Boolean,
-    val reviewedFileImportAvailable: Boolean,
-)
-
-data class SportsDataExternalRecordRequest(
-    val entityType: String,
-    val externalId: String,
-    val externalParentId: String? = null,
-    val name: String? = null,
-    val payload: Map<String, String?> = emptyMap(),
-)
-
-data class SportsDataFilePreviewRequest(
-    val provider: String,
-    val records: List<SportsDataExternalRecordRequest>,
 )
 
 data class SportsDataExternalRecordResponse(
@@ -80,7 +65,6 @@ fun SportsDataOverview.toResponse() =
         },
         recentRuns.map { it.toResponse() },
         directProviderImportEnabled,
-        reviewedFileImportAvailable,
     )
 
 fun SportsDataImportRun.toResponse() =
@@ -114,18 +98,4 @@ fun SportsDataPreview.toResponse() =
         records.map { it.toResponse() },
         directImportEnabled,
         message,
-    )
-
-fun SportsDataExternalRecordRequest.toDomain() =
-    SportsDataExternalRecord(
-        runCatching {
-            SportsDataEntityType.valueOf(entityType.uppercase())
-        }.getOrElse {
-            throw com.rally26.common.error
-                .ValidationException("Unknown sports-data entity type.")
-        },
-        externalId,
-        externalParentId,
-        name,
-        payload,
     )

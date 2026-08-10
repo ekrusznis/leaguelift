@@ -70,10 +70,12 @@ class TimezoneResolutionIntegrationTest : AbstractIntegrationTest() {
         organizationService.update(organization.id, null, null, null, null, null, owner, timezone = suggested)
 
         // A team with no override: falls all the way through to the organization default.
-        val teamWithoutOverride = teamService.create(organization.id, "Team Without Override", "Soccer", null, null, owner)
+        val teamWithoutOverride =
+            teamService.create(organization.id, "Team Without Override", "Soccer", null, null, null, null, null, owner)
 
         // A team with an explicit override: wins over the organization default.
-        val teamWithOverride = teamService.create(organization.id, "Team With Override", "Soccer", null, null, owner)
+        val teamWithOverride =
+            teamService.create(organization.id, "Team With Override", "Soccer", null, null, null, null, null, owner)
         teamService.updateTimezoneOverride(organization.id, teamWithOverride.id, "America/Los_Angeles", owner)
 
         // A tournament with an explicit override: wins over the organization default when no team is set.

@@ -90,7 +90,7 @@ class AthleteStorefrontOrderIntegrationTest : AbstractIntegrationTest() {
     fun `a confirmed public storefront order attributes the household and grants real family credit`() {
         val owner = registerUser("storefront-owner")
         val organization = createOrganization(owner)
-        val team = teamService.create(organization.id, "Riverside U10", "Soccer", null, null, owner)
+        val team = teamService.create(organization.id, "Riverside U10", "Soccer", null, null, null, null, null, owner)
         val household = householdService.create(organization.id, "The Johnson Family", "sarah@example.com", null, null, owner)
         val participant = participantService.create(organization.id, household.id, "Maya", "Johnson", null, null, owner)
         participantService.assignToTeam(organization.id, participant.id, team.id, null, owner)
@@ -142,7 +142,7 @@ class AthleteStorefrontOrderIntegrationTest : AbstractIntegrationTest() {
     fun `refunding a storefront order reverses the family credit grant`() {
         val owner = registerUser("storefront-refund-owner")
         val organization = createOrganization(owner)
-        val team = teamService.create(organization.id, "Riverside U12", "Soccer", null, null, owner)
+        val team = teamService.create(organization.id, "Riverside U12", "Soccer", null, null, null, null, null, owner)
         val household = householdService.create(organization.id, "The Alvarez Family", "carlos@example.com", null, null, owner)
         val participant = participantService.create(organization.id, household.id, "Diego", "Alvarez", null, null, owner)
         participantService.assignToTeam(organization.id, participant.id, team.id, null, owner)

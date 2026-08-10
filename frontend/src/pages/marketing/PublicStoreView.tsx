@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
@@ -147,7 +147,16 @@ export function PublicStoreView() {
 		<>
 			<Seo title={store.name} description={`Shop ${store.name} on Rally26.`} />
 
-			<section className="bg-navy-950 py-20 sm:py-28">
+			<section
+				className="py-20 sm:py-28"
+				style={
+					{
+						backgroundColor: "var(--team-color-1)",
+						"--team-color-1": store.primaryColor,
+						"--team-color-2": store.secondaryColor,
+					} as CSSProperties
+				}
+			>
 				<PageContainer className="max-w-2xl">
 					<h1 className="text-balance font-heading text-3xl font-extrabold text-white sm:text-4xl">{store.name}</h1>
 
@@ -178,7 +187,12 @@ export function PublicStoreView() {
 											We couldn&rsquo;t start checkout. Please try again.
 										</p>
 									)}
-									<PrimaryButton type="button" onClick={onCheckout} loading={createCheckout.isPending}>
+									<PrimaryButton
+										type="button"
+										onClick={onCheckout}
+										loading={createCheckout.isPending}
+										style={{ backgroundColor: "var(--team-color-2)" }}
+									>
 										Checkout ({totalItems} item{totalItems !== 1 ? "s" : ""})
 									</PrimaryButton>
 								</div>

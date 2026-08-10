@@ -53,8 +53,8 @@ class AuthorizationIsolationIntegrationTest : AbstractIntegrationTest() {
                 OrganizationType.TRAVEL_CLUB,
                 owner,
             )
-        val teamA = teamService.create(organization.id, "Varsity Soccer", "Soccer", "2024", null, owner)
-        val teamB = teamService.create(organization.id, "JV Basketball", "Basketball", "2024", null, owner)
+        val teamA = teamService.create(organization.id, "Varsity Soccer", "Soccer", "2024", null, null, null, null, owner)
+        val teamB = teamService.create(organization.id, "JV Basketball", "Basketball", "2024", null, null, null, null, owner)
 
         authorizationService.grantTeamRole(organization.id, teamA.id, coachA.userId, ResourceRole.TEAM_MANAGER, owner)
 
@@ -85,7 +85,7 @@ class AuthorizationIsolationIntegrationTest : AbstractIntegrationTest() {
                 OrganizationType.RECREATIONAL_LEAGUE,
                 owner,
             )
-        val team = teamService.create(organization.id, "U10 Blue", "Soccer", "2024", null, owner)
+        val team = teamService.create(organization.id, "U10 Blue", "Soccer", "2024", null, null, null, null, owner)
 
         val ownerTeams = coachDashboardService.getTeams(organization.id, owner)
         assertEquals(listOf(team.id), ownerTeams.map { it.teamId })
@@ -105,7 +105,7 @@ class AuthorizationIsolationIntegrationTest : AbstractIntegrationTest() {
                 OrganizationType.RECREATIONAL_LEAGUE,
                 owner,
             )
-        val team = teamService.create(organization.id, "12U AAA", "Baseball", "2024", null, owner)
+        val team = teamService.create(organization.id, "12U AAA", "Baseball", "2024", null, null, null, null, owner)
 
         val platformAdminIdentity = registerUser("platform")
         val platformAdmin =

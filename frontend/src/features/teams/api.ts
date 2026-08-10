@@ -23,6 +23,9 @@ export function useCreateTeam(organizationId: string) {
 					...values,
 					season: values.season || null,
 					contactEmail: values.contactEmail || null,
+					ageGroup: values.ageGroup || null,
+					genderCategory: values.genderCategory || null,
+					level: values.level || null,
 				},
 			}),
 		onSuccess: () => {
@@ -50,6 +53,21 @@ export function useUpdateTeamTimezone(organizationId: string) {
 			apiFetch<Team>(`/organizations/${organizationId}/teams/${teamId}/timezone`, {
 				method: "PUT",
 				body: { timezone },
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: teamsQueryKey(organizationId) });
+		},
+	});
+}
+
+/** Phase 35 (ADR-099): a null color explicitly clears that color back to Rally26's default brand color. */
+export function useUpdateTeamColors(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ teamId, primaryColor, secondaryColor }: { teamId: string; primaryColor: string | null; secondaryColor: string | null }) =>
+			apiFetch<Team>(`/organizations/${organizationId}/teams/${teamId}/colors`, {
+				method: "PATCH",
+				body: { primaryColor, secondaryColor },
 			}),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: teamsQueryKey(organizationId) });

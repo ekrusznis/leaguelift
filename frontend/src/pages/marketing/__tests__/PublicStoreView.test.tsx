@@ -10,6 +10,8 @@ const store: PublicStore = {
 	id: "22222222-2222-2222-2222-222222222222",
 	name: "Spring Store",
 	slug: "spring-store",
+	primaryColor: "#0B1F33",
+	secondaryColor: "#20B26B",
 	products: [
 		{
 			id: "33333333-3333-3333-3333-333333333333",

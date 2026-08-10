@@ -11,6 +11,7 @@ import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.team.domain.Team
+import com.rally26.team.domain.TeamGenderCategory
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
 import com.rally26.timezone.application.TimeZoneService
@@ -64,10 +65,12 @@ class TeamServiceTest {
     fun `create requires manager role`() {
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
         val team = sampleTeam()
-        every { teamRepository.insert(orgId, team.name, team.sport, team.season, team.contactEmail) } returns team
+        every {
+            teamRepository.insert(orgId, team.name, team.sport, team.season, team.contactEmail, null, null, null)
+        } returns team
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 
-        val result = service.create(orgId, team.name, team.sport, team.season, team.contactEmail, currentUser)
+        val result = service.create(orgId, team.name, team.sport, team.season, team.contactEmail, null, null, null, currentUser)
 
         assertEquals(team.id, result.id)
         verify(exactly = 1) { membershipService.requireManagerRole(orgId, currentUser) }
@@ -77,10 +80,12 @@ class TeamServiceTest {
     @Test
     fun `create with duplicate name throws ConflictException`() {
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
-        every { teamRepository.insert(any(), any(), any(), any(), any()) } throws DuplicateKeyException("unique violation")
+        every {
+            teamRepository.insert(any(), any(), any(), any(), any(), any(), any(), any())
+        } throws DuplicateKeyException("unique violation")
 
         assertFailsWith<ConflictException> {
-            service.create(orgId, "Duplicate", "Soccer", null, null, currentUser)
+            service.create(orgId, "Duplicate", "Soccer", null, null, null, null, null, currentUser)
         }
     }
 
@@ -89,8 +94,35 @@ class TeamServiceTest {
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
 
         assertFailsWith<ValidationException> {
-            service.create(orgId, "Team A", "Soccer", null, "not-an-email", currentUser)
+            service.create(orgId, "Team A", "Soccer", null, "not-an-email", null, null, null, currentUser)
         }
+    }
+
+    @Test
+    fun `create passes age group, gender category, and level through to the repository`() {
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        val team = sampleTeam().copy(ageGroup = "12U", genderCategory = TeamGenderCategory.GIRLS, level = "A")
+        every {
+            teamRepository.insert(orgId, team.name, team.sport, team.season, team.contactEmail, "12U", TeamGenderCategory.GIRLS, "A")
+        } returns team
+        every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+
+        val result =
+            service.create(
+                orgId,
+                team.name,
+                team.sport,
+                team.season,
+                team.contactEmail,
+                "12U",
+                TeamGenderCategory.GIRLS,
+                "A",
+                currentUser,
+            )
+
+        assertEquals("12U", result.ageGroup)
+        assertEquals(TeamGenderCategory.GIRLS, result.genderCategory)
+        assertEquals("A", result.level)
     }
 
     @Test
@@ -183,6 +215,60 @@ class TeamServiceTest {
 
         assertFailsWith<NotFoundException> {
             service.updateTimezoneOverride(orgId, UUID.randomUUID(), "America/New_York", currentUser)
+        }
+    }
+
+    @Test
+    fun `updateColors sets both colors and records an audit event`() {
+        val team = sampleTeam()
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { teamRepository.findById(team.id, orgId) } returns team andThen
+            team.copy(primaryColor = "#112233", secondaryColor = "#445566")
+        every { teamRepository.updateColors(team.id, orgId, "#112233", "#445566") } returns 1
+        every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+
+        val result = service.updateColors(orgId, team.id, "#112233", "#445566", currentUser)
+
+        assertEquals("#112233", result.primaryColor)
+        assertEquals("#445566", result.secondaryColor)
+        verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "team.colors_updated", "team", team.id, any()) }
+    }
+
+    @Test
+    fun `updateColors with null explicitly clears back to the Rally26 default brand color`() {
+        val team = sampleTeam().copy(primaryColor = "#112233", secondaryColor = "#445566")
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { teamRepository.findById(team.id, orgId) } returns team andThen
+            team.copy(primaryColor = null, secondaryColor = null)
+        every { teamRepository.updateColors(team.id, orgId, null, null) } returns 1
+        every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+
+        val result = service.updateColors(orgId, team.id, null, null, currentUser)
+
+        assertEquals(null, result.primaryColor)
+        assertEquals(null, result.secondaryColor)
+        assertEquals(Team.DEFAULT_PRIMARY_COLOR, result.resolvedPrimaryColor)
+        assertEquals(Team.DEFAULT_SECONDARY_COLOR, result.resolvedSecondaryColor)
+    }
+
+    @Test
+    fun `updateColors rejects a non-hex color value`() {
+        val team = sampleTeam()
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { teamRepository.findById(team.id, orgId) } returns team
+
+        assertFailsWith<ValidationException> {
+            service.updateColors(orgId, team.id, "navy", null, currentUser)
+        }
+    }
+
+    @Test
+    fun `updateColors throws NotFoundException when team does not exist`() {
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { teamRepository.findById(any(), orgId) } returns null
+
+        assertFailsWith<NotFoundException> {
+            service.updateColors(orgId, UUID.randomUUID(), "#112233", null, currentUser)
         }
     }
 

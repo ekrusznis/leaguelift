@@ -48,7 +48,7 @@ class DeterministicStubIntegrationAdapterTest {
         val second = adapter.exchangeCode(request)
         assertEquals(first.accessToken, second.accessToken)
         assertEquals(listOf("accounting"), first.grantedScopes)
-        assertTrue(!adapter.supports(IntegrationProvider.GAMECHANGER))
+        assertTrue(!adapter.supports(IntegrationProvider.ICS_FEED))
     }
 
     @Test

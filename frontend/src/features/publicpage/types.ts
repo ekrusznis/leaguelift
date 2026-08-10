@@ -24,6 +24,9 @@ export interface PublicPage {
 	updatedAt: string;
 	logo: PublicPageMedia | null;
 	cover: PublicPageMedia | null;
+	/** Phase 35 (ADR-099): resolved (always non-null) team colors for a TEAM page; Rally26 defaults for every other page type. */
+	primaryColor: string;
+	secondaryColor: string;
 }
 
 export interface PublicPagePage {

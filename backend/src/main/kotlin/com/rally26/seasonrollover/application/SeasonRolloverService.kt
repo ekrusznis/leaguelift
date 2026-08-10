@@ -80,6 +80,9 @@ class SeasonRolloverService(
                 sport = preview.sourceTeam.sport,
                 season = normalized.newSeason,
                 contactEmail = preview.sourceTeam.contactEmail,
+                ageGroup = null,
+                genderCategory = null,
+                level = null,
                 currentUser = currentUser,
             )
 

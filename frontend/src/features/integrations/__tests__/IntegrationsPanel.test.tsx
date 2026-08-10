@@ -18,7 +18,7 @@ describe("IntegrationsPanel", () => {
 			if (url.includes("/integrations/catalog")) {
 				return response([
 					{ provider: "QUICKBOOKS_ONLINE", displayName: "QuickBooks Online", category: "ACCOUNTING", ownerType: "ORGANIZATION", authMode: "OAUTH2", supportedAuthModes: ["OAUTH2"], readiness: "NOT_CONFIGURED", adapterMode: "OAUTH_SCAFFOLD", description: "Accounting connection", activationRequirement: "Requires verified credentials.", defaultScopes: [], stub: false, connection: null },
-					{ provider: "GAMECHANGER", displayName: "GameChanger", category: "SPORTS_DATA", ownerType: "ORGANIZATION", authMode: "FILE_IMPORT", supportedAuthModes: ["FILE_IMPORT"], readiness: "PARTNER_PENDING", adapterMode: "PARTNER_PENDING", description: "Partner pending", activationRequirement: "Requires official access.", defaultScopes: [], stub: false, connection: null },
+					{ provider: "TEAMSNAP", displayName: "TeamSnap", category: "SPORTS_DATA", ownerType: "ORGANIZATION", authMode: "FILE_IMPORT", supportedAuthModes: ["FILE_IMPORT"], readiness: "PARTNER_PENDING", adapterMode: "PARTNER_PENDING", description: "Partner pending", activationRequirement: "Requires official access.", defaultScopes: [], stub: false, connection: null },
 				]);
 			}
 			return response([]);

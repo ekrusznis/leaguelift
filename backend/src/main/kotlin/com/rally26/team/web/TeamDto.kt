@@ -19,6 +19,11 @@ data class CreateTeamRequest(
     val season: String? = null,
     @field:Email
     val contactEmail: String? = null,
+    @field:Size(max = 60)
+    val ageGroup: String? = null,
+    val genderCategory: String? = null,
+    @field:Size(max = 60)
+    val level: String? = null,
 )
 
 data class UpdateTeamRequest(
@@ -30,6 +35,11 @@ data class UpdateTeamRequest(
     val season: String? = null,
     @field:Email
     val contactEmail: String? = null,
+    @field:Size(max = 60)
+    val ageGroup: String? = null,
+    val genderCategory: String? = null,
+    @field:Size(max = 60)
+    val level: String? = null,
 )
 
 data class TeamResponse(
@@ -41,6 +51,11 @@ data class TeamResponse(
     val status: String,
     val contactEmail: String?,
     val timezoneOverride: String?,
+    val ageGroup: String?,
+    val genderCategory: String?,
+    val level: String?,
+    val primaryColor: String,
+    val secondaryColor: String,
     val createdAt: Instant,
     val updatedAt: Instant,
 )
@@ -55,6 +70,11 @@ fun Team.toResponse() =
         status = status.name,
         contactEmail = contactEmail,
         timezoneOverride = timezoneOverride,
+        ageGroup = ageGroup,
+        genderCategory = genderCategory?.name,
+        level = level,
+        primaryColor = resolvedPrimaryColor,
+        secondaryColor = resolvedSecondaryColor,
         createdAt = createdAt,
         updatedAt = updatedAt,
     )
@@ -62,6 +82,12 @@ fun Team.toResponse() =
 /** [timezone] null explicitly clears the override back to "inherit organization default." */
 data class UpdateTeamTimezoneRequest(
     val timezone: String? = null,
+)
+
+/** [primaryColor]/[secondaryColor] null explicitly clears that color back to Rally26's default brand color. */
+data class UpdateTeamColorsRequest(
+    val primaryColor: String? = null,
+    val secondaryColor: String? = null,
 )
 
 typealias TeamPageResponse = PageResponse<TeamResponse>

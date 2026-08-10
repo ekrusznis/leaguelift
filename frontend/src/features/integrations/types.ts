@@ -32,8 +32,7 @@ export type IntegrationProvider =
 	| "GOOGLE_CALENDAR"
 	| "QUICKBOOKS_ONLINE"
 	| "SPORTSENGINE"
-	| "GAMECHANGER"
-	| "MAXPREPS"
+	| "TEAMSNAP"
 	| "ICS_FEED"
 	| "CSV_IMPORT"
 	| "STRIPE"
@@ -288,7 +287,7 @@ export interface QuickBooksOverview {
 
 export interface SportsDataImportRun {
 	id: string;
-	provider: "SPORTSENGINE" | "GAMECHANGER" | "MAXPREPS";
+	provider: "SPORTSENGINE" | "TEAMSNAP";
 	sourceMode: "OAUTH" | "API_TOKEN" | "FILE_IMPORT" | "ICS";
 	status: "PREVIEWED" | "READY" | "BLOCKED" | "IMPORTED" | "PARTIAL" | "FAILED";
 	commitAllowed: boolean;
@@ -306,7 +305,6 @@ export interface SportsDataOverview {
 	providers: IntegrationCatalogItem[];
 	recentRuns: SportsDataImportRun[];
 	directProviderImportEnabled: boolean;
-	reviewedFileImportAvailable: boolean;
 }
 
 export interface SportsDataImportIssue {

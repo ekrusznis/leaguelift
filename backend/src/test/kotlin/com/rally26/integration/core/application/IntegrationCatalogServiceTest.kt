@@ -63,7 +63,7 @@ class IntegrationCatalogServiceTest {
     fun `partner pending baseline cannot be promoted by configuration`() {
         val definition =
             quickBooksDefinition().copy(
-                provider = IntegrationProvider.GAMECHANGER,
+                provider = IntegrationProvider.TEAMSNAP,
                 primaryAuthMode = IntegrationAuthMode.FILE_IMPORT,
                 baselineReadiness = IntegrationReadiness.PARTNER_PENDING,
                 adapterMode = IntegrationAdapterMode.PARTNER_PENDING,

@@ -52,4 +52,7 @@ data class PublicStoreResponse(
     val name: String,
     val slug: String,
     val products: List<PublicProductResponse>,
+    /** Phase 35 (ADR-099): resolved (always non-null) team colors — Rally26 defaults when the store has no team or the team has no override. */
+    val primaryColor: String,
+    val secondaryColor: String,
 )

@@ -2,6 +2,8 @@ package com.rally26.store.web
 
 import com.rally26.store.application.ProductService
 import com.rally26.store.application.StoreService
+import com.rally26.team.domain.Team
+import com.rally26.team.persistence.TeamRepository
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController
 class StorePublicController(
     private val storeService: StoreService,
     private val productService: ProductService,
+    private val teamRepository: TeamRepository,
 ) {
     @GetMapping("/{slug}")
     fun getStore(
@@ -37,6 +40,14 @@ class StorePublicController(
                         },
                 )
             }
-        return PublicStoreResponse(store.id, store.name, store.slug, products)
+        val team = store.teamId?.let { teamRepository.findById(it, store.organizationId) }
+        return PublicStoreResponse(
+            store.id,
+            store.name,
+            store.slug,
+            products,
+            primaryColor = team?.resolvedPrimaryColor ?: Team.DEFAULT_PRIMARY_COLOR,
+            secondaryColor = team?.resolvedSecondaryColor ?: Team.DEFAULT_SECONDARY_COLOR,
+        )
     }
 }
