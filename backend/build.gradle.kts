@@ -53,8 +53,8 @@ dependencies {
     implementation("software.amazon.awssdk:s3")
     implementation("software.amazon.awssdk:url-connection-client")
     implementation("com.stripe:stripe-java:29.0.0")
-    implementation("com.google.zxing:core:3.5.3")
-    implementation("com.google.zxing:javase:3.5.3")
+    implementation("com.google.zxing:core:3.5.4")
+    implementation("com.google.zxing:javase:3.5.4")
     implementation("com.github.spullara.mustache.java:compiler:0.9.14")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
