@@ -1,6 +1,6 @@
 # Rally26 Phase 33 — Native Mobile Application Planning & Product Specification
 
-**Status:** Projected / planning-only
+**Status:** Projected / planning-only. **Scaffold kickoff 2026-08-10 (ADR-100), coach screen set 2026-08-10 (ADR-101), real backend integration 2026-08-10 (ADR-102), Parent persona 2026-08-10 (ADR-103):** the `mobile/` module below now exists for real (Expo/TypeScript/Router, rebranded, EAS build profiles, a real ios/android platform-split example) with **two full, backend-wired personas** — Coach and Parent/Guardian — real login for any Rally26 role, secure token storage, and every screen in both personas calling the real Spring Boot API with real loading/error/empty states, toasts, modals, and confirm dialogs. No mock data remains. `typecheck`/`lint` (incl. React Compiler purity rules)/`expo-doctor` all clean — see `mobile/README.md`. This is infrastructure/reference-implementation groundwork only; the planning slices below (§32.0–§32.7) are still not started, and Athlete/Owner persona screens aren't built.
 **Target platforms:** iOS, iPadOS, Android phones, Android tablets, foldables/windowed Android
 **Client:** React Native + Expo + TypeScript
 **Backend:** existing Rally26 Spring Boot API
@@ -37,6 +37,8 @@ Phase 33 must decide and document:
 - analytics/crash/error-reporting boundary consistent with Rally26 privacy rules.
 
 Do not implement the mobile app as a WebView wrapper around the existing Vite application. Individual external/provider-hosted flows may legitimately open secure browser/provider surfaces, but ordinary Rally26 screens are native React Native screens.
+
+**Settled 2026-08-10 (was previously an open implementation-time decision in the bullet list above):** web and native *may* share API contracts, generated TypeScript types, constants, and other platform-neutral code where genuinely reusable — but UI and navigation are implemented natively in both applications, never generated from or wrapping the web DOM tree.
 
 ## Responsive / screen-size-agnostic requirement
 
@@ -297,7 +299,9 @@ Specify the complete delivery model before production code begins:
 - rollback/update policy, including which changes require a new native binary;
 - implementation sequencing and estimates/slices for the subsequent mobile build phase.
 
-Phase 33 ends with a founder-approved implementation backlog. It does not count as a shipped mobile application.
+**Expo/EAS is the assumed tool for cloud builds, credentials, signing, and store-submission workflows** — re-verify current EAS capability against this projection's assumptions when the phase actually begins, since tooling ages.
+
+Phase 33 ends with a founder-approved implementation backlog. It does not count as a shipped mobile application — that is Phase 36 (reserved in `DESIGN-DOC.md` §14.1, scope not yet written), which this backlog directly feeds. Phase 36's mandate is explicit and non-negotiable: it must produce **real, distributable artifacts** — an installable Android APK for direct/testing distribution, an Android AAB for Google Play submission, and a signed iOS IPA for TestFlight/App Store submission — not merely source code that passes CI. A plan that stops at "buildable" without producing these artifacts has not completed Phase 36.
 
 ## UI specification standard for every screen
 
@@ -344,6 +348,7 @@ This makes the planning artifact directly usable as the implementation contract 
 8. Existing Phase 25 youth messaging safety, Phase 27 audit/history scoping, Phase 28 preferences, Phase 31 eligibility/privacy, and Phase 32 payment/provider boundaries are represented in the native design.
 9. Android and iOS build/signing/testing/store-release ownership is documented.
 10. The phase produces an approved, slice-by-slice implementation backlog before production mobile development starts.
+11. The approved backlog explicitly requires Phase 36 to produce real installable Android APK/AAB and signed iOS IPA artifacts, not just CI-green source code.
 
 ## Current technology assumptions to re-verify when Phase 33 begins
 
