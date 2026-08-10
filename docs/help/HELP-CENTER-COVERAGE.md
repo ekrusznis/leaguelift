@@ -1,4 +1,4 @@
-# Rally26 Help Center coverage standard and inventory
+# LeagueLift Help Center coverage standard and inventory
 
 **Status:** Active cross-phase requirement
 **Established:** 2026-08-01
@@ -17,7 +17,7 @@ Articles must be audience-scoped (`PUBLIC`, `OWNER_ADMIN`, `COACH`, `GUARDIAN`, 
 
 ## Pre-pilot completeness gate
 
-Before the Phase 21 production go/no-go, Rally26 must review every reachable route and major action for every persona. The review must verify:
+Before the Phase 21 production go/no-go, LeagueLift must review every reachable route and major action for every persona. The review must verify:
 
 - a user can find the relevant article from `/help` or `/app/help`;
 - setup, normal use, failure recovery, and permission limitations are explained;
@@ -46,7 +46,7 @@ Before the Phase 21 production go/no-go, Rally26 must review every reachable rou
 | Action Center, announcements, notification preferences | All authenticated roles | Task sources, read state, publishing, audiences, email/SMS preferences | Article pending |
 | Help Center and support cases | Public, all authenticated roles, Platform | Search, submit case, case statuses, no live chat/SLA | Starter UI copy exists; article pending |
 | Platform Admin console and support access | Platform | Directories, scoped support sessions, audit, queues, article/case administration | Starter article exists; detailed articles pending |
-| Personal and organization integrations | All authenticated roles, Owner/Admin | Personal vs. organization ownership, connection states, ICS fallback, provider-specific limits, reauthorization/disconnect | **Connection-status article published in V40; Google Calendar and platform-managed-provider articles published in V41; QuickBooks, SportsEngine, GameChanger/MaxPreps, and sync-history articles published in V42** |
+| Personal and organization integrations | All authenticated roles, Owner/Admin | Personal vs. organization ownership, connection states, ICS fallback, provider-specific limits, reauthorization/disconnect | **Connection-status article published in V40; Google Calendar and platform-managed-provider articles published in V41; QuickBooks, SportsEngine, GameChanger/MaxPreps, and sync-history articles published in V42; the QuickBooks owner/admin article is forward-corrected for Rally26 Phase 29 mapping/readiness boundaries in V72** |
 | Platform provider readiness | Platform | Sanitized configuration checks, difference between readiness and live health, failure recovery | **Platform-managed-provider article published in V41 and sync-history/provider-readiness guidance published in V42**; provider-specific live recovery steps remain Phase 20 evidence-backed content |
 | Privacy, security, accessibility, legal pages | Public, all roles | Youth-data boundaries, security expectations, accessibility/support paths | Privacy starter exists; legal review remains a launch gate |
 

@@ -172,14 +172,24 @@ class QuickBooksService(
         connectionId: UUID,
         currentUser: CurrentUser,
     ): List<QuickBooksMappingValidation> {
+        // Authorize the organization/connection pair before reading any saved mapping rows.
+        // This keeps cross-organization connection IDs fail-closed even for internal repository reads.
+        val accounts = listAccounts(organizationId, connectionId, currentUser)
         val diagnostics =
             mappingPolicy.validateMappings(
                 repository.listMappings(connectionId),
-                listAccounts(organizationId, connectionId, currentUser),
+                accounts,
             )
         repository.markMappingValidation(
             connectionId,
             diagnostics.all { it.status in NON_BLOCKING_MAPPING_STATUSES },
+        )
+        auditService.record(
+            currentUser.userId,
+            organizationId,
+            "integration.quickbooks_mappings_revalidated",
+            "integration_connection",
+            connectionId,
         )
         return diagnostics
     }
