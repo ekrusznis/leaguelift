@@ -41,7 +41,10 @@ object QuickBooksContractMapper {
                 QuickBooksAccount(
                     id = account.id.requireContractValue("Account.Id"),
                     name = account.name.requireContractValue("Account.Name"),
+                    fullyQualifiedName = account.fullyQualifiedName?.trim()?.takeIf { it.isNotEmpty() },
                     accountType = account.accountType.requireContractValue("Account.AccountType"),
+                    accountSubType = account.accountSubType?.trim()?.takeIf { it.isNotEmpty() },
+                    classification = account.classification?.trim()?.takeIf { it.isNotEmpty() },
                     active = account.active ?: false,
                 )
             }

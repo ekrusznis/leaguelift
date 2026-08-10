@@ -6,9 +6,15 @@ import com.rally26.integration.quickbooks.domain.QuickBooksConnectionSetting
 import com.rally26.integration.quickbooks.domain.QuickBooksEnvironment
 import com.rally26.integration.quickbooks.domain.QuickBooksExportBatch
 import com.rally26.integration.quickbooks.domain.QuickBooksExportCandidateCounts
+import com.rally26.integration.quickbooks.domain.QuickBooksExportItem
 import com.rally26.integration.quickbooks.domain.QuickBooksExportPolicy
 import com.rally26.integration.quickbooks.domain.QuickBooksExportStatus
+import com.rally26.integration.quickbooks.domain.QuickBooksMappingCompatibility
 import com.rally26.integration.quickbooks.domain.QuickBooksMappingType
+import com.rally26.integration.quickbooks.domain.QuickBooksProviderOperationKind
+import com.rally26.integration.quickbooks.domain.QuickBooksProviderOperationStatus
+import com.rally26.integration.quickbooks.domain.QuickBooksProviderRequestPlan
+import com.rally26.integration.quickbooks.domain.QuickBooksRetryDisposition
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import java.sql.ResultSet
@@ -85,12 +91,20 @@ class QuickBooksRepository(
         mappingType: QuickBooksMappingType,
         accountId: String,
         accountName: String,
+        fullyQualifiedName: String?,
         accountType: String?,
+        accountSubType: String?,
+        compatibility: QuickBooksMappingCompatibility,
+        warningAcknowledged: Boolean,
         userId: UUID,
     ): QuickBooksAccountMapping {
         jdbcClient
             .sql(
-                "update quickbooks_account_mapping set active = false, updated_at = now() where connection_id = :connectionId and mapping_type = :mappingType and active",
+                """
+                update quickbooks_account_mapping
+                set active = false, updated_at = now()
+                where connection_id = :connectionId and mapping_type = :mappingType and active
+                """.trimIndent(),
             ).param("connectionId", connectionId)
             .param("mappingType", mappingType.name)
             .update()
@@ -100,17 +114,23 @@ class QuickBooksRepository(
                 """
                 insert into quickbooks_account_mapping
                     (id, connection_id, mapping_type, external_account_id, external_account_name,
-                     external_account_type, configured_by_user_id)
+                     external_account_fully_qualified_name, external_account_type, external_account_sub_type,
+                     compatibility_at_selection, warning_acknowledged, configured_by_user_id)
                 values
                     (:id, :connectionId, :mappingType, :accountId, :accountName,
-                     :accountType, :userId)
+                     :fullyQualifiedName, :accountType, :accountSubType,
+                     :compatibility, :warningAcknowledged, :userId)
                 """.trimIndent(),
             ).param("id", id)
             .param("connectionId", connectionId)
             .param("mappingType", mappingType.name)
             .param("accountId", accountId.take(200))
             .param("accountName", accountName.take(300))
+            .param("fullyQualifiedName", fullyQualifiedName?.take(500))
             .param("accountType", accountType?.take(100))
+            .param("accountSubType", accountSubType?.take(100))
+            .param("compatibility", compatibility.name)
+            .param("warningAcknowledged", warningAcknowledged)
             .param("userId", userId)
             .update()
         return jdbcClient
@@ -189,6 +209,51 @@ class QuickBooksRepository(
         return requireNotNull(findBatch(id))
     }
 
+    fun findExportItemBySource(
+        batchId: UUID,
+        sourceType: String,
+        sourceId: UUID,
+    ): QuickBooksExportItem? =
+        jdbcClient
+            .sql(
+                "select $EXPORT_ITEM_COLUMNS from quickbooks_export_item " +
+                    "where batch_id = :batchId and source_type = :sourceType and source_id = :sourceId",
+            ).param("batchId", batchId)
+            .param("sourceType", sourceType)
+            .param("sourceId", sourceId)
+            .query(::mapExportItem)
+            .optional()
+            .orElse(null)
+
+    fun insertPlannedExportItem(
+        batchId: UUID,
+        sourceId: UUID,
+        plan: QuickBooksProviderRequestPlan,
+    ): QuickBooksExportItem {
+        val id = UUID.randomUUID()
+        jdbcClient
+            .sql(
+                """
+                insert into quickbooks_export_item
+                    (id, batch_id, source_type, source_id, status, payload_hash, provider_entity_type,
+                     operation_kind, operation_key, intuit_request_id, retry_disposition)
+                values
+                    (:id, :batchId, :sourceType, :sourceId, 'WRITE_DISABLED', :payloadHash, :providerEntityType,
+                     :operationKind, :operationKey, :requestId, 'DO_NOT_RETRY')
+                """.trimIndent(),
+            ).param("id", id)
+            .param("batchId", batchId)
+            .param("sourceType", plan.sourceType)
+            .param("sourceId", sourceId)
+            .param("payloadHash", plan.identity.payloadHash)
+            .param("providerEntityType", plan.providerEntityType)
+            .param("operationKind", plan.operationKind.name)
+            .param("operationKey", plan.identity.operationKey)
+            .param("requestId", plan.identity.intuitRequestId)
+            .update()
+        return requireNotNull(findExportItemBySource(batchId, plan.sourceType, sourceId))
+    }
+
     fun listBatches(
         organizationId: UUID,
         limit: Int = 20,
@@ -248,9 +313,42 @@ class QuickBooksRepository(
         QuickBooksMappingType.valueOf(rs.getString("mapping_type")),
         rs.getString("external_account_id"),
         rs.getString("external_account_name"),
+        rs.getString("external_account_fully_qualified_name"),
         rs.getString("external_account_type"),
+        rs.getString("external_account_sub_type"),
+        QuickBooksMappingCompatibility.valueOf(rs.getString("compatibility_at_selection")),
+        rs.getBoolean("warning_acknowledged"),
         rs.getBoolean("active"),
         rs.getObject("configured_by_user_id", UUID::class.java),
+        rs.getTimestamp("created_at").toInstant(),
+        rs.getTimestamp("updated_at").toInstant(),
+    )
+
+    private fun mapExportItem(
+        rs: ResultSet,
+        rowNum: Int,
+    ) = QuickBooksExportItem(
+        rs.getObject("id", UUID::class.java),
+        rs.getObject("batch_id", UUID::class.java),
+        rs.getString("source_type"),
+        rs.getObject("source_id", UUID::class.java),
+        rs.getString("external_transaction_id"),
+        QuickBooksProviderOperationStatus.valueOf(rs.getString("status")),
+        rs.getString("payload_hash"),
+        rs.getString("provider_entity_type"),
+        rs.getString("operation_kind")?.let(QuickBooksProviderOperationKind::valueOf),
+        rs.getString("operation_key"),
+        rs.getString("intuit_request_id"),
+        rs.getInt("attempt_count"),
+        rs.getObject("last_http_status", Integer::class.java)?.toInt(),
+        rs.getString("last_fault_type"),
+        rs.getString("last_fault_code"),
+        rs.getString("last_intuit_tid"),
+        rs.getString("retry_disposition")?.let(QuickBooksRetryDisposition::valueOf),
+        rs.getTimestamp("retry_not_before")?.toInstant(),
+        rs.getTimestamp("last_attempt_at")?.toInstant(),
+        rs.getString("error_code"),
+        rs.getString("error_message"),
         rs.getTimestamp("created_at").toInstant(),
         rs.getTimestamp("updated_at").toInstant(),
     )
@@ -279,10 +377,16 @@ class QuickBooksRepository(
             "connection_id, realm_id, company_name, environment, export_policy, accounting_basis, default_currency, " +
                 "last_company_read_at, last_accounts_read_at, created_at, updated_at"
         const val MAPPING_COLUMNS =
-            "id, connection_id, mapping_type, external_account_id, external_account_name, external_account_type, active, " +
-                "configured_by_user_id, created_at, updated_at"
+            "id, connection_id, mapping_type, external_account_id, external_account_name, " +
+                "external_account_fully_qualified_name, external_account_type, external_account_sub_type, " +
+                "compatibility_at_selection, warning_acknowledged, active, configured_by_user_id, created_at, updated_at"
         const val BATCH_COLUMNS =
             "id, connection_id, organization_id, sync_run_id, status, period_start, period_end, candidate_count, exported_count, " +
                 "failed_count, requested_by_user_id, created_at, completed_at"
+        const val EXPORT_ITEM_COLUMNS =
+            "id, batch_id, source_type, source_id, external_transaction_id, status, payload_hash, provider_entity_type, " +
+                "operation_kind, operation_key, intuit_request_id, attempt_count, last_http_status, last_fault_type, " +
+                "last_fault_code, last_intuit_tid, retry_disposition, retry_not_before, last_attempt_at, error_code, " +
+                "error_message, created_at, updated_at"
     }
 }

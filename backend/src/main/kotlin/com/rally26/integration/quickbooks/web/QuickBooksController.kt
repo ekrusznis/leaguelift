@@ -25,6 +25,18 @@ class QuickBooksController(
         @AuthenticationPrincipal currentUser: CurrentUser,
     ) = service.overview(organizationId, currentUser).toResponse()
 
+    @GetMapping("/mapping-rules")
+    fun mappingRules(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = service.mappingDefinitions(organizationId, currentUser).map { it.toResponse() }
+
+    @GetMapping("/posting-intents")
+    fun postingIntents(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = service.postingIntentDefinitions(organizationId, currentUser).map { it.toResponse() }
+
     @PostMapping("/connections/{connectionId}/company/refresh")
     fun company(
         @PathVariable organizationId: UUID,
@@ -39,13 +51,36 @@ class QuickBooksController(
         @AuthenticationPrincipal currentUser: CurrentUser,
     ) = service.listAccounts(organizationId, connectionId, currentUser).map { it.toResponse() }
 
+    @GetMapping("/connections/{connectionId}/mapping-options/{mappingType}")
+    fun mappingOptions(
+        @PathVariable organizationId: UUID,
+        @PathVariable connectionId: UUID,
+        @PathVariable mappingType: String,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = service.mappingOptions(organizationId, connectionId, mappingType(mappingType), currentUser).toResponse()
+
+    @GetMapping("/connections/{connectionId}/mappings/validation")
+    fun mappingValidation(
+        @PathVariable organizationId: UUID,
+        @PathVariable connectionId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = service.validateMappings(organizationId, connectionId, currentUser).map { it.toResponse() }
+
     @PutMapping("/connections/{connectionId}/mappings")
     fun mapping(
         @PathVariable organizationId: UUID,
         @PathVariable connectionId: UUID,
         @RequestBody request: UpdateQuickBooksMappingRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ) = service.saveMapping(organizationId, connectionId, mappingType(request.mappingType), request.accountId, currentUser).toResponse()
+    ) = service
+        .saveMapping(
+            organizationId,
+            connectionId,
+            mappingType(request.mappingType),
+            request.accountId,
+            request.acknowledgeWarning,
+            currentUser,
+        ).toResponse()
 
     @PostMapping("/connections/{connectionId}/exports/preview")
     fun preview(

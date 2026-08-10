@@ -8990,6 +8990,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuickBooksOverviewResponse'
+  /organizations/{organizationId}/integrations/quickbooks/mapping-rules:
+    get:
+      summary: List owner-reviewable QuickBooks accounting mapping rules
+      parameters:
+      - $ref: '#/components/parameters/OrganizationIdParam'
+      responses:
+        '200':
+          description: Mapping rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/QuickBooksMappingDefinitionResponse'}
+  /organizations/{organizationId}/integrations/quickbooks/posting-intents:
+    get:
+      summary: List deterministic Rally26-to-QuickBooks posting intent definitions
+      parameters:
+      - $ref: '#/components/parameters/OrganizationIdParam'
+      responses:
+        '200':
+          description: Posting intent definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/QuickBooksPostingIntentDefinitionResponse'}
   /organizations/{organizationId}/integrations/quickbooks/connections/{connectionId}/company/refresh:
     post:
       summary: Read the authorized QuickBooks company through the configured adapter
@@ -9008,7 +9034,7 @@ paths:
                 $ref: '#/components/schemas/QuickBooksConnectionSettingResponse'
   /organizations/{organizationId}/integrations/quickbooks/connections/{connectionId}/accounts:
     get:
-      summary: List active QuickBooks accounts through the configured adapter
+      summary: List QuickBooks chart-of-accounts entries, including inactive entries for revalidation
       parameters:
       - $ref: '#/components/parameters/OrganizationIdParam'
       - name: connectionId
@@ -9023,6 +9049,42 @@ paths:
               schema:
                 type: array
                 items: {$ref: '#/components/schemas/QuickBooksAccountResponse'}
+  /organizations/{organizationId}/integrations/quickbooks/connections/{connectionId}/mapping-options/{mappingType}:
+    get:
+      summary: Rank the owner company chart of accounts for one Rally26 accounting role
+      parameters:
+      - $ref: '#/components/parameters/OrganizationIdParam'
+      - name: connectionId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      - name: mappingType
+        in: path
+        required: true
+        schema: {type: string}
+      responses:
+        '200':
+          description: Mapping options; suggestions never auto-save a mapping
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/QuickBooksMappingOptionsResponse'}
+  /organizations/{organizationId}/integrations/quickbooks/connections/{connectionId}/mappings/validation:
+    get:
+      summary: Revalidate saved QuickBooks mappings against the refreshed chart of accounts
+      parameters:
+      - $ref: '#/components/parameters/OrganizationIdParam'
+      - name: connectionId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Mapping validation results
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/QuickBooksMappingValidationResponse'}
   /organizations/{organizationId}/integrations/quickbooks/connections/{connectionId}/mappings:
     put:
       summary: Save a reviewed QuickBooks chart-of-accounts mapping
@@ -17052,10 +17114,14 @@ components:
         updatedAt: {type: string, format: date-time}
     QuickBooksAccountResponse:
       type: object
+      required: [id, name, accountType, active]
       properties:
         id: {type: string}
         name: {type: string}
+        fullyQualifiedName: {type: string, nullable: true}
         accountType: {type: string}
+        accountSubType: {type: string, nullable: true}
+        classification: {type: string, nullable: true}
         active: {type: boolean}
     QuickBooksAccountMappingResponse:
       type: object
@@ -17064,8 +17130,65 @@ components:
         mappingType: {type: string}
         externalAccountId: {type: string}
         externalAccountName: {type: string}
+        externalAccountFullyQualifiedName: {type: string, nullable: true}
         externalAccountType: {type: string, nullable: true}
+        externalAccountSubType: {type: string, nullable: true}
+        compatibilityAtSelection: {type: string, enum: [RECOMMENDED, ALLOWED_WITH_WARNING]}
+        warningAcknowledged: {type: boolean}
         updatedAt: {type: string, format: date-time}
+    QuickBooksMappingDefinitionResponse:
+      type: object
+      properties:
+        mappingType: {type: string}
+        label: {type: string}
+        description: {type: string}
+        recommendedAccountTypes:
+          type: array
+          items: {type: string}
+        warningAccountTypes:
+          type: array
+          items: {type: string}
+    QuickBooksMappingOptionResponse:
+      type: object
+      properties:
+        account: {$ref: '#/components/schemas/QuickBooksAccountResponse'}
+        compatibility: {type: string, enum: [RECOMMENDED, ALLOWED_WITH_WARNING, BLOCKED]}
+        selectable: {type: boolean}
+        suggested: {type: boolean}
+        reason: {type: string}
+    QuickBooksMappingOptionsResponse:
+      type: object
+      properties:
+        definition: {$ref: '#/components/schemas/QuickBooksMappingDefinitionResponse'}
+        suggestedAccountId: {type: string, nullable: true}
+        accounts:
+          type: array
+          items: {$ref: '#/components/schemas/QuickBooksMappingOptionResponse'}
+    QuickBooksMappingValidationResponse:
+      type: object
+      properties:
+        mappingType: {type: string}
+        mapping: {type: object, allOf: [$ref: '#/components/schemas/QuickBooksAccountMappingResponse'], nullable: true}
+        currentAccount: {type: object, allOf: [$ref: '#/components/schemas/QuickBooksAccountResponse'], nullable: true}
+        status:
+          type: string
+          enum: [MISSING, VALID, VALID_WITH_WARNING, NEEDS_REVIEW, INACTIVE, ACCOUNT_NOT_FOUND, INCOMPATIBLE]
+        message: {type: string}
+    QuickBooksPostingLegDefinitionResponse:
+      type: object
+      properties:
+        side: {type: string, enum: [DEBIT, CREDIT]}
+        mappingType: {type: string}
+    QuickBooksPostingIntentDefinitionResponse:
+      type: object
+      properties:
+        sourceType:
+          type: string
+          enum: [PROGRAM_FEE_ASSESSMENT, PROGRAM_FEE_PAYMENT, MERCHANDISE_SALE, CONTRIBUTION, SPONSORSHIP, REFUND_OR_CORRECTION, PAYOUT_SETTLEMENT]
+        description: {type: string}
+        legs:
+          type: array
+          items: {$ref: '#/components/schemas/QuickBooksPostingLegDefinitionResponse'}
     QuickBooksExportBatchResponse:
       type: object
       properties:
@@ -17082,7 +17205,7 @@ components:
       type: object
       properties:
         catalog: {$ref: '#/components/schemas/IntegrationCatalogResponse'}
-        setting: {$ref: '#/components/schemas/QuickBooksConnectionSettingResponse'}
+        setting: {type: object, allOf: [$ref: '#/components/schemas/QuickBooksConnectionSettingResponse'], nullable: true}
         mappings:
           type: array
           items: {$ref: '#/components/schemas/QuickBooksAccountMappingResponse'}
@@ -17095,8 +17218,14 @@ components:
       type: object
       required: [mappingType, accountId]
       properties:
-        mappingType: {type: string}
+        mappingType:
+          type: string
+          enum: [PROGRAM_FEE_INCOME, SALES_INCOME, CONTRIBUTION_INCOME, SPONSORSHIP_INCOME, REFUNDS, FEES_RECEIVABLE, BANK_CLEARING, PAYOUT_CLEARING]
         accountId: {type: string}
+        acknowledgeWarning:
+          type: boolean
+          default: false
+          description: Required when the chosen account type is allowed only with an accounting warning.
     QuickBooksExportPreviewRequest:
       type: object
       required: [periodStart, periodEnd, idempotencyKey]
@@ -17113,6 +17242,9 @@ components:
         missingMappings:
           type: array
           items: {type: string}
+        mappingDiagnostics:
+          type: array
+          items: {$ref: '#/components/schemas/QuickBooksMappingValidationResponse'}
         exportAllowed: {type: boolean}
         reason: {type: string}
     SportsDataExternalRecordRequest:
