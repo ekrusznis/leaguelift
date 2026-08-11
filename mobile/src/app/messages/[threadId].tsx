@@ -52,7 +52,7 @@ export default function ThreadScreen() {
       {messagesQuery.isLoading && <LoadingState label="Loading conversation…" />}
       {messagesQuery.isError && <ErrorState message="Could not load this conversation." onRetry={() => messagesQuery.refetch()} />}
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.select({ ios: 'padding', android: undefined })}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <FlatList
           data={messagesQuery.data?.items ?? []}
           keyExtractor={(item) => item.message.id}

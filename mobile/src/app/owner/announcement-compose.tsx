@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Button } from '@/components/button';
@@ -51,9 +51,9 @@ export default function OwnerAnnouncementComposeScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScreenHeader title="New Announcement" />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ThemedText type="small" themeColor="textSecondary">
           Audience
         </ThemedText>
@@ -101,7 +101,7 @@ export default function OwnerAnnouncementComposeScreen() {
           Save Draft
         </Button>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

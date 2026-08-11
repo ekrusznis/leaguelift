@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
@@ -85,9 +85,10 @@ export default function SafetyControlsScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <ScreenHeader title="Messaging Safety" />
-      <ScrollView contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ThemedView style={styles.container}>
+        <ScreenHeader title="Messaging Safety" />
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ThemedText type="small" themeColor="textSecondary">
           Record a request to stop staff messaging to your athlete, or all Rally26 messaging for that athlete. Requests are
           retained as safety history.
@@ -219,7 +220,8 @@ export default function SafetyControlsScreen() {
           Lift Restriction
         </Button>
       </Modal>
-    </ThemedView>
+      </ThemedView>
+    </KeyboardAvoidingView>
   );
 }
 

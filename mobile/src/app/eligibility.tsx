@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
@@ -44,27 +44,31 @@ export default function EligibilityScreen() {
   const requirementsQuery = useParticipantEligibilityRequirements(organizationId, participantId ?? null);
 
   return (
-    <ThemedView style={styles.container}>
-      <ScreenHeader title={participantName ? `${participantName}'s Eligibility` : 'Eligibility'} />
-      {requirementsQuery.isLoading && <LoadingState label="Loading eligibility requirements…" />}
-      {requirementsQuery.isError && (
-        <ErrorState message="Could not load eligibility requirements." onRetry={() => requirementsQuery.refetch()} />
-      )}
-      {requirementsQuery.data && requirementsQuery.data.length === 0 && (
-        <EmptyState title="Nothing outstanding" description="No eligibility requirements apply to this athlete's current teams." />
-      )}
-      <View style={styles.list}>
-        {requirementsQuery.data?.map((item) => (
-          <RequirementCard
-            key={item.requirement.id}
-            item={item}
-            organizationId={organizationId}
-            participantId={participantId ?? null}
-            householdId={householdId ?? null}
-          />
-        ))}
-      </View>
-    </ThemedView>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ThemedView style={styles.container}>
+        <ScreenHeader title={participantName ? `${participantName}'s Eligibility` : 'Eligibility'} />
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          {requirementsQuery.isLoading && <LoadingState label="Loading eligibility requirements…" />}
+          {requirementsQuery.isError && (
+            <ErrorState message="Could not load eligibility requirements." onRetry={() => requirementsQuery.refetch()} />
+          )}
+          {requirementsQuery.data && requirementsQuery.data.length === 0 && (
+            <EmptyState title="Nothing outstanding" description="No eligibility requirements apply to this athlete's current teams." />
+          )}
+          <View style={styles.list}>
+            {requirementsQuery.data?.map((item) => (
+              <RequirementCard
+                key={item.requirement.id}
+                item={item}
+                organizationId={organizationId}
+                participantId={participantId ?? null}
+                householdId={householdId ?? null}
+              />
+            ))}
+          </View>
+        </ScrollView>
+      </ThemedView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -256,6 +260,9 @@ function LegalNameSignForm({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   list: {
     paddingHorizontal: Spacing.four,

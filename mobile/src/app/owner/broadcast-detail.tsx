@@ -46,7 +46,7 @@ export default function OwnerBroadcastDetailScreen() {
       {messagesQuery.isLoading && <LoadingState label="Loading messages…" />}
       {messagesQuery.isError && <ErrorState message="Could not load this broadcast." onRetry={() => messagesQuery.refetch()} />}
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.select({ ios: 'padding', android: undefined })}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <FlatList
           data={messagesQuery.data?.items ?? []}
           keyExtractor={(item) => item.id}

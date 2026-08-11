@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
@@ -37,65 +37,67 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.select({ ios: 'padding', android: undefined })}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <ThemedText type="title" style={styles.wordmark}>
-            RALLY<ThemedText type="title" style={[styles.wordmark, styles.wordmarkAccent]}>26</ThemedText>
-          </ThemedText>
-          <ThemedText themeColor="textSecondary" style={styles.subtitle}>
-            Sign in to your account
-          </ThemedText>
-        </View>
-
-        <View style={styles.form}>
-          <View style={styles.field}>
-            <ThemedText type="small" themeColor="textSecondary">
-              Email
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.header}>
+            <ThemedText type="title" style={styles.wordmark}>
+              RALLY<ThemedText type="title" style={[styles.wordmark, styles.wordmarkAccent]}>26</ThemedText>
             </ThemedText>
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              placeholder="you@example.com"
-              placeholderTextColor={theme.textSecondary}
-              style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-            />
-          </View>
-          <View style={styles.field}>
-            <ThemedText type="small" themeColor="textSecondary">
-              Password
+            <ThemedText themeColor="textSecondary" style={styles.subtitle}>
+              Sign in to your account
             </ThemedText>
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoComplete="password"
-              placeholder="••••••••"
-              placeholderTextColor={theme.textSecondary}
-              style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-              onSubmitEditing={onSubmit}
-            />
           </View>
 
-          {error && (
-            <ThemedText style={styles.error} accessibilityRole="alert">
-              {error}
-            </ThemedText>
-          )}
+          <View style={styles.form}>
+            <View style={styles.field}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Email
+              </ThemedText>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                placeholder="you@example.com"
+                placeholderTextColor={theme.textSecondary}
+                style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+              />
+            </View>
+            <View style={styles.field}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Password
+              </ThemedText>
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoComplete="password"
+                placeholder="••••••••"
+                placeholderTextColor={theme.textSecondary}
+                style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+                onSubmitEditing={onSubmit}
+              />
+            </View>
 
-          <Button onPress={onSubmit} disabled={submitting}>
-            {submitting ? 'Signing in…' : 'Sign In'}
-          </Button>
+            {error && (
+              <ThemedText style={styles.error} accessibilityRole="alert">
+                {error}
+              </ThemedText>
+            )}
 
-          <Pressable onPress={() => router.push('/register')} style={styles.registerLink}>
-            <ThemedText type="small" themeColor="textSecondary">
-              Don&rsquo;t have an account? <ThemedText type="small" style={styles.registerLinkAccent}>Create one</ThemedText>
-            </ThemedText>
-          </Pressable>
-        </View>
+            <Button onPress={onSubmit} disabled={submitting}>
+              {submitting ? 'Signing in…' : 'Sign In'}
+            </Button>
+
+            <Pressable onPress={() => router.push('/register')} style={styles.registerLink}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Don&rsquo;t have an account? <ThemedText type="small" style={styles.registerLinkAccent}>Create one</ThemedText>
+              </ThemedText>
+            </Pressable>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -108,6 +110,9 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: Spacing.five,
     justifyContent: 'center',
     gap: Spacing.six,
