@@ -1,7 +1,9 @@
 package com.rally26.eligibility.web
 
+import com.rally26.eligibility.domain.AcceptanceMethod
 import com.rally26.eligibility.domain.ClearanceStatus
 import com.rally26.eligibility.domain.EligibilityClearance
+import com.rally26.eligibility.domain.EligibilityEvidence
 import com.rally26.eligibility.domain.EligibilityRequirement
 import com.rally26.eligibility.domain.EvidenceClassification
 import com.rally26.eligibility.domain.ExpirationRule
@@ -119,4 +121,41 @@ fun rosterPendingResponse(
     status = ClearanceStatus.ROSTER_PENDING.name,
     unmetRequirementCount = 0,
     computedAt = null,
+)
+
+data class EligibilityEvidenceResponse(
+    val id: UUID,
+    val requirementId: UUID,
+    val classification: String,
+    val acceptanceMethod: String,
+    val enteredLegalName: String?,
+    val documentAssetId: UUID?,
+    val status: String,
+    val acceptedAt: Instant,
+    val expiresAt: Instant?,
+)
+
+fun EligibilityEvidence.toResponse() =
+    EligibilityEvidenceResponse(
+        id = id,
+        requirementId = requirementId,
+        classification = classification.name,
+        acceptanceMethod = acceptanceMethod.name,
+        enteredLegalName = enteredLegalName,
+        documentAssetId = documentAssetId,
+        status = status.name,
+        acceptedAt = acceptedAt,
+        expiresAt = expiresAt,
+    )
+
+/** One requirement paired with the caller's current evidence status for it, if any — what a guardian/athlete-self sees. */
+data class ParticipantRequirementResponse(
+    val requirement: EligibilityRequirementResponse,
+    val evidence: EligibilityEvidenceResponse?,
+)
+
+data class SubmitGuardianEvidenceRequest(
+    @field:NotNull val acceptanceMethod: AcceptanceMethod,
+    @field:Size(max = 200) val enteredLegalName: String? = null,
+    val documentAssetId: UUID? = null,
 )

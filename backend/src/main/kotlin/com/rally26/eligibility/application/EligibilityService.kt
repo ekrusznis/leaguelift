@@ -3,6 +3,7 @@ package com.rally26.eligibility.application
 import com.rally26.audit.application.AuditService
 import com.rally26.authorization.application.AuthorizationService
 import com.rally26.authorization.domain.Capabilities
+import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
@@ -345,6 +346,136 @@ class EligibilityService(
     ): List<EligibilityClearance> {
         authorizationService.requireTeamCapability(organizationId, teamId, currentUser, Capabilities.TEAM_ELIGIBILITY_VIEW)
         return clearanceRepository.listForTeam(teamId, organizationId, statusFilter)
+    }
+
+    // --- Guardian/athlete-self facing (slice 31.2) -----------------------------------
+
+    private fun requireParticipantAccess(
+        organizationId: UUID,
+        participantId: UUID,
+        currentUser: CurrentUser,
+    ) {
+        val participant =
+            participantRepository.findById(participantId, organizationId)
+                ?: throw NotFoundException("PARTICIPANT_NOT_FOUND", "The participant could not be found.")
+        val staffAccess = membershipService.hasManagerRole(organizationId, currentUser)
+        val guardianAccess = authorizationService.hasGuardianRelationship(organizationId, participant.householdId, currentUser)
+        val athleteAccess =
+            authorizationService.hasParticipantCapability(currentUser, participantId, Capabilities.ATHLETE_PROFILE_VIEW)
+        if (!staffAccess && !guardianAccess && !athleteAccess) {
+            throw ForbiddenException("ELIGIBILITY_ACCESS_DENIED", "You do not have access to this participant's eligibility records.")
+        }
+    }
+
+    /**
+     * Every requirement applicable to any of [participantId]'s currently active team
+     * assignments, paired with the current evidence status (or null — no evidence
+     * submitted yet). This is a guardian/athlete-self/staff read, never staff-only, so
+     * a guardian can actually see what's outstanding for their own athlete.
+     */
+    fun listRequirementsForParticipant(
+        organizationId: UUID,
+        participantId: UUID,
+        currentUser: CurrentUser,
+    ): List<Pair<EligibilityRequirement, EligibilityEvidence?>> {
+        requireParticipantAccess(organizationId, participantId, currentUser)
+        val teamIds = participantRepository.listTeamAssignments(participantId, organizationId).map { it.teamId }.toSet()
+        val teams = teamIds.mapNotNull { teamRepository.findById(it, organizationId) }
+        val applicable =
+            teams
+                .flatMap { team ->
+                    requirementRepository
+                        .listActiveForScope(organizationId, team.id)
+                        .filter { it.sport == null || it.sport.equals(team.sport, ignoreCase = true) }
+                        .filter { it.season == null || it.season.equals(team.season, ignoreCase = true) }
+                }.distinctBy { it.requirementGroupId }
+        return applicable.map { requirement ->
+            requirement to
+                evidenceRepository.findActiveForRequirement(participantId, requirement.id, organizationId)
+        }
+    }
+
+    /**
+     * A guardian's own e-sign acknowledgment/legal-name-signature submission, or a
+     * guardian/athlete-self file upload (the [documentAssetId] must already be a READY
+     * asset uploaded through the existing media pipeline — see
+     * MediaEntityAccessService's PARTICIPANT+DOCUMENT slot, widened for this slice).
+     * Staff-reviewed external evidence and provider-imported evidence go through
+     * [recordEvidence] directly instead — this method is deliberately guardian/athlete-
+     * only, never callable with STAFF_MANUAL_VERIFICATION or EXTERNAL_IMPORT.
+     */
+    @Transactional
+    fun submitGuardianEvidence(
+        organizationId: UUID,
+        participantId: UUID,
+        requirementId: UUID,
+        acceptanceMethod: AcceptanceMethod,
+        enteredLegalName: String?,
+        documentAssetId: UUID?,
+        ipAddress: String?,
+        userAgent: String?,
+        currentUser: CurrentUser,
+    ): EligibilityEvidence {
+        if (acceptanceMethod == AcceptanceMethod.STAFF_MANUAL_VERIFICATION || acceptanceMethod == AcceptanceMethod.EXTERNAL_IMPORT) {
+            throw ValidationException("Guardians cannot submit $acceptanceMethod evidence directly.")
+        }
+        val participant =
+            participantRepository.findById(participantId, organizationId)
+                ?: throw NotFoundException("PARTICIPANT_NOT_FOUND", "The participant could not be found.")
+        val requirement =
+            requirementRepository.findById(requirementId, organizationId)
+                ?: throw NotFoundException("REQUIREMENT_NOT_FOUND", "The requirement could not be found.")
+        val guardianAccess = authorizationService.hasGuardianRelationship(organizationId, participant.householdId, currentUser)
+        val athleteAccess =
+            requirement.athleteSelfSignAllowed &&
+                authorizationService.hasParticipantCapability(currentUser, participantId, Capabilities.ATHLETE_PROFILE_UPDATE)
+        if (!guardianAccess && !athleteAccess) {
+            throw ForbiddenException("ELIGIBILITY_SUBMISSION_DENIED", "You cannot submit evidence for this participant.")
+        }
+        if (acceptanceMethod == AcceptanceMethod.FILE_UPLOAD && documentAssetId == null) {
+            throw ValidationException("documentAssetId is required for a FILE_UPLOAD submission.")
+        }
+        val expiresAt =
+            when (requirement.expirationRule) {
+                ExpirationRule.FIXED_DAYS_FROM_ACCEPTANCE ->
+                    Instant.now().plusSeconds((requirement.expirationDays ?: 0) * 86_400L)
+                // SEASON_END/ORG_CONFIGURED resolution is a later slice's concern once a
+                // season-calendar concept exists to resolve against.
+                else -> null
+            }
+        val evidence =
+            recordEvidence(
+                organizationId = organizationId,
+                participantId = participantId,
+                requirementId = requirementId,
+                // §30.4's classification tiers (VERIFIED_EXTERNAL_DOCUMENT etc.) are
+                // scoped for *imported* evidence strength — a native guardian
+                // e-sign/upload is the strongest form Rally26 has (a legally binding
+                // action taken directly in-app), so MANUALLY_VERIFIED is the closest
+                // fit rather than adding a redundant NATIVE_* tier this slice.
+                classification = EvidenceClassification.MANUALLY_VERIFIED,
+                acceptanceMethod = acceptanceMethod,
+                signerUserId = currentUser.userId,
+                signerGuardianRelationship = if (guardianAccess) "Guardian" else "Athlete (self)",
+                enteredLegalName = enteredLegalName,
+                documentAssetId = documentAssetId,
+                provider = null,
+                externalIdentifiersJson = null,
+                contentHash = null,
+                expiresAt = expiresAt,
+                ipAddress = ipAddress,
+                userAgent = userAgent,
+                reviewedByUserId = null,
+                reviewNote = null,
+                currentUser = currentUser,
+            )
+        // Recompute every active team assignment this requirement could affect, not
+        // just one — a household-wide/org-wide requirement can satisfy the same
+        // participant's clearance on more than one team at once.
+        participantRepository.listTeamAssignments(participantId, organizationId).forEach { assignment ->
+            recomputeClearance(organizationId, participantId, assignment.teamId)
+        }
+        return evidence
     }
 
     private fun sha256Hex(value: String): String =

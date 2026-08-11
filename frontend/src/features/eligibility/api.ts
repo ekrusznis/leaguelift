@@ -1,0 +1,78 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "../../lib/apiClient";
+import type {
+	CreateEligibilityRequirementRequest,
+	CreateEligibilityRequirementVersionRequest,
+	EligibilityRequirement,
+	ParticipantRequirement,
+	SubmitGuardianEvidenceRequest,
+} from "./types";
+
+const organizationRequirementsQueryKey = (organizationId: string) =>
+	["organizations", organizationId, "eligibility", "requirements"] as const;
+const participantRequirementsQueryKey = (organizationId: string, participantId: string) =>
+	["organizations", organizationId, "eligibility", "participants", participantId, "requirements"] as const;
+
+export function useEligibilityRequirements(organizationId: string) {
+	return useQuery({
+		queryKey: organizationRequirementsQueryKey(organizationId),
+		queryFn: () => apiFetch<EligibilityRequirement[]>(`/organizations/${organizationId}/eligibility/requirements`),
+		enabled: !!organizationId,
+	});
+}
+
+export function useCreateEligibilityRequirement(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (values: CreateEligibilityRequirementRequest) =>
+			apiFetch<EligibilityRequirement>(`/organizations/${organizationId}/eligibility/requirements`, {
+				method: "POST",
+				body: values,
+			}),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: organizationRequirementsQueryKey(organizationId) }),
+	});
+}
+
+export function useCreateEligibilityRequirementVersion(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ requirementId, ...values }: CreateEligibilityRequirementVersionRequest & { requirementId: string }) =>
+			apiFetch<EligibilityRequirement>(`/organizations/${organizationId}/eligibility/requirements/${requirementId}/versions`, {
+				method: "POST",
+				body: values,
+			}),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: organizationRequirementsQueryKey(organizationId) }),
+	});
+}
+
+export function useArchiveEligibilityRequirement(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (requirementId: string) =>
+			apiFetch(`/organizations/${organizationId}/eligibility/requirements/${requirementId}/archive`, { method: "POST" }),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: organizationRequirementsQueryKey(organizationId) }),
+	});
+}
+
+export function useParticipantEligibilityRequirements(organizationId: string, participantId: string) {
+	return useQuery({
+		queryKey: participantRequirementsQueryKey(organizationId, participantId),
+		queryFn: () =>
+			apiFetch<ParticipantRequirement[]>(
+				`/organizations/${organizationId}/eligibility/participants/${participantId}/requirements`,
+			),
+		enabled: !!organizationId && !!participantId,
+	});
+}
+
+export function useSubmitGuardianEvidence(organizationId: string, participantId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ requirementId, ...values }: SubmitGuardianEvidenceRequest & { requirementId: string }) =>
+			apiFetch(
+				`/organizations/${organizationId}/eligibility/participants/${participantId}/requirements/${requirementId}/evidence`,
+				{ method: "POST", body: values },
+			),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: participantRequirementsQueryKey(organizationId, participantId) }),
+	});
+}

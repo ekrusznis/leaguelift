@@ -15,6 +15,7 @@ import { CreditMarkupSettingsPanel } from "../features/credit/CreditMarkupSettin
 import { ReconciliationPanel } from "../features/reconciliation/ReconciliationPanel";
 import { OrganizationCorrectionReviewPanel } from "../features/profileCorrections/OrganizationCorrectionReviewPanel";
 import { EventListPanel } from "../features/events/EventListPanel";
+import { EligibilityRequirementList } from "../features/eligibility/EligibilityRequirementList";
 import { FeeTemplateList } from "../features/fees/FeeTemplateList";
 import { CampaignList } from "../features/fundraising/CampaignList";
 import { HouseholdList } from "../features/households/HouseholdList";
@@ -53,6 +54,7 @@ const SECTION_LABELS: Array<{ id: OrganizationSection; label: string }> = [
 	{ id: "sponsorships", label: "Sponsorships" },
 	{ id: "reports", label: "Reports" },
 	{ id: "documents", label: "Documents" },
+	{ id: "eligibility", label: "Eligibility & Waivers" },
 	{ id: "members", label: "Members" },
 	{ id: "integrations", label: "Integrations" },
 	{ id: "settings", label: "Settings" },
@@ -97,6 +99,7 @@ export function OrganizationDetailPage() {
 	const canManageMembers = isPlatformSupportMode || hasCapability(contexts.data, Capabilities.ORG_MEMBERS_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id });
 	const canManagePayouts = isPlatformSupportMode || hasCapability(contexts.data, Capabilities.ORG_PAYOUT_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id });
 	const canViewReports = isPlatformSupportMode || hasCapability(contexts.data, Capabilities.ORG_REPORT_VIEW, { contextType: "ORGANIZATION", resourceId: organization.id });
+	const canManageEligibility = isPlatformSupportMode || hasCapability(contexts.data, Capabilities.ORG_ELIGIBILITY_MANAGE, { contextType: "ORGANIZATION", resourceId: organization.id }) || canManageOrganization;
 
 	const visibleSections = SECTION_LABELS.filter(({ id }) => {
 		if (id === "overview") return true;
@@ -105,6 +108,7 @@ export function OrganizationDetailPage() {
 		if (id === "tournaments") return canManageTournaments;
 		if (id === "events") return canReadEvents || canManageEvents;
 		if (id === "fees" || id === "reports") return canViewReports || canManageOrganization;
+		if (id === "eligibility") return canManageEligibility;
 		if (id === "members") return canManageMembers;
 		if (id === "integrations") return canManageOrganization;
 		if (id === "settings") return canManageOrganization || canManagePayouts;
@@ -243,6 +247,12 @@ function OrganizationSectionContent({
 			return <Section title="Reports"><OrganizationReportsPanel organizationId={organization.id} /></Section>;
 		case "documents":
 			return <Section title="Documents"><OrganizationDocumentsPanel organizationId={organization.id} /></Section>;
+		case "eligibility":
+			return (
+				<Section title="Eligibility & Waivers" description="Define the waivers, acknowledgments, and documents guardians must complete before an athlete is roster-eligible.">
+					<EligibilityRequirementList organizationId={organization.id} />
+				</Section>
+			);
 		case "members":
 			return <Section title="Members & Invitations"><InvitationsPanel organizationId={organization.id} /></Section>;
 		case "integrations":

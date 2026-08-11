@@ -190,7 +190,13 @@ class MediaEntityAccessService(
                     organizationId,
                     entityType,
                     entityId,
-                    setOf(MediaUsageSlot.PROFILE_PHOTO),
+                    // DOCUMENT added Phase 31 slice 31.2: a guardian (or the athlete
+                    // themselves, when a requirement allows self-sign) uploading
+                    // eligibility/waiver evidence reuses this exact same
+                    // guardian-relationship/athlete-self check — no new access-control
+                    // path needed for what's still fundamentally "can this person act on
+                    // this participant's private files."
+                    setOf(MediaUsageSlot.PROFILE_PHOTO, MediaUsageSlot.DOCUMENT),
                     Visibility.HOUSEHOLD_PRIVATE,
                 )
             }

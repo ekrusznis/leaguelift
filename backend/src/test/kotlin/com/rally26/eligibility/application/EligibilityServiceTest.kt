@@ -2,6 +2,8 @@ package com.rally26.eligibility.application
 
 import com.rally26.audit.application.AuditService
 import com.rally26.authorization.application.AuthorizationService
+import com.rally26.authorization.domain.Capabilities
+import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
@@ -23,6 +25,7 @@ import com.rally26.membership.application.MembershipService
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.participant.domain.Participant
 import com.rally26.participant.domain.ParticipantStatus
+import com.rally26.participant.domain.ParticipantTeamAssignment
 import com.rally26.participant.persistence.ParticipantRepository
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
@@ -436,6 +439,171 @@ class EligibilityServiceTest {
             service.recomputeClearance(organizationId, participantId, teamId)
         }
     }
+
+    // --- listRequirementsForParticipant (slice 31.2) ---
+
+    @Test
+    fun `listRequirementsForParticipant denies a caller with no guardian, athlete-self, or staff access`() {
+        every { participantRepository.findById(participantId, organizationId) } returns participant()
+        every { membershipService.hasManagerRole(organizationId, user) } returns false
+        every { authorizationService.hasGuardianRelationship(organizationId, any(), user) } returns false
+        every { authorizationService.hasParticipantCapability(user, participantId, Capabilities.ATHLETE_PROFILE_VIEW) } returns false
+
+        assertFailsWith<ForbiddenException> {
+            service.listRequirementsForParticipant(organizationId, participantId, user)
+        }
+    }
+
+    @Test
+    fun `listRequirementsForParticipant pairs applicable requirements with the participant's current evidence`() {
+        val req = requirement()
+        val assignment = teamAssignment()
+        every { participantRepository.findById(participantId, organizationId) } returns participant()
+        every { membershipService.hasManagerRole(organizationId, user) } returns true
+        every { authorizationService.hasGuardianRelationship(organizationId, any(), user) } returns false
+        every { authorizationService.hasParticipantCapability(user, participantId, Capabilities.ATHLETE_PROFILE_VIEW) } returns false
+        every { participantRepository.listTeamAssignments(participantId, organizationId) } returns listOf(assignment)
+        every { teamRepository.findById(teamId, organizationId) } returns team()
+        every { requirementRepository.listActiveForScope(organizationId, teamId) } returns listOf(req)
+        every { evidenceRepository.findActiveForRequirement(participantId, req.id, organizationId) } returns null
+
+        val result = service.listRequirementsForParticipant(organizationId, participantId, user)
+
+        assertEquals(1, result.size)
+        assertEquals(req.id, result.single().first.id)
+        assertEquals(null, result.single().second)
+    }
+
+    // --- submitGuardianEvidence (slice 31.2) ---
+
+    @Test
+    fun `submitGuardianEvidence rejects staff-only acceptance methods`() {
+        assertFailsWith<ValidationException> {
+            service.submitGuardianEvidence(
+                organizationId,
+                participantId,
+                UUID.randomUUID(),
+                AcceptanceMethod.STAFF_MANUAL_VERIFICATION,
+                null,
+                null,
+                null,
+                null,
+                user,
+            )
+        }
+    }
+
+    @Test
+    fun `submitGuardianEvidence denies a caller with no guardian or athlete-self relationship`() {
+        val req = requirement()
+        every { participantRepository.findById(participantId, organizationId) } returns participant()
+        every { requirementRepository.findById(req.id, organizationId) } returns req
+        every { authorizationService.hasGuardianRelationship(organizationId, any(), user) } returns false
+        every { authorizationService.hasParticipantCapability(user, participantId, Capabilities.ATHLETE_PROFILE_UPDATE) } returns false
+
+        assertFailsWith<ForbiddenException> {
+            service.submitGuardianEvidence(
+                organizationId,
+                participantId,
+                req.id,
+                AcceptanceMethod.ESIGN_LEGAL_NAME,
+                "Dana Smith",
+                null,
+                null,
+                null,
+                user,
+            )
+        }
+    }
+
+    @Test
+    fun `submitGuardianEvidence rejects FILE_UPLOAD without a documentAssetId`() {
+        val req = requirement()
+        every { participantRepository.findById(participantId, organizationId) } returns participant()
+        every { requirementRepository.findById(req.id, organizationId) } returns req
+        every { authorizationService.hasGuardianRelationship(organizationId, any(), user) } returns true
+
+        assertFailsWith<ValidationException> {
+            service.submitGuardianEvidence(
+                organizationId,
+                participantId,
+                req.id,
+                AcceptanceMethod.FILE_UPLOAD,
+                null,
+                null,
+                null,
+                null,
+                user,
+            )
+        }
+    }
+
+    @Test
+    fun `submitGuardianEvidence records evidence and recomputes clearance for every active team assignment`() {
+        val req = requirement()
+        val assignment = teamAssignment()
+        every { participantRepository.findById(participantId, organizationId) } returns participant()
+        every { requirementRepository.findById(req.id, organizationId) } returns req
+        every { authorizationService.hasGuardianRelationship(organizationId, any(), user) } returns true
+        every { evidenceRepository.findActiveForRequirement(participantId, req.id, organizationId) } returns null
+        every {
+            evidenceRepository.insert(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+            )
+        } returns evidence(req.id)
+        every {
+            auditService.record(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } returns Unit
+        every { participantRepository.listTeamAssignments(participantId, organizationId) } returns listOf(assignment)
+        every { teamRepository.findById(teamId, organizationId) } returns team()
+        every { requirementRepository.listActiveForScope(organizationId, teamId) } returns listOf(req)
+        every { clearanceRepository.upsert(organizationId, participantId, teamId, any(), any()) } returns
+            clearance(ClearanceStatus.CLEARED, 0)
+
+        val result =
+            service.submitGuardianEvidence(
+                organizationId,
+                participantId,
+                req.id,
+                AcceptanceMethod.ESIGN_LEGAL_NAME,
+                "Dana Smith",
+                null,
+                "203.0.113.5",
+                "Mozilla/5.0",
+                user,
+            )
+
+        assertEquals(req.id, result.requirementId)
+        verify { clearanceRepository.upsert(organizationId, participantId, teamId, any(), any()) }
+    }
+
+    private fun teamAssignment() =
+        ParticipantTeamAssignment(
+            id = UUID.randomUUID(),
+            participantId = participantId,
+            teamId = teamId,
+            organizationId = organizationId,
+            status = "ACTIVE",
+            joinedAt = LocalDate.of(2026, 1, 1),
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
 
     private fun clearance(
         status: ClearanceStatus,

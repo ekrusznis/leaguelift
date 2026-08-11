@@ -1,8 +1,10 @@
 package com.rally26.eligibility.web
 
 import com.rally26.common.web.CurrentUser
+import com.rally26.common.web.resolveClientIp
 import com.rally26.eligibility.application.EligibilityService
 import com.rally26.eligibility.domain.ClearanceStatus
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -128,4 +130,52 @@ class TeamEligibilityController(
         service.getClearance(organizationId, participantId, teamId, currentUser) // capability check, discard result
         return service.recomputeClearance(organizationId, participantId, teamId).toResponse()
     }
+}
+
+/**
+ * Guardian/athlete-self facing (Phase 31 slice 31.2, DESIGN-DOC.md section 14.1L
+ * §30.3). File-upload evidence is a two-step flow: the caller first uploads through
+ * the existing generic `POST /organizations/{organizationId}/media/uploads` (+
+ * `/confirm`) with `usageSlot: DOCUMENT` and `entityType: PARTICIPANT`/`entityId` set
+ * to this same participant (MediaEntityAccessService's PARTICIPANT resolver, widened
+ * this slice to allow DOCUMENT), then passes the resulting `documentAssetId` here.
+ */
+@RestController
+@RequestMapping("/api/v1/organizations/{organizationId}/eligibility/participants/{participantId}")
+class ParticipantEligibilityController(
+    private val service: EligibilityService,
+) {
+    @GetMapping("/requirements")
+    fun listRequirements(
+        @PathVariable organizationId: UUID,
+        @PathVariable participantId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): List<ParticipantRequirementResponse> =
+        service.listRequirementsForParticipant(organizationId, participantId, currentUser).map { (requirement, evidence) ->
+            ParticipantRequirementResponse(requirement.toResponse(), evidence?.toResponse())
+        }
+
+    @PostMapping("/requirements/{requirementId}/evidence")
+    fun submitEvidence(
+        @PathVariable organizationId: UUID,
+        @PathVariable participantId: UUID,
+        @PathVariable requirementId: UUID,
+        @Valid @RequestBody request: SubmitGuardianEvidenceRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+        httpRequest: HttpServletRequest,
+    ): ResponseEntity<EligibilityEvidenceResponse> =
+        ResponseEntity.status(HttpStatus.CREATED).body(
+            service
+                .submitGuardianEvidence(
+                    organizationId = organizationId,
+                    participantId = participantId,
+                    requirementId = requirementId,
+                    acceptanceMethod = request.acceptanceMethod,
+                    enteredLegalName = request.enteredLegalName,
+                    documentAssetId = request.documentAssetId,
+                    ipAddress = resolveClientIp(httpRequest),
+                    userAgent = httpRequest.getHeader("User-Agent"),
+                    currentUser = currentUser,
+                ).toResponse(),
+        )
 }

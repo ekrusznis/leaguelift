@@ -13,6 +13,7 @@ export type OrganizationSection =
 	| "events"
 	| "reports"
 	| "documents"
+	| "eligibility"
 	| "members"
 	| "integrations"
 	| "settings";

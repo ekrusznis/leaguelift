@@ -17,6 +17,7 @@ export const Capabilities = {
 	ORG_TEAM_MANAGE: "organization.team.manage",
 	ORG_TOURNAMENT_MANAGE: "organization.tournament.manage",
 	ORG_COMMUNICATION_MANAGE: "organization.communication.manage",
+	ORG_ELIGIBILITY_MANAGE: "organization.eligibility.manage",
 
 	TEAM_VIEW: "team.view",
 	TEAM_PAGE_EDIT: "team.page.edit",
@@ -27,6 +28,7 @@ export const Capabilities = {
 	TEAM_STAFF_MANAGE: "team.staff.manage",
 	TEAM_FEE_VIEW: "team.fee.view",
 	TEAM_COMMUNICATION_MANAGE: "team.communication.manage",
+	TEAM_ELIGIBILITY_VIEW: "team.eligibility.view",
 
 	TOURNAMENT_VIEW: "tournament.view",
 	TOURNAMENT_MANAGE: "tournament.manage",
