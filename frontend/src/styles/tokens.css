@@ -13,6 +13,15 @@
  * below; the `gold-*` names are kept only for backward compatibility with existing
  * call sites and may be renamed outright in a future pass.
  */
+/*
+ * Phase 37.5 (ADR-113) — makes Tailwind's `dark:` variant follow Rally26's own
+ * account-level appearance preference (the `.dark` class toggled by
+ * applyAppearance(), features/settings/appearance.ts) instead of Tailwind v4's
+ * default `prefers-color-scheme` media query, which would ignore a user's explicit
+ * LIGHT/DARK choice and only track the OS.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-navy: #0B1F33;
   --color-victory-green: #20B26B;

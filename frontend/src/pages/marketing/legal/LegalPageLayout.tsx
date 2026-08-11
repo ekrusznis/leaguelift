@@ -10,10 +10,10 @@ export function LegalPageLayout({ title, description, children }: { title: strin
 	return (
 		<>
 			<Seo title={title} description={description} />
-			<section className="bg-white py-16 sm:py-20">
+			<section className="bg-white dark:bg-[#111827] py-16 sm:py-20">
 				<PageContainer className="mx-auto max-w-[760px]">
-					<h1 className="font-heading text-3xl font-extrabold text-navy-900">{title}</h1>
-					<p className="mt-2 text-sm text-slate-500">Last updated: {UPDATED}</p>
+					<h1 className="font-heading text-3xl font-extrabold text-navy-900 dark:text-[#f8fafc]">{title}</h1>
+					<p className="mt-2 text-sm text-slate-500 dark:text-[#cbd5e1]">Last updated: {UPDATED}</p>
 
 					<div className="mt-6">
 						<InlineAlert tone="warning" title="This is a working draft, not a published policy.">
@@ -23,7 +23,7 @@ export function LegalPageLayout({ title, description, children }: { title: strin
 						</InlineAlert>
 					</div>
 
-					<div className="mt-8 flex flex-col gap-6 leading-relaxed text-slate-700">{children}</div>
+					<div className="mt-8 flex flex-col gap-6 leading-relaxed text-slate-700 dark:text-[#cbd5e1]">{children}</div>
 				</PageContainer>
 			</section>
 		</>

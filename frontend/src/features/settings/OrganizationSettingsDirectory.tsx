@@ -55,11 +55,11 @@ export function OrganizationSettingsDirectory() {
 	if (organizationIds.size === 0) return null;
 
 	return (
-		<section className="rounded-xl border border-slate-200 bg-white p-5" aria-labelledby="organization-settings-heading">
+		<section className="rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-5" aria-labelledby="organization-settings-heading">
 			<div>
 				<p className="text-sm font-semibold uppercase tracking-wide text-victory-green">Organization controls</p>
-				<h2 id="organization-settings-heading" className="mt-1 font-heading text-xl font-semibold text-navy-900">Organization settings</h2>
-				<p className="mt-1 max-w-3xl text-sm text-slate-600">
+				<h2 id="organization-settings-heading" className="mt-1 font-heading text-xl font-semibold text-navy-900 dark:text-[#f8fafc]">Organization settings</h2>
+				<p className="mt-1 max-w-3xl text-sm text-slate-600 dark:text-[#cbd5e1]">
 					Only organizations you can manage appear here. These links open the existing domain-owned controls; this page does not copy business settings into a parallel settings store.
 				</p>
 			</div>
@@ -103,11 +103,11 @@ function OrganizationSettingsCard({
 	}
 
 	return (
-		<div className="rounded-xl border border-slate-200 bg-ice-white p-4">
+		<div className="rounded-xl border border-slate-200 dark:border-[#334155] bg-ice-white dark:bg-[#0f172a] p-4">
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div>
-					<h3 className="font-heading text-lg font-semibold text-navy-900">{organization.data.name}</h3>
-					<p className="mt-1 text-xs text-slate-500">/{organization.data.slug}</p>
+					<h3 className="font-heading text-lg font-semibold text-navy-900 dark:text-[#f8fafc]">{organization.data.name}</h3>
+					<p className="mt-1 text-xs text-slate-500 dark:text-[#cbd5e1]">/{organization.data.slug}</p>
 					{supportMode && (
 						<p className="mt-2 text-xs font-semibold uppercase tracking-wide text-amber-700">Reasoned Platform Support access</p>
 					)}
@@ -119,9 +119,9 @@ function OrganizationSettingsCard({
 
 			<div className="mt-4 grid gap-3 md:grid-cols-2">
 				{groups.map((group) => (
-					<div key={group.key} className="rounded-lg border border-slate-200 bg-white p-4">
-						<h4 className="font-semibold text-navy-900">{group.title}</h4>
-						<p className="mt-1 text-xs leading-5 text-slate-600">{group.description}</p>
+					<div key={group.key} className="rounded-lg border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-4">
+						<h4 className="font-semibold text-navy-900 dark:text-[#f8fafc]">{group.title}</h4>
+						<p className="mt-1 text-xs leading-5 text-slate-600 dark:text-[#cbd5e1]">{group.description}</p>
 						<div className="mt-3 flex flex-wrap gap-x-3 gap-y-2">
 							{group.links.map((link) => (
 								<Link key={`${group.key}-${link.label}`} to={link.to} className="text-sm font-semibold text-azure-blue hover:underline">
@@ -134,7 +134,7 @@ function OrganizationSettingsCard({
 			</div>
 
 			{canManageOrganization && (
-				<p className="mt-4 text-xs text-slate-500">
+				<p className="mt-4 text-xs text-slate-500 dark:text-[#cbd5e1]">
 					No organization-level notification or event-default toggle is added in this slice unless an existing delivery/event service consumes it. Individual SMS consent and Phase 25 safety requirements remain non-overridable.
 				</p>
 			)}

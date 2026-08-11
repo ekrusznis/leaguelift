@@ -26,15 +26,15 @@ export function OrderList({ organizationId, storeId }: { organizationId: string;
 				{data.items.map((order) => {
 					const isExpanded = expandedOrderId === order.id;
 					return (
-						<li key={order.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+						<li key={order.id} className="rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3">
 							<div className="flex flex-wrap items-center justify-between gap-3">
 								<div className="min-w-0 flex-1">
-									<p className="break-words font-medium text-navy">
+									<p className="break-words font-medium text-navy dark:text-[#f8fafc]">
 										{order.supporterName ?? "Anonymous supporter"}
 										{order.paymentSource === "OFFLINE" && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Recorded offline</span>}
-									{order.status === "REFUNDED" && <span className="ml-2 rounded-full bg-ice-white px-2 py-0.5 text-xs font-medium text-slate-gray">Refunded</span>}
+									{order.status === "REFUNDED" && <span className="ml-2 rounded-full bg-ice-white dark:bg-[#0f172a] px-2 py-0.5 text-xs font-medium text-slate-gray dark:text-[#cbd5e1]">Refunded</span>}
 									</p>
-									<p className="text-sm text-slate-gray">{order.supporterEmail ?? "No email recorded"}</p>
+									<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">{order.supporterEmail ?? "No email recorded"}</p>
 								</div>
 								<div className="flex shrink-0 flex-wrap items-center gap-3">
 									<OrderFulfillmentBadge organizationId={organizationId} orderId={order.id} />
@@ -59,11 +59,11 @@ export function OrderList({ organizationId, storeId }: { organizationId: string;
 
 function OrderFulfillmentBadge({ organizationId, orderId }: { organizationId: string; orderId: string }) {
 	const { data } = useOrderFulfillment(organizationId, orderId);
-	if (!data) return <span className="text-xs text-slate-gray">Fulfillment pending</span>;
+	if (!data) return <span className="text-xs text-slate-gray dark:text-[#cbd5e1]">Fulfillment pending</span>;
 	const critical = data.status === "FAILED" || data.status === "NEEDS_ATTENTION";
 	const positive = data.status === "SHIPPED" || data.status === "DELIVERED";
 	return (
-		<span className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${critical ? "bg-error-red/10 text-error-red" : positive ? "bg-victory-green/10 text-green-700" : "bg-slate-gray/10 text-slate-gray"}`}>
+		<span className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${critical ? "bg-error-red/10 text-error-red" : positive ? "bg-victory-green/10 text-green-700" : "bg-slate-gray/10 text-slate-gray dark:text-[#cbd5e1]"}`}>
 			{formatStatus(data.status)}
 		</span>
 	);

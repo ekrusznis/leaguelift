@@ -30,10 +30,10 @@ export function OrganizationList() {
 				<li key={organization.id}>
 					<Link
 						to={`/app/organizations/${organization.id}`}
-						className="block rounded-lg border border-slate-gray/20 bg-pure-white p-4 shadow-sm hover:border-victory-green"
+						className="block rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-4 shadow-sm hover:border-victory-green"
 					>
-						<p className="font-heading font-semibold text-navy">{organization.name}</p>
-						<p className="text-sm text-slate-gray">/{organization.slug}</p>
+						<p className="font-heading font-semibold text-navy dark:text-[#f8fafc]">{organization.name}</p>
+						<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">/{organization.slug}</p>
 					</Link>
 				</li>
 			))}

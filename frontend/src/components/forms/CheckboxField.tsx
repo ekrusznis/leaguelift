@@ -13,7 +13,7 @@ export const CheckboxField = forwardRef<HTMLInputElement, CheckboxFieldProps>(fu
 	const generatedId = useId();
 	const fieldId = id ?? generatedId;
 	const errorId = error ? `${fieldId}-error` : undefined;
-	const labelClassName = tone === "dark" ? "text-slate-200" : "text-slate-700";
+	const labelClassName = tone === "dark" ? "text-slate-200" : "text-slate-700 dark:text-[#cbd5e1]";
 	const errorClassName = tone === "dark" ? "text-gold-400" : "text-error-600";
 
 	return (
@@ -25,7 +25,7 @@ export const CheckboxField = forwardRef<HTMLInputElement, CheckboxFieldProps>(fu
 					type="checkbox"
 					aria-invalid={!!error}
 					aria-describedby={errorId}
-					className={`mt-0.5 size-5 shrink-0 rounded border-slate-300 text-green-500 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400 ${className}`}
+					className={`mt-0.5 size-5 shrink-0 rounded border-slate-300 dark:border-[#334155] text-green-500 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400 ${className}`}
 					{...props}
 				/>
 				<label htmlFor={fieldId} className={`text-sm leading-relaxed ${labelClassName}`}>

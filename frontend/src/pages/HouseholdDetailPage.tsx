@@ -82,30 +82,30 @@ function AddAdultForm({ organizationId, householdId, onDone }: { organizationId:
 	});
 
 	return (
-		<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-4" noValidate aria-label="Add an adult">
+		<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4" noValidate aria-label="Add an adult">
 			<div className="flex flex-wrap gap-3">
 				<div className="flex flex-col gap-1">
-					<label htmlFor="adult-first" className="text-sm font-medium text-navy">First name <span aria-hidden>*</span></label>
+					<label htmlFor="adult-first" className="text-sm font-medium text-navy dark:text-[#f8fafc]">First name <span aria-hidden>*</span></label>
 					<input id="adult-first" type="text" {...register("firstName")} aria-invalid={!!errors.firstName} aria-describedby={errors.firstName ? "adult-first-error" : undefined} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 					{errors.firstName && <p id="adult-first-error" role="alert" className="text-sm text-error-red">{errors.firstName.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor="adult-last" className="text-sm font-medium text-navy">Last name <span aria-hidden>*</span></label>
+					<label htmlFor="adult-last" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Last name <span aria-hidden>*</span></label>
 					<input id="adult-last" type="text" {...register("lastName")} aria-invalid={!!errors.lastName} aria-describedby={errors.lastName ? "adult-last-error" : undefined} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 					{errors.lastName && <p id="adult-last-error" role="alert" className="text-sm text-error-red">{errors.lastName.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor="adult-email" className="text-sm font-medium text-navy">Email</label>
+					<label htmlFor="adult-email" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Email</label>
 					<input id="adult-email" type="email" {...register("email")} aria-invalid={!!errors.email} aria-describedby={errors.email ? "adult-email-error" : undefined} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 					{errors.email && <p id="adult-email-error" role="alert" className="text-sm text-error-red">{errors.email.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor="adult-rel" className="text-sm font-medium text-navy">Relationship</label>
+					<label htmlFor="adult-rel" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Relationship</label>
 					<input id="adult-rel" type="text" placeholder="e.g. Parent" {...register("relationship")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</div>
 				<div className="flex items-center gap-2 self-end pb-1">
 					<input id="adult-primary" type="checkbox" {...register("isPrimary")} className="h-4 w-4" />
-					<label htmlFor="adult-primary" className="text-sm font-medium text-navy">Primary contact</label>
+					<label htmlFor="adult-primary" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Primary contact</label>
 				</div>
 			</div>
 			<div className="flex justify-end gap-2">
@@ -127,7 +127,7 @@ function AdultsPanel({ organizationId, householdId, canManage, canManagePhotos }
 	return (
 		<section aria-label="Adults" className="flex flex-col gap-3">
 			<div className="flex items-center justify-between">
-				<h2 className="font-heading text-lg font-semibold text-navy">Adults</h2>
+				<h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Adults</h2>
 				{canManage && (
 					<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
 						{showForm ? "Cancel" : "Add adult"}
@@ -145,7 +145,7 @@ function AdultsPanel({ organizationId, householdId, canManage, canManagePhotos }
 					{data.map((adult) => {
 						const canRequestForAdult = canManage || (!!currentUserEmail && adult.email?.trim().toLowerCase() === currentUserEmail);
 						return (
-						<li key={adult.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+						<li key={adult.id} className="rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3">
 							<div className="flex flex-wrap items-center justify-between gap-3">
 							<ProfilePhotoEditor
 								organizationId={organizationId}
@@ -155,11 +155,11 @@ function AdultsPanel({ organizationId, householdId, canManage, canManagePhotos }
 								canEdit={canManage || (canManagePhotos && !!currentUserEmail && adult.email?.trim().toLowerCase() === currentUserEmail)}
 							/>
 							<div className="min-w-0 flex-1">
-								<p className="break-words font-medium text-navy">
+								<p className="break-words font-medium text-navy dark:text-[#f8fafc]">
 									{adult.firstName} {adult.lastName}
-									{adult.isPrimary && <span className="ml-2 rounded-full bg-navy/10 px-2 py-0.5 text-xs text-navy">Primary</span>}
+									{adult.isPrimary && <span className="ml-2 rounded-full bg-navy/10 px-2 py-0.5 text-xs text-navy dark:text-[#f8fafc]">Primary</span>}
 								</p>
-								<p className="text-sm text-slate-gray">
+								<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 									{[adult.relationship, adult.email].filter(Boolean).join(" · ")}
 								</p>
 							</div>
@@ -210,19 +210,19 @@ function ParticipantTeamRow({ organizationId, participant, canManage }: { organi
 
 	return (
 		<div className="mt-2 pl-4 border-l border-slate-gray/20">
-			{isLoading && <p className="text-sm text-slate-gray">Loading teams…</p>}
+			{isLoading && <p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Loading teams…</p>}
 			{assignments && assignments.length > 0 && (
 				<ul className="flex flex-wrap gap-2 mb-2">
 					{assignments.map((a) => {
 						const team = teams?.items.find((t) => t.id === a.teamId);
 						return (
-							<li key={a.id} className="flex items-center gap-1 rounded-full bg-navy/10 px-3 py-1 text-xs text-navy">
+							<li key={a.id} className="flex items-center gap-1 rounded-full bg-navy/10 px-3 py-1 text-xs text-navy dark:text-[#f8fafc]">
 								{team?.name ?? a.teamId}
 								{canManage && (
 									<button
 										type="button"
 										onClick={() => removeFromTeam.mutate(a.teamId)}
-										className="ml-1 text-slate-gray hover:text-error-red"
+										className="ml-1 text-slate-gray dark:text-[#cbd5e1] hover:text-error-red"
 										aria-label={`Remove from ${team?.name ?? "team"}`}
 									>
 										×
@@ -278,20 +278,20 @@ function AddParticipantForm({ organizationId, householdId, onDone }: { organizat
 	});
 
 	return (
-		<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-4" noValidate aria-label="Add a participant">
+		<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4" noValidate aria-label="Add a participant">
 			<div className="flex flex-wrap gap-3">
 				<div className="flex flex-col gap-1">
-					<label htmlFor="par-first" className="text-sm font-medium text-navy">First name <span aria-hidden>*</span></label>
+					<label htmlFor="par-first" className="text-sm font-medium text-navy dark:text-[#f8fafc]">First name <span aria-hidden>*</span></label>
 					<input id="par-first" type="text" {...register("firstName")} aria-invalid={!!errors.firstName} aria-describedby={errors.firstName ? "par-first-error" : undefined} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 					{errors.firstName && <p id="par-first-error" role="alert" className="text-sm text-error-red">{errors.firstName.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor="par-last" className="text-sm font-medium text-navy">Last name <span aria-hidden>*</span></label>
+					<label htmlFor="par-last" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Last name <span aria-hidden>*</span></label>
 					<input id="par-last" type="text" {...register("lastName")} aria-invalid={!!errors.lastName} aria-describedby={errors.lastName ? "par-last-error" : undefined} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 					{errors.lastName && <p id="par-last-error" role="alert" className="text-sm text-error-red">{errors.lastName.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor="par-dob" className="text-sm font-medium text-navy">Date of birth</label>
+					<label htmlFor="par-dob" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Date of birth</label>
 					<input id="par-dob" type="date" {...register("dateOfBirth")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</div>
 			</div>
@@ -313,7 +313,7 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 	return (
 		<section aria-label="Participants" className="flex flex-col gap-3">
 			<div className="flex items-center justify-between">
-				<h2 className="font-heading text-lg font-semibold text-navy">Participants</h2>
+				<h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Participants</h2>
 				{canManage && (
 					<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
 						{showForm ? "Cancel" : "Add participant"}
@@ -329,7 +329,7 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 			{data && data.length > 0 && (
 				<ul className="flex flex-col gap-2" aria-label="Participants list">
 					{data.map((participant) => (
-						<li key={participant.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+						<li key={participant.id} className="rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3">
 							<div className="flex flex-wrap items-center justify-between gap-3">
 								<ProfilePhotoEditor
 									organizationId={organizationId}
@@ -339,11 +339,11 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 									canEdit={canManagePhotos}
 								/>
 								<div className="min-w-0 flex-1">
-									<p className="break-words font-medium text-navy">
+									<p className="break-words font-medium text-navy dark:text-[#f8fafc]">
 										{participant.firstName} {participant.lastName}
 									</p>
 									{participant.dateOfBirth && (
-										<p className="text-sm text-slate-gray">Born {participant.dateOfBirth}</p>
+										<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Born {participant.dateOfBirth}</p>
 									)}
 								</div>
 								<div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -413,15 +413,15 @@ function RecordPaymentForm({ organizationId, householdId, assignmentId, onDone }
 	});
 
 	return (
-		<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-3" noValidate aria-label="Record a payment">
+		<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-3" noValidate aria-label="Record a payment">
 			<div className="flex flex-wrap gap-3">
 				<div className="flex flex-col gap-1">
-					<label htmlFor={`payment-amount-${assignmentId}`} className="text-sm font-medium text-navy">Amount (cents) <span aria-hidden>*</span></label>
+					<label htmlFor={`payment-amount-${assignmentId}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">Amount (cents) <span aria-hidden>*</span></label>
 					<input id={`payment-amount-${assignmentId}`} type="number" min={1} step={1} {...register("amountMinor")} aria-invalid={!!errors.amountMinor} aria-describedby={errors.amountMinor ? `payment-amount-${assignmentId}-error` : undefined} className="min-h-11 w-32 rounded-md border border-slate-gray/30 px-3 py-2" />
 					{errors.amountMinor && <p id={`payment-amount-${assignmentId}-error`} role="alert" className="text-sm text-error-red">{errors.amountMinor.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor={`payment-method-${assignmentId}`} className="text-sm font-medium text-navy">Method</label>
+					<label htmlFor={`payment-method-${assignmentId}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">Method</label>
 					<select id={`payment-method-${assignmentId}`} {...register("method")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 						<option value="CASH">Cash</option>
 						<option value="CHECK">Check</option>
@@ -431,11 +431,11 @@ function RecordPaymentForm({ organizationId, householdId, assignmentId, onDone }
 					</select>
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor={`payment-date-${assignmentId}`} className="text-sm font-medium text-navy">Date paid</label>
+					<label htmlFor={`payment-date-${assignmentId}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">Date paid</label>
 					<input id={`payment-date-${assignmentId}`} type="date" {...register("paidAt")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor={`payment-note-${assignmentId}`} className="text-sm font-medium text-navy">Note</label>
+					<label htmlFor={`payment-note-${assignmentId}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">Note</label>
 					<input id={`payment-note-${assignmentId}`} type="text" {...register("note")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</div>
 			</div>
@@ -465,10 +465,10 @@ function ApplyAdjustmentForm({ organizationId, householdId, assignmentId, onDone
 	});
 
 	return (
-		<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-3" noValidate aria-label="Apply a discount or credit">
+		<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-3" noValidate aria-label="Apply a discount or credit">
 			<div className="flex flex-wrap gap-3">
 				<div className="flex flex-col gap-1">
-					<label htmlFor={`adj-type-${assignmentId}`} className="text-sm font-medium text-navy">Type</label>
+					<label htmlFor={`adj-type-${assignmentId}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">Type</label>
 					<select id={`adj-type-${assignmentId}`} {...register("adjustmentType")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 						<option value="DISCOUNT">Discount</option>
 						<option value="CREDIT">Credit</option>
@@ -476,12 +476,12 @@ function ApplyAdjustmentForm({ organizationId, householdId, assignmentId, onDone
 					</select>
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor={`adj-amount-${assignmentId}`} className="text-sm font-medium text-navy">Amount (cents) <span aria-hidden>*</span></label>
+					<label htmlFor={`adj-amount-${assignmentId}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">Amount (cents) <span aria-hidden>*</span></label>
 					<input id={`adj-amount-${assignmentId}`} type="number" min={1} step={1} {...register("amountMinor")} aria-invalid={!!errors.amountMinor} aria-describedby={errors.amountMinor ? `adj-amount-${assignmentId}-error` : undefined} className="min-h-11 w-32 rounded-md border border-slate-gray/30 px-3 py-2" />
 					{errors.amountMinor && <p id={`adj-amount-${assignmentId}-error`} role="alert" className="text-sm text-error-red">{errors.amountMinor.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor={`adj-reason-${assignmentId}`} className="text-sm font-medium text-navy">Reason</label>
+					<label htmlFor={`adj-reason-${assignmentId}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">Reason</label>
 					<input id={`adj-reason-${assignmentId}`} type="text" {...register("reason")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</div>
 			</div>
@@ -519,20 +519,20 @@ function FeeDetailPanel({ organizationId, householdId, fee, canManage }: { organ
 		<div className="mt-2 flex flex-col gap-3 border-l border-slate-gray/20 pl-4">
 			<dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
 				<div>
-					<dt className="text-slate-gray">Original</dt>
-					<dd className="font-medium text-navy">{formatAmount(fee.originalAmountMinor, fee.currency)}</dd>
+					<dt className="text-slate-gray dark:text-[#cbd5e1]">Original</dt>
+					<dd className="font-medium text-navy dark:text-[#f8fafc]">{formatAmount(fee.originalAmountMinor, fee.currency)}</dd>
 				</div>
 				<div>
-					<dt className="text-slate-gray">Paid</dt>
-					<dd className="font-medium text-navy">{formatAmount(fee.paidMinor, fee.currency)}</dd>
+					<dt className="text-slate-gray dark:text-[#cbd5e1]">Paid</dt>
+					<dd className="font-medium text-navy dark:text-[#f8fafc]">{formatAmount(fee.paidMinor, fee.currency)}</dd>
 				</div>
 				<div>
-					<dt className="text-slate-gray">Adjusted</dt>
-					<dd className="font-medium text-navy">{formatAmount(fee.adjustedMinor, fee.currency)}</dd>
+					<dt className="text-slate-gray dark:text-[#cbd5e1]">Adjusted</dt>
+					<dd className="font-medium text-navy dark:text-[#f8fafc]">{formatAmount(fee.adjustedMinor, fee.currency)}</dd>
 				</div>
 				<div>
-					<dt className="text-slate-gray">Balance</dt>
-					<dd className="font-semibold text-navy">{formatAmount(fee.balanceMinor, fee.currency)}</dd>
+					<dt className="text-slate-gray dark:text-[#cbd5e1]">Balance</dt>
+					<dd className="font-semibold text-navy dark:text-[#f8fafc]">{formatAmount(fee.balanceMinor, fee.currency)}</dd>
 				</div>
 			</dl>
 
@@ -562,14 +562,14 @@ function FeeDetailPanel({ organizationId, householdId, fee, canManage }: { organ
 				canManage={canManage && !locked}
 			/>
 
-			{paymentsLoading && <p className="text-sm text-slate-gray">Loading payment history…</p>}
+			{paymentsLoading && <p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Loading payment history…</p>}
 			{payments && payments.length > 0 && (
 				<div>
-					<h3 className="text-sm font-semibold text-navy">Payments</h3>
+					<h3 className="text-sm font-semibold text-navy dark:text-[#f8fafc]">Payments</h3>
 					<ul className="flex flex-col gap-1">
 						{payments.map((payment) => (
 							<li key={payment.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
-								<span className={`min-w-0 flex-1 break-words ${payment.voidedAt ? "text-slate-gray line-through" : "text-slate-gray"}`}>
+								<span className={`min-w-0 flex-1 break-words ${payment.voidedAt ? "text-slate-gray dark:text-[#cbd5e1] line-through" : "text-slate-gray dark:text-[#cbd5e1]"}`}>
 									{formatAmount(payment.amountMinor, payment.currency)} · {payment.method} · {payment.paidAt}
 									{payment.voidedAt ? ` · voided (${payment.voidReason})` : ""}
 								</span>
@@ -584,14 +584,14 @@ function FeeDetailPanel({ organizationId, householdId, fee, canManage }: { organ
 				</div>
 			)}
 
-			{adjustmentsLoading && <p className="text-sm text-slate-gray">Loading adjustment history…</p>}
+			{adjustmentsLoading && <p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Loading adjustment history…</p>}
 			{adjustments && adjustments.length > 0 && (
 				<div>
-					<h3 className="text-sm font-semibold text-navy">Discounts &amp; Credits</h3>
+					<h3 className="text-sm font-semibold text-navy dark:text-[#f8fafc]">Discounts &amp; Credits</h3>
 					<ul className="flex flex-col gap-1">
 						{adjustments.map((adjustment) => (
 							<li key={adjustment.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
-								<span className={`min-w-0 flex-1 break-words ${adjustment.voidedAt ? "text-slate-gray line-through" : "text-slate-gray"}`}>
+								<span className={`min-w-0 flex-1 break-words ${adjustment.voidedAt ? "text-slate-gray dark:text-[#cbd5e1] line-through" : "text-slate-gray dark:text-[#cbd5e1]"}`}>
 									{formatAmount(adjustment.amountMinor, adjustment.currency)} · {adjustment.adjustmentType}
 									{adjustment.reason ? ` · ${adjustment.reason}` : ""}
 									{adjustment.voidedAt ? ` · voided (${adjustment.voidReason})` : ""}
@@ -641,11 +641,11 @@ function AddFeeAssignmentForm({
 	});
 
 	return (
-		<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-4" noValidate aria-label="Assign a fee">
+		<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4" noValidate aria-label="Assign a fee">
 			<div className="flex flex-wrap gap-3">
 				{templates && templates.items.length > 0 && (
 					<div className="flex flex-col gap-1">
-						<label htmlFor="fee-template" className="text-sm font-medium text-navy">Fee template</label>
+						<label htmlFor="fee-template" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Fee template</label>
 						<select
 							id="fee-template"
 							{...register("feeTemplateId")}
@@ -667,22 +667,22 @@ function AddFeeAssignmentForm({
 					</div>
 				)}
 				<div className="flex flex-col gap-1">
-					<label htmlFor="fee-desc" className="text-sm font-medium text-navy">Description <span aria-hidden>*</span></label>
+					<label htmlFor="fee-desc" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Description <span aria-hidden>*</span></label>
 					<input id="fee-desc" type="text" {...register("description")} aria-invalid={!!errors.description} aria-describedby={errors.description ? "fee-desc-error" : undefined} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 					{errors.description && <p id="fee-desc-error" role="alert" className="text-sm text-error-red">{errors.description.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor="fee-amount" className="text-sm font-medium text-navy">Amount (cents) <span aria-hidden>*</span></label>
+					<label htmlFor="fee-amount" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Amount (cents) <span aria-hidden>*</span></label>
 					<input id="fee-amount" type="number" min={0} step={1} {...register("originalAmountMinor")} aria-invalid={!!errors.originalAmountMinor} aria-describedby={errors.originalAmountMinor ? "fee-amount-error" : undefined} className="min-h-11 w-36 rounded-md border border-slate-gray/30 px-3 py-2" />
 					{errors.originalAmountMinor && <p id="fee-amount-error" role="alert" className="text-sm text-error-red">{errors.originalAmountMinor.message}</p>}
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor="fee-due" className="text-sm font-medium text-navy">Due date</label>
+					<label htmlFor="fee-due" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Due date</label>
 					<input id="fee-due" type="date" {...register("dueDate")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</div>
 				{participants && participants.length > 0 && (
 					<div className="flex flex-col gap-1">
-						<label htmlFor="fee-participant" className="text-sm font-medium text-navy">Participant (optional)</label>
+						<label htmlFor="fee-participant" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Participant (optional)</label>
 						<select id="fee-participant" {...register("participantId")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 							<option value="">Household-wide</option>
 							{participants.map((p) => (
@@ -713,7 +713,7 @@ function FeeAssignmentsPanel({ organizationId, householdId, canManage }: { organ
 	return (
 		<section aria-label="Fee assignments" className="flex flex-col gap-3">
 			<div className="flex items-center justify-between">
-				<h2 className="font-heading text-lg font-semibold text-navy">Fees</h2>
+				<h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Fees</h2>
 				{canManage && (
 					<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
 						{showForm ? "Cancel" : "Add fee"}
@@ -721,8 +721,8 @@ function FeeAssignmentsPanel({ organizationId, householdId, canManage }: { organ
 				)}
 			</div>
 			{data && data.items.length > 0 && (
-				<p className="text-sm text-slate-gray">
-					Household balance: <span className="font-semibold text-navy">{formatAmount(totalBalanceMinor, currency)}</span>
+				<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
+					Household balance: <span className="font-semibold text-navy dark:text-[#f8fafc]">{formatAmount(totalBalanceMinor, currency)}</span>
 				</p>
 			)}
 			{canManage && showForm && (
@@ -738,11 +738,11 @@ function FeeAssignmentsPanel({ organizationId, householdId, canManage }: { organ
 					{data.items.map((fee) => {
 						const participant = participants?.find((p) => p.id === fee.participantId);
 						return (
-							<li key={fee.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+							<li key={fee.id} className="rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3">
 								<div className="flex flex-wrap items-center justify-between gap-3">
 									<div className="min-w-0 flex-1">
-										<p className="break-words font-medium text-navy">{fee.description}</p>
-										<p className="text-sm text-slate-gray">
+										<p className="break-words font-medium text-navy dark:text-[#f8fafc]">{fee.description}</p>
+										<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 											{formatAmount(fee.balanceMinor, fee.currency)} due of {formatAmount(fee.originalAmountMinor, fee.currency)}
 											{fee.dueDate ? ` · Due ${fee.dueDate}` : ""}
 											{participant ? ` · ${participant.firstName} ${participant.lastName}` : ""}
@@ -831,14 +831,14 @@ export function HouseholdDetailPage() {
 				<Link to={canAdminister ? appPaths.organization(organizationId, "households") : appPaths.dashboard()} className="mb-2 inline-block text-sm text-azure-blue hover:underline">
 					← {canAdminister ? "Back to households" : "Back to dashboard"}
 				</Link>
-				<h1 className="font-heading text-2xl font-bold text-navy">{household.displayName}</h1>
-				{household.contactEmail && <p className="text-slate-gray">{household.contactEmail}</p>}
-				{household.contactPhone && <p className="text-slate-gray">{household.contactPhone}</p>}
+				<h1 className="font-heading text-2xl font-bold text-navy dark:text-[#f8fafc]">{household.displayName}</h1>
+				{household.contactEmail && <p className="text-slate-gray dark:text-[#cbd5e1]">{household.contactEmail}</p>}
+				{household.contactPhone && <p className="text-slate-gray dark:text-[#cbd5e1]">{household.contactPhone}</p>}
 			</div>
 
 			<nav aria-label="Household sections" className="flex gap-2 overflow-x-auto border-b border-slate-gray/20 pb-3">
 				{HOUSEHOLD_SECTIONS.map((item) => (
-					<Link key={item.id} to={appPaths.household(organizationId, householdId, item.id)} aria-current={activeSection === item.id ? "page" : undefined} className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium ${activeSection === item.id ? "bg-navy text-white" : "text-slate-gray hover:bg-ice-white hover:text-navy"}`}>
+					<Link key={item.id} to={appPaths.household(organizationId, householdId, item.id)} aria-current={activeSection === item.id ? "page" : undefined} className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium ${activeSection === item.id ? "bg-navy text-white" : "text-slate-gray dark:text-[#cbd5e1] hover:bg-ice-white hover:dark:bg-[#0f172a] hover:text-navy hover:dark:text-[#f8fafc]"}`}>
 						{item.label}
 					</Link>
 				))}
@@ -850,14 +850,14 @@ export function HouseholdDetailPage() {
 			{activeSection === "fees" && <FeeAssignmentsPanel organizationId={organizationId} householdId={householdId} canManage={canAdminister} />}
 			{activeSection === "corrections" && (
 				<section aria-label="Correction Requests" className="flex flex-col gap-3">
-					<h2 className="font-heading text-lg font-semibold text-navy">Correction Requests</h2>
-					<p className="text-sm text-slate-gray">Track requested profile changes and the organization's review decision.</p>
+					<h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Correction Requests</h2>
+					<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Track requested profile changes and the organization's review decision.</p>
 					<HouseholdCorrectionRequestsPanel organizationId={organizationId} householdId={householdId} />
 				</section>
 			)}
 			{activeSection === "documents" && (
 				<section aria-label="Documents" className="flex flex-col gap-3">
-					<h2 className="font-heading text-lg font-semibold text-navy">Documents</h2>
+					<h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Documents</h2>
 					<HouseholdDocumentsPanel organizationId={organizationId} householdId={householdId} canManage={canAdminister} />
 				</section>
 			)}

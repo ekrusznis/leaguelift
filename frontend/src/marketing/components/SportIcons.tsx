@@ -77,7 +77,7 @@ export const SPORT_ICONS = [
 ];
 
 export function SportIconRow({ tone = "dark" }: { tone?: "dark" | "light" }) {
-	const textColor = tone === "dark" ? "text-slate-300" : "text-slate-700";
+	const textColor = tone === "dark" ? "text-slate-300" : "text-slate-700 dark:text-[#cbd5e1]";
 	const iconColor = tone === "dark" ? "text-orange-400" : "text-orange-600";
 
 	return (

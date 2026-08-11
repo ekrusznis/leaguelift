@@ -5,7 +5,7 @@ const TONE_STYLES: Record<PillTone, string> = {
 	warning: "bg-gold-500/15 text-warning-600",
 	error: "bg-error-600/10 text-error-600",
 	info: "bg-info-600/10 text-info-600",
-	neutral: "bg-slate-200 text-slate-700",
+	neutral: "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-[#cbd5e1]",
 };
 
 export function Pill({ tone = "neutral", children }: { tone?: PillTone; children: string }) {

@@ -21,15 +21,15 @@ export function PlatformSupportSessionsPage() {
 		<div className="flex flex-col gap-6">
 			<div className="flex flex-wrap items-end justify-between gap-4">
 				<div>
-					<h1 className="font-heading text-2xl font-bold text-navy-900">Support Sessions</h1>
-					<p className="mt-1 text-slate-500">Review reasoned, organization-scoped access by Rally26 employees.</p>
+					<h1 className="font-heading text-2xl font-bold text-navy-900 dark:text-[#f8fafc]">Support Sessions</h1>
+					<p className="mt-1 text-slate-500 dark:text-[#cbd5e1]">Review reasoned, organization-scoped access by Rally26 employees.</p>
 				</div>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy-900">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy-900 dark:text-[#f8fafc]">
 					Status
 					<select
 						value={status}
 						onChange={(event) => { setStatus(event.target.value); setPage(0); }}
-						className="min-h-11 rounded-md border border-slate-300 bg-white px-3 py-2 font-normal"
+						className="min-h-11 rounded-md border border-slate-300 dark:border-[#334155] bg-white dark:bg-[#111827] px-3 py-2 font-normal"
 					>
 						<option value="">All sessions</option>
 						<option value="ACTIVE">Active</option>
@@ -39,9 +39,9 @@ export function PlatformSupportSessionsPage() {
 				</label>
 			</div>
 
-			<div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+			<div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827]">
 				<table className="w-full min-w-[980px] text-left text-sm">
-					<thead className="border-b border-slate-200 bg-ice-50 text-slate-500">
+					<thead className="border-b border-slate-200 dark:border-[#334155] bg-ice-50 dark:bg-[#0f172a] text-slate-500 dark:text-[#cbd5e1]">
 						<tr>
 							<th className="px-4 py-3 font-medium">Employee</th>
 							<th className="px-4 py-3 font-medium">Organization</th>
@@ -51,35 +51,35 @@ export function PlatformSupportSessionsPage() {
 							<th className="px-4 py-3 font-medium">Expires / ended</th>
 						</tr>
 					</thead>
-					<tbody className="divide-y divide-slate-100">
+					<tbody className="divide-y divide-slate-100 dark:divide-[#334155]">
 						{sessions.data.items.map((session) => (
 							<tr key={session.id}>
 								<td className="px-4 py-3">
-									<p className="font-semibold text-navy-900">{session.platformAdminName}</p>
-									<p className="text-xs text-slate-500">{session.platformAdminEmail}</p>
+									<p className="font-semibold text-navy-900 dark:text-[#f8fafc]">{session.platformAdminName}</p>
+									<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">{session.platformAdminEmail}</p>
 								</td>
 								<td className="px-4 py-3">
-									<Link to={appPaths.platformOrganization(session.organizationId)} className="font-semibold text-navy-900 hover:text-green-700 hover:underline">
+									<Link to={appPaths.platformOrganization(session.organizationId)} className="font-semibold text-navy-900 dark:text-[#f8fafc] hover:text-green-700 hover:underline">
 										{session.organizationName}
 									</Link>
 								</td>
-								<td className="max-w-md px-4 py-3 text-slate-600"><p className="line-clamp-3">{session.reason}</p></td>
+								<td className="max-w-md px-4 py-3 text-slate-600 dark:text-[#cbd5e1]"><p className="line-clamp-3">{session.reason}</p></td>
 								<td className="px-4 py-3"><StatusPill status={session.status} /></td>
-								<td className="px-4 py-3 text-slate-600">{formatDateTime(session.createdAt)}</td>
-								<td className="px-4 py-3 text-slate-600">{formatDateTime(session.endedAt ?? session.expiresAt)}</td>
+								<td className="px-4 py-3 text-slate-600 dark:text-[#cbd5e1]">{formatDateTime(session.createdAt)}</td>
+								<td className="px-4 py-3 text-slate-600 dark:text-[#cbd5e1]">{formatDateTime(session.endedAt ?? session.expiresAt)}</td>
 							</tr>
 						))}
 					</tbody>
 				</table>
-				{sessions.data.items.length === 0 && <p className="p-6 text-center text-sm text-slate-500">No support sessions match this status.</p>}
+				{sessions.data.items.length === 0 && <p className="p-6 text-center text-sm text-slate-500 dark:text-[#cbd5e1]">No support sessions match this status.</p>}
 			</div>
 
-			<div className="flex items-center justify-between text-sm text-slate-600">
+			<div className="flex items-center justify-between text-sm text-slate-600 dark:text-[#cbd5e1]">
 				<p>{sessions.data.totalElements} sessions</p>
 				<div className="flex items-center gap-2">
-					<button type="button" disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))} className="rounded-md border border-slate-300 bg-white px-3 py-2 disabled:opacity-40">Previous</button>
+					<button type="button" disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))} className="rounded-md border border-slate-300 dark:border-[#334155] bg-white dark:bg-[#111827] px-3 py-2 disabled:opacity-40">Previous</button>
 					<span>Page {page + 1} of {totalPages}</span>
-					<button type="button" disabled={page + 1 >= totalPages} onClick={() => setPage((value) => value + 1)} className="rounded-md border border-slate-300 bg-white px-3 py-2 disabled:opacity-40">Next</button>
+					<button type="button" disabled={page + 1 >= totalPages} onClick={() => setPage((value) => value + 1)} className="rounded-md border border-slate-300 dark:border-[#334155] bg-white dark:bg-[#111827] px-3 py-2 disabled:opacity-40">Next</button>
 				</div>
 			</div>
 		</div>
@@ -87,7 +87,7 @@ export function PlatformSupportSessionsPage() {
 }
 
 function StatusPill({ status }: { status: "ACTIVE" | "ENDED" | "EXPIRED" }) {
-	const classes = status === "ACTIVE" ? "bg-green-100 text-green-800" : status === "EXPIRED" ? "bg-amber-100 text-amber-900" : "bg-slate-100 text-slate-700";
+	const classes = status === "ACTIVE" ? "bg-green-100 text-green-800" : status === "EXPIRED" ? "bg-amber-100 text-amber-900" : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-[#cbd5e1]";
 	return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${classes}`}>{status}</span>;
 }
 

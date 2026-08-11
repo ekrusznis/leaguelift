@@ -52,26 +52,26 @@ export function SolutionDetailPage() {
 				</PageContainer>
 			</section>
 
-			<section className="bg-white py-16 sm:py-20">
+			<section className="bg-white dark:bg-[#111827] py-16 sm:py-20">
 				<PageContainer className="grid gap-10 lg:grid-cols-2">
 					<div>
-						<h2 className="font-heading text-xl font-bold text-navy-900">The problem</h2>
-						<p className="mt-3 text-slate-700 leading-relaxed">{solution.problem}</p>
+						<h2 className="font-heading text-xl font-bold text-navy-900 dark:text-[#f8fafc]">The problem</h2>
+						<p className="mt-3 text-slate-700 dark:text-[#cbd5e1] leading-relaxed">{solution.problem}</p>
 					</div>
 					<div>
-						<h2 className="font-heading text-xl font-bold text-navy-900">The Rally26 approach</h2>
-						<p className="mt-3 text-slate-700 leading-relaxed">{solution.approach}</p>
+						<h2 className="font-heading text-xl font-bold text-navy-900 dark:text-[#f8fafc]">The Rally26 approach</h2>
+						<p className="mt-3 text-slate-700 dark:text-[#cbd5e1] leading-relaxed">{solution.approach}</p>
 					</div>
 				</PageContainer>
 			</section>
 
-			<section className="bg-ice-50 py-16 sm:py-20">
+			<section className="bg-ice-50 dark:bg-[#0f172a] py-16 sm:py-20">
 				<PageContainer className="grid gap-10 lg:grid-cols-2">
 					<div>
 						<SectionHeading align="left" heading="Key capabilities" />
 						<ul className="mt-6 grid gap-3">
 							{solution.capabilities.map((capability) => (
-								<li key={capability} className="flex items-center gap-2 text-sm text-slate-700">
+								<li key={capability} className="flex items-center gap-2 text-sm text-slate-700 dark:text-[#cbd5e1]">
 									<svg className="size-4 shrink-0 text-green-600" viewBox="0 0 16 16" fill="none" aria-hidden="true">
 										<path d="m3 8.5 3 3 7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
 									</svg>
@@ -84,7 +84,7 @@ export function SolutionDetailPage() {
 						<SectionHeading align="left" heading="Example workflow" />
 						<ol className="mt-6 flex flex-col gap-3">
 							{solution.workflow.map((step, index) => (
-								<li key={step} className="flex items-start gap-3 text-sm text-slate-700">
+								<li key={step} className="flex items-start gap-3 text-sm text-slate-700 dark:text-[#cbd5e1]">
 									<span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-green-500/15 text-xs font-bold text-green-600">
 										{index + 1}
 									</span>
@@ -96,7 +96,7 @@ export function SolutionDetailPage() {
 				</PageContainer>
 			</section>
 
-			<section className="bg-white py-16 sm:py-20">
+			<section className="bg-white dark:bg-[#111827] py-16 sm:py-20">
 				<PageContainer className="flex flex-col gap-8">
 					<SectionHeading heading="Who this is for" />
 					<div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -107,7 +107,7 @@ export function SolutionDetailPage() {
 				</PageContainer>
 			</section>
 
-			<section className="bg-ice-50 py-16 sm:py-20">
+			<section className="bg-ice-50 dark:bg-[#0f172a] py-16 sm:py-20">
 				<PageContainer className="flex flex-col gap-8">
 					<SectionHeading heading="Frequently asked questions" />
 					<div className="mx-auto w-full max-w-3xl">

@@ -53,12 +53,12 @@ export function SecurityPage() {
 				</PageContainer>
 			</section>
 
-			<section className="bg-white py-16 sm:py-20">
+			<section className="bg-white dark:bg-[#111827] py-16 sm:py-20">
 				<PageContainer className="mx-auto flex max-w-3xl flex-col gap-8">
 					{SECTIONS.map((section) => (
 						<div key={section.heading}>
-							<h2 className="font-heading text-lg font-bold text-navy-900">{section.heading}</h2>
-							<p className="mt-2 leading-relaxed text-slate-700">{section.copy}</p>
+							<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">{section.heading}</h2>
+							<p className="mt-2 leading-relaxed text-slate-700 dark:text-[#cbd5e1]">{section.copy}</p>
 						</div>
 					))}
 

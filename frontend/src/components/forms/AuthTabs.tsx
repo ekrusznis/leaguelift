@@ -7,7 +7,7 @@ export function AuthTabs({ active, tone = "light" }: { active: "sign-in" | "regi
 		{ key: "register", label: "Create Account", to: "/auth/register" },
 	] as const;
 
-	const borderClassName = tone === "dark" ? "border-white/10" : "border-slate-300";
+	const borderClassName = tone === "dark" ? "border-white/10" : "border-slate-300 dark:border-[#334155]";
 
 	return (
 		<div role="tablist" aria-label="Authentication" className={`flex gap-6 border-b ${borderClassName}`}>
@@ -21,8 +21,8 @@ export function AuthTabs({ active, tone = "light" }: { active: "sign-in" | "regi
 						aria-selected={isActive}
 						className={`relative pb-3 text-sm font-semibold ${
 						isActive
-							? tone === "dark" ? "text-white" : "text-navy-900"
-							: tone === "dark" ? "text-slate-400 hover:text-slate-200" : "text-slate-600 hover:text-navy-900"
+							? tone === "dark" ? "text-white" : "text-navy-900 dark:text-[#f8fafc]"
+							: tone === "dark" ? "text-slate-400 hover:text-slate-200" : "text-slate-600 dark:text-[#cbd5e1] hover:text-navy-900 hover:dark:text-[#f8fafc]"
 					}`}
 					>
 						{tab.label}

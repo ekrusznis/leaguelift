@@ -7,8 +7,8 @@ export function BannerCard({ icon, heading, copy, action }: { icon: ReactNode; h
 			<div className="flex items-center gap-3">
 				<span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-green-500/15 text-green-600">{icon}</span>
 				<div>
-					<p className="font-heading font-bold text-navy-900">{heading}</p>
-					<p className="text-sm text-slate-600">{copy}</p>
+					<p className="font-heading font-bold text-navy-900 dark:text-[#f8fafc]">{heading}</p>
+					<p className="text-sm text-slate-600 dark:text-[#cbd5e1]">{copy}</p>
 				</div>
 			</div>
 			{action}

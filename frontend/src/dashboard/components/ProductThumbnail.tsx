@@ -13,7 +13,7 @@ const SIZES = { sm: "size-10", md: "size-12", lg: "size-14" };
 export function ProductThumbnail({ src, alt, fallbackIcon, size = "md" }: ProductThumbnailProps) {
 	if (src) {
 		return (
-			<span className={`flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white ${SIZES[size]}`}>
+			<span className={`flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] ${SIZES[size]}`}>
 				<img src={src} alt={alt} className="size-full object-contain" />
 			</span>
 		);

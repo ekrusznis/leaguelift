@@ -69,7 +69,7 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex items-center justify-between">
-				<span className="text-sm text-slate-gray">
+				<span className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 					{data ? `${data.totalElements} campaign${data.totalElements !== 1 ? "s" : ""}` : ""}
 				</span>
 				<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
@@ -80,13 +80,13 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 			{showForm && (
 				<form
 					onSubmit={onSubmit}
-					className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-4"
+					className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4"
 					noValidate
 					aria-label="Create a fundraising campaign"
 				>
 					<div className="flex flex-wrap gap-3">
 						<div className="flex flex-col gap-1">
-							<label htmlFor="campaign-name" className="text-sm font-medium text-navy">
+							<label htmlFor="campaign-name" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Name <span aria-hidden>*</span>
 							</label>
 							<input
@@ -101,7 +101,7 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 							{errors.name && <p id="campaign-name-error" role="alert" className="text-sm text-error-red">{errors.name.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
-							<label htmlFor="campaign-slug" className="text-sm font-medium text-navy">
+							<label htmlFor="campaign-slug" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Public URL slug <span aria-hidden>*</span>
 							</label>
 							<input
@@ -116,7 +116,7 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 							{errors.slug && <p id="campaign-slug-error" role="alert" className="text-sm text-error-red">{errors.slug.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
-							<label htmlFor="campaign-type" className="text-sm font-medium text-navy">
+							<label htmlFor="campaign-type" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Campaign type
 							</label>
 							<select
@@ -132,7 +132,7 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 							</select>
 						</div>
 						<div className="flex flex-col gap-1">
-							<label htmlFor="campaign-team" className="text-sm font-medium text-navy">
+							<label htmlFor="campaign-team" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Team (optional)
 							</label>
 							<select
@@ -149,7 +149,7 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 							</select>
 						</div>
 						<div className="flex flex-col gap-1">
-							<label htmlFor="campaign-goal" className="text-sm font-medium text-navy">
+							<label htmlFor="campaign-goal" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Goal (cents) <span aria-hidden>*</span>
 							</label>
 							<input
@@ -166,7 +166,7 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 							{errors.goalAmountMinor && <p id="campaign-goal-error" role="alert" className="text-sm text-error-red">{errors.goalAmountMinor.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
-							<label htmlFor="campaign-start" className="text-sm font-medium text-navy">
+							<label htmlFor="campaign-start" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Start date
 							</label>
 							<input
@@ -177,7 +177,7 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 							/>
 						</div>
 						<div className="flex flex-col gap-1">
-							<label htmlFor="campaign-end" className="text-sm font-medium text-navy">
+							<label htmlFor="campaign-end" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								End date
 							</label>
 							<input
@@ -191,7 +191,7 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 							{errors.endDate && <p id="campaign-end-error" role="alert" className="text-sm text-error-red">{errors.endDate.message}</p>}
 						</div>
 						<div className="flex min-w-[16rem] flex-1 flex-col gap-1">
-							<label htmlFor="campaign-desc" className="text-sm font-medium text-navy">
+							<label htmlFor="campaign-desc" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Description
 							</label>
 							<input
@@ -221,16 +221,16 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 			{data && data.items.length > 0 && (
 				<ul className="flex flex-col gap-2" aria-label="Fundraising campaigns">
 					{data.items.map((campaign) => (
-						<li key={campaign.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+						<li key={campaign.id} className="rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3">
 							<div className="flex flex-wrap items-center justify-between gap-3">
 								<div className="min-w-0 flex-1">
-									<p className="break-words font-medium text-navy">
+									<p className="break-words font-medium text-navy dark:text-[#f8fafc]">
 										{campaign.name}
-										<span className="ml-2 rounded-full bg-ice-white px-2 py-0.5 text-xs font-medium text-slate-gray">
+										<span className="ml-2 rounded-full bg-ice-white dark:bg-[#0f172a] px-2 py-0.5 text-xs font-medium text-slate-gray dark:text-[#cbd5e1]">
 											{campaign.status}
 										</span>
 									</p>
-									<p className="text-sm text-slate-gray">
+									<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 										{formatMoneyMinorUnits(campaign.raisedMinor, campaign.currency)} raised of{" "}
 										{formatMoneyMinorUnits(campaign.goalAmountMinor, campaign.currency)} goal &middot; /{campaign.slug}
 									</p>

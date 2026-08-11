@@ -21,7 +21,7 @@ export function AuthLayout() {
 		<div className="flex min-h-screen flex-col bg-navy-950 lg:flex-row">
 			<a
 				href="#auth-main"
-				className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-white focus:p-2 focus:text-navy-900"
+				className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-white focus:dark:bg-[#111827] focus:p-2 focus:text-navy-900 focus:dark:text-[#f8fafc]"
 			>
 				Skip to main content
 			</a>
@@ -63,7 +63,7 @@ export function AuthLayout() {
 				</div>
 			</div>
 
-			<div className="flex min-w-0 flex-1 flex-col bg-ice-50">
+			<div className="flex min-w-0 flex-1 flex-col bg-ice-50 dark:bg-[#0f172a]">
 				<div id="auth-main" className="flex flex-1 items-center justify-center px-5 py-10 sm:px-10 lg:px-14">
 					<div className="w-full max-w-md"><Outlet /></div>
 				</div>

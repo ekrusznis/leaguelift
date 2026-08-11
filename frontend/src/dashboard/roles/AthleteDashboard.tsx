@@ -80,9 +80,9 @@ export function AthleteDashboard() {
 							{(data) =>
 								data.nextEvent ? (
 									<div>
-										<h4 className="font-heading text-xl font-extrabold text-navy-900">{data.nextEvent.title}</h4>
-										<p className="text-sm text-slate-500">{data.nextEvent.subtitle}</p>
-										<div className="mt-4 flex flex-col gap-2 text-sm text-slate-600">
+										<h4 className="font-heading text-xl font-extrabold text-navy-900 dark:text-[#f8fafc]">{data.nextEvent.title}</h4>
+										<p className="text-sm text-slate-500 dark:text-[#cbd5e1]">{data.nextEvent.subtitle}</p>
+										<div className="mt-4 flex flex-col gap-2 text-sm text-slate-600 dark:text-[#cbd5e1]">
 											<span className="flex items-center gap-2">
 												<CalendarIcon className="size-4 text-slate-400" /> {data.nextEvent.dateLabel}
 											</span>
@@ -93,7 +93,7 @@ export function AthleteDashboard() {
 										{data.isDemoData && <p className="mt-3 text-xs text-slate-400">Demo data</p>}
 									</div>
 								) : (
-									<p className="text-sm text-slate-500">No upcoming events.</p>
+									<p className="text-sm text-slate-500 dark:text-[#cbd5e1]">No upcoming events.</p>
 								)
 							}
 						</CardQuery>
@@ -106,10 +106,10 @@ export function AthleteDashboard() {
 							{(items) => (
 								<ul className="flex flex-col gap-4">
 									{items.map((team) => (
-										<li key={team.detail} className="rounded-xl border border-slate-200 p-3">
-											<p className="font-semibold text-navy-900">{team.name}</p>
-											<p className="text-sm text-slate-500">{team.detail}</p>
-											<p className="mt-2 text-sm text-slate-600">Coach {team.coachName}</p>
+										<li key={team.detail} className="rounded-xl border border-slate-200 dark:border-[#334155] p-3">
+											<p className="font-semibold text-navy-900 dark:text-[#f8fafc]">{team.name}</p>
+											<p className="text-sm text-slate-500 dark:text-[#cbd5e1]">{team.detail}</p>
+											<p className="mt-2 text-sm text-slate-600 dark:text-[#cbd5e1]">Coach {team.coachName}</p>
 										</li>
 									))}
 								</ul>
@@ -125,20 +125,20 @@ export function AthleteDashboard() {
 								<ul className="flex flex-col gap-3">
 									{items.map((event) => (
 										<li key={event.id} className="flex items-center gap-3">
-											<div className="flex w-12 shrink-0 flex-col items-center rounded-lg bg-ice-50 py-1 text-xs font-semibold text-slate-500">
+											<div className="flex w-12 shrink-0 flex-col items-center rounded-lg bg-ice-50 dark:bg-[#0f172a] py-1 text-xs font-semibold text-slate-500 dark:text-[#cbd5e1]">
 												<span>{event.day}</span>
-												<span className="font-heading text-base text-navy-900">{event.date}</span>
+												<span className="font-heading text-base text-navy-900 dark:text-[#f8fafc]">{event.date}</span>
 											</div>
 											<div className="min-w-0 flex-1">
 												{organizationId && eventSearch ? (
-											<Link to={appPaths.event(organizationId, event.id, eventSearch)} className="truncate font-medium text-navy-900 hover:text-green-600 hover:underline">{event.title}</Link>
+											<Link to={appPaths.event(organizationId, event.id, eventSearch)} className="truncate font-medium text-navy-900 dark:text-[#f8fafc] hover:text-green-600 hover:underline">{event.title}</Link>
 										) : (
-											<p className="truncate font-medium text-navy-900">{event.title}</p>
+											<p className="truncate font-medium text-navy-900 dark:text-[#f8fafc]">{event.title}</p>
 										)}
-												<p className="text-xs text-slate-500">{event.subtitle}</p>
+												<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">{event.subtitle}</p>
 											</div>
 											<div className="text-right text-xs">
-												<p className="font-semibold text-navy-900">{event.time}</p>
+												<p className="font-semibold text-navy-900 dark:text-[#f8fafc]">{event.time}</p>
 												{event.tag && <p className={event.tag === "Home" ? "text-green-600" : "text-info-600"}>{event.tag}</p>}
 											</div>
 										</li>
@@ -157,8 +157,8 @@ export function AthleteDashboard() {
 									{items.map((item) => (
 										<li key={item.id} className="flex items-center justify-between gap-3">
 											<div className="min-w-0">
-												<p className="truncate font-medium text-navy-900">{item.opponent}</p>
-												<p className="text-xs text-slate-500">
+												<p className="truncate font-medium text-navy-900 dark:text-[#f8fafc]">{item.opponent}</p>
+												<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">
 													{item.dateLabel} · {item.location}
 												</p>
 											</div>
@@ -180,11 +180,11 @@ export function AthleteDashboard() {
 										<li key={guardian.name} className="flex items-start gap-3">
 											<div className="min-w-0 flex-1">
 												<div className="flex items-center gap-2">
-													<p className="font-medium text-navy-900">{guardian.name}</p>
+													<p className="font-medium text-navy-900 dark:text-[#f8fafc]">{guardian.name}</p>
 													<Pill tone={guardian.role === "Primary Guardian" ? "success" : "neutral"}>{guardian.role}</Pill>
 												</div>
-												<p className="truncate text-xs text-slate-500">{guardian.email}</p>
-												<p className="text-xs text-slate-500">{guardian.phone}</p>
+												<p className="truncate text-xs text-slate-500 dark:text-[#cbd5e1]">{guardian.email}</p>
+												<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">{guardian.phone}</p>
 											</div>
 											<MailIcon className="size-4 shrink-0 text-slate-400" />
 										</li>

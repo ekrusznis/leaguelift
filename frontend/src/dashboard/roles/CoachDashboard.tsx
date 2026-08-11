@@ -82,12 +82,12 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 				actions={
 					<>
 						{teams.data && teams.data.length > 1 && (
-							<label className="flex items-center gap-2 text-sm text-slate-600">
+							<label className="flex items-center gap-2 text-sm text-slate-600 dark:text-[#cbd5e1]">
 								<span className="sr-only">Viewing team</span>
 								<select
 									value={activeTeamId ?? ""}
 									onChange={(event) => setSelectedTeamId(event.target.value)}
-									className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-navy-900"
+									className="rounded-lg border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] px-3 py-2 text-sm font-medium text-navy-900 dark:text-[#f8fafc]"
 								>
 									{teams.data.map((team) => (
 										<option key={team.teamId} value={team.teamId}>
@@ -113,10 +113,10 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 							{(items) => (
 								<ul className="flex flex-col gap-3">
 									{items.map((team) => (
-										<li key={team.teamId} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
+										<li key={team.teamId} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-[#334155] p-3">
 											<div>
-												<p className="font-medium text-navy-900">{team.name}</p>
-												<p className="text-xs text-slate-500">{team.sport}</p>
+												<p className="font-medium text-navy-900 dark:text-[#f8fafc]">{team.name}</p>
+												<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">{team.sport}</p>
 											</div>
 											<StatTile value={String(team.participants)} label="Athletes" />
 										</li>
@@ -134,13 +134,13 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 								<ul className="flex flex-col gap-3">
 									{items.map((event) => (
 										<li key={event.id} className="flex items-center gap-3">
-											<div className="flex w-12 shrink-0 flex-col items-center rounded-lg bg-ice-50 py-1 text-xs font-semibold text-slate-500">
+											<div className="flex w-12 shrink-0 flex-col items-center rounded-lg bg-ice-50 dark:bg-[#0f172a] py-1 text-xs font-semibold text-slate-500 dark:text-[#cbd5e1]">
 												<span>{event.day}</span>
-												<span className="font-heading text-base text-navy-900">{event.date}</span>
+												<span className="font-heading text-base text-navy-900 dark:text-[#f8fafc]">{event.date}</span>
 											</div>
 											<div className="min-w-0 flex-1">
-												<Link to={appPaths.event(organizationId, event.id)} className="truncate font-medium text-navy-900 hover:text-green-600 hover:underline">{event.title}</Link>
-												<p className="text-xs text-slate-500">{event.subtitle}</p>
+												<Link to={appPaths.event(organizationId, event.id)} className="truncate font-medium text-navy-900 dark:text-[#f8fafc] hover:text-green-600 hover:underline">{event.title}</Link>
+												<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">{event.subtitle}</p>
 											</div>
 											{event.tag && <span className={`text-xs font-semibold ${event.tag === "Home" ? "text-green-600" : "text-info-600"}`}>{event.tag}</span>}
 										</li>
@@ -189,7 +189,7 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 										)}
 									</div>
 								) : (
-									<p className="text-sm text-slate-500">No team page created yet.</p>
+									<p className="text-sm text-slate-500 dark:text-[#cbd5e1]">No team page created yet.</p>
 								)
 							}
 						</CardQuery>
@@ -203,12 +203,12 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 								data ? (
 									<>
 										<div className="flex items-center justify-between">
-											<p className="font-medium text-navy-900">{data.name}</p>
+											<p className="font-medium text-navy-900 dark:text-[#f8fafc]">{data.name}</p>
 											<Pill tone="success">{data.status}</Pill>
 										</div>
-										<p className="mt-2 font-heading text-2xl font-extrabold text-navy-900">
+										<p className="mt-2 font-heading text-2xl font-extrabold text-navy-900 dark:text-[#f8fafc]">
 											{formatMoneyMinorUnits(data.raisedMinor, data.currency)}{" "}
-											<span className="text-sm font-normal text-slate-500">raised of {formatMoneyMinorUnits(data.goalAmountMinor, data.currency)} goal</span>
+											<span className="text-sm font-normal text-slate-500 dark:text-[#cbd5e1]">raised of {formatMoneyMinorUnits(data.goalAmountMinor, data.currency)} goal</span>
 										</p>
 										<div className="mt-2">
 											<ProgressBar percent={(data.raisedMinor / data.goalAmountMinor) * 100} />
@@ -216,7 +216,7 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 										{data.isRaisedDemoData && <p className="mt-2 text-xs text-slate-400">Raised amount is demo data — contribution recording isn't built yet.</p>}
 									</>
 								) : (
-									<p className="text-sm text-slate-500">No active fundraiser.</p>
+									<p className="text-sm text-slate-500 dark:text-[#cbd5e1]">No active fundraiser.</p>
 								)
 							}
 						</CardQuery>

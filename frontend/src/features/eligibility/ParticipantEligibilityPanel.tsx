@@ -37,8 +37,8 @@ function AcknowledgmentForm({ organizationId, participantId, requirementId, onDo
 	}
 
 	return (
-		<div className="mt-2 flex items-center gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-3">
-			<p className="flex-1 text-sm text-slate-gray">By clicking below, you acknowledge you have read and agree to this requirement.</p>
+		<div className="mt-2 flex items-center gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-3">
+			<p className="flex-1 text-sm text-slate-gray dark:text-[#cbd5e1]">By clicking below, you acknowledge you have read and agree to this requirement.</p>
 			<Button type="button" onClick={handleAcknowledge} disabled={submitting}>{submitting ? "Submitting…" : "I acknowledge"}</Button>
 		</div>
 	);
@@ -58,9 +58,9 @@ function LegalNameSignForm({ organizationId, participantId, requirementId, onDon
 	});
 
 	return (
-		<form onSubmit={onSubmit} className="mt-2 flex flex-wrap items-end gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-3" noValidate aria-label="Sign this requirement">
+		<form onSubmit={onSubmit} className="mt-2 flex flex-wrap items-end gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-3" noValidate aria-label="Sign this requirement">
 			<div className="flex flex-col gap-1">
-				<label htmlFor={`sign-name-${requirementId}`} className="text-sm font-medium text-navy">Type your full legal name to sign <span aria-hidden>*</span></label>
+				<label htmlFor={`sign-name-${requirementId}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">Type your full legal name to sign <span aria-hidden>*</span></label>
 				<input id={`sign-name-${requirementId}`} type="text" {...register("enteredLegalName")} aria-invalid={!!errors.enteredLegalName} aria-describedby={errors.enteredLegalName ? `sign-name-${requirementId}-error` : undefined} className="min-h-11 w-64 rounded-md border border-slate-gray/30 px-3 py-2" />
 				{errors.enteredLegalName && <p id={`sign-name-${requirementId}-error`} role="alert" className="text-sm text-error-red">{errors.enteredLegalName.message}</p>}
 			</div>
@@ -122,9 +122,9 @@ function DocumentEvidenceForm({ organizationId, participantId, requirementId, on
 	}
 
 	return (
-		<form onSubmit={handleSubmit} className="mt-2 flex flex-wrap items-end gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-3" aria-label="Upload evidence">
+		<form onSubmit={handleSubmit} className="mt-2 flex flex-wrap items-end gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-3" aria-label="Upload evidence">
 			<div className="flex flex-col gap-1">
-				<label htmlFor={`evidence-file-${requirementId}`} className="text-sm font-medium text-navy">PDF file</label>
+				<label htmlFor={`evidence-file-${requirementId}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">PDF file</label>
 				<input
 					ref={fileInputRef}
 					id={`evidence-file-${requirementId}`}
@@ -154,13 +154,13 @@ function RequirementRow({ organizationId, participantId, item }: { organizationI
 	const isSatisfied = isRequirementSatisfied(item);
 
 	return (
-		<li className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+		<li className="rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3">
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div className="min-w-0 flex-1">
-					<p className="break-words font-medium text-navy">{requirement.title}</p>
-					<p className="whitespace-pre-wrap break-words text-sm text-slate-gray">{requirement.content}</p>
+					<p className="break-words font-medium text-navy dark:text-[#f8fafc]">{requirement.title}</p>
+					<p className="whitespace-pre-wrap break-words text-sm text-slate-gray dark:text-[#cbd5e1]">{requirement.content}</p>
 					{evidence && (
-						<p className="mt-1 text-sm text-slate-gray">
+						<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">
 							{STATUS_LABELS[evidence.status] ?? evidence.status}
 							{evidence.acceptedAt ? ` · ${new Date(evidence.acceptedAt).toLocaleDateString()}` : ""}
 							{evidence.expiresAt ? ` · Expires ${new Date(evidence.expiresAt).toLocaleDateString()}` : ""}
@@ -172,7 +172,7 @@ function RequirementRow({ organizationId, participantId, item }: { organizationI
 				</span>
 			</div>
 			{!isSatisfied && requirement.mode === "STAFF_REVIEWED_EXTERNAL" && (
-				<p className="mt-2 text-sm text-slate-gray">This requirement is verified by staff — no action needed here.</p>
+				<p className="mt-2 text-sm text-slate-gray dark:text-[#cbd5e1]">This requirement is verified by staff — no action needed here.</p>
 			)}
 			{!isSatisfied && requirement.mode !== "STAFF_REVIEWED_EXTERNAL" && !actionOpen && (
 				<Button type="button" variant="secondary" className="mt-2" onClick={() => setActionOpen(true)}>

@@ -133,8 +133,8 @@ export function FulfillmentOperationsPanel({
 		<div className="mt-4 flex flex-col gap-5 border-t border-slate-gray/20 pt-4">
 			<div className="flex flex-wrap items-center justify-between gap-2">
 				<div>
-					<h4 className="font-heading text-base font-semibold text-navy">Fulfillment operations</h4>
-					<p className="text-sm text-slate-gray">
+					<h4 className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">Fulfillment operations</h4>
+					<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 						{fulfillment.data.source === "PRINTIFY" ? "Printify-origin fulfillment" : "Manual fulfillment"}
 						{fulfillment.data.manualVendorName ? ` · ${fulfillment.data.manualVendorName}` : ""}
 					</p>
@@ -181,14 +181,14 @@ export function FulfillmentOperationsPanel({
 				</Field>
 				<Field label="Attention reason" id={`fulfillment-attention-${orderId}`}>
 					<input id={`fulfillment-attention-${orderId}`} value={form.attentionReason} onChange={(event) => setForm({ ...form, attentionReason: event.target.value })} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" aria-describedby={`fulfillment-attention-help-${orderId}`} />
-					<p id={`fulfillment-attention-help-${orderId}`} className="text-xs text-slate-gray">Required when the status is Needs attention.</p>
+					<p id={`fulfillment-attention-help-${orderId}`} className="text-xs text-slate-gray dark:text-[#cbd5e1]">Required when the status is Needs attention.</p>
 				</Field>
 				<Field label="Internal notes" id={`fulfillment-notes-${orderId}`}>
 					<textarea id={`fulfillment-notes-${orderId}`} rows={3} value={form.internalNotes} onChange={(event) => setForm({ ...form, internalNotes: event.target.value })} className="rounded-md border border-slate-gray/30 px-3 py-2" />
 				</Field>
 				<Field label="Change note" id={`fulfillment-change-note-${orderId}`}>
 					<textarea id={`fulfillment-change-note-${orderId}`} rows={3} value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} className="rounded-md border border-slate-gray/30 px-3 py-2" aria-describedby={`fulfillment-change-help-${orderId}`} />
-					<p id={`fulfillment-change-help-${orderId}`} className="text-xs text-slate-gray">Explain the operational update. This is preserved in history.</p>
+					<p id={`fulfillment-change-help-${orderId}`} className="text-xs text-slate-gray dark:text-[#cbd5e1]">Explain the operational update. This is preserved in history.</p>
 				</Field>
 			</div>
 			<div className="flex justify-end">
@@ -198,19 +198,19 @@ export function FulfillmentOperationsPanel({
 			</div>
 
 			<section aria-labelledby={`fulfillment-history-heading-${orderId}`}>
-				<h5 id={`fulfillment-history-heading-${orderId}`} className="text-sm font-semibold text-navy">Status history</h5>
+				<h5 id={`fulfillment-history-heading-${orderId}`} className="text-sm font-semibold text-navy dark:text-[#f8fafc]">Status history</h5>
 				{history.isLoading && <LoadingState label="Loading fulfillment history…" />}
 				{history.isError && <ErrorState message="Could not load fulfillment history." onRetry={() => history.refetch()} />}
-				{history.data && history.data.length === 0 && <p className="mt-2 text-sm text-slate-gray">No history has been recorded.</p>}
+				{history.data && history.data.length === 0 && <p className="mt-2 text-sm text-slate-gray dark:text-[#cbd5e1]">No history has been recorded.</p>}
 				{history.data && history.data.length > 0 && (
 					<ol className="mt-2 flex flex-col gap-2">
 						{history.data.map((entry) => (
-							<li key={entry.id} className="rounded-md bg-ice-white p-3 text-sm">
+							<li key={entry.id} className="rounded-md bg-ice-white dark:bg-[#0f172a] p-3 text-sm">
 								<div className="flex flex-wrap items-center justify-between gap-2">
-									<span className="font-medium text-navy">{entry.previousStatus ? `${formatStatus(entry.previousStatus)} → ` : ""}{formatStatus(entry.newStatus)}</span>
-									<time className="text-xs text-slate-gray" dateTime={entry.createdAt}>{formatTimestamp(entry.createdAt)}</time>
+									<span className="font-medium text-navy dark:text-[#f8fafc]">{entry.previousStatus ? `${formatStatus(entry.previousStatus)} → ` : ""}{formatStatus(entry.newStatus)}</span>
+									<time className="text-xs text-slate-gray dark:text-[#cbd5e1]" dateTime={entry.createdAt}>{formatTimestamp(entry.createdAt)}</time>
 								</div>
-								<p className="mt-1 text-slate-gray">{entry.note}</p>
+								<p className="mt-1 text-slate-gray dark:text-[#cbd5e1]">{entry.note}</p>
 							</li>
 						))}
 					</ol>
@@ -218,8 +218,8 @@ export function FulfillmentOperationsPanel({
 			</section>
 
 			<section aria-labelledby={`reprint-heading-${orderId}`} className="rounded-lg border border-slate-gray/20 p-4">
-				<h5 id={`reprint-heading-${orderId}`} className="text-sm font-semibold text-navy">Replacements and reprints</h5>
-				<p className="mt-1 text-sm text-slate-gray">Create a durable replacement record without changing the original order or ledger.</p>
+				<h5 id={`reprint-heading-${orderId}`} className="text-sm font-semibold text-navy dark:text-[#f8fafc]">Replacements and reprints</h5>
+				<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Create a durable replacement record without changing the original order or ledger.</p>
 				<div className="mt-3 grid gap-3 md:grid-cols-3">
 					<Field label="Reason" id={`reprint-reason-${orderId}`}>
 						<input id={`reprint-reason-${orderId}`} value={reprintReason} onChange={(event) => setReprintReason(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
@@ -238,7 +238,7 @@ export function FulfillmentOperationsPanel({
 				</div>
 				{reprints.isLoading && <LoadingState label="Loading replacements…" />}
 				{reprints.isError && <ErrorState message="Could not load replacement records." onRetry={() => reprints.refetch()} />}
-				{reprints.data && reprints.data.length === 0 && <p className="mt-3 text-sm text-slate-gray">No replacements or reprints have been recorded.</p>}
+				{reprints.data && reprints.data.length === 0 && <p className="mt-3 text-sm text-slate-gray dark:text-[#cbd5e1]">No replacements or reprints have been recorded.</p>}
 				{reprints.data && reprints.data.length > 0 && (
 					<ul className="mt-3 flex flex-col gap-3" aria-label="Replacement and reprint records">
 						{reprints.data.map((reprint) => <ReprintEditor key={reprint.id} organizationId={organizationId} orderId={orderId} reprint={reprint} />)}
@@ -272,11 +272,11 @@ function ReprintEditor({ organizationId, orderId, reprint }: { organizationId: s
 	}
 
 	return (
-		<li className="rounded-md bg-ice-white p-3">
+		<li className="rounded-md bg-ice-white dark:bg-[#0f172a] p-3">
 			<div className="flex flex-wrap items-start justify-between gap-2">
 				<div>
-					<p className="font-medium text-navy">{reprint.reason}</p>
-					<p className="text-xs text-slate-gray">Requested {formatTimestamp(reprint.createdAt)}</p>
+					<p className="font-medium text-navy dark:text-[#f8fafc]">{reprint.reason}</p>
+					<p className="text-xs text-slate-gray dark:text-[#cbd5e1]">Requested {formatTimestamp(reprint.createdAt)}</p>
 				</div>
 				<StatusBadge status={status} />
 			</div>
@@ -309,14 +309,14 @@ function ReprintEditor({ organizationId, orderId, reprint }: { organizationId: s
 }
 
 function Field({ label, id, children }: { label: string; id: string; children: ReactNode }) {
-	return <div className="flex flex-col gap-1"><label htmlFor={id} className="text-sm font-medium text-navy">{label}</label>{children}</div>;
+	return <div className="flex flex-col gap-1"><label htmlFor={id} className="text-sm font-medium text-navy dark:text-[#f8fafc]">{label}</label>{children}</div>;
 }
 
 function StatusBadge({ status }: { status: FulfillmentStatus | FulfillmentReprintStatus }) {
 	const critical = status === "FAILED" || status === "NEEDS_ATTENTION";
 	const positive = status === "SHIPPED" || status === "DELIVERED";
 	return (
-		<span className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${critical ? "bg-error-red/10 text-error-red" : positive ? "bg-victory-green/10 text-green-700" : "bg-slate-gray/10 text-slate-gray"}`}>
+		<span className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${critical ? "bg-error-red/10 text-error-red" : positive ? "bg-victory-green/10 text-green-700" : "bg-slate-gray/10 text-slate-gray dark:text-[#cbd5e1]"}`}>
 			{formatStatus(status)}
 		</span>
 	);

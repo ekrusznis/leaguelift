@@ -18,7 +18,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-	DRAFT: "text-slate-gray bg-slate-gray/10",
+	DRAFT: "text-slate-gray dark:text-[#cbd5e1] bg-slate-gray/10",
 	PUBLISHED: "text-victory-green bg-victory-green/10",
 	ARCHIVED: "text-error-red bg-error-red/10",
 };
@@ -42,10 +42,10 @@ function PageRow({
 	const unpublishPage = useUnpublishPage(organizationId);
 
 	return (
-		<li className="flex items-center justify-between rounded-lg border border-slate-gray/20 bg-pure-white p-3 gap-3 flex-wrap">
+		<li className="flex items-center justify-between rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3 gap-3 flex-wrap">
 			<div className="flex flex-col gap-0.5 min-w-0">
-				<p className="font-medium text-navy truncate">{publicPage.title}</p>
-				<p className="text-sm text-slate-gray">
+				<p className="font-medium text-navy dark:text-[#f8fafc] truncate">{publicPage.title}</p>
+				<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 					{TYPE_LABELS[publicPage.pageType]} · {entityName} ·{" "}
 					<span className="font-mono">/{publicPage.slug}</span>
 				</p>
@@ -144,7 +144,7 @@ export function PublicPagesPanel({
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex items-center justify-between">
-				<span className="text-sm text-slate-gray">
+				<span className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 					{pagesData ? `${pagesData.totalElements} page${pagesData.totalElements !== 1 ? "s" : ""}` : ""}
 				</span>
 				<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
@@ -155,13 +155,13 @@ export function PublicPagesPanel({
 			{showForm && (
 				<form
 					onSubmit={onSubmit}
-					className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-4"
+					className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4"
 					noValidate
 					aria-label="Create a public page"
 				>
 					<div className="flex flex-wrap gap-3">
 						<div className="flex flex-col gap-1">
-							<label htmlFor="public-page-type" className="text-sm font-medium text-navy">Page type</label>
+							<label htmlFor="public-page-type" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Page type</label>
 							<select
 								id="public-page-type"
 								value={selectedType}
@@ -176,7 +176,7 @@ export function PublicPagesPanel({
 
 						{selectedType === "TEAM" && (
 							<div className="flex flex-col gap-1">
-								<label htmlFor="page-entity" className="text-sm font-medium text-navy">
+								<label htmlFor="page-entity" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 									Team
 								</label>
 								<select
@@ -201,7 +201,7 @@ export function PublicPagesPanel({
 
 						{selectedType === "TOURNAMENT" && (
 							<div className="flex flex-col gap-1">
-								<label htmlFor="page-entity" className="text-sm font-medium text-navy">
+								<label htmlFor="page-entity" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 									Tournament
 								</label>
 								<select
@@ -225,7 +225,7 @@ export function PublicPagesPanel({
 						)}
 
 						<div className="flex flex-col gap-1">
-							<label htmlFor="page-title" className="text-sm font-medium text-navy">
+							<label htmlFor="page-title" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Title <span aria-hidden>*</span>
 							</label>
 							<input
@@ -244,11 +244,11 @@ export function PublicPagesPanel({
 						</div>
 
 						<div className="flex flex-col gap-1">
-							<label htmlFor="page-slug" className="text-sm font-medium text-navy">
+							<label htmlFor="page-slug" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Slug <span aria-hidden>*</span>
 							</label>
 							<div className="flex items-center gap-1">
-								<span className="text-slate-gray">/</span>
+								<span className="text-slate-gray dark:text-[#cbd5e1]">/</span>
 								<input
 									id="page-slug"
 									type="text"
@@ -267,7 +267,7 @@ export function PublicPagesPanel({
 						</div>
 
 						<div className="flex flex-col gap-1 w-full">
-							<label htmlFor="page-summary" className="text-sm font-medium text-navy">
+							<label htmlFor="page-summary" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Summary
 							</label>
 							<textarea

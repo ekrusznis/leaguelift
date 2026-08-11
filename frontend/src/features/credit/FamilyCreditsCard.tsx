@@ -15,16 +15,16 @@ export function FamilyCreditsCard({ organizationId, householdId }: { organizatio
 	const [showApply, setShowApply] = useState(false);
 	const [showTransfer, setShowTransfer] = useState(false);
 
-	if (balance.isLoading) return <p className="text-sm text-slate-500">Loading credits…</p>;
-	if (balance.isError || !balance.data) return <p className="text-sm text-slate-500">Could not load family credits.</p>;
+	if (balance.isLoading) return <p className="text-sm text-slate-500 dark:text-[#cbd5e1]">Loading credits…</p>;
+	if (balance.isError || !balance.data) return <p className="text-sm text-slate-500 dark:text-[#cbd5e1]">Could not load family credits.</p>;
 	const data = balance.data;
 
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex items-center justify-between">
 				<div>
-					<p className="text-xs text-slate-500">Available Credit</p>
-					<p className="font-heading text-3xl font-extrabold text-navy-900">{formatMoneyMinorUnits(data.availableMinor, data.currency)}</p>
+					<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">Available Credit</p>
+					<p className="font-heading text-3xl font-extrabold text-navy-900 dark:text-[#f8fafc]">{formatMoneyMinorUnits(data.availableMinor, data.currency)}</p>
 				</div>
 				{data.availableMinor > 0 && (
 					<Button type="button" variant="secondary" onClick={() => setShowApply((value) => !value)}>
@@ -32,18 +32,18 @@ export function FamilyCreditsCard({ organizationId, householdId }: { organizatio
 					</Button>
 				)}
 			</div>
-			<dl className="grid grid-cols-2 gap-3 border-t border-slate-200 pt-3 text-sm">
+			<dl className="grid grid-cols-2 gap-3 border-t border-slate-200 dark:border-[#334155] pt-3 text-sm">
 				<div>
-					<dt className="text-slate-500">Pending</dt>
-					<dd className="font-medium text-navy-900">{formatMoneyMinorUnits(data.pendingMinor, data.currency)}</dd>
+					<dt className="text-slate-500 dark:text-[#cbd5e1]">Pending</dt>
+					<dd className="font-medium text-navy-900 dark:text-[#f8fafc]">{formatMoneyMinorUnits(data.pendingMinor, data.currency)}</dd>
 				</div>
 				<div>
-					<dt className="text-slate-500">Applied to date</dt>
-					<dd className="font-medium text-navy-900">{formatMoneyMinorUnits(data.appliedAllTimeMinor, data.currency)}</dd>
+					<dt className="text-slate-500 dark:text-[#cbd5e1]">Applied to date</dt>
+					<dd className="font-medium text-navy-900 dark:text-[#f8fafc]">{formatMoneyMinorUnits(data.appliedAllTimeMinor, data.currency)}</dd>
 				</div>
 				{data.expiringSoonMinor > 0 && (
 					<div className="col-span-2">
-						<dt className="text-slate-500">Expiring within 30 days</dt>
+						<dt className="text-slate-500 dark:text-[#cbd5e1]">Expiring within 30 days</dt>
 						<dd className="font-medium text-amber-700">{formatMoneyMinorUnits(data.expiringSoonMinor, data.currency)}</dd>
 					</div>
 				)}
@@ -58,7 +58,7 @@ export function FamilyCreditsCard({ organizationId, householdId }: { organizatio
 				/>
 			)}
 			{data.p2pTransferEnabled && (data.availableMinor > 0 || showTransfer) && (
-				<div className="border-t border-slate-200 pt-3">
+				<div className="border-t border-slate-200 dark:border-[#334155] pt-3">
 					{!showTransfer && (
 						<Button type="button" variant="secondary" onClick={() => setShowTransfer(true)}>
 							Send credit to another family
@@ -113,19 +113,19 @@ function ApplyCreditForm({
 	}
 
 	return (
-		<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-md bg-ice-white p-3" noValidate>
-			<label className="flex flex-col gap-1 text-sm font-medium text-navy-900">
+		<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-md bg-ice-white dark:bg-[#0f172a] p-3" noValidate>
+			<label className="flex flex-col gap-1 text-sm font-medium text-navy-900 dark:text-[#f8fafc]">
 				Fee
-				<select value={feeAssignmentId} onChange={(event) => setFeeAssignmentId(event.target.value)} className="min-h-11 rounded-md border border-slate-300 px-3 py-2 font-normal">
+				<select value={feeAssignmentId} onChange={(event) => setFeeAssignmentId(event.target.value)} className="min-h-11 rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2 font-normal">
 					<option value="">Select…</option>
 					{outstanding.map((item) => (
 						<option key={item.id} value={item.id}>{item.description} — {formatMoneyMinorUnits(item.balanceMinor, item.currency)} due</option>
 					))}
 				</select>
 			</label>
-			<label className="flex flex-col gap-1 text-sm font-medium text-navy-900">
+			<label className="flex flex-col gap-1 text-sm font-medium text-navy-900 dark:text-[#f8fafc]">
 				Amount ({currency}, up to {formatMoneyMinorUnits(availableMinor, currency)})
-				<input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} className="min-h-11 rounded-md border border-slate-300 px-3 py-2 font-normal" />
+				<input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} className="min-h-11 rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2 font-normal" />
 			</label>
 			{error && <p role="alert" className="text-sm text-error-red">{error}</p>}
 			<Button type="submit" disabled={applyCredit.isPending}>{applyCredit.isPending ? "Applying…" : "Apply credit"}</Button>
@@ -166,24 +166,24 @@ function TransferCreditForm({
 
 	if (submitted) {
 		return (
-			<div className="mt-3 flex flex-col gap-2 rounded-md bg-ice-white p-3">
-				<p className="text-sm font-medium text-navy-900">Transfer request sent.</p>
-				<p className="text-xs text-slate-500">The amount is held from your available credit until your organization reviews and approves the transfer.</p>
+			<div className="mt-3 flex flex-col gap-2 rounded-md bg-ice-white dark:bg-[#0f172a] p-3">
+				<p className="text-sm font-medium text-navy-900 dark:text-[#f8fafc]">Transfer request sent.</p>
+				<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">The amount is held from your available credit until your organization reviews and approves the transfer.</p>
 				<Button type="button" variant="secondary" onClick={onDone}>Done</Button>
 			</div>
 		);
 	}
 
 	return (
-		<form onSubmit={onSubmit} className="mt-3 flex flex-col gap-3 rounded-md bg-ice-white p-3" noValidate>
-			<p className="text-xs text-slate-500">Ask the other family for their household ID — a searchable directory isn&rsquo;t available yet. Transfers are held until your organization reviews and approves them.</p>
-			<label className="flex flex-col gap-1 text-sm font-medium text-navy-900">
+		<form onSubmit={onSubmit} className="mt-3 flex flex-col gap-3 rounded-md bg-ice-white dark:bg-[#0f172a] p-3" noValidate>
+			<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">Ask the other family for their household ID — a searchable directory isn&rsquo;t available yet. Transfers are held until your organization reviews and approves them.</p>
+			<label className="flex flex-col gap-1 text-sm font-medium text-navy-900 dark:text-[#f8fafc]">
 				Recipient household ID
-				<input value={toHouseholdId} onChange={(event) => setToHouseholdId(event.target.value)} className="min-h-11 rounded-md border border-slate-300 px-3 py-2 font-normal" />
+				<input value={toHouseholdId} onChange={(event) => setToHouseholdId(event.target.value)} className="min-h-11 rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2 font-normal" />
 			</label>
-			<label className="flex flex-col gap-1 text-sm font-medium text-navy-900">
+			<label className="flex flex-col gap-1 text-sm font-medium text-navy-900 dark:text-[#f8fafc]">
 				Amount, up to {formatMoneyMinorUnits(availableMinor, "USD")}
-				<input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} className="min-h-11 rounded-md border border-slate-300 px-3 py-2 font-normal" />
+				<input type="number" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} className="min-h-11 rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2 font-normal" />
 			</label>
 			{error && <p role="alert" className="text-sm text-error-red">{error}</p>}
 			<div className="flex gap-2">

@@ -79,7 +79,7 @@ export function ProfilePhotoEditor({
 			<Avatar name={name} size="md" src={assignment?.url} />
 			{canEdit && (
 				<div className="flex flex-wrap items-center gap-2">
-					<label htmlFor={inputId} className="inline-flex min-h-11 cursor-pointer items-center rounded-md border border-slate-gray/30 bg-pure-white px-3 py-2 text-sm font-medium text-navy hover:bg-ice-white">
+					<label htmlFor={inputId} className="inline-flex min-h-11 cursor-pointer items-center rounded-md border border-slate-gray/30 bg-pure-white dark:bg-[#111827] px-3 py-2 text-sm font-medium text-navy dark:text-[#f8fafc] hover:bg-ice-white hover:dark:bg-[#0f172a]">
 						{assignment ? "Replace photo" : "Add photo"}
 					</label>
 					<input
@@ -98,7 +98,7 @@ export function ProfilePhotoEditor({
 					)}
 				</div>
 			)}
-			{state.uploading && <span className="text-xs text-slate-gray">Uploading…</span>}
+			{state.uploading && <span className="text-xs text-slate-gray dark:text-[#cbd5e1]">Uploading…</span>}
 			{state.error && <span role="alert" className="max-w-48 text-xs text-error-red">{state.error}</span>}
 		</div>
 	);

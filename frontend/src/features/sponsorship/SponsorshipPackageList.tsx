@@ -69,7 +69,7 @@ export function SponsorshipPackageList({
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex items-center justify-between">
-				<span className="text-sm text-slate-gray">
+				<span className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 					{data ? `${data.totalElements} sponsorship package${data.totalElements !== 1 ? "s" : ""}` : ""}
 				</span>
 				<div className="flex gap-2">
@@ -83,7 +83,7 @@ export function SponsorshipPackageList({
 			</div>
 
 			{showPendingReview && (
-				<div className="rounded-lg border border-slate-gray/20 bg-ice-white p-4">
+				<div className="rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4">
 					<PendingReviewQueue organizationId={organizationId} />
 				</div>
 			)}
@@ -91,13 +91,13 @@ export function SponsorshipPackageList({
 			{showForm && (
 				<form
 					onSubmit={onSubmit}
-					className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-4"
+					className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4"
 					noValidate
 					aria-label="Create a sponsorship package"
 				>
 					<div className="flex flex-wrap gap-3">
 						<div className="flex flex-col gap-1">
-							<label htmlFor="sponsorship-name" className="text-sm font-medium text-navy">
+							<label htmlFor="sponsorship-name" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Name <span aria-hidden>*</span>
 							</label>
 							<input
@@ -112,7 +112,7 @@ export function SponsorshipPackageList({
 							{errors.name && <p id="sponsorship-name-error" role="alert" className="text-sm text-error-red">{errors.name.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
-							<label htmlFor="sponsorship-price" className="text-sm font-medium text-navy">
+							<label htmlFor="sponsorship-price" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Price (cents) <span aria-hidden>*</span>
 							</label>
 							<input
@@ -128,7 +128,7 @@ export function SponsorshipPackageList({
 							{errors.priceMinor && <p id="sponsorship-price-error" role="alert" className="text-sm text-error-red">{errors.priceMinor.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
-							<label htmlFor="sponsorship-max-quantity" className="text-sm font-medium text-navy">
+							<label htmlFor="sponsorship-max-quantity" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Max quantity
 							</label>
 							<input
@@ -142,12 +142,12 @@ export function SponsorshipPackageList({
 								className="min-h-11 w-32 rounded-md border border-slate-gray/30 px-3 py-2"
 							/>
 						</div>
-						<label className="flex items-center gap-2 self-end pb-2 text-sm text-navy">
+						<label className="flex items-center gap-2 self-end pb-2 text-sm text-navy dark:text-[#f8fafc]">
 							<input type="checkbox" {...register("exclusive")} className="size-4" />
 							Exclusive (only one sponsor)
 						</label>
 						<div className="flex min-w-[16rem] flex-1 flex-col gap-1">
-							<label htmlFor="sponsorship-desc" className="text-sm font-medium text-navy">
+							<label htmlFor="sponsorship-desc" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Description
 							</label>
 							<input
@@ -158,7 +158,7 @@ export function SponsorshipPackageList({
 							/>
 						</div>
 						<div className="flex flex-col gap-1">
-							<label htmlFor="sponsorship-start" className="text-sm font-medium text-navy">
+							<label htmlFor="sponsorship-start" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Placement start
 							</label>
 							<input
@@ -169,7 +169,7 @@ export function SponsorshipPackageList({
 							/>
 						</div>
 						<div className="flex flex-col gap-1">
-							<label htmlFor="sponsorship-end" className="text-sm font-medium text-navy">
+							<label htmlFor="sponsorship-end" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Placement end
 							</label>
 							<input
@@ -199,12 +199,12 @@ export function SponsorshipPackageList({
 			{data && data.items.length > 0 && (
 				<ul className="flex flex-col gap-2" aria-label="Sponsorship packages">
 					{data.items.map((sponsorshipPackage) => (
-						<li key={sponsorshipPackage.id} className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+						<li key={sponsorshipPackage.id} className="rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3">
 							<div className="flex flex-wrap items-center justify-between gap-3">
 								<div className="min-w-0 flex-1">
-									<p className="break-words font-medium text-navy">
+									<p className="break-words font-medium text-navy dark:text-[#f8fafc]">
 										{sponsorshipPackage.name}
-										<span className="ml-2 rounded-full bg-ice-white px-2 py-0.5 text-xs font-medium text-slate-gray">
+										<span className="ml-2 rounded-full bg-ice-white dark:bg-[#0f172a] px-2 py-0.5 text-xs font-medium text-slate-gray dark:text-[#cbd5e1]">
 											{sponsorshipPackage.status}
 										</span>
 										{sponsorshipPackage.exclusive && (
@@ -218,7 +218,7 @@ export function SponsorshipPackageList({
 											</span>
 										)}
 									</p>
-									<p className="text-sm text-slate-gray">
+									<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 										{formatMoneyMinorUnits(sponsorshipPackage.priceMinor, sponsorshipPackage.currency)}
 										{" · "}
 										{sponsorshipPackage.confirmedCount} confirmed
@@ -300,10 +300,10 @@ function SponsorshipManagementPanel({ organizationId, packageId }: { organizatio
 	return (
 		<ul className="flex flex-col gap-3" aria-label="Confirmed sponsors">
 			{data.items.map((sponsorship) => (
-				<li key={sponsorship.id} className="rounded-md bg-ice-white p-3">
+				<li key={sponsorship.id} className="rounded-md bg-ice-white dark:bg-[#0f172a] p-3">
 					<div className="flex flex-wrap items-center justify-between gap-3">
 						<div className="min-w-0 flex-1">
-							<p className="break-words font-medium text-navy">
+							<p className="break-words font-medium text-navy dark:text-[#f8fafc]">
 								{sponsorship.sponsorName}
 								<span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${reviewStatusBadgeClass(sponsorship.reviewStatus)}`}>
 									{sponsorship.reviewStatus === "PENDING_REVIEW" ? "Pending review" : sponsorship.reviewStatus}
@@ -312,12 +312,12 @@ function SponsorshipManagementPanel({ organizationId, packageId }: { organizatio
 									<span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Recorded offline</span>
 								)}
 								{sponsorship.status === "REFUNDED" && (
-									<span className="ml-2 rounded-full bg-slate-gray/10 px-2 py-0.5 text-xs font-medium text-slate-gray">Refunded</span>
+									<span className="ml-2 rounded-full bg-slate-gray/10 px-2 py-0.5 text-xs font-medium text-slate-gray dark:text-[#cbd5e1]">Refunded</span>
 								)}
 							</p>
-							{sponsorship.sponsorContactEmail && <p className="text-sm text-slate-gray">{sponsorship.sponsorContactEmail}</p>}
+							{sponsorship.sponsorContactEmail && <p className="text-sm text-slate-gray dark:text-[#cbd5e1]">{sponsorship.sponsorContactEmail}</p>}
 						</div>
-						<span className="shrink-0 text-sm text-slate-gray">{formatMoneyMinorUnits(sponsorship.amountMinor, sponsorship.currency)}</span>
+						<span className="shrink-0 text-sm text-slate-gray dark:text-[#cbd5e1]">{formatMoneyMinorUnits(sponsorship.amountMinor, sponsorship.currency)}</span>
 					</div>
 					<div className="mt-2 flex flex-wrap items-center gap-2">
 						<SponsorLogoUpload organizationId={organizationId} packageId={packageId} sponsorId={sponsorship.sponsorId} />
@@ -336,7 +336,7 @@ function SponsorshipManagementPanel({ organizationId, packageId }: { organizatio
 							{editingSponsorId === sponsorship.sponsorId ? "Hide contact details" : "Edit contact details"}
 						</Button>
 						{sponsorship.status === "CONFIRMED" && sponsorship.paymentSource === "STRIPE" && (
-							<Link className="min-h-11 rounded-md border border-slate-gray/30 bg-pure-white px-4 py-2 text-sm font-medium text-navy hover:bg-ice-white" to={`${appPaths.organization(organizationId, "financial-operations")}?targetType=SPONSORSHIP&targetId=${sponsorship.id}`}>
+							<Link className="min-h-11 rounded-md border border-slate-gray/30 bg-pure-white dark:bg-[#111827] px-4 py-2 text-sm font-medium text-navy dark:text-[#f8fafc] hover:bg-ice-white hover:dark:bg-[#0f172a]" to={`${appPaths.organization(organizationId, "financial-operations")}?targetType=SPONSORSHIP&targetId=${sponsorship.id}`}>
 								Preview refund
 							</Link>
 						)}
@@ -365,18 +365,18 @@ function SponsorshipInvoicePanel({ organizationId, sponsorshipId }: { organizati
 
 	return (
 		<dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm" aria-label="Sponsorship invoice">
-			<dt className="text-slate-gray">Organization</dt>
-			<dd className="text-navy">{data.organizationName}</dd>
-			<dt className="text-slate-gray">Sponsor</dt>
-			<dd className="text-navy">{data.sponsorName}{data.sponsorCompanyName ? ` (${data.sponsorCompanyName})` : ""}</dd>
-			<dt className="text-slate-gray">Package</dt>
-			<dd className="text-navy">{data.packageName}</dd>
-			<dt className="text-slate-gray">Amount</dt>
-			<dd className="text-navy">{formatMoneyMinorUnits(data.amountMinor, data.currency)}</dd>
-			<dt className="text-slate-gray">Status</dt>
-			<dd className="text-navy">{data.status}</dd>
-			<dt className="text-slate-gray">Date</dt>
-			<dd className="text-navy">{data.confirmedAt ? new Date(data.confirmedAt).toLocaleDateString() : "—"}</dd>
+			<dt className="text-slate-gray dark:text-[#cbd5e1]">Organization</dt>
+			<dd className="text-navy dark:text-[#f8fafc]">{data.organizationName}</dd>
+			<dt className="text-slate-gray dark:text-[#cbd5e1]">Sponsor</dt>
+			<dd className="text-navy dark:text-[#f8fafc]">{data.sponsorName}{data.sponsorCompanyName ? ` (${data.sponsorCompanyName})` : ""}</dd>
+			<dt className="text-slate-gray dark:text-[#cbd5e1]">Package</dt>
+			<dd className="text-navy dark:text-[#f8fafc]">{data.packageName}</dd>
+			<dt className="text-slate-gray dark:text-[#cbd5e1]">Amount</dt>
+			<dd className="text-navy dark:text-[#f8fafc]">{formatMoneyMinorUnits(data.amountMinor, data.currency)}</dd>
+			<dt className="text-slate-gray dark:text-[#cbd5e1]">Status</dt>
+			<dd className="text-navy dark:text-[#f8fafc]">{data.status}</dd>
+			<dt className="text-slate-gray dark:text-[#cbd5e1]">Date</dt>
+			<dd className="text-navy dark:text-[#f8fafc]">{data.confirmedAt ? new Date(data.confirmedAt).toLocaleDateString() : "—"}</dd>
 		</dl>
 	);
 }
@@ -406,13 +406,13 @@ function SponsorContactForm({ organizationId, packageId, sponsorId }: { organiza
 			{updateSponsor.isSuccess && <p className="text-sm text-victory-green">Saved.</p>}
 			<div className="flex flex-wrap gap-2">
 				<div className="flex flex-col gap-1">
-					<label htmlFor={`sponsor-phone-${sponsorId}`} className="text-xs font-medium text-navy">
+					<label htmlFor={`sponsor-phone-${sponsorId}`} className="text-xs font-medium text-navy dark:text-[#f8fafc]">
 						Phone
 					</label>
 					<input id={`sponsor-phone-${sponsorId}`} type="tel" {...register("phone")} className="min-h-9 rounded-md border border-slate-gray/30 px-2 py-1 text-sm" />
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor={`sponsor-company-${sponsorId}`} className="text-xs font-medium text-navy">
+					<label htmlFor={`sponsor-company-${sponsorId}`} className="text-xs font-medium text-navy dark:text-[#f8fafc]">
 						Company name
 					</label>
 					<input
@@ -423,7 +423,7 @@ function SponsorContactForm({ organizationId, packageId, sponsorId }: { organiza
 					/>
 				</div>
 				<div className="flex min-w-[14rem] flex-1 flex-col gap-1">
-					<label htmlFor={`sponsor-notes-${sponsorId}`} className="text-xs font-medium text-navy">
+					<label htmlFor={`sponsor-notes-${sponsorId}`} className="text-xs font-medium text-navy dark:text-[#f8fafc]">
 						Notes
 					</label>
 					<input id={`sponsor-notes-${sponsorId}`} type="text" {...register("notes")} className="min-h-9 rounded-md border border-slate-gray/30 px-2 py-1 text-sm" />
@@ -453,10 +453,10 @@ function PendingReviewQueue({ organizationId }: { organizationId: string }) {
 	return (
 		<ul className="flex flex-col gap-2" aria-label="Sponsorships awaiting review">
 			{data.items.map((sponsorship) => (
-				<li key={sponsorship.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-pure-white p-3">
+				<li key={sponsorship.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-pure-white dark:bg-[#111827] p-3">
 					<div className="min-w-0 flex-1">
-						<p className="break-words font-medium text-navy">{sponsorship.sponsorName}</p>
-						<p className="text-sm text-slate-gray">{formatMoneyMinorUnits(sponsorship.amountMinor, sponsorship.currency)}</p>
+						<p className="break-words font-medium text-navy dark:text-[#f8fafc]">{sponsorship.sponsorName}</p>
+						<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">{formatMoneyMinorUnits(sponsorship.amountMinor, sponsorship.currency)}</p>
 					</div>
 					<div className="flex shrink-0 gap-2">
 						<Button type="button" disabled={approve.isPending} onClick={() => approve.mutate(sponsorship.id)}>
@@ -490,7 +490,7 @@ function ShareLinkPanel({ organizationId, organizationSlug }: { organizationId: 
 	const { data, isLoading, isError } = useShareLinkQrCode(organizationId, url, Boolean(organizationSlug));
 
 	if (!organizationSlug) {
-		return <p className="text-sm text-slate-gray">A share link isn&rsquo;t available until this organization has a public slug.</p>;
+		return <p className="text-sm text-slate-gray dark:text-[#cbd5e1]">A share link isn&rsquo;t available until this organization has a public slug.</p>;
 	}
 
 	return (
@@ -499,7 +499,7 @@ function ShareLinkPanel({ organizationId, organizationSlug }: { organizationId: 
 			{isError && <ErrorState message="Could not generate a QR code." />}
 			{data && <img src={data.qrCodeDataUri} alt={`QR code linking to ${url}`} className="size-32 rounded-md border border-slate-gray/20" />}
 			<div className="flex flex-col gap-1">
-				<p className="text-sm text-slate-gray">Share this link with a prospective sponsor, or print the QR code in event materials.</p>
+				<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Share this link with a prospective sponsor, or print the QR code in event materials.</p>
 				<div className="flex items-center gap-2">
 					<input readOnly aria-label="Shareable sponsorship link" value={url} className="min-h-9 w-64 rounded-md border border-slate-gray/30 px-2 py-1 text-sm" onFocus={(e) => e.currentTarget.select()} />
 					<Button type="button" variant="secondary" onClick={() => navigator.clipboard?.writeText(url)}>
@@ -547,7 +547,7 @@ function SponsorLogoUpload({ organizationId, packageId, sponsorId }: { organizat
 
 	return (
 		<div className="flex flex-col gap-1">
-			<label htmlFor={`sponsor-logo-${sponsorId}`} className="text-sm font-medium text-navy">
+			<label htmlFor={`sponsor-logo-${sponsorId}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 				Sponsor logo
 			</label>
 			<input
@@ -558,7 +558,7 @@ function SponsorLogoUpload({ organizationId, packageId, sponsorId }: { organizat
 				disabled={state.status === "uploading"}
 				className="text-sm"
 			/>
-			{state.status === "uploading" && <p className="text-sm text-slate-gray">Uploading…</p>}
+			{state.status === "uploading" && <p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Uploading…</p>}
 			{state.status === "error" && <p role="alert" className="text-sm text-error-red">{state.error}</p>}
 		</div>
 	);

@@ -61,11 +61,11 @@ export function ManualVendorPanel({ organizationId }: { organizationId: string }
 	});
 
 	return (
-		<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5" aria-labelledby="manual-vendors-heading">
+		<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5" aria-labelledby="manual-vendors-heading">
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div>
-					<h3 id="manual-vendors-heading" className="font-heading text-lg font-semibold text-navy">Manual vendors</h3>
-					<p className="mt-1 text-sm text-slate-gray">Record local printers, in-house fulfillment, and other non-Printify suppliers without creating fake provider IDs.</p>
+					<h3 id="manual-vendors-heading" className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Manual vendors</h3>
+					<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Record local printers, in-house fulfillment, and other non-Printify suppliers without creating fake provider IDs.</p>
 				</div>
 				<Button type="button" variant="secondary" onClick={showForm ? () => setShowForm(false) : beginCreate}>
 					{showForm ? "Close" : "Add vendor"}
@@ -73,7 +73,7 @@ export function ManualVendorPanel({ organizationId }: { organizationId: string }
 			</div>
 
 			{showForm && (
-				<form onSubmit={onSubmit} className="mt-4 grid gap-3 rounded-lg bg-ice-white p-4 sm:grid-cols-2" noValidate>
+				<form onSubmit={onSubmit} className="mt-4 grid gap-3 rounded-lg bg-ice-white dark:bg-[#0f172a] p-4 sm:grid-cols-2" noValidate>
 					<Field label="Vendor name" id="vendor-name" error={errors.name?.message} required>
 						<input id="vendor-name" {...register("name")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 					</Field>
@@ -108,9 +108,9 @@ export function ManualVendorPanel({ organizationId }: { organizationId: string }
 						<li key={vendor.id} className="rounded-lg border border-slate-gray/20 p-4">
 							<div className="flex items-start justify-between gap-3">
 								<div className="min-w-0">
-									<p className="break-words font-medium text-navy">{vendor.name}</p>
-									<p className="text-sm text-slate-gray">{vendor.contactName ?? vendor.contactEmail ?? "No contact recorded"}</p>
-									<span className="mt-2 inline-flex rounded-full bg-ice-white px-2 py-1 text-xs font-medium text-slate-gray">{vendor.status}</span>
+									<p className="break-words font-medium text-navy dark:text-[#f8fafc]">{vendor.name}</p>
+									<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">{vendor.contactName ?? vendor.contactEmail ?? "No contact recorded"}</p>
+									<span className="mt-2 inline-flex rounded-full bg-ice-white dark:bg-[#0f172a] px-2 py-1 text-xs font-medium text-slate-gray dark:text-[#cbd5e1]">{vendor.status}</span>
 								</div>
 								{vendor.status === "ACTIVE" && (
 									<div className="flex shrink-0 flex-wrap gap-2">
@@ -130,7 +130,7 @@ export function ManualVendorPanel({ organizationId }: { organizationId: string }
 function Field({ label, id, error, required = false, children }: { label: string; id: string; error?: string; required?: boolean; children: ReactElement }) {
 	return (
 		<div className="flex flex-col gap-1">
-			<label htmlFor={id} className="text-sm font-medium text-navy">{label}{required && <span aria-hidden> *</span>}</label>
+			<label htmlFor={id} className="text-sm font-medium text-navy dark:text-[#f8fafc]">{label}{required && <span aria-hidden> *</span>}</label>
 			{children}
 			{error && <p id={`${id}-error`} role="alert" className="text-sm text-error-red">{error}</p>}
 		</div>

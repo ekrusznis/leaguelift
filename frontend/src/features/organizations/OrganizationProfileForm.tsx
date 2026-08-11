@@ -61,7 +61,7 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 	return (
 		<form onSubmit={onSubmit} className="flex max-w-lg flex-col gap-4" noValidate>
 			<div className="flex flex-col gap-1">
-				<label htmlFor="profile-name" className="text-sm font-medium text-navy">
+				<label htmlFor="profile-name" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Organization name
 				</label>
 				<input
@@ -80,7 +80,7 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 			</div>
 
 			<div className="flex flex-col gap-1">
-				<label htmlFor="profile-type" className="text-sm font-medium text-navy">
+				<label htmlFor="profile-type" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Organization type
 				</label>
 				<select
@@ -97,7 +97,7 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 			</div>
 
 			<fieldset className="flex flex-col gap-2">
-				<legend className="text-sm font-medium text-navy">Sports offered</legend>
+				<legend className="text-sm font-medium text-navy dark:text-[#f8fafc]">Sports offered</legend>
 				<div className="flex flex-wrap gap-2">
 					{COMMON_SPORTS.map((sport) => {
 						const checked = selectedSports.includes(sport);
@@ -106,8 +106,8 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 								key={sport}
 								className={`min-h-11 cursor-pointer rounded-full border px-3 py-2 text-sm ${
 									checked
-										? "border-victory-green bg-victory-green/10 text-navy"
-										: "border-slate-gray/30 text-slate-gray"
+										? "border-victory-green bg-victory-green/10 text-navy dark:text-[#f8fafc]"
+										: "border-slate-gray/30 text-slate-gray dark:text-[#cbd5e1]"
 								}`}
 							>
 								<input
@@ -129,7 +129,7 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 			</fieldset>
 
 			<div className="flex flex-col gap-1">
-				<label htmlFor="profile-contact-email" className="text-sm font-medium text-navy">
+				<label htmlFor="profile-contact-email" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Contact email
 				</label>
 				<input
@@ -148,7 +148,7 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 			</div>
 
 			<div className="flex flex-col gap-1">
-				<label htmlFor="profile-contact-phone" className="text-sm font-medium text-navy">
+				<label htmlFor="profile-contact-phone" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Contact phone (optional)
 				</label>
 				<input
@@ -160,9 +160,9 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 			</div>
 
 			<fieldset className="flex flex-col gap-3">
-				<legend className="text-sm font-medium text-navy">Address (optional)</legend>
+				<legend className="text-sm font-medium text-navy dark:text-[#f8fafc]">Address (optional)</legend>
 				<div className="flex flex-col gap-1">
-					<label htmlFor="profile-address-line1" className="text-sm text-slate-gray">
+					<label htmlFor="profile-address-line1" className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 						Street address
 					</label>
 					<input
@@ -173,7 +173,7 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 					/>
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor="profile-address-line2" className="text-sm text-slate-gray">
+					<label htmlFor="profile-address-line2" className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 						Street address line 2
 					</label>
 					<input
@@ -185,7 +185,7 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 				</div>
 				<div className="flex flex-wrap gap-3">
 					<div className="flex flex-col gap-1">
-						<label htmlFor="profile-address-city" className="text-sm text-slate-gray">
+						<label htmlFor="profile-address-city" className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 							City
 						</label>
 						<input
@@ -196,7 +196,7 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 						/>
 					</div>
 					<div className="flex flex-col gap-1">
-						<label htmlFor="profile-address-state" className="text-sm text-slate-gray">
+						<label htmlFor="profile-address-state" className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 							State / province
 						</label>
 						<input
@@ -208,7 +208,7 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 						/>
 					</div>
 					<div className="flex flex-col gap-1">
-						<label htmlFor="profile-address-postal-code" className="text-sm text-slate-gray">
+						<label htmlFor="profile-address-postal-code" className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 							Postal code
 						</label>
 						<input
@@ -219,7 +219,7 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 						/>
 					</div>
 					<div className="flex flex-col gap-1">
-						<label htmlFor="profile-address-country" className="text-sm text-slate-gray">
+						<label htmlFor="profile-address-country" className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 							Country
 						</label>
 						<input
@@ -234,7 +234,7 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 			</fieldset>
 
 			<div className="flex flex-col gap-1">
-				<label htmlFor="profile-timezone" className="text-sm font-medium text-navy">
+				<label htmlFor="profile-timezone" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Timezone
 				</label>
 				<input
@@ -244,14 +244,14 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 					{...register("timezone")}
 					className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 				/>
-				<p className="text-xs text-slate-gray">
+				<p className="text-xs text-slate-gray dark:text-[#cbd5e1]">
 					IANA time zone id. Used as the default for new events, teams, and tournaments that don't set their own
 					override.
 				</p>
 				{showSuggestionBanner && (
 					<div
 						role="status"
-						className="mt-1 flex flex-wrap items-center gap-2 rounded-md border border-championship-gold/40 bg-championship-gold/10 px-3 py-2 text-sm text-navy"
+						className="mt-1 flex flex-wrap items-center gap-2 rounded-md border border-championship-gold/40 bg-championship-gold/10 px-3 py-2 text-sm text-navy dark:text-[#f8fafc]"
 					>
 						<span>
 							Suggested timezone based on your address: <strong>{suggestedTimezone}</strong>

@@ -63,8 +63,8 @@ export function PlatformOrganizationConsolePage() {
 			<div className="flex flex-wrap items-start justify-between gap-4">
 				<div>
 					<Link to="/app/platform/organizations" className="text-sm font-medium text-azure-blue hover:underline">← All organizations</Link>
-					<h1 className="mt-2 font-heading text-2xl font-bold text-navy-900">{data.name}</h1>
-					<p className="mt-1 text-slate-500">/{data.slug} · {data.organizationType.replaceAll("_", " ")} · {data.status}</p>
+					<h1 className="mt-2 font-heading text-2xl font-bold text-navy-900 dark:text-[#f8fafc]">{data.name}</h1>
+					<p className="mt-1 text-slate-500 dark:text-[#cbd5e1]">/{data.slug} · {data.organizationType.replaceAll("_", " ")} · {data.status}</p>
 				</div>
 				{hasActiveAccess && (
 					<Link to={appPaths.organization(organizationId, "overview")} className="rounded-md bg-green-600 px-4 py-2.5 font-semibold text-white hover:bg-green-700">
@@ -84,9 +84,9 @@ export function PlatformOrganizationConsolePage() {
 				<Metric label="Organization earnings" value={formatMoneyMinorUnits(data.organizationEarningsMinor, "USD")} detail={`${data.sponsorships} sponsorship records`} />
 			</section>
 
-			<section className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 lg:grid-cols-2">
+			<section className="grid gap-4 rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-5 lg:grid-cols-2">
 				<div>
-					<h2 className="font-heading text-lg font-semibold text-navy-900">Customer contacts</h2>
+					<h2 className="font-heading text-lg font-semibold text-navy-900 dark:text-[#f8fafc]">Customer contacts</h2>
 					<dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
 						<Detail label="Owner" value={data.ownerNames.join(", ") || "No active owner"} />
 						<Detail label="Owner email" value={data.ownerEmails.join(", ") || "Not available"} />
@@ -95,20 +95,20 @@ export function PlatformOrganizationConsolePage() {
 					</dl>
 				</div>
 				<div>
-					<h2 className="font-heading text-lg font-semibold text-navy-900">Support access</h2>
+					<h2 className="font-heading text-lg font-semibold text-navy-900 dark:text-[#f8fafc]">Support access</h2>
 					{hasActiveAccess ? (
-						<div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+						<div className="mt-3 rounded-lg border border-green-200 bg-green-50 dark:bg-green-950 p-4 text-sm text-green-900">
 							<p className="font-semibold">Active until {new Date(currentAccess.data!.expiresAt).toLocaleString()}</p>
 							<p className="mt-1">{currentAccess.data!.reason}</p>
 						</div>
 					) : (
 						<div className="mt-3 flex flex-col gap-3">
-							{activeForAnotherOrganization && <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">Starting this session will end your active access to {currentAccess.data!.organizationName}.</p>}
-							<label className="flex flex-col gap-1 text-sm font-medium text-navy-900">
+							{activeForAnotherOrganization && <p className="rounded-md bg-amber-50 dark:bg-amber-950 p-3 text-sm text-amber-900">Starting this session will end your active access to {currentAccess.data!.organizationName}.</p>}
+							<label className="flex flex-col gap-1 text-sm font-medium text-navy-900 dark:text-[#f8fafc]">
 								Reason for access
-								<textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} maxLength={500} placeholder="Example: Help the owner resolve a failed roster import and verify the affected households." className="rounded-md border border-slate-300 px-3 py-2 font-normal" />
+								<textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} maxLength={500} placeholder="Example: Help the owner resolve a failed roster import and verify the affected households." className="rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2 font-normal" />
 							</label>
-							<p className="text-xs text-slate-500">Required, audited, and limited to two hours. You remain the actor; this does not impersonate the customer.</p>
+							<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">Required, audited, and limited to two hours. You remain the actor; this does not impersonate the customer.</p>
 							<button type="button" disabled={reason.trim().length < 10 || startAccess.isPending} onClick={beginSupportAccess} className="self-start rounded-md bg-navy-900 px-4 py-2.5 font-semibold text-white hover:bg-navy-800 disabled:cursor-not-allowed disabled:opacity-50">
 								{startAccess.isPending ? "Starting access…" : "Start support access"}
 							</button>
@@ -119,24 +119,24 @@ export function PlatformOrganizationConsolePage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-semibold text-navy-900">Organization workspace</h2>
-				<p className="mt-1 text-sm text-slate-500">These destinations reuse the organization’s real pages and backend authorization. Start support access before opening customer data.</p>
+				<h2 className="font-heading text-lg font-semibold text-navy-900 dark:text-[#f8fafc]">Organization workspace</h2>
+				<p className="mt-1 text-sm text-slate-500 dark:text-[#cbd5e1]">These destinations reuse the organization’s real pages and backend authorization. Start support access before opening customer data.</p>
 				<div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 					{MODULES.map((module) => {
 						const count = module.countKey ? counts[module.countKey] : null;
 						const content = (
 							<>
 								<div className="flex items-start justify-between gap-3">
-									<h3 className="font-semibold text-navy-900">{module.label}</h3>
-									{count !== null && <span className="rounded-full bg-ice-50 px-2 py-0.5 text-xs font-semibold text-slate-600">{count}</span>}
+									<h3 className="font-semibold text-navy-900 dark:text-[#f8fafc]">{module.label}</h3>
+									{count !== null && <span className="rounded-full bg-ice-50 dark:bg-[#0f172a] px-2 py-0.5 text-xs font-semibold text-slate-600 dark:text-[#cbd5e1]">{count}</span>}
 								</div>
-								<p className="mt-1 text-sm text-slate-500">{module.description}</p>
+								<p className="mt-1 text-sm text-slate-500 dark:text-[#cbd5e1]">{module.description}</p>
 							</>
 						);
 						return hasActiveAccess ? (
-							<Link key={module.section} to={appPaths.organization(organizationId, module.section)} className="rounded-xl border border-slate-200 bg-white p-4 hover:border-green-500 hover:shadow-sm">{content}</Link>
+							<Link key={module.section} to={appPaths.organization(organizationId, module.section)} className="rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-4 hover:border-green-500 hover:shadow-sm">{content}</Link>
 						) : (
-							<div key={module.section} aria-disabled="true" className="rounded-xl border border-slate-200 bg-slate-50 p-4 opacity-65">{content}</div>
+							<div key={module.section} aria-disabled="true" className="rounded-xl border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-[#1e293b] p-4 opacity-65">{content}</div>
 						);
 					})}
 				</div>
@@ -146,9 +146,9 @@ export function PlatformOrganizationConsolePage() {
 }
 
 function Metric({ label, value, detail }: { label: string; value: number | string; detail: string }) {
-	return <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p><p className="mt-2 font-heading text-2xl font-bold text-navy-900">{value}</p><p className="mt-1 text-xs text-slate-500">{detail}</p></div>;
+	return <div className="rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-4"><p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-[#cbd5e1]">{label}</p><p className="mt-2 font-heading text-2xl font-bold text-navy-900 dark:text-[#f8fafc]">{value}</p><p className="mt-1 text-xs text-slate-500 dark:text-[#cbd5e1]">{detail}</p></div>;
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
-	return <div><dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt><dd className="mt-1 break-words text-navy-900">{value}</dd></div>;
+	return <div><dt className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-[#cbd5e1]">{label}</dt><dd className="mt-1 break-words text-navy-900 dark:text-[#f8fafc]">{value}</dd></div>;
 }

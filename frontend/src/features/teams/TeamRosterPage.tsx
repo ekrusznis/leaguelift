@@ -21,7 +21,7 @@ const CLEARANCE_LABELS: Record<ClearanceStatus, string> = {
 };
 
 const CLEARANCE_CLASSES: Record<ClearanceStatus, string> = {
-	ROSTER_PENDING: "bg-slate-gray/10 text-slate-gray",
+	ROSTER_PENDING: "bg-slate-gray/10 text-slate-gray dark:text-[#cbd5e1]",
 	DOCUMENTS_REQUIRED: "bg-championship-gold/10 text-championship-gold",
 	UNDER_REVIEW: "bg-info-blue/10 text-info-blue",
 	CLEARED: "bg-victory-green/10 text-victory-green",
@@ -58,8 +58,8 @@ export function TeamRosterPage() {
 				<Link to={appPaths.teamEvents(organizationId, teamId)} className="mb-2 inline-block text-sm text-azure-blue hover:underline">
 					← Back to team schedule
 				</Link>
-				<h1 className="font-heading text-2xl font-bold text-navy">Team Roster</h1>
-				<p className="mt-1 text-slate-gray">Every athlete assigned to this team.</p>
+				<h1 className="font-heading text-2xl font-bold text-navy dark:text-[#f8fafc]">Team Roster</h1>
+				<p className="mt-1 text-slate-gray dark:text-[#cbd5e1]">Every athlete assigned to this team.</p>
 			</div>
 
 			{canViewEligibility && (
@@ -67,7 +67,7 @@ export function TeamRosterPage() {
 					type="button"
 					onClick={() => setIneligibleOnly((value) => !value)}
 					aria-pressed={ineligibleOnly}
-					className={`self-start rounded-full px-3 py-1 text-sm font-medium ${ineligibleOnly ? "bg-navy text-white" : "border border-slate-gray/30 text-slate-gray hover:bg-ice-white"}`}
+					className={`self-start rounded-full px-3 py-1 text-sm font-medium ${ineligibleOnly ? "bg-navy text-white" : "border border-slate-gray/30 text-slate-gray dark:text-[#cbd5e1] hover:bg-ice-white hover:dark:bg-[#0f172a]"}`}
 				>
 					{ineligibleOnly ? "Showing ineligible only" : "Show ineligible only"}
 				</button>
@@ -88,8 +88,8 @@ export function TeamRosterPage() {
 						const clearance = clearanceByParticipant.get(participant.id);
 						const status = clearance?.status ?? "ROSTER_PENDING";
 						return (
-							<li key={participant.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-3">
-								<p className="font-medium text-navy">
+							<li key={participant.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3">
+								<p className="font-medium text-navy dark:text-[#f8fafc]">
 									{participant.firstName} {participant.lastName}
 								</p>
 								{canViewEligibility && (

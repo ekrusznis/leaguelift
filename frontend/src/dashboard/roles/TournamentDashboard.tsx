@@ -62,11 +62,11 @@ export function TournamentDashboard({ organizationId, tournamentId }: { organiza
 							{(data) => (
 								<div>
 									<div className="flex items-center justify-between">
-										<p className="font-heading text-xl font-extrabold text-navy-900">{data.name}</p>
+										<p className="font-heading text-xl font-extrabold text-navy-900 dark:text-[#f8fafc]">{data.name}</p>
 										<Pill tone={data.status === "ACTIVE" ? "success" : "neutral"}>{data.status}</Pill>
 									</div>
-									<p className="mt-1 text-sm text-slate-500">{data.sport ?? "Multi-sport"}</p>
-									<div className="mt-3 flex flex-col gap-1 text-sm text-slate-600">
+									<p className="mt-1 text-sm text-slate-500 dark:text-[#cbd5e1]">{data.sport ?? "Multi-sport"}</p>
+									<div className="mt-3 flex flex-col gap-1 text-sm text-slate-600 dark:text-[#cbd5e1]">
 										{data.startDate && (
 											<span>
 												{data.startDate}

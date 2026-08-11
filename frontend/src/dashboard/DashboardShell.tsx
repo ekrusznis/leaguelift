@@ -120,7 +120,7 @@ export function DashboardShell({
 						: `flex items-center gap-3 rounded-lg border-l-4 px-3 py-2.5 text-sm font-medium transition ${active ? "border-green-500 bg-white/5 text-white" : "border-transparent text-slate-400 hover:bg-white/5 hover:text-white"}`
 				}
 			>
-				<span className={active ? "text-green-400" : "text-slate-500"}>{item.icon}</span>
+				<span className={active ? "text-green-400" : "text-slate-500 dark:text-[#cbd5e1]"}>{item.icon}</span>
 				{item.label}
 			</Link>
 		);
@@ -139,10 +139,10 @@ export function DashboardShell({
 	);
 
 	return (
-		<div className="flex min-h-screen flex-col bg-ice-50">
+		<div className="flex min-h-screen flex-col bg-ice-50 dark:bg-[#0f172a]">
 			<a
 				href="#dashboard-content"
-				className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-white focus:p-2 focus:text-navy-900"
+				className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-white focus:dark:bg-[#111827] focus:p-2 focus:text-navy-900 focus:dark:text-[#f8fafc]"
 			>
 				Skip to dashboard content
 			</a>
@@ -210,17 +210,17 @@ export function DashboardShell({
 							<ChevronDownIcon className="hidden size-4 text-slate-400 sm:block" />
 						</button>
 						{userMenuOpen && (
-							<div className="absolute right-0 top-full z-30 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-								<Link to="/app" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 hover:bg-ice-50">
+							<div className="absolute right-0 top-full z-30 mt-2 w-44 rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-2 shadow-xl">
+								<Link to="/app" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 dark:text-[#f8fafc] hover:bg-ice-50 hover:dark:bg-[#0f172a]">
 									Dashboard
 								</Link>
-								<Link to="/app/action-center" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 hover:bg-ice-50">
+								<Link to="/app/action-center" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 dark:text-[#f8fafc] hover:bg-ice-50 hover:dark:bg-[#0f172a]">
 									Action center
 								</Link>
-								<Link to="/app/announcements" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 hover:bg-ice-50">
+								<Link to="/app/announcements" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 dark:text-[#f8fafc] hover:bg-ice-50 hover:dark:bg-[#0f172a]">
 									Announcements
 								</Link>
-								<Link to="/app/help" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 hover:bg-ice-50">
+								<Link to="/app/help" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 dark:text-[#f8fafc] hover:bg-ice-50 hover:dark:bg-[#0f172a]">
 									Help center
 								</Link>
 								<button type="button" onClick={signOut} className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-error-600 hover:bg-error-50">

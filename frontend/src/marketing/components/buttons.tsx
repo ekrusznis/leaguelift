@@ -133,7 +133,7 @@ export function SecondaryLightButton(props: ButtonLikeProps) {
 	return renderAs(
 		props,
 		buildClassName(
-			"border border-navy-900 bg-white text-navy-900 hover:border-orange-500 hover:text-orange-600",
+			"border border-navy-900 bg-white dark:bg-[#111827] text-navy-900 dark:text-[#f8fafc] hover:border-orange-500 hover:text-orange-600",
 			props.className,
 		),
 	);

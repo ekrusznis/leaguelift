@@ -56,32 +56,32 @@ export function SafeSportOrgPolicyPanel({ organizationId, canReview }: { organiz
 	}
 
 	return (
-		<section className="rounded-lg border border-slate-gray/20 bg-ice-white p-4" aria-labelledby="safesport-policy-heading">
+		<section className="rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4" aria-labelledby="safesport-policy-heading">
 			<div className="flex flex-wrap items-center justify-between gap-3">
-				<h3 id="safesport-policy-heading" className="font-heading text-lg font-semibold text-navy">
+				<h3 id="safesport-policy-heading" className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">
 					Messaging SafeSport / Compliance Review
 				</h3>
 				<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[data.reviewStatus]}`}>{STATUS_LABELS[data.reviewStatus]}</span>
 			</div>
-			<p className="mt-1 text-sm text-slate-gray">
+			<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">
 				Athlete-created peer messaging stays disabled organization-wide until a Rally26 platform administrator records an approved
 				compliance review with a durable reference.
 			</p>
 			<dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
 				<div>
-					<dt className="text-slate-gray">Athlete messaging</dt>
-					<dd className="font-medium text-navy">{data.athleteMessagingEnabled ? "Enabled" : "Disabled"}</dd>
+					<dt className="text-slate-gray dark:text-[#cbd5e1]">Athlete messaging</dt>
+					<dd className="font-medium text-navy dark:text-[#f8fafc]">{data.athleteMessagingEnabled ? "Enabled" : "Disabled"}</dd>
 				</div>
 				{data.reviewReference && (
 					<div className="sm:col-span-2">
-						<dt className="text-slate-gray">Review reference</dt>
-						<dd className="break-words text-navy">{data.reviewReference}</dd>
+						<dt className="text-slate-gray dark:text-[#cbd5e1]">Review reference</dt>
+						<dd className="break-words text-navy dark:text-[#f8fafc]">{data.reviewReference}</dd>
 					</div>
 				)}
 				{data.reviewedAt && (
 					<div className="sm:col-span-2">
-						<dt className="text-slate-gray">Reviewed</dt>
-						<dd className="text-navy">{new Date(data.reviewedAt).toLocaleString()}</dd>
+						<dt className="text-slate-gray dark:text-[#cbd5e1]">Reviewed</dt>
+						<dd className="text-navy dark:text-[#f8fafc]">{new Date(data.reviewedAt).toLocaleString()}</dd>
 					</div>
 				)}
 			</dl>
@@ -92,9 +92,9 @@ export function SafeSportOrgPolicyPanel({ organizationId, canReview }: { organiz
 				</Button>
 			)}
 			{canReview && showForm && (
-				<form onSubmit={(event) => void submit(event)} className="mt-4 flex flex-col gap-3 rounded-md border border-slate-gray/20 bg-pure-white p-3" noValidate>
+				<form onSubmit={(event) => void submit(event)} className="mt-4 flex flex-col gap-3 rounded-md border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3" noValidate>
 					<div>
-						<label htmlFor="safesport-status" className="text-sm font-medium text-navy">Decision</label>
+						<label htmlFor="safesport-status" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Decision</label>
 						<select
 							id="safesport-status"
 							value={reviewStatus}
@@ -110,7 +110,7 @@ export function SafeSportOrgPolicyPanel({ organizationId, canReview }: { organiz
 						</select>
 					</div>
 					<div>
-						<label htmlFor="safesport-reference" className="text-sm font-medium text-navy">
+						<label htmlFor="safesport-reference" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 							Review reference <span aria-hidden>*</span>
 						</label>
 						<textarea
@@ -125,7 +125,7 @@ export function SafeSportOrgPolicyPanel({ organizationId, canReview }: { organiz
 						/>
 					</div>
 					{reviewStatus === "APPROVED" && (
-						<label className="flex items-center gap-2 text-sm text-navy">
+						<label className="flex items-center gap-2 text-sm text-navy dark:text-[#f8fafc]">
 							<input
 								type="checkbox"
 								checked={athleteMessagingEnabled}
@@ -170,19 +170,19 @@ export function GuardianMessageSafetyControls() {
 		} catch (error) { setNotice(error instanceof Error ? error.message : "The restriction could not be recorded."); }
 	}
 
-	return <section className="mt-6 rounded-lg border border-slate-gray/20 bg-ice-white p-4" aria-labelledby="guardian-message-safety-heading">
-		<h3 id="guardian-message-safety-heading" className="font-heading text-lg font-semibold text-navy">Guardian communication controls</h3>
-		<p className="mt-1 text-sm text-slate-gray">Record a request to stop staff messaging to your athlete, or all Rally26 messaging for that athlete. Requests are retained as safety history.</p>
+	return <section className="mt-6 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4" aria-labelledby="guardian-message-safety-heading">
+		<h3 id="guardian-message-safety-heading" className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Guardian communication controls</h3>
+		<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Record a request to stop staff messaging to your athlete, or all Rally26 messaging for that athlete. Requests are retained as safety history.</p>
 		{participants.isLoading && <LoadingState label="Loading linked athletes…" />}
 		{participants.isError && <ErrorState message="Could not load linked athletes." onRetry={() => participants.refetch()} />}
 		{participants.data?.length === 0 && <EmptyState title="No linked athletes" description="Communication restrictions appear when your guardian account is linked to an athlete." />}
 		{participants.data && participants.data.length > 0 && <form onSubmit={(event) => void submit(event)} className="mt-4 grid gap-3 md:grid-cols-2">
-			<div><label htmlFor="restriction-athlete" className="text-sm font-medium text-navy">Athlete</label><select id="restriction-athlete" value={participant ? `${participant.organizationId}:${participant.participantId}` : ""} onChange={(e) => setParticipantKey(e.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-slate-gray/30 px-3 py-2">{participants.data.map((item) => <option key={item.participantId} value={`${item.organizationId}:${item.participantId}`}>{item.displayName}</option>)}</select></div>
-			<div><label htmlFor="restriction-kind" className="text-sm font-medium text-navy">Restriction</label><select id="restriction-kind" value={kind} onChange={(e) => setKind(e.target.value as MessageContactRestrictionKind)} className="mt-1 min-h-11 w-full rounded-md border border-slate-gray/30 px-3 py-2"><option value="ADULT_TO_MINOR">Stop staff → athlete messages</option><option value="ALL_MESSAGING">Stop all messaging for athlete</option></select></div>
-			<div className="md:col-span-2"><label htmlFor="restriction-note" className="text-sm font-medium text-navy">Optional note</label><textarea id="restriction-note" maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="mt-1 w-full rounded-md border border-slate-gray/30 px-3 py-2" /></div>
+			<div><label htmlFor="restriction-athlete" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Athlete</label><select id="restriction-athlete" value={participant ? `${participant.organizationId}:${participant.participantId}` : ""} onChange={(e) => setParticipantKey(e.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-slate-gray/30 px-3 py-2">{participants.data.map((item) => <option key={item.participantId} value={`${item.organizationId}:${item.participantId}`}>{item.displayName}</option>)}</select></div>
+			<div><label htmlFor="restriction-kind" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Restriction</label><select id="restriction-kind" value={kind} onChange={(e) => setKind(e.target.value as MessageContactRestrictionKind)} className="mt-1 min-h-11 w-full rounded-md border border-slate-gray/30 px-3 py-2"><option value="ADULT_TO_MINOR">Stop staff → athlete messages</option><option value="ALL_MESSAGING">Stop all messaging for athlete</option></select></div>
+			<div className="md:col-span-2"><label htmlFor="restriction-note" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Optional note</label><textarea id="restriction-note" maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} rows={2} className="mt-1 w-full rounded-md border border-slate-gray/30 px-3 py-2" /></div>
 			<div className="md:col-span-2"><Button type="submit" disabled={createRestriction.isPending}>Record restriction</Button></div>
 		</form>}
-		{restrictions.data && restrictions.data.length > 0 && <ul className="mt-4 flex flex-col gap-2">{restrictions.data.map((item) => <li key={item.id} className="rounded-md border border-slate-gray/20 bg-pure-white p-3"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-medium text-navy">{item.participantDisplayName}</p><p className="text-xs text-slate-gray">{item.kind === "ALL_MESSAGING" ? "All messaging" : "Staff → athlete"} · {item.status}</p></div>{item.status === "ACTIVE" && <Button type="button" variant="secondary" disabled={liftRestriction.isPending} onClick={() => { const reason=window.prompt("Why are you lifting this restriction?"); if (reason?.trim()) liftRestriction.mutate({ restrictionId: item.id, note: reason.trim() }); }}>Lift</Button>}</div></li>)}</ul>}
-		{notice && <p role="status" className="mt-3 text-sm text-slate-gray">{notice}</p>}
+		{restrictions.data && restrictions.data.length > 0 && <ul className="mt-4 flex flex-col gap-2">{restrictions.data.map((item) => <li key={item.id} className="rounded-md border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-medium text-navy dark:text-[#f8fafc]">{item.participantDisplayName}</p><p className="text-xs text-slate-gray dark:text-[#cbd5e1]">{item.kind === "ALL_MESSAGING" ? "All messaging" : "Staff → athlete"} · {item.status}</p></div>{item.status === "ACTIVE" && <Button type="button" variant="secondary" disabled={liftRestriction.isPending} onClick={() => { const reason=window.prompt("Why are you lifting this restriction?"); if (reason?.trim()) liftRestriction.mutate({ restrictionId: item.id, note: reason.trim() }); }}>Lift</Button>}</div></li>)}</ul>}
+		{notice && <p role="status" className="mt-3 text-sm text-slate-gray dark:text-[#cbd5e1]">{notice}</p>}
 	</section>;
 }

@@ -11,7 +11,7 @@ export function AccessibilityPage() {
 			</p>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">What we&rsquo;ve built toward this</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">What we&rsquo;ve built toward this</h2>
 				<ul className="mt-3 flex list-disc flex-col gap-2 pl-5">
 					<li>Keyboard navigation and visible focus states throughout the site and application;</li>
 					<li>Semantic landmarks, heading structure, and labeled form fields;</li>
@@ -22,7 +22,7 @@ export function AccessibilityPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Where we are today</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Where we are today</h2>
 				<p className="mt-2">
 					These are engineering targets we build against continuously, not the result of a completed,
 					independent accessibility audit. If you encounter a barrier, we want to know about it and fix it
@@ -31,7 +31,7 @@ export function AccessibilityPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Feedback</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Feedback</h2>
 				<p className="mt-2">
 					If you encounter an accessibility barrier using Rally26, contact us through the{" "}
 					<Link to="/contact" className="text-green-600 hover:underline">

@@ -8,7 +8,7 @@ export function OrganizationsPage() {
 	return (
 		<div className="flex flex-col gap-8">
 			<div className="flex items-center justify-between">
-				<h1 className="font-heading text-2xl font-bold text-navy">Organizations</h1>
+				<h1 className="font-heading text-2xl font-bold text-navy dark:text-[#f8fafc]">Organizations</h1>
 				<button
 					type="button"
 					onClick={() => setShowForm((prev) => !prev)}

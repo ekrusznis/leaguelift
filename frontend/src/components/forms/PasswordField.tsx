@@ -17,8 +17,8 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(fu
 	const fieldId = id ?? generatedId;
 	const hintId = hint ? `${fieldId}-hint` : undefined;
 	const errorId = error ? `${fieldId}-error` : undefined;
-	const labelClassName = tone === "dark" ? "text-white" : "text-navy-900";
-	const hintClassName = tone === "dark" ? "text-slate-300" : "text-slate-500";
+	const labelClassName = tone === "dark" ? "text-white" : "text-navy-900 dark:text-[#f8fafc]";
+	const hintClassName = tone === "dark" ? "text-slate-300" : "text-slate-500 dark:text-[#cbd5e1]";
 	const requiredClassName = tone === "dark" ? "text-gold-400" : "text-error-600";
 	const errorClassName = tone === "dark" ? "text-gold-400" : "text-error-600";
 
@@ -41,8 +41,8 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(fu
 					required={required}
 					aria-invalid={!!error}
 					aria-describedby={[hintId, errorId].filter(Boolean).join(" ") || undefined}
-					className={`min-h-12 w-full rounded-[10px] border bg-white px-3.5 py-2.5 pr-12 text-navy-900 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400 ${
-						error ? "border-error-600" : "border-slate-200"
+					className={`min-h-12 w-full rounded-[10px] border bg-white dark:bg-[#111827] px-3.5 py-2.5 pr-12 text-navy-900 dark:text-[#f8fafc] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400 ${
+						error ? "border-error-600" : "border-slate-200 dark:border-[#334155]"
 					} ${className}`}
 					{...props}
 				/>
@@ -51,7 +51,7 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(fu
 					onClick={() => setVisible((value) => !value)}
 					aria-label={visible ? "Hide password" : "Show password"}
 					aria-pressed={visible}
-					className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-2 text-slate-500 hover:text-navy-900 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400"
+					className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-2 text-slate-500 dark:text-[#cbd5e1] hover:text-navy-900 hover:dark:text-[#f8fafc] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400"
 				>
 					{visible ? (
 						<svg className="size-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">

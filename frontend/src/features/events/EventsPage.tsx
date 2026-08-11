@@ -61,8 +61,8 @@ export function EventsPage({ scopeType }: { scopeType: EventsPageScope }) {
 		<div className="flex flex-col gap-6">
 			<div>
 				<Link to={backTo} className="mb-2 inline-block text-sm text-azure-blue hover:underline">← Back</Link>
-				<h1 className="font-heading text-2xl font-bold text-navy">{title}</h1>
-				<p className="mt-1 text-slate-gray">{description}</p>
+				<h1 className="font-heading text-2xl font-bold text-navy dark:text-[#f8fafc]">{title}</h1>
+				<p className="mt-1 text-slate-gray dark:text-[#cbd5e1]">{description}</p>
 			</div>
 			<EventListPanel scope={scope} canManage={canManage} householdId={householdId} participantId={participantId} />
 		</div>

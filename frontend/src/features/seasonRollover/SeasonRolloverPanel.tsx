@@ -71,10 +71,10 @@ export function SeasonRolloverPanel({ organizationId }: { organizationId: string
 	}
 
 	return (
-		<section className="flex flex-col gap-4 rounded-xl border border-slate-gray/20 bg-pure-white p-5">
+		<section className="flex flex-col gap-4 rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5">
 			<div>
-				<h3 className="font-heading text-base font-semibold text-navy">Season rollover</h3>
-				<p className="mt-1 max-w-3xl text-sm text-slate-gray">
+				<h3 className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">Season rollover</h3>
+				<p className="mt-1 max-w-3xl text-sm text-slate-gray dark:text-[#cbd5e1]">
 					Create the next-season team from an active team, preview every selected setup item, and optionally archive the source.
 					Historical and financial records are never moved or copied.
 				</p>
@@ -82,7 +82,7 @@ export function SeasonRolloverPanel({ organizationId }: { organizationId: string
 
 			<form onSubmit={previewRollover} className="flex flex-col gap-4">
 				<div className="grid gap-3 md:grid-cols-3">
-					<label className="flex flex-col gap-1 text-sm font-medium text-navy" htmlFor="rollover-source-team">
+					<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]" htmlFor="rollover-source-team">
 						Source team
 						<select
 							id="rollover-source-team"
@@ -97,7 +97,7 @@ export function SeasonRolloverPanel({ organizationId }: { organizationId: string
 							))}
 						</select>
 					</label>
-					<label className="flex flex-col gap-1 text-sm font-medium text-navy" htmlFor="rollover-new-team-name">
+					<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]" htmlFor="rollover-new-team-name">
 						New team name
 						<input
 							id="rollover-new-team-name"
@@ -108,7 +108,7 @@ export function SeasonRolloverPanel({ organizationId }: { organizationId: string
 							className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 						/>
 					</label>
-					<label className="flex flex-col gap-1 text-sm font-medium text-navy" htmlFor="rollover-new-season">
+					<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]" htmlFor="rollover-new-season">
 						New season
 						<input
 							id="rollover-new-season"
@@ -123,7 +123,7 @@ export function SeasonRolloverPanel({ organizationId }: { organizationId: string
 				</div>
 
 				<fieldset className="rounded-lg border border-slate-gray/20 p-4">
-					<legend className="px-1 text-sm font-semibold text-navy">Select what to carry forward</legend>
+					<legend className="px-1 text-sm font-semibold text-navy dark:text-[#f8fafc]">Select what to carry forward</legend>
 					<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 						<Option checked={options.copyRoster} onChange={(checked) => setOptions((current) => ({ ...current, copyRoster: checked }))} label="Active roster links" />
 						<Option checked={options.copyStaff} onChange={(checked) => setOptions((current) => ({ ...current, copyStaff: checked }))} label="Explicit team staff" />
@@ -136,7 +136,7 @@ export function SeasonRolloverPanel({ organizationId }: { organizationId: string
 					<Button type="submit" disabled={!source || previewMutation.isPending || !newTeamName.trim() || !newSeason.trim()}>
 						{previewMutation.isPending ? "Building preview…" : "Preview rollover"}
 					</Button>
-					<p className="text-xs text-slate-gray">Preview is required again whenever an option or source value changes.</p>
+					<p className="text-xs text-slate-gray dark:text-[#cbd5e1]">Preview is required again whenever an option or source value changes.</p>
 				</div>
 			</form>
 
@@ -144,7 +144,7 @@ export function SeasonRolloverPanel({ organizationId }: { organizationId: string
 			{error && <p role="alert" className="text-sm text-error-red">{error}</p>}
 			{preview && <RolloverPreview preview={preview} pending={executeMutation.isPending} onConfirm={executeRollover} />}
 			{result && (
-				<div role="status" className="rounded-lg border border-victory-green/30 bg-victory-green/5 p-4 text-sm text-navy">
+				<div role="status" className="rounded-lg border border-victory-green/30 bg-victory-green/5 p-4 text-sm text-navy dark:text-[#f8fafc]">
 					<p className="font-semibold">Season rollover complete: {result.destinationTeam.name} ({result.destinationTeam.season}).</p>
 					<p className="mt-1">
 						Copied {result.rosterCopiedCount} roster link{result.rosterCopiedCount === 1 ? "" : "s"}, {result.staffCopiedCount} staff grant{result.staffCopiedCount === 1 ? "" : "s"}, and {result.brandingCopiedCount} branding assignment{result.brandingCopiedCount === 1 ? "" : "s"}.
@@ -158,7 +158,7 @@ export function SeasonRolloverPanel({ organizationId }: { organizationId: string
 
 function Option({ checked, onChange, label }: { checked: boolean; onChange: (checked: boolean) => void; label: string }) {
 	return (
-		<label className="flex min-h-11 items-center gap-2 rounded-md border border-slate-gray/20 px-3 py-2 text-sm text-navy">
+		<label className="flex min-h-11 items-center gap-2 rounded-md border border-slate-gray/20 px-3 py-2 text-sm text-navy dark:text-[#f8fafc]">
 			<input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
 			{label}
 		</label>
@@ -169,8 +169,8 @@ function RolloverPreview({ preview, pending, onConfirm }: { preview: SeasonRollo
 	return (
 		<div className="flex flex-col gap-4 rounded-lg border border-info-blue/30 bg-info-blue/5 p-4">
 			<div>
-				<h4 className="font-heading font-semibold text-navy">Confirm exact rollover</h4>
-				<p className="mt-1 text-sm text-slate-gray">
+				<h4 className="font-heading font-semibold text-navy dark:text-[#f8fafc]">Confirm exact rollover</h4>
+				<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">
 					{preview.sourceTeam.name} → {preview.destinationTeam.name} ({preview.destinationTeam.season}); sport and contact email are carried forward.
 				</p>
 			</div>
@@ -180,18 +180,18 @@ function RolloverPreview({ preview, pending, onConfirm }: { preview: SeasonRollo
 				<PreviewList title={`Branding (${preview.branding.length})`} items={preview.branding.map((item) => `${item.usageSlot}: ${item.fileName}`)} empty="No ready logo or cover selected or available." />
 			</div>
 			{preview.warnings.length > 0 && (
-				<div className="rounded-md border border-championship-gold/40 bg-championship-gold/10 p-3 text-sm text-navy">
+				<div className="rounded-md border border-championship-gold/40 bg-championship-gold/10 p-3 text-sm text-navy dark:text-[#f8fafc]">
 					<p className="font-medium">Important behavior</p>
 					<ul className="mt-1 list-disc space-y-1 pl-5">{preview.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
 				</div>
 			)}
-			<div className="rounded-md border border-slate-gray/20 bg-pure-white p-3 text-sm">
-				<p className="font-medium text-navy">Never copied by this workflow</p>
-				<ul className="mt-1 list-disc space-y-1 pl-5 text-slate-gray">{preview.excludedData.map((item) => <li key={item}>{item}</li>)}</ul>
+			<div className="rounded-md border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3 text-sm">
+				<p className="font-medium text-navy dark:text-[#f8fafc]">Never copied by this workflow</p>
+				<ul className="mt-1 list-disc space-y-1 pl-5 text-slate-gray dark:text-[#cbd5e1]">{preview.excludedData.map((item) => <li key={item}>{item}</li>)}</ul>
 			</div>
 			<div className="flex flex-wrap items-center gap-3">
 				<Button type="button" onClick={onConfirm} disabled={pending}>{pending ? "Completing rollover…" : "Confirm and create next-season team"}</Button>
-				<p className="text-xs text-slate-gray">Confirmation hash: <span className="font-mono">{preview.confirmationHash.slice(0, 12)}…</span></p>
+				<p className="text-xs text-slate-gray dark:text-[#cbd5e1]">Confirmation hash: <span className="font-mono">{preview.confirmationHash.slice(0, 12)}…</span></p>
 			</div>
 		</div>
 	);
@@ -199,9 +199,9 @@ function RolloverPreview({ preview, pending, onConfirm }: { preview: SeasonRollo
 
 function PreviewList({ title, items, empty }: { title: string; items: string[]; empty: string }) {
 	return (
-		<div className="min-w-0 rounded-md border border-slate-gray/20 bg-pure-white p-3">
-			<p className="text-sm font-semibold text-navy">{title}</p>
-			{items.length > 0 ? <ul className="mt-2 max-h-48 list-disc space-y-1 overflow-auto pl-5 text-sm text-slate-gray">{items.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul> : <p className="mt-2 text-sm text-slate-gray">{empty}</p>}
+		<div className="min-w-0 rounded-md border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3">
+			<p className="text-sm font-semibold text-navy dark:text-[#f8fafc]">{title}</p>
+			{items.length > 0 ? <ul className="mt-2 max-h-48 list-disc space-y-1 overflow-auto pl-5 text-sm text-slate-gray dark:text-[#cbd5e1]">{items.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul> : <p className="mt-2 text-sm text-slate-gray dark:text-[#cbd5e1]">{empty}</p>}
 		</div>
 	);
 }
