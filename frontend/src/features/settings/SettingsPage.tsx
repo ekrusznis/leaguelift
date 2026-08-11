@@ -28,7 +28,7 @@ const TOPIC_LABELS: Record<NotificationTopic, { title: string; description: stri
 	EVENTS_SCHEDULE: { title: "Events & schedule", description: "Schedule changes and event reminders." },
 	RSVP: { title: "RSVP", description: "Participation and response reminders." },
 	FEES_PAYMENTS: { title: "Fees & payments", description: "Optional fee and balance reminders; receipts remain required." },
-	DOCUMENTS_ELIGIBILITY: { title: "Documents & eligibility", description: "Optional document and future eligibility reminders." },
+	DOCUMENTS_ELIGIBILITY: { title: "Documents & eligibility", description: "Optional document and eligibility/waiver reminders." },
 	ANNOUNCEMENTS: { title: "Announcements", description: "General organization and team announcements." },
 	FUNDRAISING: { title: "Fundraising", description: "Campaign launches and fundraising updates." },
 	SWAG_SHOP_ORDERS: { title: "Swag Shop & orders", description: "Optional store updates; order/refund receipts remain required." },

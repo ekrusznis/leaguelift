@@ -5,7 +5,7 @@ import java.util.UUID
 
 enum class AnnouncementScopeType { ORGANIZATION, TEAM, TOURNAMENT }
 
-enum class AnnouncementKind { GENERAL, CAMPAIGN_LAUNCH, EVENT_REMINDER, FEE_REMINDER, DOCUMENT_REMINDER }
+enum class AnnouncementKind { GENERAL, CAMPAIGN_LAUNCH, EVENT_REMINDER, FEE_REMINDER, DOCUMENT_REMINDER, ELIGIBILITY_REMINDER }
 
 enum class AnnouncementAudience { ALL, STAFF, GUARDIANS, ATHLETES }
 

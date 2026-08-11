@@ -3,6 +3,7 @@ package com.rally26.integration.sportsdata.application
 import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.config.IntegrationProperties
 import com.rally26.integration.core.domain.IntegrationProvider
+import com.rally26.integration.sportsdata.domain.ProviderEligibilityCapability
 import com.rally26.integration.sportsdata.domain.SportsDataEntityType
 import com.rally26.integration.sportsdata.domain.SportsDataExternalRecord
 import org.springframework.stereotype.Component
@@ -50,6 +51,20 @@ class ScaffoldSportsEngineProviderClient(
                     "startAt" to "2026-09-12T14:00:00Z",
                 ),
             ),
+            // Phase 31 slice 31.3 — proves ELIGIBILITY_EVIDENCE flows through the same generic
+            // preview pipeline as every other entity type. Parented to the team stub record since
+            // this scaffold has no participant-level stub data yet; a real SportsEngine adapter
+            // would parent to a roster-membership/participant external id instead.
+            SportsDataExternalRecord(
+                SportsDataEntityType.ELIGIBILITY_EVIDENCE,
+                "se-eligibility-1",
+                "se-team-1",
+                "Registration Waiver Acknowledgment",
+                mapOf(
+                    "capability" to ProviderEligibilityCapability.WAIVER_ACKNOWLEDGMENT_IMPORT.name,
+                    "classificationHint" to "EXTERNAL_ACKNOWLEDGMENT",
+                ),
+            ),
         )
     }
 }
@@ -86,6 +101,20 @@ class ScaffoldTeamSnapProviderClient(
                 "League Match",
                 mapOf(
                     "startAt" to "2026-09-19T15:00:00Z",
+                ),
+            ),
+            // Phase 31 slice 31.3 — proves ELIGIBILITY_EVIDENCE flows through the same generic
+            // preview pipeline as every other entity type. Parented to the team stub record since
+            // this scaffold has no participant-level stub data yet; a real TeamSnap adapter would
+            // parent to a roster-membership/participant external id instead.
+            SportsDataExternalRecord(
+                SportsDataEntityType.ELIGIBILITY_EVIDENCE,
+                "ts-eligibility-1",
+                "ts-team-1",
+                "Registration Waiver Acknowledgment",
+                mapOf(
+                    "capability" to ProviderEligibilityCapability.WAIVER_ACKNOWLEDGMENT_IMPORT.name,
+                    "classificationHint" to "EXTERNAL_ACKNOWLEDGMENT",
                 ),
             ),
         )

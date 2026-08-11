@@ -17,7 +17,8 @@ import { Button } from '@/components/button';
 
 /**
  * Real household document list + acknowledge (ADR-103) — a plain upload/acknowledge
- * flow, not Phase 31 eligibility/waivers (which doesn't exist on the backend yet).
+ * flow for organization/household documents, separate from Phase 31 eligibility/waiver
+ * requirements (see app/eligibility.tsx), which have their own status/evidence model.
  */
 export default function DocumentsScreen() {
   const dashboardContext = useDashboardContext(true);

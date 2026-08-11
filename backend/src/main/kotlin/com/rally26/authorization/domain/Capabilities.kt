@@ -90,6 +90,17 @@ object Capabilities {
     const val TOURNAMENT_EVENT_MANAGE = "tournament.event.manage"
     const val ORG_EVENT_MANAGE = "organization.event.manage"
 
+    // Eligibility / guardian e-sign waivers (Phase 31 slice 31.1, DESIGN-DOC.md section
+    // 14.1L). ORG_ELIGIBILITY_MANAGE defines/archives requirement versions
+    // (owner/admin only, same tier as ORG_TEAM_MANAGE); TEAM_ELIGIBILITY_VIEW is
+    // deliberately broad (granted at every team resource-role tier including
+    // COACH_READ) since section 14.1L §30.2 says coaches must see clearance
+    // state/requirement count/expiration warnings — operational status only, never the
+    // underlying evidence records themselves, which slice 31.2's guardian/reviewer
+    // endpoints gate separately.
+    const val ORG_ELIGIBILITY_MANAGE = "organization.eligibility.manage"
+    const val TEAM_ELIGIBILITY_VIEW = "team.eligibility.view"
+
     // Platform admin
     const val PLATFORM_ORG_VIEW = "platform.organization.view"
     const val PLATFORM_ORG_MANAGE = "platform.organization.manage"
@@ -148,6 +159,7 @@ object CapabilityRegistry {
                     Capabilities.ORG_COMMUNICATION_MANAGE,
                     Capabilities.ORG_EVENT_MANAGE,
                     Capabilities.EVENT_READ,
+                    Capabilities.ORG_ELIGIBILITY_MANAGE,
                 )
             }
 
@@ -161,6 +173,7 @@ object CapabilityRegistry {
                     Capabilities.ORG_COMMUNICATION_MANAGE,
                     Capabilities.ORG_EVENT_MANAGE,
                     Capabilities.EVENT_READ,
+                    Capabilities.ORG_ELIGIBILITY_MANAGE,
                 )
             }
 
@@ -176,7 +189,7 @@ object CapabilityRegistry {
     fun teamCapabilities(role: ResourceRole): Set<String> =
         when (role) {
             ResourceRole.COACH_READ -> {
-                setOf(Capabilities.TEAM_VIEW, Capabilities.EVENT_READ)
+                setOf(Capabilities.TEAM_VIEW, Capabilities.EVENT_READ, Capabilities.TEAM_ELIGIBILITY_VIEW)
             }
 
             ResourceRole.TEAM_EDITOR -> {
@@ -193,6 +206,7 @@ object CapabilityRegistry {
                     Capabilities.EVENT_RSVP_READ_TEAM,
                     Capabilities.TEAM_EVENT_MANAGE,
                     Capabilities.TEAM_COMMUNICATION_MANAGE,
+                    Capabilities.TEAM_ELIGIBILITY_VIEW,
                 )
             }
 
@@ -214,6 +228,7 @@ object CapabilityRegistry {
                     Capabilities.EVENT_RSVP_READ_TEAM,
                     Capabilities.TEAM_EVENT_MANAGE,
                     Capabilities.TEAM_COMMUNICATION_MANAGE,
+                    Capabilities.TEAM_ELIGIBILITY_VIEW,
                 )
             }
 
