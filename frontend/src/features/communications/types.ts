@@ -1,8 +1,8 @@
 export type AnnouncementScopeType = "ORGANIZATION" | "TEAM" | "TOURNAMENT";
-export type AnnouncementKind = "GENERAL" | "CAMPAIGN_LAUNCH" | "EVENT_REMINDER" | "FEE_REMINDER" | "DOCUMENT_REMINDER";
+export type AnnouncementKind = "GENERAL" | "CAMPAIGN_LAUNCH" | "EVENT_REMINDER" | "FEE_REMINDER" | "DOCUMENT_REMINDER" | "ELIGIBILITY_REMINDER";
 export type AnnouncementAudience = "ALL" | "STAFF" | "GUARDIANS" | "ATHLETES";
 export type AnnouncementStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
-export type ReminderResourceType = "CAMPAIGN" | "EVENT" | "FEE_ASSIGNMENT" | "DOCUMENT";
+export type ReminderResourceType = "CAMPAIGN" | "EVENT" | "FEE_ASSIGNMENT" | "DOCUMENT" | "ELIGIBILITY";
 
 export interface Announcement {
 	id: string;

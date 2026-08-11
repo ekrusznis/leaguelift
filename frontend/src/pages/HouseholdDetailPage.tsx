@@ -382,7 +382,7 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 							)}
 							{eligibilityExpandedId === participant.id && (
 								<div className="mt-2 border-l border-slate-gray/20 pl-4">
-									<ParticipantEligibilityPanel organizationId={organizationId} participantId={participant.id} />
+									<ParticipantEligibilityPanel organizationId={organizationId} participantId={participant.id} canManage={canManage} />
 								</div>
 							)}
 						</li>

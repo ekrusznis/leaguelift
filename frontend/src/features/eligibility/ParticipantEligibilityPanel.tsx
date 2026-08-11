@@ -5,6 +5,7 @@ import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
+import { ReminderButton } from "../communications/ReminderButton";
 import { useConfirmMediaUpload, useRequestMediaUpload } from "../media/api";
 import { uploadToSignedUrl } from "../media/uploadToSignedUrl";
 import { useParticipantEligibilityRequirements, useSubmitGuardianEvidence } from "./api";
@@ -142,10 +143,15 @@ function DocumentEvidenceForm({ organizationId, participantId, requirementId, on
 	);
 }
 
+function isRequirementSatisfied(item: ParticipantRequirement): boolean {
+	const { evidence } = item;
+	return evidence?.status === "ACTIVE" && (!evidence.expiresAt || new Date(evidence.expiresAt) > new Date());
+}
+
 function RequirementRow({ organizationId, participantId, item }: { organizationId: string; participantId: string; item: ParticipantRequirement }) {
 	const [actionOpen, setActionOpen] = useState(false);
 	const { requirement, evidence } = item;
-	const isSatisfied = evidence?.status === "ACTIVE" && (!evidence.expiresAt || new Date(evidence.expiresAt) > new Date());
+	const isSatisfied = isRequirementSatisfied(item);
 
 	return (
 		<li className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
@@ -186,7 +192,15 @@ function RequirementRow({ organizationId, participantId, item }: { organizationI
 	);
 }
 
-export function ParticipantEligibilityPanel({ organizationId, participantId }: { organizationId: string; participantId: string }) {
+export function ParticipantEligibilityPanel({
+	organizationId,
+	participantId,
+	canManage = false,
+}: {
+	organizationId: string;
+	participantId: string;
+	canManage?: boolean;
+}) {
 	const { data, isLoading, isError, refetch } = useParticipantEligibilityRequirements(organizationId, participantId);
 
 	if (isLoading) return <LoadingState label="Loading eligibility requirements…" />;
@@ -195,11 +209,18 @@ export function ParticipantEligibilityPanel({ organizationId, participantId }: {
 		return <EmptyState title="No eligibility requirements apply" description="This athlete has no outstanding waivers or documents for their current teams." />;
 	}
 
+	const hasOutstanding = data.some((item) => !isRequirementSatisfied(item));
+
 	return (
-		<ul className="flex flex-col gap-2" aria-label="Eligibility requirements">
-			{data.map((item) => (
-				<RequirementRow key={item.requirement.id} organizationId={organizationId} participantId={participantId} item={item} />
-			))}
-		</ul>
+		<div className="flex flex-col gap-3">
+			{canManage && hasOutstanding && (
+				<ReminderButton organizationId={organizationId} resourceType="ELIGIBILITY" resourceId={participantId} label="Send eligibility reminder" />
+			)}
+			<ul className="flex flex-col gap-2" aria-label="Eligibility requirements">
+				{data.map((item) => (
+					<RequirementRow key={item.requirement.id} organizationId={organizationId} participantId={participantId} item={item} />
+				))}
+			</ul>
+		</div>
 	);
 }
