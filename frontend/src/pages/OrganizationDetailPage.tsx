@@ -12,6 +12,7 @@ import { OnboardingPanel } from "../features/onboarding/OnboardingPanel";
 import { OfflineFinancialRecordsPanel } from "../features/offlineFinance/OfflineFinancialRecordsPanel";
 import { FinancialCorrectionsPanel } from "../features/financialCorrections/FinancialCorrectionsPanel";
 import { CreditMarkupSettingsPanel } from "../features/credit/CreditMarkupSettingsPanel";
+import { SafeSportOrgPolicyPanel } from "../features/messaging/SafeSportPolicyPanel";
 import { ReconciliationPanel } from "../features/reconciliation/ReconciliationPanel";
 import { OrganizationCorrectionReviewPanel } from "../features/profileCorrections/OrganizationCorrectionReviewPanel";
 import { EventListPanel } from "../features/events/EventListPanel";
@@ -157,6 +158,7 @@ export function OrganizationDetailPage() {
 				canManageOrganization={canManageOrganization}
 				canManagePayouts={canManagePayouts}
 				canViewReports={canViewReports}
+				isPlatformSupportMode={isPlatformSupportMode}
 				visibleSections={visibleSections}
 			/>
 		</div>
@@ -170,6 +172,7 @@ function OrganizationSectionContent({
 	canManageOrganization,
 	canManagePayouts,
 	canViewReports,
+	isPlatformSupportMode,
 	visibleSections,
 }: {
 	section: OrganizationSection;
@@ -178,6 +181,7 @@ function OrganizationSectionContent({
 	canManageOrganization: boolean;
 	canManagePayouts: boolean;
 	canViewReports: boolean;
+	isPlatformSupportMode: boolean;
 	visibleSections: Array<{ id: OrganizationSection; label: string }>;
 }) {
 	switch (section) {
@@ -266,6 +270,7 @@ function OrganizationSectionContent({
 							<Section title="Organization Profile"><OrganizationProfileForm organization={organization} /></Section>
 							<Section title="Public Pages"><PublicPagesPanel organizationId={organization.id} organizationName={organization.name} /></Section>
 							<Section title="Credit & Markup"><CreditMarkupSettingsPanel organizationId={organization.id} /></Section>
+							<Section title="Messaging Safety"><SafeSportOrgPolicyPanel organizationId={organization.id} canReview={isPlatformSupportMode} /></Section>
 						</>
 					)}
 					{canManagePayouts && (
