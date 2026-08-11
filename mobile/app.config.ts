@@ -33,6 +33,11 @@ const config: ExpoConfig = {
   plugins: [
     'expo-router',
     'expo-secure-store',
+    // Adds the "Sign In with Apple" iOS entitlement — required for
+    // AppleAuthentication.signInAsync (Phase 37, ADR-111) to work on a real device.
+    // No-op on Android; still requires the capability enabled on a real Apple
+    // Developer account/App ID before Sign in with Apple actually works end to end.
+    'expo-apple-authentication',
     '@react-native-community/datetimepicker',
     [
       'expo-splash-screen',

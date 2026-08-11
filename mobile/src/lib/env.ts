@@ -18,4 +18,13 @@ export const env = {
   /** Base origin of frontend/ (matches backend's rally26.frontend.base-url) — WebView embeds (Swag Shop/Fundraising/Sponsorships, ADR-106) load real frontend/ pages under this origin. */
   frontendBaseUrl: required('EXPO_PUBLIC_FRONTEND_BASE_URL', process.env.EXPO_PUBLIC_FRONTEND_BASE_URL),
   environmentName: process.env.EXPO_PUBLIC_ENVIRONMENT_NAME ?? 'development',
+  /**
+   * Phase 37 (ADR-111) — Google/Apple sign-in. Deliberately optional, unlike the vars
+   * above: Rally26 has not yet registered a real Google Cloud OAuth client, so this is
+   * blank in every environment today. Blank means "not configured yet," not a build
+   * error — login.tsx shows a "coming soon" toast instead of starting the native flow.
+   * Must match the backend's own GOOGLE_OAUTH_CLIENT_ID (rally26.oauth.google.client-id)
+   * so the ID token's audience passes OAuthSignInService's verification.
+   */
+  googleOAuthClientId: process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID ?? '',
 };

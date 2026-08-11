@@ -3,8 +3,14 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 
 import { registerAccessTokenGetter, registerUnauthorizedHandler } from '@/lib/apiClient';
 
-import { getMe, login as loginRequest, register as registerRequest } from './authApi';
-import type { RegisterRequest, RegistrationAcceptedResponse, UserResponse } from './types';
+import {
+  getMe,
+  login as loginRequest,
+  register as registerRequest,
+  signInWithApple as signInWithAppleRequest,
+  signInWithGoogle as signInWithGoogleRequest,
+} from './authApi';
+import type { AuthResponse, RegisterRequest, RegistrationAcceptedResponse, UserResponse } from './types';
 
 const TOKEN_KEY = 'rally26.accessToken';
 const EXPIRES_AT_KEY = 'rally26.expiresAt';
@@ -21,6 +27,10 @@ interface AuthState {
   user: UserResponse | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  /** Phase 37 (ADR-111) — verifies a Google-issued ID token server-side and establishes a session exactly like login(). Throws ApiError (including GOOGLE_OAUTH_NOT_CONFIGURED — see authApi.isOAuthNotConfiguredError) on failure. */
+  loginWithGoogle: (idToken: string) => Promise<void>;
+  /** Same as loginWithGoogle, for an Apple-issued ID token (APPLE_OAUTH_NOT_CONFIGURED when not yet registered). */
+  loginWithApple: (idToken: string) => Promise<void>;
   /** Creates a bare, unverified AppUser only — no session is established, matching web's register() contract. Throws ApiError on failure, same convention as login(). */
   register: (request: RegisterRequest) => Promise<RegistrationAcceptedResponse>;
   logout: () => Promise<void>;
@@ -124,17 +134,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const response = await loginRequest({ email, password });
+  const establishSession = useCallback(async (response: AuthResponse) => {
     const expiresAt = Date.now() + response.expiresIn * 1000;
     tokenRef.current = { token: response.accessToken, expiresAt };
     await writeStoredSession(response.accessToken, expiresAt, response.user);
     setUser(response.user);
   }, []);
 
+  const login = useCallback(
+    async (email: string, password: string) => {
+      await establishSession(await loginRequest({ email, password }));
+    },
+    [establishSession],
+  );
+
+  const loginWithGoogle = useCallback(
+    async (idToken: string) => {
+      await establishSession(await signInWithGoogleRequest({ idToken }));
+    },
+    [establishSession],
+  );
+
+  const loginWithApple = useCallback(
+    async (idToken: string) => {
+      await establishSession(await signInWithAppleRequest({ idToken }));
+    },
+    [establishSession],
+  );
+
   const register = useCallback((request: RegisterRequest) => registerRequest(request), []);
 
-  return <AuthContext.Provider value={{ user, isLoading, login, register, logout, getWebSession }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithGoogle, loginWithApple, register, logout, getWebSession }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthState {

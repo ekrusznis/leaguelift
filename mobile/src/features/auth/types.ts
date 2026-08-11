@@ -5,6 +5,11 @@ export interface LoginRequest {
   password: string;
 }
 
+/** Matches backend's OAuthSignInRequest (ADR-111) — idToken is the Google/Apple-issued ID token from the native sign-in SDK, verified server-side against that provider's own JWKS. */
+export interface OAuthSignInRequest {
+  idToken: string;
+}
+
 export interface UserResponse {
   id: string;
   email: string;
