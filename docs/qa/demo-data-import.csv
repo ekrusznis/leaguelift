@@ -1,0 +1,17 @@
+record_type,external_id,name,sport,season,contact_email,display_name,contact_phone,notes,household_external_id,first_name,last_name,email,phone,relationship,is_primary,date_of_birth,team_external_id
+TEAM,demo-team-soccer,DEMO Thunder U12 Soccer,Soccer,Fall 2026,,,,,,,,,,,,,
+TEAM,demo-team-basketball,DEMO Lightning U10 Basketball,Basketball,Fall 2026,,,,,,,,,,,,,
+HOUSEHOLD,demo-household-smith,,,,,DEMO Smith Household,555-010-0001,QA demo data - safe to delete,,,,,,,,,
+HOUSEHOLD,demo-household-johnson,,,,,DEMO Johnson Household,555-010-0002,QA demo data - safe to delete,,,,,,,,,
+HOUSEHOLD,demo-household-nguyen,,,,,DEMO Nguyen Household,555-010-0003,QA demo data - safe to delete,,,,,,,,,
+HOUSEHOLD,demo-household-garcia,,,,,DEMO Garcia Household,555-010-0004,QA demo data - safe to delete,,,,,,,,,
+GUARDIAN,demo-guardian-smith1,,,,,,,,demo-household-smith,Dana,Smith,ekrusznis+demo.dana.smith@gmail.com,555-020-0001,Parent,true,,
+GUARDIAN,demo-guardian-smith2,,,,,,,,demo-household-smith,Chris,Smith,ekrusznis+demo.chris.smith@gmail.com,555-020-0002,Parent,false,,
+GUARDIAN,demo-guardian-johnson1,,,,,,,,demo-household-johnson,Pat,Johnson,ekrusznis+demo.pat.johnson@gmail.com,555-020-0003,Parent,true,,
+GUARDIAN,demo-guardian-nguyen1,,,,,,,,demo-household-nguyen,Linh,Nguyen,ekrusznis+demo.linh.nguyen@gmail.com,555-020-0004,Parent,true,,
+GUARDIAN,demo-guardian-garcia1,,,,,,,,demo-household-garcia,Maria,Garcia,ekrusznis+demo.maria.garcia@gmail.com,555-020-0005,Parent,true,,
+PARTICIPANT,demo-athlete-smith1,,,,,,,,demo-household-smith,Jordan,Smith,,,,,2014-05-12,demo-team-soccer
+PARTICIPANT,demo-athlete-smith2,,,,,,,,demo-household-smith,Riley,Smith,,,,,2016-11-02,demo-team-basketball
+PARTICIPANT,demo-athlete-johnson1,,,,,,,,demo-household-johnson,Casey,Johnson,,,,,2014-08-03,demo-team-soccer
+PARTICIPANT,demo-athlete-nguyen1,,,,,,,,demo-household-nguyen,Mai,Nguyen,,,,,2015-01-20,demo-team-basketball
+PARTICIPANT,demo-athlete-garcia1,,,,,,,,demo-household-garcia,Sofia,Garcia,,,,,2015-03-15,demo-team-basketball
