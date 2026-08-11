@@ -14,6 +14,29 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
+/**
+ * Phase 37 slice 37.4 — deterministic severity-based triage, replacing pure
+ * reverse-chronological order in [MessageSafetyRepository.listForManagement]. Open
+ * reports before reviewed/resolved ones, then the more urgent [MessageSafetyReportReason]
+ * first, then oldest-first within the same priority tier so an urgent report doesn't sit
+ * unseen behind newer ones of the same severity. No automated content signal (profanity/
+ * tone detection) exists in this codebase — this is a real prioritization improvement
+ * over FIFO, not a claim of automated content analysis.
+ */
+private const val TRIAGE_ORDER =
+    """
+    case msr.status when 'OPEN' then 1 when 'IN_REVIEW' then 2 else 3 end,
+    case msr.reason
+        when 'SAFETY_CONCERN' then 1
+        when 'HARASSMENT' then 2
+        when 'BULLYING' then 2
+        when 'INAPPROPRIATE_CONTENT' then 3
+        when 'SPAM' then 4
+        else 5
+    end,
+    msr.created_at asc
+    """
+
 @Repository
 class MessageSafetyRepository(
     private val jdbcClient: JdbcClient,
@@ -135,7 +158,7 @@ class MessageSafetyRepository(
         if (scopeId != null) filters += "mt.scope_id = :scopeId"
         if (status != null) filters += "msr.status = :status"
         var statement =
-            reportQuery("where ${filters.joinToString(" and ")} order by msr.created_at desc offset :offset limit :limit")
+            reportQuery("where ${filters.joinToString(" and ")} order by $TRIAGE_ORDER offset :offset limit :limit")
                 .param("organizationId", organizationId)
                 .param("offset", page.offset)
                 .param("limit", page.size)
