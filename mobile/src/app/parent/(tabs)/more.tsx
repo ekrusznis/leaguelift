@@ -23,6 +23,7 @@ export default function ParentMoreScreen() {
     },
     { icon: 'megaphone-outline', label: 'Announcements', onPress: () => router.push('/announcements') },
     { icon: 'document-text-outline', label: 'Documents', onPress: () => router.push('/documents') },
+    { icon: 'shield-checkmark-outline', label: 'Messaging Safety', onPress: () => router.push('/safety-controls') },
     { icon: 'settings-outline', label: 'Settings', onPress: () => router.push('/settings') },
   ];
 

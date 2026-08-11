@@ -109,6 +109,7 @@ function RootNavigator() {
           <Stack.Screen name="guardians" options={{ presentation: 'card' }} />
           <Stack.Screen name="athlete/new-conversation" options={{ presentation: 'card' }} />
           <Stack.Screen name="message-compose" options={{ presentation: 'card' }} />
+          <Stack.Screen name="safety-controls" options={{ presentation: 'card' }} />
           <Stack.Screen name="owner/team-detail" options={{ presentation: 'card' }} />
           <Stack.Screen name="owner/reports" options={{ presentation: 'card' }} />
           <Stack.Screen name="owner/payout" options={{ presentation: 'card' }} />

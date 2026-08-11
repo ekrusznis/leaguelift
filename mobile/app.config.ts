@@ -9,7 +9,7 @@ import type { ExpoConfig } from 'expo/config';
  */
 const config: ExpoConfig = {
   name: 'Rally26',
-  slug: 'rally26',
+  slug: 'rally',
   version: '1.0.0',
   orientation: 'default',
   icon: './assets/images/icon.png',
@@ -49,9 +49,7 @@ const config: ExpoConfig = {
   },
   extra: {
     eas: {
-      // Replace once `eas init` is run against a real Expo account/project —
-      // see mobile/README.md "First-time EAS setup."
-      projectId: 'REPLACE_WITH_REAL_EAS_PROJECT_ID',
+      projectId: '94588650-4ee1-4798-a023-8aab2bf1d7f5',
     },
   },
 };

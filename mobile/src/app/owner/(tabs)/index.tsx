@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -142,17 +142,19 @@ export default function OwnerDashboardScreen() {
         )}
         <View style={styles.list}>
           {upcomingEventsQuery.data?.map((item) => (
-            <ThemedView key={item.id} type="backgroundElement" style={styles.eventRow}>
-              <ThemedText type="smallBold">{item.title}</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {item.day} {item.date} · {item.time}
-              </ThemedText>
-              {item.subtitle && (
+            <Pressable key={item.id} onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
+              <ThemedView type="backgroundElement" style={styles.eventRow}>
+                <ThemedText type="smallBold">{item.title}</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
-                  {item.subtitle}
+                  {item.day} {item.date} · {item.time}
                 </ThemedText>
-              )}
-            </ThemedView>
+                {item.subtitle && (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {item.subtitle}
+                  </ThemedText>
+                )}
+              </ThemedView>
+            </Pressable>
           ))}
         </View>
 

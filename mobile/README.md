@@ -194,8 +194,9 @@ eas login                # real Expo account
 eas init                 # creates a real project, prints a projectId
 ```
 
-Paste the printed `projectId` into `app.config.ts`'s `extra.eas.projectId` (currently
-`REPLACE_WITH_REAL_EAS_PROJECT_ID`) before running a real build.
+**Done as of 2026-08-11** — `app.config.ts`'s `extra.eas.projectId` is a real EAS
+project (`94588650-4ee1-4798-a023-8aab2bf1d7f5`), no longer the
+`REPLACE_WITH_REAL_EAS_PROJECT_ID` placeholder.
 
 ## Producing a real distributable build
 

@@ -19,11 +19,12 @@ import { useTheme } from '@/hooks/use-theme';
 import { apiFetch } from '@/lib/apiClient';
 import { generateIdempotencyKey } from '@/lib/idempotency';
 
-type AudienceMode = 'ALL' | 'GUARDIANS' | 'SELECTED';
+type AudienceMode = 'ALL' | 'STAFF' | 'GUARDIANS' | 'SELECTED';
 type Step = 'audience' | 'contacts' | 'compose';
 
 const AUDIENCE_OPTIONS: { value: AudienceMode; label: string; description: string }[] = [
   { value: 'ALL', label: 'Full Team', description: 'Every staff member, guardian, and athlete on the team' },
+  { value: 'STAFF', label: 'Coaches & Staff', description: 'Every staff member on the team' },
   { value: 'GUARDIANS', label: 'Parents Only', description: "Every guardian on the team's roster" },
   { value: 'SELECTED', label: 'Select Specific People', description: 'Pick individual players and/or their parents' },
 ];

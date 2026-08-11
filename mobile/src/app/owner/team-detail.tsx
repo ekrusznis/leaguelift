@@ -1,5 +1,6 @@
-import { useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ErrorState } from '@/components/error-state';
 import { LoadingState } from '@/components/loading-state';
@@ -9,10 +10,17 @@ import { ThemedView } from '@/components/themed-view';
 import { useDashboardContext } from '@/features/dashboard/api';
 import { useOrgTeam } from '@/features/organization-teams/api';
 import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
-/** Read-only team detail, pushed from the Teams tab — real GET /organizations/{id}/teams/{teamId} (ADR-105). Editing is a later slice. */
+/**
+ * Team detail, pushed from the Teams tab — real GET /organizations/{id}/teams/{teamId}
+ * (ADR-105). Team field editing is still a later slice; New Event and Message Team
+ * were added (ADR-108) so Owner has the same event-management and team-messaging
+ * reach Coach already had, per founder QA follow-up.
+ */
 export default function OwnerTeamDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const theme = useTheme();
   const dashboardContext = useDashboardContext(true);
   const organizationId = dashboardContext.data?.organizationId ?? null;
   const teamQuery = useOrgTeam(organizationId, id ?? null);
@@ -39,7 +47,23 @@ export default function OwnerTeamDetailScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScreenHeader title={team.name} />
+      <ScreenHeader
+        title={team.name}
+        right={
+          <View style={styles.headerActions}>
+            <Pressable
+              hitSlop={8}
+              onPress={() => router.push({ pathname: '/message-compose', params: { teamId: team.id } })}>
+              <Ionicons name="chatbubble-outline" size={22} color={theme.text} />
+            </Pressable>
+            <Pressable
+              hitSlop={8}
+              onPress={() => router.push({ pathname: '/event-form', params: { mode: 'create', teamId: team.id } })}>
+              <Ionicons name="add-circle-outline" size={24} color={theme.text} />
+            </Pressable>
+          </View>
+        }
+      />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.colorRow}>
           <View style={[styles.colorSwatch, { backgroundColor: team.primaryColor }]} />
@@ -78,6 +102,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.six,
     gap: Spacing.two,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: Spacing.three,
   },
   colorRow: {
     flexDirection: 'row',
