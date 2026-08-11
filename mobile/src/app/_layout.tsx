@@ -95,6 +95,7 @@ function RootNavigator() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="onboarding" />
           <Stack.Screen name="login" />
+          <Stack.Screen name="register" />
           <Stack.Screen name="role-not-available" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="parent/(tabs)" />

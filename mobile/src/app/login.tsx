@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
@@ -10,7 +10,7 @@ import { ApiError } from '@/lib/apiClient';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Real login — POST /auth/login (ADR-102). No "forgot password"/registration flow yet; those exist on web only for now. */
+/** Real login — POST /auth/login (ADR-102). No "forgot password" flow yet; that exists on web only for now. */
 export default function LoginScreen() {
   const theme = useTheme();
   const { login } = useAuth();
@@ -89,6 +89,12 @@ export default function LoginScreen() {
           <Button onPress={onSubmit} disabled={submitting}>
             {submitting ? 'Signing in…' : 'Sign In'}
           </Button>
+
+          <Pressable onPress={() => router.push('/register')} style={styles.registerLink}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Don&rsquo;t have an account? <ThemedText type="small" style={styles.registerLinkAccent}>Create one</ThemedText>
+            </ThemedText>
+          </Pressable>
         </View>
       </SafeAreaView>
     </KeyboardAvoidingView>
@@ -132,5 +138,12 @@ const styles = StyleSheet.create({
   },
   error: {
     color: '#C93636',
+  },
+  registerLink: {
+    alignSelf: 'center',
+    marginTop: Spacing.two,
+  },
+  registerLinkAccent: {
+    color: Brand.championshipGold,
   },
 });

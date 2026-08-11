@@ -3,8 +3,8 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 
 import { registerAccessTokenGetter, registerUnauthorizedHandler } from '@/lib/apiClient';
 
-import { getMe, login as loginRequest } from './authApi';
-import type { UserResponse } from './types';
+import { getMe, login as loginRequest, register as registerRequest } from './authApi';
+import type { RegisterRequest, RegistrationAcceptedResponse, UserResponse } from './types';
 
 const TOKEN_KEY = 'rally26.accessToken';
 const EXPIRES_AT_KEY = 'rally26.expiresAt';
@@ -21,6 +21,8 @@ interface AuthState {
   user: UserResponse | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  /** Creates a bare, unverified AppUser only — no session is established, matching web's register() contract. Throws ApiError on failure, same convention as login(). */
+  register: (request: RegisterRequest) => Promise<RegistrationAcceptedResponse>;
   logout: () => Promise<void>;
   /**
    * Returns the current session in the exact JSON shape
@@ -130,7 +132,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.user);
   }, []);
 
-  return <AuthContext.Provider value={{ user, isLoading, login, logout, getWebSession }}>{children}</AuthContext.Provider>;
+  const register = useCallback((request: RegisterRequest) => registerRequest(request), []);
+
+  return <AuthContext.Provider value={{ user, isLoading, login, register, logout, getWebSession }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthState {
