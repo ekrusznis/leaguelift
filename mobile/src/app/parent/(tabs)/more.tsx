@@ -5,18 +5,27 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { PlatformStatusSpacer } from '@/components/platform-status-spacer';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useHouseholdCtx } from '@/features/household/HouseholdContext';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { webEmbedRoute } from '@/lib/webEmbed';
 
-const ITEMS: { icon: keyof typeof Ionicons.glyphMap; label: string; href: '/announcements' | '/documents' | '/settings' }[] = [
-  { icon: 'megaphone-outline', label: 'Announcements', href: '/announcements' },
-  { icon: 'document-text-outline', label: 'Documents', href: '/documents' },
-  { icon: 'settings-outline', label: 'Settings', href: '/settings' },
-];
-
-/** More tab — parent persona menu hub (ADR-103), mirrors coach's (tabs)/more.tsx. */
+/** More tab — parent persona menu hub (ADR-103/106). Swag Shop added ADR-106 — real frontend/ order flow via WebView, not rebuilt natively. */
 export default function ParentMoreScreen() {
   const theme = useTheme();
+  const { organizationId } = useHouseholdCtx();
+
+  const items: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }[] = [
+    {
+      icon: 'shirt-outline',
+      label: 'Swag Shop',
+      onPress: () => router.push(webEmbedRoute(`/app/organizations/${organizationId}/swag-shop/order`, 'Swag Shop')),
+    },
+    { icon: 'megaphone-outline', label: 'Announcements', onPress: () => router.push('/announcements') },
+    { icon: 'document-text-outline', label: 'Documents', onPress: () => router.push('/documents') },
+    { icon: 'settings-outline', label: 'Settings', onPress: () => router.push('/settings') },
+  ];
+
   return (
     <ThemedView style={styles.container}>
       <PlatformStatusSpacer />
@@ -24,8 +33,8 @@ export default function ParentMoreScreen() {
         <ThemedText type="smallBold">More</ThemedText>
       </View>
       <View style={styles.list}>
-        {ITEMS.map((item) => (
-          <Pressable key={item.href} onPress={() => router.push(item.href)}>
+        {items.map((item) => (
+          <Pressable key={item.label} onPress={item.onPress} disabled={item.label === 'Swag Shop' && !organizationId}>
             <ThemedView type="backgroundElement" style={styles.row}>
               <Ionicons name={item.icon} size={20} color={theme.text} />
               <ThemedText style={styles.label}>{item.label}</ThemedText>

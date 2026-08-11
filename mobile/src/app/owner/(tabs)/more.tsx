@@ -5,31 +5,41 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { PlatformStatusSpacer } from '@/components/platform-status-spacer';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useDashboardContext } from '@/features/dashboard/api';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { webEmbedRoute } from '@/lib/webEmbed';
 
-const ITEMS: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  href:
-    | '/owner/announcements-manage'
-    | '/owner/broadcasts-manage'
-    | '/owner/reports'
-    | '/owner/payout'
-    | '/announcements'
-    | '/settings';
-}[] = [
-  { icon: 'megaphone-outline', label: 'Announcements', href: '/owner/announcements-manage' },
-  { icon: 'chatbubbles-outline', label: 'Broadcasts', href: '/owner/broadcasts-manage' },
-  { icon: 'bar-chart-outline', label: 'Reports', href: '/owner/reports' },
-  { icon: 'card-outline', label: 'Payout Account', href: '/owner/payout' },
-  { icon: 'notifications-outline', label: 'My Announcements', href: '/announcements' },
-  { icon: 'settings-outline', label: 'Settings', href: '/settings' },
-];
-
-/** More tab — owner persona menu hub (ADR-105), mirrors coach/parent/athlete's (tabs)/more.tsx. */
+/** More tab — owner persona menu hub (ADR-105/106), mirrors coach/parent/athlete's (tabs)/more.tsx. */
 export default function OwnerMoreScreen() {
   const theme = useTheme();
+  const dashboardContext = useDashboardContext(true);
+  const organizationId = dashboardContext.data?.organizationId ?? null;
+
+  const items: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }[] = [
+    { icon: 'megaphone-outline', label: 'Announcements', onPress: () => router.push('/owner/announcements-manage') },
+    { icon: 'chatbubbles-outline', label: 'Broadcasts', onPress: () => router.push('/owner/broadcasts-manage') },
+    { icon: 'bar-chart-outline', label: 'Reports', onPress: () => router.push('/owner/reports') },
+    { icon: 'card-outline', label: 'Payout Account', onPress: () => router.push('/owner/payout') },
+    {
+      icon: 'shirt-outline',
+      label: 'Swag Shop',
+      onPress: () => router.push(webEmbedRoute(`/app/organizations/${organizationId}/swag-shop`, 'Swag Shop')),
+    },
+    {
+      icon: 'heart-outline',
+      label: 'Fundraising',
+      onPress: () => router.push(webEmbedRoute(`/app/organizations/${organizationId}/fundraising`, 'Fundraising')),
+    },
+    {
+      icon: 'ribbon-outline',
+      label: 'Sponsorships',
+      onPress: () => router.push(webEmbedRoute(`/app/organizations/${organizationId}/sponsorships`, 'Sponsorships')),
+    },
+    { icon: 'notifications-outline', label: 'My Announcements', onPress: () => router.push('/announcements') },
+    { icon: 'settings-outline', label: 'Settings', onPress: () => router.push('/settings') },
+  ];
+
   return (
     <ThemedView style={styles.container}>
       <PlatformStatusSpacer />
@@ -37,8 +47,8 @@ export default function OwnerMoreScreen() {
         <ThemedText type="smallBold">More</ThemedText>
       </View>
       <View style={styles.list}>
-        {ITEMS.map((item) => (
-          <Pressable key={item.href} onPress={() => router.push(item.href)}>
+        {items.map((item) => (
+          <Pressable key={item.label} onPress={item.onPress} disabled={!organizationId && item.label !== 'Settings'}>
             <ThemedView type="backgroundElement" style={styles.row}>
               <Ionicons name={item.icon} size={20} color={theme.text} />
               <ThemedText style={styles.label}>{item.label}</ThemedText>

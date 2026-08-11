@@ -15,5 +15,7 @@ function required(name: string, value: string | undefined): string {
 
 export const env = {
   apiBaseUrl: required('EXPO_PUBLIC_API_BASE_URL', process.env.EXPO_PUBLIC_API_BASE_URL),
+  /** Base origin of frontend/ (matches backend's rally26.frontend.base-url) — WebView embeds (Swag Shop/Fundraising/Sponsorships, ADR-106) load real frontend/ pages under this origin. */
+  frontendBaseUrl: required('EXPO_PUBLIC_FRONTEND_BASE_URL', process.env.EXPO_PUBLIC_FRONTEND_BASE_URL),
   environmentName: process.env.EXPO_PUBLIC_ENVIRONMENT_NAME ?? 'development',
 };

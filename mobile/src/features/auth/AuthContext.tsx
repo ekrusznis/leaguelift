@@ -22,6 +22,17 @@ interface AuthState {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /**
+   * Returns the current session in the exact JSON shape
+   * frontend/src/auth/AuthContext.tsx reads from sessionStorage (key
+   * "rally26.session": {accessToken, expiresAt, user: {displayName, email}}) — used to
+   * bootstrap an authenticated WebView embed (ADR-106) via
+   * injectedJavaScriptBeforeContentLoaded, with no new backend endpoint. Web's
+   * apiClient sends no cookie/CSRF token, so the bearer token is the only thing that
+   * gates access — verified directly against frontend/src/auth/AuthContext.tsx and
+   * frontend/src/lib/apiClient.ts before relying on this.
+   */
+  getWebSession: () => { accessToken: string; expiresAt: number; user: { displayName: string; email: string } } | null;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -69,6 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  function getWebSession() {
+    const current = tokenRef.current;
+    if (!current || !user || Date.now() >= current.expiresAt) return null;
+    return { accessToken: current.token, expiresAt: current.expiresAt, user: { displayName: user.displayName, email: user.email } };
+  }
+
   useEffect(() => {
     registerAccessTokenGetter(async () => {
       const current = tokenRef.current;
@@ -113,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.user);
   }, []);
 
-  return <AuthContext.Provider value={{ user, isLoading, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, isLoading, login, logout, getWebSession }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthState {

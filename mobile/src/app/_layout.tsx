@@ -109,6 +109,7 @@ function RootNavigator() {
           <Stack.Screen name="owner/broadcasts-manage" options={{ presentation: 'card' }} />
           <Stack.Screen name="owner/broadcast-compose" options={{ presentation: 'card' }} />
           <Stack.Screen name="owner/broadcast-detail" options={{ presentation: 'card' }} />
+          <Stack.Screen name="web-embed" options={{ presentation: 'card' }} />
           <Stack.Screen name="messages/[threadId]" options={{ presentation: 'card' }} />
           <Stack.Screen name="settings" options={{ presentation: 'card' }} />
         </Stack>

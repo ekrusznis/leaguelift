@@ -112,11 +112,60 @@ Owner persona (`/owner`, ADR-105) — 4 tabs: Home/Teams/Members/More:
 | `/owner/broadcast-compose` | New Broadcast | Creates an org-scoped thread, then hands off to Broadcast Detail to send the first message |
 | `/owner/broadcast-detail?threadId=` | Broadcast Detail | Real management-scoped message list + send |
 
-**Deferred, not attempted this slice** (see ADR-105): Swag Shop, QuickBooks/org
-integrations, sponsorships, Rally26 subscription billing, fundraising campaign
-*management* (reads are real), payout `transfer`/`onboarding-link` actions, org
-profile/credit-settings edit forms, Documents (owner-side), team/tournament
-create/edit/archive, and team-scoped (vs. org-scoped) announcements/broadcasts.
+**Deferred, not attempted this slice** (see ADR-105): Rally26 subscription billing,
+payout `transfer`/`onboarding-link` actions, org profile/credit-settings edit forms,
+Documents (owner-side), team/tournament create/edit/archive, and team-scoped (vs.
+org-scoped) announcements/broadcasts. Swag Shop, Fundraising, and Sponsorships are
+covered — see WebView embeds below (ADR-106).
+
+## WebView embeds — Swag Shop, Fundraising, Sponsorships (ADR-106)
+
+Rather than rebuild these natively, `/web-embed` (`src/app/web-embed.tsx`) loads the
+**real, already-built `frontend/` pages** for these three feature areas inside an
+in-app WebView (`react-native-webview`) — a deliberate exception to "not a WebView
+wrapper around `frontend/`" (that principle is about the app's overall identity/
+navigation, not a blanket ban on embedding one bounded, complex feature where a native
+rebuild would be pure duplicate maintenance for no UX gain, e.g. live Printify mockup
+preview).
+
+**How auth works, no new backend endpoint:** `useAuth().getWebSession()` returns the
+current session in the *exact* JSON shape `frontend/src/auth/AuthContext.tsx` reads
+from `sessionStorage` under the key `"rally26.session"` —
+`{accessToken, expiresAt, user: {displayName, email}}`. `web-embed.tsx` injects that
+via `injectedJavaScriptBeforeContentLoaded` before the page's own JS boots. Verified
+directly against `frontend/src/auth/AuthContext.tsx` and `frontend/src/lib/apiClient.ts`
+before relying on this: web sends no cookie, no CSRF/double-submit token — the bearer
+token in `sessionStorage` is the only thing that gates access, so injecting it is
+sufficient; no "exchange token" bridge endpoint was needed on the backend.
+
+**Stripe checkout stays inside the WebView too** — web itself only does
+`window.location.href = checkoutUrl` to Stripe's hosted Checkout (no Stripe SDK
+anywhere in this codebase), so there's nothing extra to build for that; `web-embed.tsx`
+watches for `status=success`/`status=canceled` in the WebView's navigated URL to show a
+native toast.
+
+| Route | Screen | Entry points |
+|---|---|---|
+| `/web-embed?path=&title=` | Real `frontend/` page in a WebView | Owner More: Swag Shop (`/app/organizations/{id}/swag-shop`, management), Fundraising (`/app/organizations/{id}/fundraising`, management), Sponsorships (`/app/organizations/{id}/sponsorships`, management). Coach More + Parent More: Swag Shop (`/app/organizations/{id}/swag-shop/order`, the real buyer/personalization/checkout flow) |
+
+**Known limitation:** the authenticated in-app Swag Shop *order* flow's Stripe
+success/cancel redirect target is hardcoded server-side to `frontendProperties.baseUrl`
+(`OrderService.createSwagShopCheckoutSession`, `OrderDto.kt`'s doc comment confirms no
+caller-supplied override exists) — it redirects back to the same `frontend/` page
+inside the WebView, which is fine, but there's no way to redirect out to a
+`rally26://` deep link instead without a backend change. Fundraising/Sponsorship
+checkout endpoints *do* accept caller-supplied `successUrl`/`cancelUrl`, but this slice
+still routes them through the WebView (not a native deep-link handoff) for consistency
+with Swag Shop and to avoid a second redirect pattern for no real gain yet.
+
+**QuickBooks stays web-only, no mobile screen at all** — not even a WebView link. Its
+own Intuit OAuth core is inactive on web too (fails closed,
+`QUICKBOOKS_CLIENT_NOT_ACTIVATED`), so there's nothing live to reach from mobile right
+now.
+
+**Still native-only, not yet built anywhere on mobile:** Help Center + Support
+ticketing, owner-side Documents (upload/broadcast-to-all-households), and Action
+Center — see the mobile-vs-web parity gap analysis (2026-08-10) for sizing.
 
 ## Local development
 
