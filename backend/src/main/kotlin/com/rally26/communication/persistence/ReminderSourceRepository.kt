@@ -117,6 +117,30 @@ class ReminderSourceRepository(
                 )
             }.optional()
             .orElse(null)
+
+    /** Phase 31 slice 31.5 — the participant a staff-triggered eligibility reminder targets. */
+    fun findParticipant(
+        organizationId: UUID,
+        id: UUID,
+    ): ParticipantReminderSource? =
+        jdbcClient
+            .sql(
+                """
+                select id, organization_id, household_id, first_name, last_name
+                from participant where id = :id and organization_id = :organizationId and status = 'ACTIVE'
+                """.trimIndent(),
+            ).param("id", id)
+            .param("organizationId", organizationId)
+            .query { rs, _ ->
+                ParticipantReminderSource(
+                    id = rs.getObject("id", UUID::class.java),
+                    organizationId = rs.getObject("organization_id", UUID::class.java),
+                    householdId = rs.getObject("household_id", UUID::class.java),
+                    firstName = rs.getString("first_name"),
+                    lastName = rs.getString("last_name"),
+                )
+            }.optional()
+            .orElse(null)
 }
 
 data class CampaignReminderSource(
@@ -156,4 +180,12 @@ data class DocumentReminderSource(
     val organizationId: UUID,
     val householdId: UUID,
     val title: String,
+)
+
+data class ParticipantReminderSource(
+    val id: UUID,
+    val organizationId: UUID,
+    val householdId: UUID,
+    val firstName: String,
+    val lastName: String,
 )

@@ -8,6 +8,7 @@ import com.rally26.communication.domain.AnnouncementAudience
 import com.rally26.communication.domain.AnnouncementKind
 import com.rally26.communication.domain.AnnouncementScopeType
 import com.rally26.communication.persistence.EventReminderSource
+import com.rally26.communication.persistence.ParticipantReminderSource
 import com.rally26.communication.persistence.ReminderSourceRepository
 import com.rally26.membership.application.MembershipService
 import io.mockk.every
@@ -91,5 +92,62 @@ class ReminderServiceTest {
             )
         }
         assertTrue(source.timezone == "America/New_York")
+    }
+
+    @Test
+    fun `eligibility reminder requires a manager role and notifies the participant's household guardians`() {
+        val participantId = UUID.randomUUID()
+        val householdId = UUID.randomUUID()
+        val source =
+            ParticipantReminderSource(
+                id = participantId,
+                organizationId = organizationId,
+                householdId = householdId,
+                firstName = "Jordan",
+                lastName = "Smith",
+            )
+        val result = mockk<Announcement>()
+        every { membershipService.requireManagerRole(organizationId, user) } returns mockk()
+        every { sources.findParticipant(organizationId, participantId) } returns source
+        every {
+            announcements.createSystemAndPublish(
+                organizationId,
+                AnnouncementScopeType.ORGANIZATION,
+                organizationId,
+                AnnouncementKind.ELIGIBILITY_REMINDER,
+                "PARTICIPANT",
+                participantId,
+                householdId,
+                any(),
+                "Eligibility reminder: Jordan Smith",
+                any(),
+                AnnouncementAudience.GUARDIANS,
+                true,
+                false,
+                user,
+            )
+        } returns result
+
+        service.send(organizationId, ReminderResourceType.ELIGIBILITY, participantId, "request-456", true, false, user)
+
+        verify(exactly = 1) { membershipService.requireManagerRole(organizationId, user) }
+        verify(exactly = 1) {
+            announcements.createSystemAndPublish(
+                organizationId,
+                AnnouncementScopeType.ORGANIZATION,
+                organizationId,
+                AnnouncementKind.ELIGIBILITY_REMINDER,
+                "PARTICIPANT",
+                participantId,
+                householdId,
+                any(),
+                "Eligibility reminder: Jordan Smith",
+                any(),
+                AnnouncementAudience.GUARDIANS,
+                true,
+                false,
+                user,
+            )
+        }
     }
 }

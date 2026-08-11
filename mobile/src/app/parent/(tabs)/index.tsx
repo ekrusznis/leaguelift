@@ -83,22 +83,31 @@ export default function ParentDashboardScreen() {
         </ThemedText>
         <View style={styles.athleteRow}>
           {household.athletes.map((athlete) => (
-            <ThemedView key={athlete.participantId} type="backgroundElement" style={styles.athleteCard}>
-              <ThemedView type="backgroundSelected" style={styles.athleteAvatar}>
-                <ThemedText type="smallBold">
-                  {athlete.name
-                    .split(' ')
-                    .map((p) => p[0])
-                    .join('')
-                    .slice(0, 2)
-                    .toUpperCase()}
+            <Pressable
+              key={athlete.participantId}
+              onPress={() =>
+                router.push({
+                  pathname: '/eligibility',
+                  params: { participantId: athlete.participantId, participantName: athlete.name, householdId: household.householdId ?? '' },
+                })
+              }>
+              <ThemedView type="backgroundElement" style={styles.athleteCard}>
+                <ThemedView type="backgroundSelected" style={styles.athleteAvatar}>
+                  <ThemedText type="smallBold">
+                    {athlete.name
+                      .split(' ')
+                      .map((p) => p[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </ThemedText>
+                </ThemedView>
+                <ThemedText type="smallBold">{athlete.name}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                  {athlete.teamNames.join(', ') || 'No team yet'}
                 </ThemedText>
               </ThemedView>
-              <ThemedText type="smallBold">{athlete.name}</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                {athlete.teamNames.join(', ') || 'No team yet'}
-              </ThemedText>
-            </ThemedView>
+            </Pressable>
           ))}
         </View>
 

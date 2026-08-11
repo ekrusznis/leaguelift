@@ -21,7 +21,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
 
-enum class ReminderResourceType { CAMPAIGN, EVENT, FEE_ASSIGNMENT, DOCUMENT }
+enum class ReminderResourceType { CAMPAIGN, EVENT, FEE_ASSIGNMENT, DOCUMENT, ELIGIBILITY }
 
 @Service
 class ReminderService(
@@ -45,6 +45,15 @@ class ReminderService(
             ReminderResourceType.EVENT -> event(organizationId, resourceId, idempotencyKey, emailEnabled, smsEnabled, currentUser)
             ReminderResourceType.FEE_ASSIGNMENT -> fee(organizationId, resourceId, idempotencyKey, emailEnabled, smsEnabled, currentUser)
             ReminderResourceType.DOCUMENT -> document(organizationId, resourceId, idempotencyKey, emailEnabled, smsEnabled, currentUser)
+            ReminderResourceType.ELIGIBILITY ->
+                eligibility(
+                    organizationId,
+                    resourceId,
+                    idempotencyKey,
+                    emailEnabled,
+                    smsEnabled,
+                    currentUser,
+                )
         }
 
     private fun campaign(
@@ -211,6 +220,38 @@ class ReminderService(
             sourceKey("DOCUMENT", document.id, key),
             "Document reminder: ${document.title}",
             "Please review and acknowledge ${document.title} in your Rally26 household documents.",
+            AnnouncementAudience.GUARDIANS,
+            email,
+            sms,
+            currentUser,
+        )
+    }
+
+    /** Phase 31 slice 31.5 — the first real sender for the "Documents & eligibility" notification preference (V67, ADR-088). */
+    private fun eligibility(
+        organizationId: UUID,
+        id: UUID,
+        key: String,
+        email: Boolean,
+        sms: Boolean,
+        currentUser: CurrentUser,
+    ): Announcement {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        val participant =
+            sources.findParticipant(organizationId, id)
+                ?: throw NotFoundException("PARTICIPANT_NOT_FOUND", "The participant could not be found.")
+        return announcements.createSystemAndPublish(
+            organizationId,
+            AnnouncementScopeType.ORGANIZATION,
+            organizationId,
+            AnnouncementKind.ELIGIBILITY_REMINDER,
+            "PARTICIPANT",
+            participant.id,
+            participant.householdId,
+            sourceKey("ELIGIBILITY", participant.id, key),
+            "Eligibility reminder: ${participant.firstName} ${participant.lastName}",
+            "${participant.firstName} ${participant.lastName} has outstanding eligibility requirements for their team. " +
+                "Sign in to Rally26 to review and complete them.",
             AnnouncementAudience.GUARDIANS,
             email,
             sms,

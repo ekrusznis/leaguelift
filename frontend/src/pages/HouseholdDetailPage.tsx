@@ -47,6 +47,7 @@ import type { FeeAssignment, FeeAssignmentStatus } from "../features/fees/types"
 import { useFeeTemplates } from "../features/fees/api";
 import { useTeams } from "../features/teams/api";
 import { HouseholdDocumentsPanel } from "../features/documents/HouseholdDocumentsPanel";
+import { ParticipantEligibilityPanel } from "../features/eligibility/ParticipantEligibilityPanel";
 import { EventListPanel } from "../features/events/EventListPanel";
 import { ProfilePhotoEditor } from "../features/media/ProfilePhotoEditor";
 import { ProfileCorrectionForm } from "../features/profileCorrections/ProfileCorrectionForm";
@@ -306,6 +307,7 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 	const { data, isLoading, isError, refetch } = useParticipants(organizationId, householdId);
 	const [showForm, setShowForm] = useState(false);
 	const [expandedId, setExpandedId] = useState<string | null>(null);
+	const [eligibilityExpandedId, setEligibilityExpandedId] = useState<string | null>(null);
 	const [correctionParticipantId, setCorrectionParticipantId] = useState<string | null>(null);
 
 	return (
@@ -355,6 +357,13 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 									>
 										{expandedId === participant.id ? "Hide teams" : "Teams"}
 									</button>
+									<button
+										type="button"
+										className="text-sm text-azure-blue hover:underline"
+										onClick={() => setEligibilityExpandedId((id) => id === participant.id ? null : participant.id)}
+									>
+										{eligibilityExpandedId === participant.id ? "Hide eligibility" : "Eligibility"}
+									</button>
 								</div>
 							</div>
 							{correctionParticipantId === participant.id && (
@@ -370,6 +379,11 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 							)}
 							{expandedId === participant.id && (
 								<ParticipantTeamRow organizationId={organizationId} participant={participant} canManage={canManage} />
+							)}
+							{eligibilityExpandedId === participant.id && (
+								<div className="mt-2 border-l border-slate-gray/20 pl-4">
+									<ParticipantEligibilityPanel organizationId={organizationId} participantId={participant.id} canManage={canManage} />
+								</div>
 							)}
 						</li>
 					))}

@@ -119,7 +119,7 @@ class MediaEntityAccessServiceTest {
         val target = service.resolveForManage(organizationId, MediaEntityType.PARTICIPANT, participant.id, currentUser)
 
         assertEquals(Visibility.HOUSEHOLD_PRIVATE, target.visibility)
-        assertEquals(setOf(MediaUsageSlot.PROFILE_PHOTO), target.allowedSlots)
+        assertEquals(setOf(MediaUsageSlot.PROFILE_PHOTO, MediaUsageSlot.DOCUMENT), target.allowedSlots)
     }
 
     @Test

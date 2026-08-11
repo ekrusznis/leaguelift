@@ -4,7 +4,13 @@ import com.rally26.integration.core.domain.IntegrationProvider
 import java.time.Instant
 import java.util.UUID
 
-enum class SportsDataEntityType { ORGANIZATION, TEAM, PARTICIPANT, ROSTER_MEMBERSHIP, EVENT }
+/**
+ * ELIGIBILITY_EVIDENCE added Phase 31 slice 31.3 (DESIGN-DOC.md section 14.1L §30.4/30.5) —
+ * a provider's waiver/registration-status record, discovered through the same generic preview
+ * pipeline as every other entity type. See [com.rally26.integration.sportsdata.domain.ProviderEligibilityCapabilities]
+ * for which providers may claim this at all, and at what evidence-strength tier.
+ */
+enum class SportsDataEntityType { ORGANIZATION, TEAM, PARTICIPANT, ROSTER_MEMBERSHIP, EVENT, ELIGIBILITY_EVIDENCE }
 
 enum class SportsDataSourceMode { OAUTH, API_TOKEN, FILE_IMPORT, ICS }
 
