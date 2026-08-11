@@ -187,6 +187,9 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 									<Link to={appPaths.teamEvents(organizationId, team.id)} className="inline-flex min-h-11 items-center rounded-md border border-slate-gray/30 bg-pure-white px-4 py-2 text-sm font-medium text-navy hover:bg-ice-white">
 										Schedule
 									</Link>
+									<Link to={appPaths.teamRoster(organizationId, team.id)} className="inline-flex min-h-11 items-center rounded-md border border-slate-gray/30 bg-pure-white px-4 py-2 text-sm font-medium text-navy hover:bg-ice-white">
+										Roster
+									</Link>
 									<Button
 										type="button"
 										variant="secondary"

@@ -152,7 +152,7 @@ export function CoachDashboard({ organizationId }: { organizationId: string }) {
 				)}
 
 				{visibleWidgets.has("coach.roster-summary") && (
-					<DashCard id="coach-roster" title="Roster Summary">
+					<DashCard id="coach-roster" title="Roster Summary" action={activeTeamId ? { label: "View roster", to: appPaths.teamRoster(organizationId, activeTeamId) } : undefined}>
 						<CardQuery query={rosterSummary} loadingLabel="Loading roster…">
 							{(data) => (
 								<>

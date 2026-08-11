@@ -46,6 +46,7 @@ export type NavDestination =
 	| { type: "organization"; section: OrganizationSection }
 	| { type: "household"; section: HouseholdSection }
 	| { type: "team-events" }
+	| { type: "team-roster" }
 	| { type: "tournament-events" }
 	| { type: "participant-events" }
 	| { type: "swag-shop-order" }
@@ -128,6 +129,7 @@ export const NAV_REGISTRY: NavRegistryItem[] = [
 	{ id: "coach.my-teams", label: "My Teams", icon: <UsersIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_VIEW], destination: { type: "dashboard", hash: "coach-teams" } },
 	{ id: "coach.schedule", label: "Schedule", icon: <CalendarIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.EVENT_READ], destination: { type: "team-events" } },
 	{ id: "coach.roster", label: "Roster Summary", icon: <UserIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_VIEW], destination: { type: "dashboard", hash: "coach-roster" } },
+	{ id: "coach.team-roster", label: "Team Roster", icon: <UsersIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_VIEW], destination: { type: "team-roster" } },
 	{ id: "coach.team-page", label: "Team Page", icon: <LayoutIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_VIEW, Capabilities.TEAM_PAGE_EDIT], destination: { type: "dashboard", hash: "coach-team-page" } },
 	{ id: "coach.fundraising", label: "Fundraising", icon: <HeartHandshakeIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_VIEW, Capabilities.TEAM_FUNDRAISING_MANAGE], destination: { type: "dashboard", hash: "coach-fundraising" } },
 	{ id: "coach.swag-shop", label: "Swag Shop", icon: <ShirtIcon className="size-5" />, contextTypes: ["TEAM"], requiredCapabilities: [Capabilities.TEAM_ORDER_CREATE], destination: { type: "swag-shop-order" } },
@@ -181,6 +183,7 @@ function resolveDestination(destination: NavDestination, context: NavRouteContex
 		case "organization": return context.organizationId ? appPaths.organization(context.organizationId, destination.section) : null;
 		case "household": return context.organizationId && context.householdId ? appPaths.household(context.organizationId, context.householdId, destination.section) : null;
 		case "team-events": return context.organizationId && context.teamId ? appPaths.teamEvents(context.organizationId, context.teamId) : appPaths.dashboard("coach-schedule");
+		case "team-roster": return context.organizationId && context.teamId ? appPaths.teamRoster(context.organizationId, context.teamId) : appPaths.dashboard("coach-roster");
 		case "tournament-events": return context.organizationId && context.tournamentId ? appPaths.tournamentEvents(context.organizationId, context.tournamentId) : null;
 		case "participant-events": return context.organizationId && context.participantId ? appPaths.participantEvents(context.organizationId, context.participantId) : appPaths.dashboard("athlete-schedule");
 		case "swag-shop-order": return context.organizationId ? appPaths.swagShopOrder(context.organizationId) : null;

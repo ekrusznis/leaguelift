@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/apiClient";
+import type { Participant } from "../households/types";
 import type { CreateTeamFormValues } from "./schema";
 import type { Team, TeamPage } from "./types";
 
@@ -10,6 +11,15 @@ export function useTeams(organizationId: string) {
 		queryKey: teamsQueryKey(organizationId),
 		queryFn: () => apiFetch<TeamPage>(`/organizations/${organizationId}/teams`),
 		enabled: !!organizationId,
+	});
+}
+
+/** GET .../teams/{teamId}/participants — "a coach's team roster picker" (Swag Shop, DESIGN-DOC.md section 13), reused here for the real roster list. */
+export function useTeamRoster(organizationId: string, teamId: string) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "teams", teamId, "participants"],
+		queryFn: () => apiFetch<Participant[]>(`/organizations/${organizationId}/teams/${teamId}/participants`),
+		enabled: !!organizationId && !!teamId,
 	});
 }
 
