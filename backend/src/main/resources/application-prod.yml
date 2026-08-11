@@ -109,6 +109,14 @@ rally26:
       account-sid: ${TWILIO_ACCOUNT_SID:}
       auth-token: ${TWILIO_AUTH_TOKEN:}
       from-number: ${TWILIO_FROM_NUMBER:}
+  # Phase 37 — mobile Google/Apple sign-in. Blank client-id defaults until Rally26
+  # registers a real Google Cloud OAuth client and enables Sign in with Apple in its
+  # Apple Developer account; OAuthSignInService fails closed (503) until then.
+  oauth:
+    google:
+      client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+    apple:
+      client-id: ${APPLE_OAUTH_CLIENT_ID:}
   ics-feed:
     sync:
       enabled: ${ICS_FEED_SYNC_ENABLED:true}

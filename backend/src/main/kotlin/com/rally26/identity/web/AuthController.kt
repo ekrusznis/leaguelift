@@ -1,10 +1,12 @@
 package com.rally26.identity.web
 
 import com.rally26.identity.application.EmailVerificationService
+import com.rally26.identity.application.OAuthSignInService
 import com.rally26.identity.application.PasswordAuthenticationService
 import com.rally26.identity.application.PasswordResetService
 import com.rally26.identity.application.TokenService
 import com.rally26.identity.domain.AppUser
+import com.rally26.identity.domain.OAuthProvider
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -20,6 +22,7 @@ class AuthController(
     private val passwordAuthenticationService: PasswordAuthenticationService,
     private val emailVerificationService: EmailVerificationService,
     private val passwordResetService: PasswordResetService,
+    private val oauthSignInService: OAuthSignInService,
     private val tokenService: TokenService,
 ) {
     @PostMapping("/register")
@@ -83,6 +86,16 @@ class AuthController(
         val appUser = passwordAuthenticationService.authenticate(request.email, request.password)
         return issueAuthResponse(appUser)
     }
+
+    @PostMapping("/oauth/google")
+    fun signInWithGoogle(
+        @Valid @RequestBody request: OAuthSignInRequest,
+    ): AuthResponse = issueAuthResponse(oauthSignInService.signIn(OAuthProvider.GOOGLE, request.idToken))
+
+    @PostMapping("/oauth/apple")
+    fun signInWithApple(
+        @Valid @RequestBody request: OAuthSignInRequest,
+    ): AuthResponse = issueAuthResponse(oauthSignInService.signIn(OAuthProvider.APPLE, request.idToken))
 
     private fun issueAuthResponse(appUser: AppUser): AuthResponse {
         val token = tokenService.issueAccessToken(appUser.id, appUser.email, appUser.displayName)
