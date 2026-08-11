@@ -125,7 +125,9 @@ export function SettingsPage() {
 				<div>
 					<h2 id="notification-settings-heading" className="font-heading text-xl font-semibold text-navy-900">Notifications</h2>
 					<p className="mt-1 text-sm text-slate-600">
-						Optional in-app and email notifications default on. SMS defaults off and requires your individual consent plus an explicit topic setting.
+						"Default" resolves differently per channel, not the same thing everywhere: in-app stays on unless you turn it off; email follows your household's
+						email-reminder setting, so Default can mean off if your household has opted out; SMS's Default is always off — SMS only ever sends once you both
+						grant consent below and set that topic's SMS choice to On.
 					</p>
 				</div>
 				{notifications.isPending && <div className="mt-4"><LoadingState label="Loading notification preferences…" /></div>}
@@ -149,7 +151,18 @@ export function SettingsPage() {
 						<div className="overflow-x-auto rounded-xl border border-slate-200">
 							<table className="min-w-full divide-y divide-slate-200 text-sm">
 								<thead className="bg-ice-white text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-									<tr><th className="px-4 py-3">Topic</th><th className="px-4 py-3">In-app</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">SMS</th></tr>
+									<tr>
+										<th className="px-4 py-3">Topic</th>
+										<th className="px-4 py-3">In-app</th>
+										<th className="px-4 py-3">
+											Email
+											<span className="mt-0.5 block text-[10px] font-normal normal-case text-slate-400">Default follows your household setting</span>
+										</th>
+										<th className="px-4 py-3">
+											SMS
+											<span className="mt-0.5 block text-[10px] font-normal normal-case text-slate-400">Default is always off</span>
+										</th>
+									</tr>
 								</thead>
 								<tbody className="divide-y divide-slate-200 bg-white">
 									{notificationPreferences.topics.map((preference) => {
