@@ -93,3 +93,15 @@ export interface CreateMessageThreadRequest {
   emailEnabled?: boolean;
   smsEnabled?: boolean;
 }
+
+/** Team-staff-tier "message specific people" compose (ADR-107) — POST /organizations/{orgId}/message-threads/conversations, distinct from CreateAthleteConversationRequest (that one's athlete-self, this one's staff-initiated). */
+export interface CreateConversationRequest {
+  teamId: string;
+  idempotencyKey: string;
+  title: string;
+  targetUserIds: string[];
+  emailEnabled?: boolean;
+  smsEnabled?: boolean;
+  initialMessageIdempotencyKey: string;
+  initialMessage: string;
+}

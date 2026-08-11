@@ -1,7 +1,16 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Dimensions, FlatList, Pressable, StyleSheet, View, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
+import {
+  Dimensions,
+  FlatList,
+  Image,
+  Pressable,
+  StyleSheet,
+  View,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
+  type ImageSourcePropType,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
@@ -12,29 +21,25 @@ import { useOnboarding } from '@/lib/onboarding';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface Slide {
-  icon: keyof typeof Ionicons.glyphMap;
+  image: ImageSourcePropType;
   title: string;
   body: string;
 }
 
-/**
- * First-launch-only walkthrough. Copy/icons approximate docs/design/mobile_sample_design.png's
- * "ONBOARDING SCREENS" (ADR-101) — real illustrations aren't generated yet, using
- * Ionicons + brand color blocks as a faithful stand-in for the mockup's hero art.
- */
+/** First-launch-only walkthrough. Real founder-supplied illustrations (docs/design/splash2-4.png, ADR-107) — replaces the earlier Ionicons/color-block stand-in from ADR-101. */
 const SLIDES: Slide[] = [
   {
-    icon: 'people',
+    image: require('../../assets/images/onboarding-1.png'),
     title: 'Built for Teams',
     body: 'Rally26 brings your team closer with tools that make communication and organization easy.',
   },
   {
-    icon: 'megaphone',
+    image: require('../../assets/images/onboarding-2.png'),
     title: 'Stay in the Loop',
     body: 'Get updates, reminders, and important info — all in one place.',
   },
   {
-    icon: 'trophy',
+    image: require('../../assets/images/onboarding-3.png'),
     title: 'Focus on What Matters',
     body: 'Less admin. More team. Let’s make this your best season yet.',
   },
@@ -77,15 +82,15 @@ export default function OnboardingScreen() {
         onMomentumScrollEnd={onScroll}
         renderItem={({ item }) => (
           <View style={[styles.slide, { width: SCREEN_WIDTH }]}>
-            <View style={styles.iconWrap}>
-              <Ionicons name={item.icon} size={72} color={Brand.championshipGold} />
+            <Image source={item.image} resizeMode="cover" style={styles.slideImage} />
+            <View style={styles.slideTextWrap}>
+              <ThemedText type="title" style={styles.slideTitle}>
+                {item.title}
+              </ThemedText>
+              <ThemedText style={styles.slideBody} themeColor="textSecondary">
+                {item.body}
+              </ThemedText>
             </View>
-            <ThemedText type="title" style={styles.slideTitle}>
-              {item.title}
-            </ThemedText>
-            <ThemedText style={styles.slideBody} themeColor="textSecondary">
-              {item.body}
-            </ThemedText>
           </View>
         )}
       />
@@ -116,18 +121,15 @@ const styles = StyleSheet.create({
   },
   slide: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.five,
   },
-  iconWrap: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: '#102B46',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.five,
+  slideImage: {
+    width: '100%',
+    height: '55%',
+  },
+  slideTextWrap: {
+    flex: 1,
+    paddingHorizontal: Spacing.five,
+    paddingTop: Spacing.five,
   },
   slideTitle: {
     textAlign: 'center',

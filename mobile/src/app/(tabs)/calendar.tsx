@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -73,9 +74,17 @@ export default function CalendarScreen() {
           <Ionicons name="chevron-back" size={22} color={theme.text} />
         </Pressable>
         <ThemedText type="smallBold">{formatMonthLabel(year, month0)}</ThemedText>
-        <Pressable hitSlop={8} onPress={() => changeMonth(1)}>
-          <Ionicons name="chevron-forward" size={22} color={theme.text} />
-        </Pressable>
+        <View style={styles.headerRight}>
+          <Pressable hitSlop={8} onPress={() => changeMonth(1)}>
+            <Ionicons name="chevron-forward" size={22} color={theme.text} />
+          </Pressable>
+          <Pressable
+            hitSlop={8}
+            onPress={() => router.push({ pathname: '/event-form', params: { mode: 'create', teamId: coach.selectedTeamId ?? '' } })}
+            style={styles.newEventButton}>
+            <Ionicons name="add-circle" size={26} color={Brand.championshipGold} />
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.weekdayRow}>
@@ -146,6 +155,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  newEventButton: {
+    marginLeft: Spacing.one,
   },
   weekdayRow: {
     flexDirection: 'row',

@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useLocalSearchParams } from 'expo-router';
-import { ScrollView, Share, StyleSheet, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Linking, ScrollView, Share, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { ErrorState } from '@/components/error-state';
@@ -10,7 +10,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useToast } from '@/components/toast';
 import { useContexts, useDashboardContext } from '@/features/dashboard/api';
-import { useEvent, useEventRsvps, useSubmitRsvp } from '@/features/events/api';
+import { useEvent, useEventDirections, useEventRsvps, useSubmitRsvp } from '@/features/events/api';
 import type { EventType, SubmittableRsvpStatus } from '@/features/events/types';
 import { useMyAthletes } from '@/features/household/api';
 import { Brand, Spacing } from '@/constants/theme';
@@ -43,9 +43,11 @@ export default function EventDetailsScreen() {
   const toast = useToast();
   const eventQuery = useEvent(organizationId, id ?? null);
   const rsvpsQuery = useEventRsvps(organizationId, id ?? null);
+  const directionsQuery = useEventDirections(organizationId, id ?? null);
   const athletesQuery = useMyAthletes(organizationId, householdId);
   const contextsQuery = useContexts(true);
   const submitRsvp = useSubmitRsvp(organizationId, id ?? '');
+  const canEdit = dashboardContext.data?.role === 'COACH' || dashboardContext.data?.role === 'OWNER';
 
   async function onShare() {
     if (!eventQuery.data) return;
@@ -186,12 +188,22 @@ export default function EventDetailsScreen() {
         )}
 
         <View style={styles.actions}>
-          <Button
-            variant="secondary"
-            onPress={() => toast.show('Editing events isn’t available in the app yet.', 'info')}
-            style={styles.actionButton}>
-            Edit
-          </Button>
+          {canEdit && (
+            <Button
+              variant="secondary"
+              onPress={() => router.push({ pathname: '/event-form', params: { mode: 'edit', id: event.id } })}
+              style={styles.actionButton}>
+              Edit
+            </Button>
+          )}
+          {directionsQuery.data?.url && (
+            <Button
+              variant="secondary"
+              onPress={() => Linking.openURL(directionsQuery.data.url!)}
+              style={styles.actionButton}>
+              Directions
+            </Button>
+          )}
           <Button variant="primary" onPress={onShare} style={styles.actionButton}>
             Share
           </Button>
@@ -276,10 +288,12 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.three,
     marginTop: Spacing.five,
   },
   actionButton: {
     flex: 1,
+    minWidth: 100,
   },
 });

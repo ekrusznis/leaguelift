@@ -2,7 +2,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiFetch } from '@/lib/apiClient';
 
-import type { EventResponse, EventRsvpsResponse, SubmittableRsvpStatus } from './types';
+import type {
+  CreateEventRequest,
+  DirectionsResponse,
+  EventResponse,
+  EventRsvpsResponse,
+  SubmittableRsvpStatus,
+  TimezoneDefaultResponse,
+  UpdateEventRequest,
+} from './types';
 
 /** GET /teams/{teamId}/events?organizationId= — a coach's team schedule (ADR-102). Not PageResponse-wrapped; a plain array. */
 export function useTeamEvents(organizationId: string | null, teamId: string | null) {
@@ -62,5 +70,63 @@ export function useSubmitRsvp(organizationId: string | null, eventId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events', eventId, 'rsvps'] });
     },
+  });
+}
+
+/** GET .../events/timezone-default — the create-event form's smart pre-fill (team override -> org default), never used to validate/snapshot the actual event (ADR-107). */
+export function useEventTimezoneDefault(organizationId: string | null, teamId: string | null) {
+  return useQuery({
+    queryKey: ['organizations', organizationId, 'events', 'timezone-default', teamId],
+    queryFn: ({ signal }) =>
+      apiFetch<TimezoneDefaultResponse>(
+        `/organizations/${organizationId}/events/timezone-default${teamId ? `?teamId=${teamId}` : ''}`,
+        { signal },
+      ),
+    enabled: !!organizationId,
+  });
+}
+
+export function useCreateEvent(organizationId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: CreateEventRequest) =>
+      apiFetch<EventResponse>(`/organizations/${organizationId}/events`, { method: 'POST', body: request }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['organizations', organizationId, 'dashboard'] });
+    },
+  });
+}
+
+export function useUpdateEvent(organizationId: string | null, eventId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: UpdateEventRequest) =>
+      apiFetch<EventResponse>(`/organizations/${organizationId}/events/${eventId}`, { method: 'PATCH', body: request }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organizations', organizationId, 'events', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+    },
+  });
+}
+
+export function usePublishEvent(organizationId: string | null, eventId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch<EventResponse>(`/organizations/${organizationId}/events/${eventId}/publish`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organizations', organizationId, 'events', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+    },
+  });
+}
+
+/** GET .../events/{eventId}/directions — real, keyless Google Maps URL (ADR-028); url is null when the event has no location data. */
+export function useEventDirections(organizationId: string | null, eventId: string | null) {
+  return useQuery({
+    queryKey: ['organizations', organizationId, 'events', eventId, 'directions'],
+    queryFn: ({ signal }) =>
+      apiFetch<DirectionsResponse>(`/organizations/${organizationId}/events/${eventId}/directions`, { signal }),
+    enabled: !!organizationId && !!eventId,
   });
 }

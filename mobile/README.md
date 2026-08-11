@@ -179,10 +179,10 @@ npm start
 Then press `a` (Android emulator), `i` (iOS simulator — macOS only), or scan the QR
 code with Expo Go / a development build on a physical device.
 
-**Physical device caveat:** `EXPO_PUBLIC_API_BASE_URL=http://localhost:8080/...` only
-reaches the backend from an emulator/simulator on the same machine. On a physical
-device, replace `localhost` with your machine's LAN IP (Expo prints this in the QR
-code screen) or use `npx expo start --tunnel`.
+**`localhost` doesn't mean the same thing on every target — set `.env.local` per platform:**
+- **iOS Simulator:** `http://localhost:8080/...` works as-is — the simulator shares the host's network stack.
+- **Android Emulator:** `localhost` refers to the emulated device itself, not your host machine — use the special alias `http://10.0.2.2:8080/...` instead (applies to both `EXPO_PUBLIC_API_BASE_URL` and `EXPO_PUBLIC_FRONTEND_BASE_URL`, the latter only mattering once you're inside a WebView embed screen, ADR-106).
+- **Physical device:** neither of the above reaches your machine — replace the host with your machine's LAN IP (Expo prints this in the QR code screen) or use `npx expo start --tunnel`.
 
 ## First-time EAS setup (one-time, per Expo account)
 

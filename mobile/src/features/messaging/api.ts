@@ -9,6 +9,7 @@ import type {
   BroadcastMessageResponse,
   ConversationContactResponse,
   CreateAthleteConversationRequest,
+  CreateConversationRequest,
   CreateMessageThreadRequest,
   MessageThreadResponse,
   MyBroadcastMessageResponse,
@@ -130,6 +131,33 @@ export function useSendBroadcastMessage(organizationId: string | null, threadId:
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organizations', organizationId, 'message-threads'] });
+    },
+  });
+}
+
+/** GET /organizations/{organizationId}/message-threads/contacts?teamId= — staff-facing contacts list for "message specific people" (ADR-107), distinct from the athlete-self equivalent. */
+export function useTeamContacts(organizationId: string | null, teamId: string | null) {
+  return useQuery({
+    queryKey: ['organizations', organizationId, 'message-threads', 'contacts', teamId],
+    queryFn: ({ signal }) =>
+      apiFetch<ConversationContactResponse[]>(
+        `/organizations/${organizationId}/message-threads/contacts?teamId=${teamId}`,
+        { signal },
+      ),
+    enabled: !!organizationId && !!teamId,
+  });
+}
+
+export function useCreateConversation(organizationId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (request: CreateConversationRequest) =>
+      apiFetch<MessageThreadResponse>(`/organizations/${organizationId}/message-threads/conversations`, {
+        method: 'POST',
+        body: request,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['me', 'message-threads'] });
     },
   });
 }

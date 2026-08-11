@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { DarkTheme, Redirect, router, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Redirect, router, Stack, ThemeProvider } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 
@@ -8,16 +8,12 @@ import { ToastProvider } from '@/components/toast';
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
 import { useDashboardContext } from '@/features/dashboard/api';
 import type { DashboardRole } from '@/features/dashboard/types';
+import { AppThemeProvider, useThemeScheme } from '@/hooks/use-theme';
 import { OnboardingContext, useOnboarding, useOnboardingState } from '@/lib/onboarding';
 import { queryClient } from '@/lib/queryClient';
 
 SplashScreen.preventAutoHideAsync();
 
-/**
- * Forced DarkTheme (matches docs/design/mobile_sample_design.png, ADR-101) rather
- * than following the OS scheme — see src/hooks/use-theme.ts. Real System/Light/Dark
- * alignment with Phase 28 is a later Phase 33 §32.1 design-system task.
- */
 export default function RootLayout() {
   const onboarding = useOnboardingState();
 
@@ -26,14 +22,24 @@ export default function RootLayout() {
       <AuthProvider>
         <ToastProvider>
           <OnboardingContext.Provider value={onboarding}>
-            <ThemeProvider value={DarkTheme}>
-              <AnimatedSplashOverlay />
-              <RootNavigator />
-            </ThemeProvider>
+            <AppThemeProvider>
+              <NavigationThemeBridge />
+            </AppThemeProvider>
           </OnboardingContext.Provider>
         </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>
+  );
+}
+
+/** Reads the resolved System/Light/Dark scheme (src/hooks/use-theme.ts) to pick React Navigation's own theme — separate from AppThemeProvider so useThemeScheme() has a provider to read from. */
+function NavigationThemeBridge() {
+  const scheme = useThemeScheme();
+  return (
+    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <AnimatedSplashOverlay />
+      <RootNavigator />
+    </ThemeProvider>
   );
 }
 
@@ -95,12 +101,14 @@ function RootNavigator() {
           <Stack.Screen name="athlete/(tabs)" />
           <Stack.Screen name="owner/(tabs)" />
           <Stack.Screen name="event-details" options={{ presentation: 'card' }} />
+          <Stack.Screen name="event-form" options={{ presentation: 'card' }} />
           <Stack.Screen name="announcements" options={{ presentation: 'card' }} />
           <Stack.Screen name="announcement-details" options={{ presentation: 'card' }} />
           <Stack.Screen name="documents" options={{ presentation: 'card' }} />
           <Stack.Screen name="fee-details" options={{ presentation: 'card' }} />
           <Stack.Screen name="guardians" options={{ presentation: 'card' }} />
           <Stack.Screen name="athlete/new-conversation" options={{ presentation: 'card' }} />
+          <Stack.Screen name="message-compose" options={{ presentation: 'card' }} />
           <Stack.Screen name="owner/team-detail" options={{ presentation: 'card' }} />
           <Stack.Screen name="owner/reports" options={{ presentation: 'card' }} />
           <Stack.Screen name="owner/payout" options={{ presentation: 'card' }} />

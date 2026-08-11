@@ -14,10 +14,11 @@ import type {
 export const userPreferencesQueryKey = ['me', 'preferences'] as const;
 export const notificationPreferencesQueryKey = ['me', 'notification-preferences'] as const;
 
-export function useUserPreferences() {
+export function useUserPreferences(enabled = true) {
   return useQuery({
     queryKey: userPreferencesQueryKey,
     queryFn: ({ signal }) => apiFetch<UserPreferences>('/me/preferences', { signal }),
+    enabled,
   });
 }
 

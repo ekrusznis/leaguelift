@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { ConfirmDialog } from '@/components/confirm-dialog';
@@ -91,6 +91,7 @@ export default function SettingsScreen() {
     <ThemedView style={styles.container}>
       <ScreenHeader title="Settings" />
 
+      <ScrollView contentContainerStyle={styles.scrollContent}>
       <View style={styles.profileRow}>
         <ThemedView type="backgroundSelected" style={styles.avatar}>
           <ThemedText type="smallBold">{(user?.displayName ?? '?').slice(0, 2).toUpperCase()}</ThemedText>
@@ -105,9 +106,6 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <ThemedText type="smallBold">Appearance</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.sectionNote}>
-          Saved to your account now; the app itself doesn’t yet switch look with this setting.
-        </ThemedText>
         {preferences.isPending && <LoadingState label="Loading…" />}
         {preferences.isError && <ErrorState message="Could not load appearance." onRetry={() => preferences.refetch()} />}
         {preferences.data && (
@@ -162,6 +160,7 @@ export default function SettingsScreen() {
           Log Out
         </Button>
       </View>
+      </ScrollView>
 
       <Modal visible={!!editingTopic} onClose={() => setEditingTopic(null)}>
         {editingTopic && (
@@ -215,6 +214,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: Spacing.six,
+  },
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -233,9 +235,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     marginBottom: Spacing.five,
     gap: Spacing.two,
-  },
-  sectionNote: {
-    marginBottom: Spacing.one,
   },
   optionRow: {
     flexDirection: 'row',
