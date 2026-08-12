@@ -7,6 +7,7 @@ import com.rally26.notification.SmsMessage
 import com.rally26.notification.SmsProvider
 import com.rally26.outbox.domain.OutboxEvent
 import com.rally26.outbox.domain.OutboxEventStatus
+import com.rally26.subscription.application.PlanEntitlementService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -23,7 +24,11 @@ class FeePaymentReminderHandlerTest {
     private val emailProvider = mockk<EmailProvider>()
     private val smsProvider = mockk<SmsProvider>()
     private val objectMapper = ObjectMapper()
-    private val handler = FeePaymentReminderHandler(emailProvider, smsProvider, objectMapper)
+    private val planEntitlementService =
+        mockk<PlanEntitlementService> {
+            every { smsAllowed(any()) } returns true
+        }
+    private val handler = FeePaymentReminderHandler(emailProvider, smsProvider, objectMapper, planEntitlementService)
 
     private fun eventWithPayload(payloadJson: String): OutboxEvent {
         val now = Instant.now()
@@ -89,6 +94,21 @@ class FeePaymentReminderHandlerTest {
 
         verify(exactly = 1) { emailProvider.send(any()) }
         verify(exactly = 1) { smsProvider.send(any()) }
+    }
+
+    @Test
+    fun `skips SMS but still sends the email when the organization's plan does not allow SMS`() {
+        every { planEntitlementService.smsAllowed(any()) } returns false
+        val payload =
+            """{"feeAssignmentId":"${UUID.randomUUID()}","householdContactEmail":"family@example.test",""" +
+                """"householdContactPhone":"+15550100","participantName":null,""" +
+                """"description":"Fall registration","currency":"USD","dueDate":"2026-08-10","balanceMinor":10000}"""
+        every { emailProvider.send(any()) } just runs
+
+        handler.handle(eventWithPayload(payload))
+
+        verify(exactly = 1) { emailProvider.send(any()) }
+        verify(exactly = 0) { smsProvider.send(any()) }
     }
 
     @Test

@@ -15,6 +15,7 @@ import com.rally26.integration.core.domain.IntegrationProviderDefinition
 import com.rally26.integration.core.domain.IntegrationReadiness
 import com.rally26.integration.quickbooks.persistence.QuickBooksRepository
 import com.rally26.membership.application.MembershipService
+import com.rally26.subscription.application.PlanEntitlementService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -34,6 +35,7 @@ class QuickBooksServiceTest {
     private val sync = mockk<IntegrationSyncService>()
     private val membership = mockk<MembershipService>(relaxed = true)
     private val audit = mockk<AuditService>(relaxed = true)
+    private val planEntitlementService = mockk<PlanEntitlementService>(relaxed = true)
     private val service =
         QuickBooksService(
             catalog,
@@ -46,6 +48,7 @@ class QuickBooksServiceTest {
             sync,
             membership,
             audit,
+            planEntitlementService,
         )
     private val organizationId = UUID.randomUUID()
     private val currentUser = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")

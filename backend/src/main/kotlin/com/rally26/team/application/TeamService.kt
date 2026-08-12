@@ -7,6 +7,7 @@ import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.membership.application.MembershipService
+import com.rally26.subscription.application.PlanEntitlementService
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamGenderCategory
 import com.rally26.team.persistence.TeamRepository
@@ -24,6 +25,7 @@ class TeamService(
     private val membershipService: MembershipService,
     private val auditService: AuditService,
     private val timeZoneService: TimeZoneService,
+    private val planEntitlementService: PlanEntitlementService,
 ) {
     fun list(
         organizationId: UUID,
@@ -66,6 +68,7 @@ class TeamService(
         currentUser: CurrentUser,
     ): Team {
         membershipService.requireManagerRole(organizationId, currentUser)
+        planEntitlementService.requireTeamCapacity(organizationId, teamRepository.countAll(organizationId))
         validateContactEmail(contactEmail)
         return try {
             val team = teamRepository.insert(organizationId, name, sport, season, contactEmail, ageGroup, genderCategory, level)

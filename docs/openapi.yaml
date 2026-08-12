@@ -2752,6 +2752,33 @@ paths:
 
   # --- Fee Assignments ---
 
+  /organizations/{organizationId}/payment-methods:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [fees]
+      summary: List available household payment methods (Phase 32 scaffold)
+      description: >
+        Stripe card is always available. Venmo/Cash App Pay/Affirm show
+        available=false with a "Coming soon" note until real, reviewed
+        credentials are configured. Deliberately not gated by manager role —
+        this carries no secrets, and a guardian needs it too. See
+        PaymentMethodAvailabilityService.
+      operationId: listPaymentMethods
+      responses:
+        "200":
+          description: Payment method availability for this organization
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PaymentMethodAvailabilityResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /organizations/{organizationId}/households/{householdId}/fee-assignments:
     parameters:
     - $ref: "#/components/parameters/OrganizationIdParam"
@@ -2972,11 +2999,67 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /organizations/{organizationId}/fee-assignments/{assignmentId}/checkout-sessions:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/FeeAssignmentIdParam"
+    post:
+      tags: [fees]
+      summary: Start a guardian-initiated online payment via Stripe Checkout
+      description: >
+        Inserts a PENDING_CHECKOUT fee_payment row, creates a Stripe Checkout
+        Session, and returns its URL. Confirmation happens only via the Stripe
+        webhook — poll GET .../payments/{paymentId} after redirect to learn the
+        outcome.
+      operationId: createFeeCheckoutSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFeeCheckoutSessionRequest"
+      responses:
+        "201":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeePaymentCheckoutResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /organizations/{organizationId}/fee-assignments/{assignmentId}/payments/{paymentId}:
     parameters:
     - $ref: "#/components/parameters/OrganizationIdParam"
     - $ref: "#/components/parameters/FeeAssignmentIdParam"
     - $ref: "#/components/parameters/PaymentIdParam"
+    get:
+      tags: [fees]
+      summary: Get a single payment's status
+      description: >
+        Household-capability-gated (household.fee.view), not staff-only — a
+        guardian polls this after returning from Stripe Checkout to learn
+        whether their online payment has been confirmed yet.
+      operationId: getFeePayment
+      responses:
+        "200":
+          description: The payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeePaymentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
     delete:
       tags: [fees]
       summary: Void a payment
@@ -11156,6 +11239,10 @@ components:
           description: >-
             Phase 24 slice 24.5 (ADR-071): an IANA time zone id. Submitting this field IS the owner's
             timezone-confirmation act — the frontend never auto-submits a suggested value without an explicit click.
+        zelleHandle:
+          type: string
+          maxLength: 200
+          description: Phase 32 scaffold — displayed to guardians as Zelle payment instructions. Null means don't change (same coalesce convention as every other field here).
     OrganizationType:
       type: string
       enum:
@@ -11218,6 +11305,10 @@ components:
           description: >-
             An IANA time zone id, or null if the owner has not yet confirmed one (ADR-071). Null means the
             organization default falls back to a hard-coded last resort, never presented as authoritative.
+        zelleHandle:
+          type: string
+          nullable: true
+          description: Phase 32 scaffold — null until an owner/admin sets it; shown to guardians as Zelle payment instructions.
         createdAt:
           type: string
           format: date-time
@@ -12212,7 +12303,7 @@ components:
           minimum: 1
         method:
           type: string
-          enum: [CASH, CHECK, VENMO, ZELLE, OTHER]
+          enum: [CASH, CHECK, VENMO, ZELLE, OTHER, STRIPE_ONLINE]
         paidAt:
           type: string
           format: date
@@ -12230,7 +12321,7 @@ components:
           maxLength: 500
     FeePaymentResponse:
       type: object
-      required: [id, feeAssignmentId, amountMinor, currency, method, paidAt, recordedByUserId, createdAt]
+      required: [id, feeAssignmentId, amountMinor, currency, method, paidAt, recordedByUserId, createdAt, status]
       properties:
         id:
           type: string
@@ -12245,7 +12336,7 @@ components:
           type: string
         method:
           type: string
-          enum: [CASH, CHECK, VENMO, ZELLE, OTHER]
+          enum: [CASH, CHECK, VENMO, ZELLE, OTHER, STRIPE_ONLINE]
         paidAt:
           type: string
           format: date
@@ -12265,6 +12356,55 @@ components:
         createdAt:
           type: string
           format: date-time
+        status:
+          type: string
+          enum: [PENDING_CHECKOUT, CONFIRMED, CANCELED]
+          description: PENDING_CHECKOUT only ever appears for a STRIPE_ONLINE payment between Checkout session creation and webhook confirmation — excluded from balance calculations until CONFIRMED.
+    CreateFeeCheckoutSessionRequest:
+      type: object
+      required: [amountMinor, successUrl, cancelUrl]
+      description: >
+        Authenticated — the paying guardian must hold household.fee.pay for this
+        fee's household. Confirmation happens only via the Stripe webhook
+        (POST /webhooks/stripe), not this call's response.
+      properties:
+        amountMinor:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Must not exceed the fee assignment's current outstanding balance.
+        successUrl:
+          type: string
+          description: >
+            May contain the literal placeholder "{FEE_PAYMENT_ID}", substituted
+            server-side with the created payment's id before being handed to
+            Stripe as the Checkout Session's success_url.
+        cancelUrl:
+          type: string
+    FeePaymentCheckoutResponse:
+      type: object
+      required: [feePaymentId, checkoutUrl]
+      properties:
+        feePaymentId:
+          type: string
+          format: uuid
+        checkoutUrl:
+          type: string
+    PaymentMethodAvailabilityResponse:
+      type: object
+      required: [method, displayName, available]
+      properties:
+        method:
+          type: string
+          enum: [STRIPE_ONLINE, VENMO, CASH_APP_PAY, AFFIRM, ZELLE]
+        displayName:
+          type: string
+        available:
+          type: boolean
+        note:
+          type: string
+          nullable: true
+          description: "\"Coming soon\" when not yet configured; Zelle payment instructions when an org handle is set."
     ApplyAdjustmentRequest:
       type: object
       required: [adjustmentType, amountMinor]

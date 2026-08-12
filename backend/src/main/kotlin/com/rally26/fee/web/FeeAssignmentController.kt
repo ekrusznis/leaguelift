@@ -3,6 +3,7 @@ package com.rally26.fee.web
 import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageResponse
 import com.rally26.fee.application.FeeService
+import com.rally26.fee.application.PaymentMethodAvailabilityService
 import com.rally26.fee.domain.FeeAssignmentStatus
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -24,7 +25,14 @@ import java.util.UUID
 @RequestMapping("/api/v1/organizations/{organizationId}")
 class FeeAssignmentController(
     private val feeService: FeeService,
+    private val paymentMethodAvailabilityService: PaymentMethodAvailabilityService,
 ) {
+    @GetMapping("/payment-methods")
+    fun listPaymentMethods(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): List<PaymentMethodAvailabilityResponse> = paymentMethodAvailabilityService.list(organizationId).map { it.toResponse() }
+
     @GetMapping("/households/{householdId}/fee-assignments")
     fun list(
         @PathVariable organizationId: UUID,
@@ -128,12 +136,41 @@ class FeeAssignmentController(
         return ResponseEntity.status(HttpStatus.CREATED).body(result.toResponse())
     }
 
+    @PostMapping("/fee-assignments/{assignmentId}/checkout-sessions")
+    fun createCheckoutSession(
+        @PathVariable organizationId: UUID,
+        @PathVariable assignmentId: UUID,
+        @Valid @RequestBody request: CreateFeeCheckoutSessionRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): ResponseEntity<FeePaymentCheckoutResponse> {
+        val checkout =
+            feeService.createOnlineCheckoutSession(
+                organizationId,
+                assignmentId,
+                request.amountMinor,
+                currentUser,
+                request.successUrl,
+                request.cancelUrl,
+            )
+        return ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(FeePaymentCheckoutResponse(checkout.feePaymentId, checkout.checkoutUrl))
+    }
+
     @GetMapping("/fee-assignments/{assignmentId}/payments")
     fun listPayments(
         @PathVariable organizationId: UUID,
         @PathVariable assignmentId: UUID,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): List<FeePaymentResponse> = feeService.listPayments(organizationId, assignmentId, currentUser).map { it.toResponse() }
+
+    @GetMapping("/fee-assignments/{assignmentId}/payments/{paymentId}")
+    fun getPayment(
+        @PathVariable organizationId: UUID,
+        @PathVariable assignmentId: UUID,
+        @PathVariable paymentId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): FeePaymentResponse = feeService.getPaymentStatus(organizationId, assignmentId, paymentId, currentUser).toResponse()
 
     @DeleteMapping("/fee-assignments/{assignmentId}/payments/{paymentId}")
     fun voidPayment(

@@ -9,4 +9,8 @@ export const env = {
 	socialFacebookUrl: import.meta.env.VITE_SOCIAL_FACEBOOK_URL?.trim() ?? "",
 	socialInstagramUrl: import.meta.env.VITE_SOCIAL_INSTAGRAM_URL?.trim() ?? "",
 	socialXUrl: import.meta.env.VITE_SOCIAL_X_URL?.trim() ?? "",
+	// Browser/RUM license keys are designed to be public/client-visible (unlike a backend
+	// API key) — New Relic's own install flow pastes this directly into page HTML.
+	newRelicBrowserLicenseKey: import.meta.env.VITE_NEW_RELIC_BROWSER_LICENSE_KEY?.trim() ?? "",
+	newRelicAppId: import.meta.env.VITE_NEW_RELIC_APP_ID?.trim() ?? "",
 } as const;

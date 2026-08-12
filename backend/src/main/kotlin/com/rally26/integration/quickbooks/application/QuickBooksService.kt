@@ -30,6 +30,7 @@ import com.rally26.integration.quickbooks.domain.QuickBooksMappingValidationStat
 import com.rally26.integration.quickbooks.domain.QuickBooksPostingIntentDefinition
 import com.rally26.integration.quickbooks.persistence.QuickBooksRepository
 import com.rally26.membership.application.MembershipService
+import com.rally26.subscription.application.PlanEntitlementService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.security.MessageDigest
@@ -59,6 +60,7 @@ class QuickBooksService(
     private val syncService: IntegrationSyncService,
     private val membershipService: MembershipService,
     private val auditService: AuditService,
+    private val planEntitlementService: PlanEntitlementService,
 ) {
     fun overview(
         organizationId: UUID,
@@ -249,6 +251,7 @@ class QuickBooksService(
         idempotencyKey: String,
         currentUser: CurrentUser,
     ): QuickBooksExportPreview {
+        planEntitlementService.requireIntegrationAllowed(organizationId, IntegrationProvider.QUICKBOOKS_ONLINE)
         if (periodEnd.isBefore(periodStart)) throw ValidationException("The export end date must be on or after the start date.")
         if (ChronoUnit.DAYS.between(periodStart, periodEnd) > 366) throw ValidationException("Preview at most one year at a time.")
         if (idempotencyKey.isBlank()) throw ValidationException("An idempotency key is required.")

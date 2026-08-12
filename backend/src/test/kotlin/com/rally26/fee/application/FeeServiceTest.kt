@@ -1,5 +1,6 @@
 package com.rally26.fee.application
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
 import com.rally26.authorization.application.AuthorizationService
 import com.rally26.common.error.NotFoundException
@@ -13,15 +14,18 @@ import com.rally26.fee.domain.FeePayment
 import com.rally26.fee.domain.FeeTemplate
 import com.rally26.fee.domain.FeeTemplateStatus
 import com.rally26.fee.domain.PaymentMethod
+import com.rally26.fee.infra.StripeFeePaymentCheckoutClient
 import com.rally26.fee.paymentplan.persistence.FeePaymentPlanRepository
 import com.rally26.fee.persistence.FeeAdjustmentRepository
 import com.rally26.fee.persistence.FeePaymentRepository
 import com.rally26.fee.persistence.FeeRepository
 import com.rally26.household.persistence.HouseholdRepository
+import com.rally26.ledger.application.LedgerService
 import com.rally26.membership.application.MembershipService
 import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
+import com.rally26.outbox.application.OutboxWriter
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -43,6 +47,10 @@ class FeeServiceTest {
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
     private val authorizationService = mockk<AuthorizationService>()
+    private val stripeFeePaymentCheckoutClient = mockk<StripeFeePaymentCheckoutClient>()
+    private val ledgerService = mockk<LedgerService>()
+    private val outboxWriter = mockk<OutboxWriter>()
+    private val objectMapper = ObjectMapper()
     private val service =
         FeeService(
             feeRepository,
@@ -53,6 +61,10 @@ class FeeServiceTest {
             membershipService,
             auditService,
             authorizationService,
+            stripeFeePaymentCheckoutClient,
+            ledgerService,
+            outboxWriter,
+            objectMapper,
         )
 
     private val orgId = UUID.randomUUID()

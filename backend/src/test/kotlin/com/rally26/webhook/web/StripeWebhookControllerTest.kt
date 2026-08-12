@@ -1,6 +1,7 @@
 package com.rally26.webhook.web
 
 import com.rally26.config.StripeProperties
+import com.rally26.fee.application.FeeService
 import com.rally26.fundraising.application.ContributionService
 import com.rally26.fundraising.domain.Contribution
 import com.rally26.fundraising.domain.ContributionStatus
@@ -42,8 +43,16 @@ class StripeWebhookControllerTest {
     private val contributionService = mockk<ContributionService>()
     private val orderService = mockk<OrderService>()
     private val sponsorshipService = mockk<SponsorshipService>()
+    private val feeService = mockk<FeeService>()
     private val controller =
-        StripeWebhookController(stripeProperties, webhookEventRepository, contributionService, orderService, sponsorshipService)
+        StripeWebhookController(
+            stripeProperties,
+            webhookEventRepository,
+            contributionService,
+            orderService,
+            sponsorshipService,
+            feeService,
+        )
 
     @Test
     fun `an invalid signature is rejected with 400 and never reaches the repository or contribution service`() {
@@ -205,6 +214,7 @@ class StripeWebhookControllerTest {
                 contributionService,
                 orderService,
                 sponsorshipService,
+                feeService,
                 payoutAccountService = payoutAccountService,
                 stripeConnectClient = stripeConnectClient,
             )

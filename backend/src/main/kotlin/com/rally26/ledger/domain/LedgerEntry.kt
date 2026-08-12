@@ -23,7 +23,7 @@ enum class LedgerEntryType {
 
 enum class LedgerDirection { CREDIT, DEBIT }
 
-enum class LedgerSourceType { CONTRIBUTION, ORDER, TRANSFER, REFUND, SPONSORSHIP, CORRECTION }
+enum class LedgerSourceType { CONTRIBUTION, ORDER, TRANSFER, REFUND, SPONSORSHIP, CORRECTION, FEE_PAYMENT }
 
 /**
  * Append-only (DESIGN-DOC.md section 8.6) — corrections are always a new

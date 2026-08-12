@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
@@ -28,9 +29,12 @@ import type { Participant } from "../features/households/types";
 import {
 	useApplyAdjustment,
 	useCreateFeeAssignment,
+	useCreateFeeCheckoutSession,
 	useFeeAdjustments,
 	useFeeAssignments,
+	useFeePaymentStatus,
 	useFeePayments,
+	usePaymentMethods,
 	useRecordPayment,
 	useUpdateFeeAssignmentStatus,
 	useVoidAdjustment,
@@ -700,15 +704,137 @@ function AddFeeAssignmentForm({
 	);
 }
 
+/** Guardian-initiated online payment via Stripe Checkout — the counterpart to staff-only `RecordPaymentForm`. Confirmation happens via the Stripe webhook, so this only starts checkout; `FeePaymentReturnBanner` handles the return. */
+function PayOnlineButton({ organizationId, assignmentId, amountMinor }: { organizationId: string; assignmentId: string; amountMinor: number }) {
+	const createCheckout = useCreateFeeCheckoutSession(organizationId, assignmentId);
+	const [error, setError] = useState<string | null>(null);
+
+	const handleClick = async () => {
+		setError(null);
+		try {
+			const returnBase = `${window.location.origin}${window.location.pathname}`;
+			const result = await createCheckout.mutateAsync({
+				amountMinor,
+				successUrl: `${returnBase}?feeAssignmentId=${assignmentId}&feePaymentId={FEE_PAYMENT_ID}`,
+				cancelUrl: `${returnBase}?feeCheckoutCanceled=1`,
+			});
+			window.location.href = result.checkoutUrl;
+		} catch {
+			setError("Could not start checkout. Please try again.");
+		}
+	};
+
+	return (
+		<div className="flex flex-col items-end gap-1">
+			<Button type="button" variant="primary" onClick={handleClick} disabled={createCheckout.isPending}>
+				{createCheckout.isPending ? "Starting checkout…" : "Pay online"}
+			</Button>
+			{error && <p className="text-xs text-red-600">{error}</p>}
+		</div>
+	);
+}
+
+/** Polls payment status after redirect back from Stripe Checkout, mirroring `ContributionReturnPanel`'s own PENDING poll — confirmation is asynchronous via the webhook, never guaranteed by the time the browser returns. */
+function FeePaymentReturnBanner({
+	organizationId,
+	householdId,
+	assignmentId,
+	paymentId,
+	onDismiss,
+}: {
+	organizationId: string;
+	householdId: string;
+	assignmentId: string;
+	paymentId: string;
+	onDismiss: () => void;
+}) {
+	const queryClient = useQueryClient();
+	const { data: payment } = useFeePaymentStatus(organizationId, assignmentId, paymentId);
+
+	useEffect(() => {
+		if (payment?.status === "CONFIRMED") {
+			queryClient.invalidateQueries({ queryKey: ["organizations", organizationId, "households", householdId, "fee-assignments"] });
+			queryClient.invalidateQueries({ queryKey: ["organizations", organizationId, "fee-assignments", assignmentId, "payments"] });
+		}
+	}, [payment?.status, organizationId, householdId, assignmentId, queryClient]);
+
+	if (payment?.status === "CONFIRMED") {
+		return (
+			<div
+				role="status"
+				className="flex items-center justify-between gap-3 rounded-md border border-green-600/30 bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-300"
+			>
+				<span>Payment confirmed — thank you!</span>
+				<button type="button" className="underline" onClick={onDismiss}>
+					Dismiss
+				</button>
+			</div>
+		);
+	}
+	return (
+		<div role="status" className="rounded-md border border-slate-gray/20 bg-slate-gray/5 px-3 py-2 text-sm text-slate-gray dark:text-[#cbd5e1]">
+			Confirming your payment…
+		</div>
+	);
+}
+
+/** Phase 32 scaffold — Venmo/Cash App/Affirm render as visibly-present-but-disabled "Coming soon" options rather than being hidden, so families know these are planned; Zelle shows the org's handle when set. */
+function PaymentMethodOptions({ organizationId }: { organizationId: string }) {
+	const { data } = usePaymentMethods(organizationId);
+	const otherMethods = data?.filter((m) => m.method !== "STRIPE_ONLINE") ?? [];
+	if (otherMethods.length === 0) return null;
+
+	return (
+		<details className="rounded-md border border-slate-gray/20 bg-slate-gray/5 px-3 py-2 text-sm">
+			<summary className="cursor-pointer font-medium text-navy dark:text-[#f8fafc]">Other ways to pay</summary>
+			<ul className="mt-2 flex flex-col gap-1.5">
+				{otherMethods.map((method) => (
+					<li key={method.method} className="flex items-center justify-between gap-3">
+						<span className={method.available ? "text-navy dark:text-[#f8fafc]" : "text-slate-gray dark:text-[#cbd5e1]"}>
+							{method.displayName}
+						</span>
+						<span
+							className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+								method.available
+									? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+									: "bg-slate-gray/10 text-slate-gray dark:bg-[#1f2937] dark:text-[#94a3b8]"
+							}`}
+						>
+							{method.note ?? "Available"}
+						</span>
+					</li>
+				))}
+			</ul>
+		</details>
+	);
+}
+
 function FeeAssignmentsPanel({ organizationId, householdId, canManage }: { organizationId: string; householdId: string; canManage: boolean }) {
 	const { data, isLoading, isError, refetch } = useFeeAssignments(organizationId, householdId);
 	const { data: participants } = useParticipants(organizationId, householdId);
 	const updateStatus = useUpdateFeeAssignmentStatus(organizationId, householdId);
 	const [showForm, setShowForm] = useState(false);
 	const [expandedFeeId, setExpandedFeeId] = useState<string | null>(null);
+	const [searchParams, setSearchParams] = useSearchParams();
 
 	const totalBalanceMinor = data?.items.reduce((sum, fee) => sum + fee.balanceMinor, 0) ?? 0;
 	const currency = data?.items[0]?.currency ?? "USD";
+
+	const returnAssignmentId = searchParams.get("feeAssignmentId");
+	const returnPaymentId = searchParams.get("feePaymentId");
+	const checkoutCanceled = searchParams.get("feeCheckoutCanceled") === "1";
+
+	const dismissReturnParams = () => {
+		setSearchParams(
+			(prev) => {
+				prev.delete("feeAssignmentId");
+				prev.delete("feePaymentId");
+				prev.delete("feeCheckoutCanceled");
+				return prev;
+			},
+			{ replace: true },
+		);
+	};
 
 	return (
 		<section aria-label="Fee assignments" className="flex flex-col gap-3">
@@ -720,11 +846,29 @@ function FeeAssignmentsPanel({ organizationId, householdId, canManage }: { organ
 					</Button>
 				)}
 			</div>
+			{returnAssignmentId && returnPaymentId && (
+				<FeePaymentReturnBanner
+					organizationId={organizationId}
+					householdId={householdId}
+					assignmentId={returnAssignmentId}
+					paymentId={returnPaymentId}
+					onDismiss={dismissReturnParams}
+				/>
+			)}
+			{checkoutCanceled && (
+				<div role="status" className="flex items-center justify-between gap-3 rounded-md border border-slate-gray/20 bg-slate-gray/5 px-3 py-2 text-sm text-slate-gray dark:text-[#cbd5e1]">
+					<span>Checkout canceled — no charge was made.</span>
+					<button type="button" className="underline" onClick={dismissReturnParams}>
+						Dismiss
+					</button>
+				</div>
+			)}
 			{data && data.items.length > 0 && (
 				<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 					Household balance: <span className="font-semibold text-navy dark:text-[#f8fafc]">{formatAmount(totalBalanceMinor, currency)}</span>
 				</p>
 			)}
+			{totalBalanceMinor > 0 && <PaymentMethodOptions organizationId={organizationId} />}
 			{canManage && showForm && (
 				<AddFeeAssignmentForm organizationId={organizationId} householdId={householdId} onDone={() => setShowForm(false)} />
 			)}
@@ -752,6 +896,9 @@ function FeeAssignmentsPanel({ organizationId, householdId, canManage }: { organ
 										<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[fee.status]}`}>
 											{STATUS_LABELS[fee.status]}
 										</span>
+										{fee.balanceMinor > 0 && fee.status !== "WAIVED" && fee.status !== "CANCELLED" && (
+											<PayOnlineButton organizationId={organizationId} assignmentId={fee.id} amountMinor={fee.balanceMinor} />
+										)}
 										{canManage && fee.balanceMinor > 0 && fee.status !== "WAIVED" && fee.status !== "CANCELLED" && (
 											<ReminderButton organizationId={organizationId} resourceType="FEE_ASSIGNMENT" resourceId={fee.id} label="Send payment reminder" />
 										)}

@@ -7,9 +7,27 @@ import type {
 	RecordPaymentFormValues,
 	VoidFormValues,
 } from "./schema";
-import type { FeeAdjustment, FeeAssignment, FeeAssignmentPage, FeeAssignmentStatus, FeePayment, FeeTemplatePage } from "./types";
+import type {
+	FeeAdjustment,
+	FeeAssignment,
+	FeeAssignmentPage,
+	FeeAssignmentStatus,
+	FeePayment,
+	FeePaymentCheckout,
+	FeeTemplatePage,
+	PaymentMethodAvailability,
+} from "./types";
 
 const templatesKey = (orgId: string) => ["organizations", orgId, "fee-templates"] as const;
+
+/** Phase 32 scaffold — Stripe card is always available; Venmo/Cash App/Affirm show `available: false` until real credentials are configured. Not manager-gated: carries no secrets, guardians need it too. */
+export function usePaymentMethods(organizationId: string) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "payment-methods"] as const,
+		queryFn: () => apiFetch<PaymentMethodAvailability[]>(`/organizations/${organizationId}/payment-methods`),
+		enabled: !!organizationId,
+	});
+}
 const assignmentsKey = (orgId: string, householdId: string) => ["organizations", orgId, "households", householdId, "fee-assignments"] as const;
 const paymentsKey = (orgId: string, assignmentId: string) => ["organizations", orgId, "fee-assignments", assignmentId, "payments"] as const;
 const adjustmentsKey = (orgId: string, assignmentId: string) => ["organizations", orgId, "fee-assignments", assignmentId, "adjustments"] as const;
@@ -114,6 +132,27 @@ export function useRecordPayment(organizationId: string, householdId: string, as
 			queryClient.invalidateQueries({ queryKey: paymentsKey(organizationId, assignmentId) });
 			queryClient.invalidateQueries({ queryKey: paymentPlanKey(organizationId, assignmentId) });
 		},
+	});
+}
+
+/** Guardian-initiated online payment — the counterpart to staff-only `useRecordPayment`. Confirmation happens via the Stripe webhook, not this call's response, so the caller redirects to `checkoutUrl` rather than treating success as confirmation. */
+export function useCreateFeeCheckoutSession(organizationId: string, assignmentId: string) {
+	return useMutation({
+		mutationFn: (values: { amountMinor: number; successUrl: string; cancelUrl: string }) =>
+			apiFetch<FeePaymentCheckout>(`/organizations/${organizationId}/fee-assignments/${assignmentId}/checkout-sessions`, {
+				method: "POST",
+				body: values,
+			}),
+	});
+}
+
+/** Polled after redirect back from Stripe Checkout — mirrors `useContributionStatus`'s own PENDING-status poll. */
+export function useFeePaymentStatus(organizationId: string, assignmentId: string, paymentId: string | null) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "fee-assignments", assignmentId, "payments", paymentId] as const,
+		queryFn: () => apiFetch<FeePayment>(`/organizations/${organizationId}/fee-assignments/${assignmentId}/payments/${paymentId}`),
+		enabled: !!organizationId && !!assignmentId && !!paymentId,
+		refetchInterval: (query) => (query.state.data?.status === "PENDING_CHECKOUT" ? 2000 : false),
 	});
 }
 

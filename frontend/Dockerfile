@@ -9,6 +9,16 @@ WORKDIR /app
 # for staging/prod images.
 ARG VITE_API_BASE_URL=http://localhost:8080/api/v1
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+# New Relic Browser/RUM agent (Workstream C, 2026-08-12) — same build-time-bake
+# reasoning as VITE_API_BASE_URL above. Blank by default: main.tsx's bootstrap
+# no-ops cleanly when either is unset (see monitoring/newRelicBrowser.ts), same
+# blank-means-unconfigured convention as every other provider key in this codebase.
+# applicationID has no value yet — it only exists once a Browser App is created in
+# the New Relic UI (New Relic > Browser > Add data); the founder hasn't done that yet.
+ARG VITE_NEW_RELIC_BROWSER_LICENSE_KEY=""
+ARG VITE_NEW_RELIC_APP_ID=""
+ENV VITE_NEW_RELIC_BROWSER_LICENSE_KEY=$VITE_NEW_RELIC_BROWSER_LICENSE_KEY
+ENV VITE_NEW_RELIC_APP_ID=$VITE_NEW_RELIC_APP_ID
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .

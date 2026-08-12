@@ -1,6 +1,7 @@
 package com.rally26.fee.persistence
 
 import com.rally26.fee.domain.FeePayment
+import com.rally26.fee.domain.FeePaymentStatus
 import com.rally26.fee.domain.PaymentMethod
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
@@ -13,7 +14,8 @@ import java.util.UUID
 
 private const val COLUMNS = """
     id, organization_id, fee_assignment_id, household_id, amount_minor, currency, method,
-    paid_at, note, recorded_by_user_id, voided_at, voided_by_user_id, void_reason, created_at
+    paid_at, note, recorded_by_user_id, voided_at, voided_by_user_id, void_reason, created_at,
+    status, stripe_checkout_session_id, stripe_payment_intent_id, payer_email, payer_name
 """
 
 @Repository
@@ -48,6 +50,7 @@ class FeePaymentRepository(
             .query(::mapRow)
             .list()
 
+    /** Excludes PENDING_CHECKOUT (an online payment not yet confirmed by Stripe's webhook) and CANCELED, alongside the existing voided-row exclusion — a pending or abandoned checkout attempt must never affect the household's outstanding balance. */
     fun sumActiveByAssignment(
         feeAssignmentId: UUID,
         organizationId: UUID,
@@ -56,12 +59,103 @@ class FeePaymentRepository(
             .sql(
                 """
                 select coalesce(sum(amount_minor), 0) from fee_payment
-                where fee_assignment_id = :feeAssignmentId and organization_id = :organizationId and voided_at is null
+                where fee_assignment_id = :feeAssignmentId and organization_id = :organizationId
+                    and voided_at is null and status = 'CONFIRMED'
                 """.trimIndent(),
             ).param("feeAssignmentId", feeAssignmentId)
             .param("organizationId", organizationId)
             .query(Long::class.java)
             .single()
+
+    fun findByStripeCheckoutSessionId(sessionId: String): FeePayment? =
+        jdbcClient
+            .sql("select $COLUMNS from fee_payment where stripe_checkout_session_id = :sessionId")
+            .param("sessionId", sessionId)
+            .query(::mapRow)
+            .optional()
+            .orElse(null)
+
+    /** Inserted with status PENDING_CHECKOUT before Stripe returns a session id — see [attachStripeSession] and [markConfirmed]. */
+    fun insertPendingOnline(
+        organizationId: UUID,
+        feeAssignmentId: UUID,
+        householdId: UUID,
+        amountMinor: Long,
+        currency: String,
+        paidAt: LocalDate,
+        recordedByUserId: UUID,
+        payerEmail: String,
+        payerName: String,
+    ): FeePayment {
+        val now = Instant.now()
+        val id = UUID.randomUUID()
+        jdbcClient
+            .sql(
+                """
+                insert into fee_payment
+                    (id, organization_id, fee_assignment_id, household_id, amount_minor, currency, method,
+                     paid_at, recorded_by_user_id, created_at, status, payer_email, payer_name)
+                values
+                    (:id, :organizationId, :feeAssignmentId, :householdId, :amountMinor, :currency, 'STRIPE_ONLINE',
+                     :paidAt, :recordedByUserId, :now, 'PENDING_CHECKOUT', :payerEmail, :payerName)
+                """.trimIndent(),
+            ).param("id", id)
+            .param("organizationId", organizationId)
+            .param("feeAssignmentId", feeAssignmentId)
+            .param("householdId", householdId)
+            .param("amountMinor", amountMinor)
+            .param("currency", currency)
+            .param("paidAt", Date.valueOf(paidAt))
+            .param("recordedByUserId", recordedByUserId)
+            .param("now", Timestamp.from(now))
+            .param("payerEmail", payerEmail)
+            .param("payerName", payerName)
+            .update()
+        return FeePayment(
+            id = id,
+            organizationId = organizationId,
+            feeAssignmentId = feeAssignmentId,
+            householdId = householdId,
+            amountMinor = amountMinor,
+            currency = currency,
+            method = PaymentMethod.STRIPE_ONLINE,
+            paidAt = paidAt,
+            note = null,
+            recordedByUserId = recordedByUserId,
+            voidedAt = null,
+            voidedByUserId = null,
+            voidReason = null,
+            createdAt = now,
+            status = FeePaymentStatus.PENDING_CHECKOUT,
+            payerEmail = payerEmail,
+            payerName = payerName,
+        )
+    }
+
+    fun attachStripeSession(
+        id: UUID,
+        stripeCheckoutSessionId: String,
+    ): Int =
+        jdbcClient
+            .sql("update fee_payment set stripe_checkout_session_id = :sessionId where id = :id")
+            .param("sessionId", stripeCheckoutSessionId)
+            .param("id", id)
+            .update()
+
+    /** Only flips PENDING_CHECKOUT -> CONFIRMED. Returns rows affected (0 if already confirmed — the idempotency guard). */
+    fun markConfirmed(
+        id: UUID,
+        stripePaymentIntentId: String?,
+    ): Int =
+        jdbcClient
+            .sql(
+                """
+                update fee_payment set status = 'CONFIRMED', stripe_payment_intent_id = :paymentIntentId
+                where id = :id and status = 'PENDING_CHECKOUT'
+                """.trimIndent(),
+            ).param("paymentIntentId", stripePaymentIntentId)
+            .param("id", id)
+            .update()
 
     fun insert(
         organizationId: UUID,
@@ -157,5 +251,10 @@ class FeePaymentRepository(
             voidedByUserId = rs.getObject("voided_by_user_id", UUID::class.java),
             voidReason = rs.getString("void_reason"),
             createdAt = rs.getTimestamp("created_at").toInstant(),
+            status = FeePaymentStatus.valueOf(rs.getString("status")),
+            stripeCheckoutSessionId = rs.getString("stripe_checkout_session_id"),
+            stripePaymentIntentId = rs.getString("stripe_payment_intent_id"),
+            payerEmail = rs.getString("payer_email"),
+            payerName = rs.getString("payer_name"),
         )
 }

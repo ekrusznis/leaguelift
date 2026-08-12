@@ -46,6 +46,9 @@ data class UpdateOrganizationRequest(
     val addressCountry: String? = null,
     /** Phase 24 slice 24.5 (ADR-071): submitting this field IS the owner's confirmation act — the frontend never auto-submits a suggested value without an explicit click. */
     val timezone: String? = null,
+    /** Phase 32 scaffold: displayed to guardians as Zelle payment instructions. */
+    @field:Size(max = 200)
+    val zelleHandle: String? = null,
 )
 
 data class OrganizationResponse(
@@ -64,6 +67,7 @@ data class OrganizationResponse(
     val addressPostalCode: String?,
     val addressCountry: String?,
     val timezone: String?,
+    val zelleHandle: String?,
     val createdAt: Instant,
     val updatedAt: Instant,
 )
@@ -85,6 +89,7 @@ fun Organization.toResponse() =
         addressPostalCode = addressPostalCode,
         addressCountry = addressCountry,
         timezone = timezone,
+        zelleHandle = zelleHandle,
         createdAt = createdAt,
         updatedAt = updatedAt,
     )

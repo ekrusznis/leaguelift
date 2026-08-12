@@ -14,7 +14,7 @@ import java.util.UUID
 private const val ORGANIZATION_COLUMNS = """
     id, name, slug, organization_type, status, sports, contact_email, contact_phone,
     address_line1, address_line2, address_city, address_state, address_postal_code, address_country,
-    timezone, created_at, updated_at
+    timezone, zelle_handle, created_at, updated_at
 """
 
 @Repository
@@ -54,7 +54,7 @@ class OrganizationRepository(
                 select o.id, o.name, o.slug, o.organization_type, o.status, o.sports,
                        o.contact_email, o.contact_phone,
                        o.address_line1, o.address_line2, o.address_city, o.address_state,
-                       o.address_postal_code, o.address_country, o.timezone,
+                       o.address_postal_code, o.address_country, o.timezone, o.zelle_handle,
                        o.created_at, o.updated_at
                 from organization o
                 join organization_membership m on m.organization_id = o.id
@@ -163,6 +163,7 @@ class OrganizationRepository(
         addressCountry: String? = null,
         /** Phase 24 slice 24.5 (ADR-071): a non-null value here IS the owner's confirmation signal — no separate "confirmed" bookkeeping. */
         timezone: String? = null,
+        zelleHandle: String? = null,
     ): Int {
         val now = Instant.now()
         val sportsJson = sports?.let { objectMapper.writeValueAsString(it) }
@@ -182,6 +183,7 @@ class OrganizationRepository(
                     address_postal_code = coalesce(:addressPostalCode, address_postal_code),
                     address_country = coalesce(:addressCountry, address_country),
                     timezone = coalesce(:timezone, timezone),
+                    zelle_handle = coalesce(:zelleHandle, zelle_handle),
                     updated_at = :now
                 where id = :id
                 """.trimIndent(),
@@ -197,6 +199,7 @@ class OrganizationRepository(
             .param("addressPostalCode", addressPostalCode)
             .param("addressCountry", addressCountry)
             .param("timezone", timezone)
+            .param("zelleHandle", zelleHandle)
             .param("now", Timestamp.from(now))
             .param("id", id)
             .update()
@@ -222,6 +225,7 @@ class OrganizationRepository(
             addressPostalCode = rs.getString("address_postal_code"),
             addressCountry = rs.getString("address_country"),
             timezone = rs.getString("timezone"),
+            zelleHandle = rs.getString("zelle_handle"),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
         )

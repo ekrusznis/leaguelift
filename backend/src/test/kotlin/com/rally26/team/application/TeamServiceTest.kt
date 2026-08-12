@@ -10,6 +10,7 @@ import com.rally26.membership.application.MembershipService
 import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
+import com.rally26.subscription.application.PlanEntitlementService
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamGenderCategory
 import com.rally26.team.domain.TeamStatus
@@ -46,7 +47,8 @@ class TeamServiceTest {
                 }
             }
         }
-    private val service = TeamService(teamRepository, membershipService, auditService, timeZoneService)
+    private val planEntitlementService = mockk<PlanEntitlementService>(relaxed = true)
+    private val service = TeamService(teamRepository, membershipService, auditService, timeZoneService, planEntitlementService)
 
     private val orgId = UUID.randomUUID()
     private val currentUser = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
@@ -64,6 +66,7 @@ class TeamServiceTest {
     @Test
     fun `create requires manager role`() {
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { teamRepository.countAll(orgId) } returns 0
         val team = sampleTeam()
         every {
             teamRepository.insert(orgId, team.name, team.sport, team.season, team.contactEmail, null, null, null)
@@ -80,6 +83,7 @@ class TeamServiceTest {
     @Test
     fun `create with duplicate name throws ConflictException`() {
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { teamRepository.countAll(orgId) } returns 0
         every {
             teamRepository.insert(any(), any(), any(), any(), any(), any(), any(), any())
         } throws DuplicateKeyException("unique violation")
@@ -92,6 +96,7 @@ class TeamServiceTest {
     @Test
     fun `create with invalid contact email throws ValidationException`() {
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { teamRepository.countAll(orgId) } returns 0
 
         assertFailsWith<ValidationException> {
             service.create(orgId, "Team A", "Soccer", null, "not-an-email", null, null, null, currentUser)
@@ -101,6 +106,7 @@ class TeamServiceTest {
     @Test
     fun `create passes age group, gender category, and level through to the repository`() {
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { teamRepository.countAll(orgId) } returns 0
         val team = sampleTeam().copy(ageGroup = "12U", genderCategory = TeamGenderCategory.GIRLS, level = "A")
         every {
             teamRepository.insert(orgId, team.name, team.sport, team.season, team.contactEmail, "12U", TeamGenderCategory.GIRLS, "A")
@@ -123,6 +129,18 @@ class TeamServiceTest {
         assertEquals("12U", result.ageGroup)
         assertEquals(TeamGenderCategory.GIRLS, result.genderCategory)
         assertEquals("A", result.level)
+    }
+
+    @Test
+    fun `create rejects a new team once the organization's plan-tier entitlement denies capacity`() {
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { teamRepository.countAll(orgId) } returns 3
+        every { planEntitlementService.requireTeamCapacity(orgId, 3) } throws ValidationException("Your plan allows up to 3 teams.")
+
+        assertFailsWith<ValidationException> {
+            service.create(orgId, "Team A", "Soccer", null, null, null, null, null, currentUser)
+        }
+        verify(exactly = 0) { teamRepository.insert(any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 
     @Test

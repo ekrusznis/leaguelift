@@ -1,6 +1,7 @@
 package com.rally26.webhook.web
 
 import com.rally26.config.StripeProperties
+import com.rally26.fee.application.FeeService
 import com.rally26.fundraising.application.ContributionService
 import com.rally26.order.application.OrderService
 import com.rally26.sponsorship.application.SponsorshipService
@@ -23,6 +24,7 @@ class StripeSubscriptionWebhookControllerTest {
     private val contributionService = mockk<ContributionService>(relaxed = true)
     private val orderService = mockk<OrderService>(relaxed = true)
     private val sponsorshipService = mockk<SponsorshipService>(relaxed = true)
+    private val feeService = mockk<FeeService>(relaxed = true)
     private val subscriptionService = mockk<OrganizationSubscriptionService>(relaxed = true)
     private val controller =
         StripeWebhookController(
@@ -31,7 +33,8 @@ class StripeSubscriptionWebhookControllerTest {
             contributionService,
             orderService,
             sponsorshipService,
-            subscriptionService,
+            feeService,
+            organizationSubscriptionService = subscriptionService,
         )
 
     @Test
