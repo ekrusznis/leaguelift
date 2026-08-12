@@ -1,5 +1,7 @@
 package com.rally26.sponsorship.infra
 
+import com.rally26.common.stripe.StripeTaxSupport
+import com.rally26.config.StripeTaxProperties
 import com.stripe.StripeClient
 import com.stripe.net.RequestOptions
 import com.stripe.param.RefundCreateParams
@@ -24,6 +26,7 @@ data class SponsorshipCheckoutSession(
 @Component
 class StripeSponsorshipCheckoutClient(
     private val stripeClient: StripeClient,
+    private val stripeTaxProperties: StripeTaxProperties,
 ) {
     fun createSponsorshipCheckoutSession(
         sponsorshipId: UUID,
@@ -33,7 +36,7 @@ class StripeSponsorshipCheckoutClient(
         successUrl: String,
         cancelUrl: String,
     ): SponsorshipCheckoutSession {
-        val params =
+        val builder =
             SessionCreateParams
                 .builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
@@ -50,14 +53,20 @@ class StripeSponsorshipCheckoutClient(
                                 .setCurrency(currency.lowercase())
                                 .setUnitAmount(amountMinor)
                                 .setProductData(
-                                    SessionCreateParams.LineItem.PriceData.ProductData
-                                        .builder()
-                                        .setName("Sponsorship: $packageName")
-                                        .build(),
+                                    StripeTaxSupport.applyTaxCode(
+                                        SessionCreateParams.LineItem.PriceData.ProductData
+                                            .builder()
+                                            .setName("Sponsorship: $packageName"),
+                                        stripeTaxProperties.sponsorshipTaxCode,
+                                    ).build(),
                                 ).build(),
                         ).build(),
-                ).build()
-        val session = stripeClient.checkout().sessions().create(params)
+                )
+        // No shipping address is collected for a sponsorship, so automatic_tax needs billing-address collection instead.
+        if (stripeTaxProperties.sponsorshipEnabled) {
+            StripeTaxSupport.applyAutomaticTax(builder, collectBillingAddress = true)
+        }
+        val session = stripeClient.checkout().sessions().create(builder.build())
         return SponsorshipCheckoutSession(sessionId = session.id, checkoutUrl = session.url)
     }
 

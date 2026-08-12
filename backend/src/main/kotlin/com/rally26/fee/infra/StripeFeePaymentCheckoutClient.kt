@@ -1,5 +1,7 @@
 package com.rally26.fee.infra
 
+import com.rally26.common.stripe.StripeTaxSupport
+import com.rally26.config.StripeTaxProperties
 import com.stripe.StripeClient
 import com.stripe.param.checkout.SessionCreateParams
 import org.springframework.stereotype.Component
@@ -21,6 +23,7 @@ data class FeePaymentCheckoutSession(
 @Component
 class StripeFeePaymentCheckoutClient(
     private val stripeClient: StripeClient,
+    private val stripeTaxProperties: StripeTaxProperties,
 ) {
     fun createFeePaymentCheckoutSession(
         feePaymentId: UUID,
@@ -30,7 +33,7 @@ class StripeFeePaymentCheckoutClient(
         successUrl: String,
         cancelUrl: String,
     ): FeePaymentCheckoutSession {
-        val params =
+        val builder =
             SessionCreateParams
                 .builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
@@ -47,14 +50,20 @@ class StripeFeePaymentCheckoutClient(
                                 .setCurrency(currency.lowercase())
                                 .setUnitAmount(amountMinor)
                                 .setProductData(
-                                    SessionCreateParams.LineItem.PriceData.ProductData
-                                        .builder()
-                                        .setName(feeDescription)
-                                        .build(),
+                                    StripeTaxSupport.applyTaxCode(
+                                        SessionCreateParams.LineItem.PriceData.ProductData
+                                            .builder()
+                                            .setName(feeDescription),
+                                        stripeTaxProperties.feePaymentTaxCode,
+                                    ).build(),
                                 ).build(),
                         ).build(),
-                ).build()
-        val session = stripeClient.checkout().sessions().create(params)
+                )
+        // No shipping address is collected for a fee payment, so automatic_tax needs billing-address collection instead.
+        if (stripeTaxProperties.feePaymentEnabled) {
+            StripeTaxSupport.applyAutomaticTax(builder, collectBillingAddress = true)
+        }
+        val session = stripeClient.checkout().sessions().create(builder.build())
         return FeePaymentCheckoutSession(sessionId = session.id, checkoutUrl = session.url)
     }
 }

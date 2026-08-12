@@ -20,6 +20,15 @@ rally26:
   stripe:
     secret-key: ${STRIPE_SECRET_KEY}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET}
+    tax:
+      order-enabled: ${STRIPE_TAX_ORDER_ENABLED:false}
+      order-tax-code: ${STRIPE_TAX_ORDER_TAX_CODE:txcd_99999999}
+      contribution-enabled: ${STRIPE_TAX_CONTRIBUTION_ENABLED:false}
+      contribution-tax-code: ${STRIPE_TAX_CONTRIBUTION_TAX_CODE:}
+      sponsorship-enabled: ${STRIPE_TAX_SPONSORSHIP_ENABLED:false}
+      sponsorship-tax-code: ${STRIPE_TAX_SPONSORSHIP_TAX_CODE:}
+      fee-payment-enabled: ${STRIPE_TAX_FEE_PAYMENT_ENABLED:false}
+      fee-payment-tax-code: ${STRIPE_TAX_FEE_PAYMENT_TAX_CODE:}
   # No default — startup fails if unset. Draft-order-only (Phase 4 slice 1); no
   # send-to-production call exists yet, see the printify integration module.
   printify:

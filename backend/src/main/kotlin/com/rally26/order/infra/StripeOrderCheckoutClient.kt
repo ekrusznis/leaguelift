@@ -1,5 +1,7 @@
 package com.rally26.order.infra
 
+import com.rally26.common.stripe.StripeTaxSupport
+import com.rally26.config.StripeTaxProperties
 import com.stripe.StripeClient
 import com.stripe.net.RequestOptions
 import com.stripe.param.RefundCreateParams
@@ -30,6 +32,7 @@ data class OrderCheckoutSession(
 @Component
 class StripeOrderCheckoutClient(
     private val stripeClient: StripeClient,
+    private val stripeTaxProperties: StripeTaxProperties,
 ) {
     fun createOrderCheckoutSession(
         orderId: UUID,
@@ -50,6 +53,11 @@ class StripeOrderCheckoutClient(
                         .addAllowedCountry(SessionCreateParams.ShippingAddressCollection.AllowedCountry.US)
                         .build(),
                 )
+        // Shipping address collection above already satisfies automatic_tax's
+        // address requirement, so billing-address collection isn't also needed here.
+        if (stripeTaxProperties.orderEnabled) {
+            StripeTaxSupport.applyAutomaticTax(builder, collectBillingAddress = false)
+        }
         lineItems.forEach { item ->
             builder.addLineItem(
                 SessionCreateParams.LineItem
@@ -61,10 +69,12 @@ class StripeOrderCheckoutClient(
                             .setCurrency(item.currency.lowercase())
                             .setUnitAmount(item.unitPriceMinor)
                             .setProductData(
-                                SessionCreateParams.LineItem.PriceData.ProductData
-                                    .builder()
-                                    .setName(item.name)
-                                    .build(),
+                                StripeTaxSupport.applyTaxCode(
+                                    SessionCreateParams.LineItem.PriceData.ProductData
+                                        .builder()
+                                        .setName(item.name),
+                                    stripeTaxProperties.orderTaxCode,
+                                ).build(),
                             ).build(),
                     ).build(),
             )
