@@ -1,10 +1,12 @@
 package com.rally26.fee.application
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
 import com.rally26.authorization.application.AuthorizationService
 import com.rally26.authorization.domain.Capabilities
 import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
+import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.util.CsvUtil
 import com.rally26.common.web.CurrentUser
@@ -19,16 +21,40 @@ import com.rally26.fee.domain.FeeTemplate
 import com.rally26.fee.domain.PaymentMethod
 import com.rally26.fee.domain.computeFeeBalance
 import com.rally26.fee.domain.resolveStatusAfterBalanceChange
+import com.rally26.fee.infra.StripeFeePaymentCheckoutClient
 import com.rally26.fee.paymentplan.persistence.FeePaymentPlanRepository
 import com.rally26.fee.persistence.FeeAdjustmentRepository
 import com.rally26.fee.persistence.FeePaymentRepository
 import com.rally26.fee.persistence.FeeRepository
 import com.rally26.household.persistence.HouseholdRepository
+import com.rally26.ledger.application.LedgerService
 import com.rally26.membership.application.MembershipService
+import com.rally26.outbox.application.OutboxWriter
+import com.stripe.exception.StripeException
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.util.UUID
+
+private val log = LoggerFactory.getLogger(FeeService::class.java)
+
+/** Mirrors `fundraising/application/ContributionService.kt`'s `{CONTRIBUTION_ID}` success-url placeholder convention. */
+const val FEE_PAYMENT_ID_PLACEHOLDER = "{FEE_PAYMENT_ID}"
+
+/** `fee_assignment.payment_confirmed_online` outbox payload — consumed by `FeePaymentReceiptEmailHandler`. */
+data class FeePaymentConfirmedPayload(
+    val payerEmail: String,
+    val payerName: String?,
+    val amountMinor: Long,
+    val currency: String,
+    val feeDescription: String,
+)
+
+data class FeePaymentCheckout(
+    val feePaymentId: UUID,
+    val checkoutUrl: String,
+)
 
 @Service
 class FeeService(
@@ -40,6 +66,10 @@ class FeeService(
     private val membershipService: MembershipService,
     private val auditService: AuditService,
     private val authorizationService: AuthorizationService,
+    private val stripeFeePaymentCheckoutClient: StripeFeePaymentCheckoutClient,
+    private val ledgerService: LedgerService,
+    private val outboxWriter: OutboxWriter,
+    private val objectMapper: ObjectMapper,
 ) {
     // --- Fee Templates ---
 
@@ -244,6 +274,122 @@ class FeeService(
         return result
     }
 
+    /**
+     * Guardian-initiated online payment via Stripe Checkout — the counterpart to
+     * staff-only [recordPayment]. [Capabilities.HOUSEHOLD_FEE_PAY] is granted in
+     * `CapabilityRegistry` but had no real call site before this. Confirmation
+     * happens only via the Stripe webhook ([confirmOnlineCheckoutFromWebhook]),
+     * mirroring `ContributionService.createCheckoutSession`'s own reasoning: a
+     * guardian who pays and closes the tab before redirecting back must not leave
+     * Stripe holding confirmed money this app never records.
+     */
+    @Transactional
+    fun createOnlineCheckoutSession(
+        organizationId: UUID,
+        assignmentId: UUID,
+        amountMinor: Long,
+        currentUser: CurrentUser,
+        successUrl: String,
+        cancelUrl: String,
+    ): FeePaymentCheckout {
+        val assignment = requireOpenAssignment(organizationId, assignmentId)
+        if (!authorizationService.hasHouseholdCapability(
+                organizationId,
+                assignment.householdId,
+                currentUser,
+                Capabilities.HOUSEHOLD_FEE_PAY,
+            )
+        ) {
+            throw ForbiddenException("HOUSEHOLD_ACCESS_DENIED", "You do not have access to pay this household's fees.")
+        }
+        val currentPaid = feePaymentRepository.sumActiveByAssignment(assignment.id, organizationId)
+        val currentAdjusted = feeAdjustmentRepository.sumActiveByAssignment(assignment.id, organizationId)
+        val currentBalance = (assignment.originalAmountMinor - currentPaid - currentAdjusted).coerceAtLeast(0)
+        if (amountMinor <= 0 || amountMinor > currentBalance) {
+            throw ValidationException(
+                "Payment amount must be between 1 and the current outstanding balance of $currentBalance minor units.",
+            )
+        }
+        return try {
+            val provisional =
+                feePaymentRepository.insertPendingOnline(
+                    organizationId,
+                    assignment.id,
+                    assignment.householdId,
+                    amountMinor,
+                    assignment.currency,
+                    LocalDate.now(),
+                    currentUser.userId,
+                    currentUser.email,
+                    currentUser.displayName,
+                )
+            val resolvedSuccessUrl = successUrl.replace(FEE_PAYMENT_ID_PLACEHOLDER, provisional.id.toString())
+            val session =
+                stripeFeePaymentCheckoutClient.createFeePaymentCheckoutSession(
+                    provisional.id,
+                    amountMinor,
+                    assignment.currency,
+                    assignment.description,
+                    resolvedSuccessUrl,
+                    cancelUrl,
+                )
+            feePaymentRepository.attachStripeSession(provisional.id, session.sessionId)
+            FeePaymentCheckout(feePaymentId = provisional.id, checkoutUrl = session.checkoutUrl)
+        } catch (e: StripeException) {
+            log.warn("Stripe checkout session creation failed for fee assignment {}: {}", assignmentId, e.message, e)
+            throw ServiceUnavailableException(
+                "FEE_PAYMENT_PROVIDER_UNAVAILABLE",
+                "Payments provider is not available right now. If this is local/staging, confirm STRIPE_SECRET_KEY is set.",
+            )
+        }
+    }
+
+    /** Idempotent: a duplicate webhook delivery or an already-confirmed payment is a safe no-op. */
+    @Transactional
+    fun confirmOnlineCheckoutFromWebhook(
+        stripeSessionId: String,
+        stripePaymentStatus: String,
+        stripePaymentIntentId: String?,
+    ): FeePayment? {
+        val payment = feePaymentRepository.findByStripeCheckoutSessionId(stripeSessionId) ?: return null
+        if (stripePaymentStatus != "paid") return payment
+        val updated = feePaymentRepository.markConfirmed(payment.id, stripePaymentIntentId)
+        if (updated > 0) {
+            val assignment =
+                feeRepository.findAssignmentById(payment.feeAssignmentId, payment.organizationId)
+                    ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
+            allocateToActivePlan(payment.organizationId, assignment.id, payment.id, payment.amountMinor)
+            recomputeStatus(payment.organizationId, assignment)
+            auditService.record(
+                null,
+                payment.organizationId,
+                "fee_assignment.payment_confirmed_online",
+                "fee_assignment",
+                assignment.id,
+            )
+            ledgerService.recordConfirmedFeePayment(payment.organizationId, payment.id, payment.amountMinor, payment.currency)
+            if (payment.payerEmail != null) {
+                outboxWriter.write(
+                    aggregateType = "fee_payment",
+                    aggregateId = payment.id,
+                    organizationId = payment.organizationId,
+                    eventType = "fee_assignment.payment_confirmed_online",
+                    payloadJson =
+                        objectMapper.writeValueAsString(
+                            FeePaymentConfirmedPayload(
+                                payment.payerEmail,
+                                payment.payerName,
+                                payment.amountMinor,
+                                payment.currency,
+                                assignment.description,
+                            ),
+                        ),
+                )
+            }
+        }
+        return feePaymentRepository.findById(payment.id, payment.organizationId)
+    }
+
     @Transactional
     fun voidPayment(
         organizationId: UUID,
@@ -280,6 +426,36 @@ class FeeService(
         feeRepository.findAssignmentById(assignmentId, organizationId)
             ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
         return feePaymentRepository.findAllByAssignment(assignmentId, organizationId)
+    }
+
+    /**
+     * Read-only, household-capability-gated (not staff-only like [listPayments]) —
+     * a guardian polls this after returning from Stripe Checkout to learn whether
+     * their online payment has been confirmed by the webhook yet, mirroring
+     * `ContributionService.getStatus`'s own poll-after-redirect purpose.
+     */
+    fun getPaymentStatus(
+        organizationId: UUID,
+        assignmentId: UUID,
+        paymentId: UUID,
+        currentUser: CurrentUser,
+    ): FeePayment {
+        val assignment =
+            feeRepository.findAssignmentById(assignmentId, organizationId)
+                ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
+        if (!authorizationService.hasHouseholdCapability(
+                organizationId,
+                assignment.householdId,
+                currentUser,
+                Capabilities.HOUSEHOLD_FEE_VIEW,
+            )
+        ) {
+            throw ForbiddenException("HOUSEHOLD_ACCESS_DENIED", "You do not have access to this household's fees.")
+        }
+        return feePaymentRepository
+            .findById(paymentId, organizationId)
+            ?.takeIf { it.feeAssignmentId == assignmentId }
+            ?: throw NotFoundException("FEE_PAYMENT_NOT_FOUND", "The payment could not be found.")
     }
 
     // --- Adjustments (manual discounts/credits) ---

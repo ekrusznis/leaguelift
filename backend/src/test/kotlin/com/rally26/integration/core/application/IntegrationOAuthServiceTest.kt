@@ -21,6 +21,7 @@ import com.rally26.integration.core.persistence.IntegrationConnectionRepository
 import com.rally26.integration.core.persistence.IntegrationCredentialRepository
 import com.rally26.integration.core.persistence.IntegrationOAuthStateRepository
 import com.rally26.membership.application.MembershipService
+import com.rally26.subscription.application.PlanEntitlementService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -58,6 +59,7 @@ class IntegrationOAuthServiceTest {
                 ),
         )
     private val cipher = CredentialCipher(properties)
+    private val planEntitlementService = mockk<PlanEntitlementService>(relaxed = true)
     private val service =
         IntegrationOAuthService(
             catalogService,
@@ -70,6 +72,7 @@ class IntegrationOAuthServiceTest {
             properties,
             ObjectMapper(),
             auditService,
+            planEntitlementService,
         )
 
     @Test

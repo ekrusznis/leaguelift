@@ -297,18 +297,21 @@ type PricingTier = {
 };
 
 /**
- * Three-tier pricing (added alongside the ADR-057 rebrand, replacing the earlier
- * Starter/Enterprise 2-tier layout). Starter and Growth carry real anchor prices;
- * Pro stays "Contact Us" rather than a fabricated enterprise number, consistent
- * with how the rest of the site avoids invented figures.
+ * Three real tiers (Phase 26/§14.1I, DESIGN-DOC.md section 19.3 item 12, resolved
+ * 2026-08-12) matching `subscription_plan` seed data exactly: STARTER/"Starter"
+ * ($49/mo), FOUNDING_CLUB/"Club" ($149/mo), CONTACT_RALLY26/"League" (contact-only).
+ * Names/prices/team-count claims here must stay in sync with V82's seed data and
+ * `PlanEntitlementService`'s per-tier limits — this static list intentionally
+ * mirrors the backend rather than fetching it, since the marketing site is
+ * anonymous/public and there's no public plans endpoint (the authenticated
+ * `/owner-onboarding/plans` the onboarding wizard uses isn't reachable here).
  */
 const PRICING_TIERS: PricingTier[] = [
 	{
 		name: "Starter",
 		tone: "dark",
-		price: "$79",
+		price: "$49",
 		cadence: "/mo",
-		billingNote: "Billed annually",
 		description: "Perfect for a single team or small club just getting started.",
 		features: [
 			"Up to 3 teams",
@@ -322,16 +325,18 @@ const PRICING_TIERS: PricingTier[] = [
 		ctaTo: "/auth/register",
 	},
 	{
-		name: "Growth",
+		name: "Club",
 		tone: "dark",
 		badge: "Most Popular",
 		price: "$149",
 		cadence: "/mo",
-		billingNote: "Billed annually",
 		description: "Built for growing clubs and leagues running multiple teams.",
 		features: [
-			"Up to 20 teams",
+			"Unlimited teams",
 			"Everything in Starter",
+			"SMS payment reminders",
+			"SportsEngine & TeamSnap sync",
+			"QuickBooks export",
 			"Fundraising campaigns",
 			"Team Swag Shop",
 			"Family credits",
@@ -342,13 +347,13 @@ const PRICING_TIERS: PricingTier[] = [
 		ctaTo: "/auth/register",
 	},
 	{
-		name: "Pro",
+		name: "League",
 		tone: "light",
 		price: "Contact Us",
 		description: "For large leagues, tournament groups, and multisport operators.",
 		features: [
 			"Unlimited teams",
-			"Everything in Growth",
+			"Everything in Club",
 			"Sponsorship management",
 			"Custom onboarding",
 			"Dedicated support",

@@ -44,7 +44,9 @@ export interface FeeAssignmentPage {
 	totalElements: number;
 }
 
-export type PaymentMethod = "CASH" | "CHECK" | "VENMO" | "ZELLE" | "OTHER";
+export type PaymentMethod = "CASH" | "CHECK" | "VENMO" | "ZELLE" | "OTHER" | "STRIPE_ONLINE";
+
+export type FeePaymentStatus = "PENDING_CHECKOUT" | "CONFIRMED" | "CANCELED";
 
 export interface FeePayment {
 	id: string;
@@ -58,6 +60,19 @@ export interface FeePayment {
 	voidedAt: string | null;
 	voidReason: string | null;
 	createdAt: string;
+	status: FeePaymentStatus;
+}
+
+export interface FeePaymentCheckout {
+	feePaymentId: string;
+	checkoutUrl: string;
+}
+
+export interface PaymentMethodAvailability {
+	method: "STRIPE_ONLINE" | "VENMO" | "CASH_APP_PAY" | "AFFIRM" | "ZELLE";
+	displayName: string;
+	available: boolean;
+	note: string | null;
 }
 
 export type AdjustmentType = "DISCOUNT" | "CREDIT" | "CORRECTION";

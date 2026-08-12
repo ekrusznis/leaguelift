@@ -71,6 +71,7 @@ class OrganizationController(
                 addressPostalCode = request.addressPostalCode,
                 addressCountry = request.addressCountry,
                 timezone = request.timezone,
+                zelleHandle = request.zelleHandle,
             ).toResponse()
 
     @GetMapping("/{organizationId}/onboarding")

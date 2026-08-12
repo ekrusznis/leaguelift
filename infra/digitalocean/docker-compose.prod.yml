@@ -49,6 +49,14 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?STRIPE_WEBHOOK_SECRET must be set in .env}
       PRINTIFY_API_TOKEN: ${PRINTIFY_API_TOKEN:?PRINTIFY_API_TOKEN must be set in .env}
       PRINTIFY_SHOP_ID: ${PRINTIFY_SHOP_ID:?PRINTIFY_SHOP_ID must be set in .env}
+      # Phase 32 scaffold — optional. Blank until the founder supplies real, reviewed
+      # credentials; PaymentMethodAvailabilityService shows "Coming soon" until then.
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-}
+      SQUARE_ACCESS_TOKEN: ${SQUARE_ACCESS_TOKEN:-}
+      SQUARE_LOCATION_ID: ${SQUARE_LOCATION_ID:-}
+      AFFIRM_PUBLIC_API_KEY: ${AFFIRM_PUBLIC_API_KEY:-}
+      AFFIRM_PRIVATE_API_KEY: ${AFFIRM_PRIVATE_API_KEY:-}
       FRONTEND_BASE_URL: https://rally26.com
       EMAIL_PROVIDER: ${EMAIL_PROVIDER:-logging}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
@@ -71,6 +79,11 @@ services:
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+      # New Relic APM (Workstream C, 2026-08-12) — a blank license key means the agent
+      # starts but reports nothing; it never blocks the app from booting (Dockerfile).
+      NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY:-}
+      NEW_RELIC_APP_NAME: rally26-backend
+      JAVA_TOOL_OPTIONS: -javaagent:/app/newrelic/newrelic.jar
     # Bound to loopback only — reachable from the droplet itself (the GitHub Actions
     # deploy health check curls http://localhost:8080 over SSH on the host) without
     # exposing the backend directly to the internet. Public traffic still only reaches

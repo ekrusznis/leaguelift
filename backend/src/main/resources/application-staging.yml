@@ -27,6 +27,17 @@ rally26:
     shop-id: ${PRINTIFY_SHOP_ID}
     webhook-secret: ${PRINTIFY_WEBHOOK_SECRET:}
     webhook-enabled: ${PRINTIFY_WEBHOOK_ENABLED:false}
+  # Phase 32 scaffold — optional, blank-tolerant (unlike Stripe/Printify above): each
+  # shows "Coming soon" to guardians until real, reviewed credentials are supplied.
+  paypal:
+    client-id: ${PAYPAL_CLIENT_ID:}
+    client-secret: ${PAYPAL_CLIENT_SECRET:}
+  square:
+    access-token: ${SQUARE_ACCESS_TOKEN:}
+    location-id: ${SQUARE_LOCATION_ID:}
+  affirm:
+    public-api-key: ${AFFIRM_PUBLIC_API_KEY:}
+    private-api-key: ${AFFIRM_PRIVATE_API_KEY:}
   # Not secrets — safe defaults, overridable without a redeploy (ADR-017, starting pilot values, not final pricing).
   platform:
     fee-basis-points: ${PLATFORM_FEE_BASIS_POINTS:500}

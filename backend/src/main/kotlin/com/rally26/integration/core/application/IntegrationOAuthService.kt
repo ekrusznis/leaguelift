@@ -22,6 +22,7 @@ import com.rally26.integration.core.persistence.IntegrationConnectionRepository
 import com.rally26.integration.core.persistence.IntegrationCredentialRepository
 import com.rally26.integration.core.persistence.IntegrationOAuthStateRepository
 import com.rally26.membership.application.MembershipService
+import com.rally26.subscription.application.PlanEntitlementService
 import org.springframework.stereotype.Service
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -60,6 +61,7 @@ class IntegrationOAuthService(
     private val properties: IntegrationProperties,
     private val objectMapper: ObjectMapper,
     private val auditService: AuditService,
+    private val planEntitlementService: PlanEntitlementService,
 ) {
     private val secureRandom = SecureRandom()
 
@@ -79,6 +81,7 @@ class IntegrationOAuthService(
         currentUser: CurrentUser,
     ): AuthorizationStartResult {
         membershipService.requireManagerRole(organizationId, currentUser)
+        planEntitlementService.requireIntegrationAllowed(organizationId, provider)
         return startAuthorization(provider, IntegrationOwnerType.ORGANIZATION, organizationId, null, currentUser.userId)
     }
 

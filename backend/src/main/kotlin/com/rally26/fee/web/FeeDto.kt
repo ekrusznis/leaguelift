@@ -1,5 +1,6 @@
 package com.rally26.fee.web
 
+import com.rally26.fee.application.PaymentMethodAvailability
 import com.rally26.fee.domain.AdjustmentType
 import com.rally26.fee.domain.FeeAdjustment
 import com.rally26.fee.domain.FeeAssignmentStatus
@@ -124,7 +125,30 @@ data class FeePaymentResponse(
     val voidedAt: Instant?,
     val voidReason: String?,
     val createdAt: Instant,
+    val status: String,
 )
+
+// --- Online checkout ---
+
+data class CreateFeeCheckoutSessionRequest(
+    @field:NotNull @field:Min(1) val amountMinor: Long,
+    @field:NotBlank val successUrl: String,
+    @field:NotBlank val cancelUrl: String,
+)
+
+data class FeePaymentCheckoutResponse(
+    val feePaymentId: UUID,
+    val checkoutUrl: String,
+)
+
+data class PaymentMethodAvailabilityResponse(
+    val method: String,
+    val displayName: String,
+    val available: Boolean,
+    val note: String?,
+)
+
+fun PaymentMethodAvailability.toResponse() = PaymentMethodAvailabilityResponse(method, displayName, available, note)
 
 // --- Adjustments ---
 
@@ -217,6 +241,7 @@ fun FeePayment.toResponse() =
         voidedAt,
         voidReason,
         createdAt,
+        status.name,
     )
 
 fun FeeAdjustment.toResponse() =

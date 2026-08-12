@@ -1,6 +1,7 @@
 package com.rally26.webhook.web
 
 import com.rally26.config.StripeProperties
+import com.rally26.fee.application.FeeService
 import com.rally26.fundraising.application.ContributionService
 import com.rally26.order.application.OrderService
 import com.rally26.order.domain.ShippingAddress
@@ -34,9 +35,10 @@ private const val PROVIDER = "stripe"
  * Inbound Stripe webhook receiver (DESIGN-DOC.md section 17). Checkout completion
  * confirms campaign
  * contributions (`fundraising/application/ContributionService.kt`), store
- * orders (`order/application/OrderService.kt`), and sponsorship purchases
- * (`sponsorship/application/SponsorshipService.kt`). A session's own metadata
- * (`orderId`/`sponsorshipId` present or not) disambiguates which one a given event
+ * orders (`order/application/OrderService.kt`), sponsorship purchases
+ * (`sponsorship/application/SponsorshipService.kt`), and — since 2026-08-12 —
+ * online fee payments (`fee/application/FeeService.kt`). A session's own metadata
+ * (`orderId`/`sponsorshipId`/`feePaymentId` present or not) disambiguates which one a given event
  * is for, since all three use the same event type. Phase 24.6/26.1 also consumes
  * organization-subscription and payment-failure events; signed subscription state
  * is authoritative for activation. Phase 37.8 (ADR-117) adds `account.updated` —
@@ -56,6 +58,7 @@ class StripeWebhookController(
     private val contributionService: ContributionService,
     private val orderService: OrderService,
     private val sponsorshipService: SponsorshipService,
+    private val feeService: FeeService,
     private val organizationSubscriptionService: OrganizationSubscriptionService? = null,
     private val payoutAccountService: PayoutAccountService? = null,
     private val stripeConnectClient: StripeConnectClient? = null,
@@ -110,6 +113,10 @@ class StripeWebhookController(
                             relatedEntityType = "sponsorship"
                             relatedEntityId =
                                 sponsorshipService.confirmFromWebhook(session.id, session.paymentStatus, session.paymentIntent)?.id
+                        } else if (session.metadata?.containsKey("feePaymentId") == true) {
+                            relatedEntityType = "fee_payment"
+                            relatedEntityId =
+                                feeService.confirmOnlineCheckoutFromWebhook(session.id, session.paymentStatus, session.paymentIntent)?.id
                         } else {
                             relatedEntityType = "contribution"
                             relatedEntityId =

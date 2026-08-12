@@ -35,6 +35,8 @@ data class Organization(
     val addressCountry: String? = null,
     /** Phase 24 slice 24.5 (ADR-071): only ever set via an owner-initiated confirm action; a non-null value IS the confirmation signal. */
     val timezone: String? = null,
+    /** Phase 32 scaffold: an org-configured Zelle handle, shown as payment instructions — Zelle itself stays manual/external, this is display-only. */
+    val zelleHandle: String? = null,
 )
 
 private val SLUG_PATTERN = Regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")

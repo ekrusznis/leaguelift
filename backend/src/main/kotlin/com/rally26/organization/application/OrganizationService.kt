@@ -108,6 +108,7 @@ class OrganizationService(
         addressCountry: String? = null,
         /** Phase 24 slice 24.5 (ADR-071): a non-null value here IS the owner's timezone-confirmation signal — see [onboardingProgress]. */
         timezone: String? = null,
+        zelleHandle: String? = null,
     ): Organization {
         membershipService.requireActiveMembership(organizationId, currentUser)
         organizationRepository.findById(organizationId)
@@ -136,6 +137,7 @@ class OrganizationService(
             addressPostalCode,
             addressCountry,
             timezone,
+            zelleHandle,
         )
         auditService.record(
             actorUserId = currentUser.userId,

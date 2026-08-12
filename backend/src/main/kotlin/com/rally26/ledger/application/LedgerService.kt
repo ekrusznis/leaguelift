@@ -134,6 +134,63 @@ class LedgerService(
         )
     }
 
+    /**
+     * Structurally identical to [recordConfirmedContribution] — an online fee
+     * payment takes Rally26's standard platform-fee cut like every other
+     * confirmed-payment method, per founder direction (2026-08-12). Reuses
+     * `LedgerEntryType.CONTRIBUTION` rather than introducing a distinct
+     * `FEE_PAYMENT` entry type, same reuse precedent as [recordConfirmedSponsorship]
+     * — `LedgerSourceType.FEE_PAYMENT` on the source fields already gives full
+     * traceability back to the `fee_payment` row.
+     */
+    @Transactional
+    fun recordConfirmedFeePayment(
+        organizationId: UUID,
+        feePaymentId: UUID,
+        amountMinor: Long,
+        currency: String,
+    ) {
+        val gross = amountMinor
+        val fee = platformFeeProperties.feeMinorOf(gross)
+        val net = gross - fee
+        ledgerEntryRepository.insert(
+            organizationId = organizationId,
+            accountCode = LedgerEntryType.CONTRIBUTION.name,
+            entryType = LedgerEntryType.CONTRIBUTION,
+            direction = LedgerDirection.CREDIT,
+            amountMinor = gross,
+            currency = currency,
+            sourceType = LedgerSourceType.FEE_PAYMENT,
+            sourceId = feePaymentId,
+            externalReference = null,
+            description = "Confirmed online fee payment",
+        )
+        ledgerEntryRepository.insert(
+            organizationId = organizationId,
+            accountCode = LedgerEntryType.RALLY26_PLATFORM_FEE.name,
+            entryType = LedgerEntryType.RALLY26_PLATFORM_FEE,
+            direction = LedgerDirection.DEBIT,
+            amountMinor = fee,
+            currency = currency,
+            sourceType = LedgerSourceType.FEE_PAYMENT,
+            sourceId = feePaymentId,
+            externalReference = null,
+            description = "Platform fee (${platformFeeProperties.feeBasisPoints} bps)",
+        )
+        ledgerEntryRepository.insert(
+            organizationId = organizationId,
+            accountCode = LedgerEntryType.ORGANIZATION_EARNING.name,
+            entryType = LedgerEntryType.ORGANIZATION_EARNING,
+            direction = LedgerDirection.CREDIT,
+            amountMinor = net,
+            currency = currency,
+            sourceType = LedgerSourceType.FEE_PAYMENT,
+            sourceId = feePaymentId,
+            externalReference = null,
+            description = "Organization earning from confirmed online fee payment",
+        )
+    }
+
     @Transactional
     fun recordConfirmedOrder(
         order: Order,
