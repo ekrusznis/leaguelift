@@ -7,6 +7,9 @@ import com.rally26.fundraising.domain.ContributionStatus
 import com.rally26.order.application.OrderService
 import com.rally26.order.domain.Order
 import com.rally26.order.domain.OrderStatus
+import com.rally26.payout.application.PayoutAccountService
+import com.rally26.payout.infra.StripeAccountStatus
+import com.rally26.payout.infra.StripeConnectClient
 import com.rally26.sponsorship.application.SponsorshipService
 import com.rally26.sponsorship.domain.Sponsorship
 import com.rally26.sponsorship.domain.SponsorshipStatus
@@ -187,6 +190,56 @@ class StripeWebhookControllerTest {
         verify(exactly = 0) { contributionService.confirmFromWebhook(any(), any(), any()) }
         verify(exactly = 0) { orderService.confirmFromWebhook(any(), any(), any(), any()) }
     }
+
+    @Test
+    fun `an account_updated event syncs the connected account's status through PayoutAccountService`() {
+        val eventId = "evt_${UUID.randomUUID()}"
+        val payload = accountUpdatedPayload(eventId, "acct_test_1")
+        val signature = sign(payload, webhookSecret)
+        val payoutAccountService = mockk<PayoutAccountService>()
+        val stripeConnectClient = mockk<StripeConnectClient>()
+        val controllerWithPayout =
+            StripeWebhookController(
+                stripeProperties,
+                webhookEventRepository,
+                contributionService,
+                orderService,
+                sponsorshipService,
+                payoutAccountService = payoutAccountService,
+                stripeConnectClient = stripeConnectClient,
+            )
+        val accountId = UUID.randomUUID()
+        every { webhookEventRepository.findExisting("stripe", eventId) } returns null
+        every { stripeConnectClient.statusFrom(any()) } returns StripeAccountStatus(true, false, false, "requirements.past_due")
+        every { payoutAccountService.syncFromWebhook("acct_test_1", any()) } returns accountId
+        every {
+            webhookEventRepository.insert(
+                "stripe",
+                eventId,
+                "account.updated",
+                payload,
+                any(),
+                true,
+                WebhookProcessingStatus.PROCESSED,
+                "organization_payout_account",
+                accountId,
+                null,
+            )
+        } returns sampleWebhookEvent()
+
+        val response = controllerWithPayout.receive(payload, signature)
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        verify(exactly = 1) { payoutAccountService.syncFromWebhook("acct_test_1", any()) }
+    }
+
+    private fun accountUpdatedPayload(
+        eventId: String,
+        stripeAccountId: String,
+    ): String =
+        """{"id":"$eventId","object":"event","api_version":"2025-03-31.basil","type":"account.updated","data":{"object":{""" +
+            """"id":"$stripeAccountId","object":"account","details_submitted":true,"charges_enabled":false,"payouts_enabled":false,""" +
+            """"requirements":{"disabled_reason":"requirements.past_due"}}}}"""
 
     private fun checkoutSessionCompletedPayload(
         eventId: String,

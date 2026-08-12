@@ -1,6 +1,7 @@
 package com.rally26.payout.infra
 
 import com.stripe.StripeClient
+import com.stripe.model.Account
 import com.stripe.param.AccountCreateParams
 import com.stripe.param.AccountLinkCreateParams
 import com.stripe.param.TransferCreateParams
@@ -11,6 +12,7 @@ data class StripeAccountStatus(
     val detailsSubmitted: Boolean,
     val chargesEnabled: Boolean,
     val payoutsEnabled: Boolean,
+    val disabledReason: String? = null,
 )
 
 /**
@@ -56,14 +58,22 @@ class StripeConnectClient(
         return link.url
     }
 
-    fun retrieveAccountStatus(stripeAccountId: String): StripeAccountStatus {
-        val account = stripeClient.accounts().retrieve(stripeAccountId)
-        return StripeAccountStatus(
+    fun retrieveAccountStatus(stripeAccountId: String): StripeAccountStatus = statusFrom(stripeClient.accounts().retrieve(stripeAccountId))
+
+    /**
+     * Same field mapping the manual [retrieveAccountStatus] pull uses, exposed so the
+     * `account.updated` webhook (Phase 37.8, ADR-117) can map its already-deserialized
+     * [Account] payload the identical way — keeps Stripe's `Account` model read in
+     * exactly one place, matching this file's own "no other file interprets Stripe
+     * fields directly" seam.
+     */
+    fun statusFrom(account: Account): StripeAccountStatus =
+        StripeAccountStatus(
             detailsSubmitted = account.detailsSubmitted ?: false,
             chargesEnabled = account.chargesEnabled ?: false,
             payoutsEnabled = account.payoutsEnabled ?: false,
+            disabledReason = account.requirements?.disabledReason,
         )
-    }
 
     fun createTransfer(
         destinationStripeAccountId: String,
