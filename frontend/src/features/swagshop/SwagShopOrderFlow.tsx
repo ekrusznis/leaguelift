@@ -1,14 +1,15 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useContexts } from "../../authorization/api";
 import { Capabilities } from "../../authorization/capabilityConstants";
 import { Button } from "../../components/Button";
+import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { formatMoneyMinorUnits } from "../../lib/money";
 import { useParticipants } from "../households/api";
-import { useCreateSwagShopOrder, useSwagShopApparelTypes, useTeamRoster } from "../store/api";
-import type { PersonalizationPlacement, SwagLogoSize } from "../store/types";
+import { useCreateSwagShopOrder, useMySwagShopOrders, useSwagShopApparelTypes, useTeamRoster } from "../store/api";
+import type { PersonalizationPlacement, SwagLogoSize, SwagShopOrderHistoryItem } from "../store/types";
 import { SwagPersonalizationPreview } from "./SwagPersonalizationPreview";
 
 const PLACEMENT_OPTIONS: { value: PersonalizationPlacement; label: string }[] = [
@@ -31,7 +32,9 @@ export function SwagShopOrderFlow() {
 	const returnedOrderId = searchParams.get("orderId");
 	const contexts = useContexts();
 	const apparelTypes = useSwagShopApparelTypes(organizationId ?? "");
+	const pastOrders = useMySwagShopOrders(organizationId ?? "");
 	const createOrder = useCreateSwagShopOrder(organizationId ?? "");
+	const orderFormRef = useRef<HTMLDivElement>(null);
 
 	const orgContexts = useMemo(() => (contexts.data ?? []).filter((c) => c.organizationId === organizationId), [contexts.data, organizationId]);
 	const household = orgContexts.find((c) => c.contextType === "HOUSEHOLD");
@@ -89,6 +92,20 @@ export function SwagShopOrderFlow() {
 		}
 	}
 
+	function reorder(item: SwagShopOrderHistoryItem) {
+		setProductId(item.productId);
+		setVariantId(item.variantId);
+		setParticipantId(item.participantId);
+		const hadPersonalization = Boolean(item.personalizationName || item.personalizationNumber);
+		setWantsPersonalization(hadPersonalization);
+		setName(item.personalizationName ?? "");
+		setNumber(item.personalizationNumber ?? "");
+		if (item.personalizationPlacement) setPlacement(item.personalizationPlacement);
+		if (item.personalizationLogoSize) setLogoSize(item.personalizationLogoSize);
+		setSubmitError(null);
+		orderFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+	}
+
 	return (
 		<div className="flex flex-col gap-6">
 			<div>
@@ -114,6 +131,37 @@ export function SwagShopOrderFlow() {
 				</div>
 			)}
 
+			<section aria-label="Your past orders" className="flex flex-col gap-3">
+				<h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Your past orders</h2>
+				{pastOrders.isLoading && <LoadingState label="Loading your past orders…" />}
+				{pastOrders.isError && <ErrorState message="Could not load your past orders." onRetry={() => pastOrders.refetch()} />}
+				{pastOrders.data && pastOrders.data.length === 0 && (
+					<EmptyState title="No past orders yet" description="Orders you place below will show up here for easy reordering." />
+				)}
+				{pastOrders.data && pastOrders.data.length > 0 && (
+					<ul className="flex flex-col gap-2" aria-label="Past orders list">
+						{pastOrders.data.map((order) => (
+							<li key={`${order.orderId}-${order.variantId}-${order.participantId}`} className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3">
+								{order.mockupFrontUrl && <img src={order.mockupFrontUrl} alt="" className="h-14 w-14 shrink-0 rounded-md object-cover" />}
+								<div className="min-w-0 flex-1">
+									<p className="break-words font-medium text-navy dark:text-[#f8fafc]">{order.productName} — {order.variantLabel}</p>
+									<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
+										For {order.participantName}
+										{order.personalizationName ? ` · ${order.personalizationName}` : ""}
+										{order.personalizationNumber ? ` #${order.personalizationNumber}` : ""}
+										{" · "}{formatMoneyMinorUnits(order.unitPriceMinor, order.currency)}
+										{" · "}{new Date(order.confirmedAt).toLocaleDateString()}
+									</p>
+								</div>
+								<Button type="button" variant="secondary" disabled={!order.isReorderable} onClick={() => reorder(order)}>
+									{order.isReorderable ? "Reorder" : "No longer available"}
+								</Button>
+							</li>
+						))}
+					</ul>
+				)}
+			</section>
+
 			{teams.length > 1 && (
 				<div className="flex flex-col gap-1">
 					<label htmlFor="swagshop-team" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Ordering for team</label>
@@ -135,7 +183,7 @@ export function SwagShopOrderFlow() {
 			)}
 
 			{apparelTypes.data && apparelTypes.data.length > 0 && (
-				<div className="flex flex-col gap-4 rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-4">
+				<div ref={orderFormRef} className="flex flex-col gap-4 rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-4">
 					<div className="flex flex-col gap-1">
 						<label htmlFor="swagshop-product" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Apparel type</label>
 						<select

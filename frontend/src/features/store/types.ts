@@ -296,3 +296,24 @@ export interface CreateSwagShopOrderRequest {
 	personalizationPlacement?: PersonalizationPlacement | null;
 	personalizationLogoSize?: SwagLogoSize | null;
 }
+
+export interface SwagShopOrderHistoryItem {
+	orderId: string;
+	confirmedAt: string;
+	participantId: string;
+	participantName: string;
+	productId: string;
+	productName: string;
+	variantId: string;
+	variantLabel: string;
+	size: string | null;
+	color: string | null;
+	mockupFrontUrl: string | null;
+	personalizationName: string | null;
+	personalizationNumber: string | null;
+	personalizationPlacement: PersonalizationPlacement | null;
+	personalizationLogoSize: SwagLogoSize | null;
+	unitPriceMinor: number;
+	currency: string;
+	isReorderable: boolean;
+}

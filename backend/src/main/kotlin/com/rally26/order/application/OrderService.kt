@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
 import com.rally26.authorization.application.AuthorizationService
 import com.rally26.authorization.domain.Capabilities
+import com.rally26.authorization.domain.ContextType
 import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ServiceUnavailableException
@@ -71,6 +72,28 @@ data class OrderLineItemRequest(
 data class OrderCheckout(
     val orderId: UUID,
     val checkoutUrl: String,
+)
+
+/** Swag Shop "my past orders" (see OrderService.listMySwagShopOrders) — one confirmed order_item, enriched with display fields the frontend needs for a history card and a reorder prefill. */
+data class SwagShopOrderHistoryItem(
+    val orderId: UUID,
+    val confirmedAt: Instant,
+    val participantId: UUID,
+    val participantName: String,
+    val productId: UUID,
+    val productName: String,
+    val variantId: UUID,
+    val variantLabel: String,
+    val size: String?,
+    val color: String?,
+    val mockupFrontUrl: String?,
+    val personalizationName: String?,
+    val personalizationNumber: String?,
+    val personalizationPlacement: PersonalizationPlacement?,
+    val personalizationLogoSize: SwagLogoSize?,
+    val unitPriceMinor: Long,
+    val currency: String,
+    val isReorderable: Boolean,
 )
 
 /** `order.confirmed` outbox payload (Phase 8 slice 2) — consumed by `OrderConfirmationEmailHandler`. */
@@ -426,6 +449,59 @@ class OrderService(
             .findById(orderId, storefront.organizationId)
             ?.takeIf { it.storeId == storefront.storeId }
             ?: throw NotFoundException("ORDER_NOT_FOUND", "The order could not be found.")
+    }
+
+    /**
+     * Swag Shop "my past orders" — every confirmed order_item for a participant the
+     * caller could place a Swag Shop order for today (same reach as
+     * requireSwagShopOrderAccess: their own household's participants, plus any team's
+     * roster they hold TEAM_ORDER_CREATE for), newest first. Self-scoping by
+     * construction — there's no caller-supplied household/team id to guard against,
+     * the participant set is derived entirely from the caller's own contexts.
+     */
+    fun listMySwagShopOrders(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): List<SwagShopOrderHistoryItem> {
+        val contexts = authorizationService.listContexts(currentUser).filter { it.organizationId == organizationId }
+        val householdIds = contexts.filter { it.contextType == ContextType.HOUSEHOLD }.mapNotNull { it.resourceId }
+        val orderTeamIds =
+            contexts
+                .filter { it.contextType == ContextType.TEAM && Capabilities.TEAM_ORDER_CREATE in it.capabilities }
+                .mapNotNull { it.resourceId }
+
+        val participantIds =
+            (
+                householdIds.flatMap { participantRepository.findByHousehold(it, organizationId) } +
+                    orderTeamIds.flatMap { participantRepository.findActiveByTeam(it, organizationId) }
+            ).map { it.id }.distinct()
+
+        return orderItemRepository.findConfirmedByParticipants(organizationId, participantIds).mapNotNull { row ->
+            val participant = participantRepository.findById(row.item.participantId ?: return@mapNotNull null, organizationId) ?: return@mapNotNull null
+            val variant = productVariantRepository.findById(row.item.productVariantId, organizationId) ?: return@mapNotNull null
+            val product = productRepository.findById(variant.productId, organizationId) ?: return@mapNotNull null
+            val store = storeRepository.findById(row.storeId, organizationId)
+            SwagShopOrderHistoryItem(
+                orderId = row.orderId,
+                confirmedAt = row.confirmedAt,
+                participantId = participant.id,
+                participantName = "${participant.firstName} ${participant.lastName}",
+                productId = product.id,
+                productName = product.name,
+                variantId = variant.id,
+                variantLabel = variant.label,
+                size = variant.size,
+                color = variant.color,
+                mockupFrontUrl = variant.mockupFrontUrl,
+                personalizationName = row.item.personalizationName,
+                personalizationNumber = row.item.personalizationNumber,
+                personalizationPlacement = row.item.personalizationPlacement,
+                personalizationLogoSize = row.item.personalizationLogoSize,
+                unitPriceMinor = row.item.unitPriceMinor,
+                currency = row.currency,
+                isReorderable = variant.isActive && product.status == ProductStatus.ACTIVE && store?.status == StoreStatus.ACTIVE,
+            )
+        }
     }
 
     /**

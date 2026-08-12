@@ -31,6 +31,7 @@ import type {
 	PublicStore,
 	Store,
 	StorePage,
+	SwagShopOrderHistoryItem,
 } from "./types";
 import type { Participant } from "../households/types";
 
@@ -278,6 +279,14 @@ export function useSwagShopApparelTypes(organizationId: string) {
 	return useQuery({
 		queryKey: ["organizations", organizationId, "swag-shop", "apparel-types"] as const,
 		queryFn: () => apiFetch<SwagShopApparelType[]>(`/organizations/${organizationId}/swag-shop/apparel-types`),
+		enabled: !!organizationId,
+	});
+}
+
+export function useMySwagShopOrders(organizationId: string) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "swag-shop", "my-orders"] as const,
+		queryFn: () => apiFetch<SwagShopOrderHistoryItem[]>(`/organizations/${organizationId}/swag-shop/my-orders`),
 		enabled: !!organizationId,
 	});
 }
