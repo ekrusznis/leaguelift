@@ -7,6 +7,7 @@ export type RequirementMode =
 
 export type ExpirationRule = "NEVER" | "SEASON_END" | "FIXED_DAYS_FROM_ACCEPTANCE" | "ORG_CONFIGURED";
 export type RequirementStatus = "ACTIVE" | "ARCHIVED";
+export type ClearanceStatus = "ROSTER_PENDING" | "DOCUMENTS_REQUIRED" | "UNDER_REVIEW" | "CLEARED" | "EXPIRED" | "INELIGIBLE";
 export type EvidenceClassification =
 	| "VERIFIED_EXTERNAL_DOCUMENT"
 	| "EXTERNAL_ACKNOWLEDGMENT"
@@ -84,4 +85,13 @@ export interface SubmitGuardianEvidenceRequest {
 	acceptanceMethod: AcceptanceMethod;
 	enteredLegalName?: string;
 	documentAssetId?: string;
+}
+
+/** Coach roster clearance view — operational status only, never evidence contents (DESIGN-DOC.md 14.1L §30.2). */
+export interface EligibilityClearance {
+	participantId: string;
+	teamId: string;
+	status: ClearanceStatus;
+	unmetRequirementCount: number;
+	computedAt: string | null;
 }

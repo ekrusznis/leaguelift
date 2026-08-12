@@ -44,17 +44,17 @@ export function ReminderButton({
 				{open ? "Cancel reminder" : label}
 			</Button>
 			{open && (
-				<div className="rounded-lg border border-slate-gray/20 bg-ice-white p-3 text-sm">
-					<p className="font-medium text-navy">Delivery channels</p>
-					<label className="mt-2 flex items-center gap-2 text-slate-gray"><input type="checkbox" checked={emailEnabled} onChange={(event) => setEmailEnabled(event.target.checked)} /> Email</label>
-					<label className="mt-2 flex items-center gap-2 text-slate-gray"><input type="checkbox" checked={smsEnabled} onChange={(event) => setSmsEnabled(event.target.checked)} /> SMS to opted-in households</label>
-					<p className="mt-2 max-w-sm text-xs text-slate-gray">The reminder is always saved in Rally26. Email opt-outs and SMS opt-ins are enforced by the backend.</p>
+				<div className="rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-3 text-sm">
+					<p className="font-medium text-navy dark:text-[#f8fafc]">Delivery channels</p>
+					<label className="mt-2 flex items-center gap-2 text-slate-gray dark:text-[#cbd5e1]"><input type="checkbox" checked={emailEnabled} onChange={(event) => setEmailEnabled(event.target.checked)} /> Email</label>
+					<label className="mt-2 flex items-center gap-2 text-slate-gray dark:text-[#cbd5e1]"><input type="checkbox" checked={smsEnabled} onChange={(event) => setSmsEnabled(event.target.checked)} /> SMS to opted-in households</label>
+					<p className="mt-2 max-w-sm text-xs text-slate-gray dark:text-[#cbd5e1]">The reminder is always saved in Rally26. Email opt-outs and SMS opt-ins are enforced by the backend.</p>
 					<Button type="button" className="mt-3" disabled={sendReminder.isPending} onClick={() => void send()}>
 						{sendReminder.isPending ? "Publishing…" : "Publish reminder"}
 					</Button>
 				</div>
 			)}
-			{message && <p role="status" className="text-xs text-slate-gray">{message}</p>}
+			{message && <p role="status" className="text-xs text-slate-gray dark:text-[#cbd5e1]">{message}</p>}
 		</div>
 	);
 }

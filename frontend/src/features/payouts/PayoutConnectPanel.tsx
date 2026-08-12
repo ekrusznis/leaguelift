@@ -38,22 +38,22 @@ export function PayoutConnectPanel({ organizationId }: { organizationId: string 
 	}
 
 	return (
-		<div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-4">
+		<div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-4">
 			<div className="min-w-0 flex-1">
 				{status?.isFullyConnected ? (
 					<>
-						<p className="font-medium text-navy">Payouts connected</p>
-						<p className="text-sm text-slate-gray">Stripe account {status.stripeAccountId}</p>
+						<p className="font-medium text-navy dark:text-[#f8fafc]">Payouts connected</p>
+						<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Stripe account {status.stripeAccountId}</p>
 					</>
 				) : status ? (
 					<>
-						<p className="font-medium text-navy">Payout setup in progress</p>
-						<p className="text-sm text-slate-gray">Finish the remaining steps in Stripe's onboarding flow.</p>
+						<p className="font-medium text-navy dark:text-[#f8fafc]">Payout setup in progress</p>
+						<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Finish the remaining steps in Stripe's onboarding flow.</p>
 					</>
 				) : (
 					<>
-						<p className="font-medium text-navy">Payouts not connected</p>
-						<p className="text-sm text-slate-gray">Connect a Stripe account to receive payouts (test mode only for now).</p>
+						<p className="font-medium text-navy dark:text-[#f8fafc]">Payouts not connected</p>
+						<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Connect a Stripe account to receive payouts (test mode only for now).</p>
 					</>
 				)}
 				{error && (

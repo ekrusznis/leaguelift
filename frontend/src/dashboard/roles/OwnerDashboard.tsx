@@ -143,7 +143,7 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 										<StatTile icon={<HomeIcon className="size-5" />} value={String(data.households)} label="Households" />
 										<StatTile icon={<TrophyIcon className="size-5" />} value={String(data.upcomingTournaments)} label="Upcoming Tournaments" />
 									</div>
-									<p className="mt-4 flex items-center gap-2 border-t border-slate-200 pt-3 text-xs text-green-600">
+									<p className="mt-4 flex items-center gap-2 border-t border-slate-200 dark:border-[#334155] pt-3 text-xs text-green-600">
 										<CheckCircleIcon className="size-4" /> All systems operational
 									</p>
 								</>
@@ -162,28 +162,28 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 							{(data) => (
 								<div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
 									<div>
-										<p className="text-xs text-slate-500">Fees Assigned</p>
-										<p className="font-heading text-lg font-bold text-navy-900">{formatMoneyMinorUnits(data.feesAssignedMinor, data.currency)}</p>
+										<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">Fees Assigned</p>
+										<p className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">{formatMoneyMinorUnits(data.feesAssignedMinor, data.currency)}</p>
 									</div>
 									<div>
-										<p className="text-xs text-slate-500">Fees Collected</p>
-										<p className="font-heading text-lg font-bold text-navy-900">{formatMoneyMinorUnits(data.feesCollectedMinor, data.currency)}</p>
+										<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">Fees Collected</p>
+										<p className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">{formatMoneyMinorUnits(data.feesCollectedMinor, data.currency)}</p>
 									</div>
 									<div>
-										<p className="text-xs text-slate-500">Outstanding</p>
+										<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">Outstanding</p>
 										<p className="font-heading text-lg font-bold text-error-600">{formatMoneyMinorUnits(data.outstandingMinor, data.currency)}</p>
 									</div>
 									<div>
-										<p className="text-xs text-slate-500">Fundraising</p>
-										<p className="font-heading text-lg font-bold text-navy-900">{formatMoneyMinorUnits(data.fundraisingMinor, data.currency)}</p>
+										<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">Fundraising</p>
+										<p className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">{formatMoneyMinorUnits(data.fundraisingMinor, data.currency)}</p>
 									</div>
 									<div>
-										<p className="text-xs text-slate-500">Apparel Sales</p>
-										<p className="font-heading text-lg font-bold text-navy-900">{formatMoneyMinorUnits(data.apparelSalesMinor, data.currency)}</p>
+										<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">Apparel Sales</p>
+										<p className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">{formatMoneyMinorUnits(data.apparelSalesMinor, data.currency)}</p>
 									</div>
 									<div>
-										<p className="text-xs text-slate-500">Pending Payout</p>
-										<p className="font-heading text-lg font-bold text-navy-900">{formatMoneyMinorUnits(data.pendingPayoutMinor, data.currency)}</p>
+										<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">Pending Payout</p>
+										<p className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">{formatMoneyMinorUnits(data.pendingPayoutMinor, data.currency)}</p>
 									</div>
 									{data.isFundraisingDemoData && (
 										<p className="col-span-2 text-xs text-slate-400 sm:col-span-3">Fundraising/apparel/payout figures are demo data — fees are real.</p>
@@ -207,27 +207,27 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 								<div className="overflow-x-auto">
 									<table className="w-full min-w-[420px] text-left text-xs">
 										<thead>
-											<tr className="text-slate-500">
+											<tr className="text-slate-500 dark:text-[#cbd5e1]">
 												<th className="pb-2 font-medium">Team</th>
 												<th className="pb-2 font-medium">Participants</th>
 												<th className="pb-2 font-medium">Fundraising</th>
 												<th className="pb-2 font-medium">Status</th>
 											</tr>
 										</thead>
-										<tbody className="divide-y divide-slate-100">
+										<tbody className="divide-y divide-slate-100 dark:divide-[#334155]">
 											{rows.map((team) => (
 												<tr key={team.teamId}>
 													<td className="py-2">
-														<p className="font-medium text-navy-900">{team.name}</p>
-														<p className="text-slate-500">{team.sport}</p>
+														<p className="font-medium text-navy-900 dark:text-[#f8fafc]">{team.name}</p>
+														<p className="text-slate-500 dark:text-[#cbd5e1]">{team.sport}</p>
 													</td>
-													<td className="py-2 text-navy-900">{team.participants}</td>
+													<td className="py-2 text-navy-900 dark:text-[#f8fafc]">{team.participants}</td>
 													<td className="py-2">
 														{team.isFundraisingDemoData || team.fundraisingRaisedMinor === null || team.fundraisingGoalMinor === null ? (
 															<span className="text-slate-400">Demo data</span>
 														) : (
 															<>
-																<p className="text-navy-900">
+																<p className="text-navy-900 dark:text-[#f8fafc]">
 																	{formatMoneyMinorUnits(team.fundraisingRaisedMinor, "USD")} / {formatMoneyMinorUnits(team.fundraisingGoalMinor, "USD")}
 																</p>
 																<div className="mt-1 w-20">
@@ -261,13 +261,13 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 								<ul className="flex flex-col gap-3">
 									{items.map((event) => (
 										<li key={event.id} className="flex items-start gap-3">
-											<div className="flex w-14 shrink-0 flex-col items-center rounded-lg bg-ice-50 py-1 text-xs font-semibold text-slate-500">
+											<div className="flex w-14 shrink-0 flex-col items-center rounded-lg bg-ice-50 dark:bg-[#0f172a] py-1 text-xs font-semibold text-slate-500 dark:text-[#cbd5e1]">
 												<CalendarIcon className="size-4 text-slate-400" />
 												{event.day} {event.date}
 											</div>
 											<div className="min-w-0 flex-1">
-												<Link to={appPaths.event(organizationId, event.id)} className="truncate text-sm font-medium text-navy-900 hover:text-green-600 hover:underline">{event.title}</Link>
-												<p className="text-xs text-slate-500">{event.subtitle}</p>
+												<Link to={appPaths.event(organizationId, event.id)} className="truncate text-sm font-medium text-navy-900 dark:text-[#f8fafc] hover:text-green-600 hover:underline">{event.title}</Link>
+												<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">{event.subtitle}</p>
 											</div>
 											{event.tag && <Pill tone={event.tag === "Home" ? "success" : "info"}>{event.tag}</Pill>}
 										</li>
@@ -292,8 +292,8 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 										<li key={activity.id} className="flex items-start gap-3">
 											<IconBadge icon={<ChartIcon className="size-4" />} tone="info" />
 											<div className="min-w-0 flex-1">
-												<p className="text-sm font-medium text-navy-900">{describeActivityAction(activity.action)}</p>
-												<p className="text-xs text-slate-500">{activity.entityType}</p>
+												<p className="text-sm font-medium text-navy-900 dark:text-[#f8fafc]">{describeActivityAction(activity.action)}</p>
+												<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">{activity.entityType}</p>
 											</div>
 											<span className="shrink-0 text-xs text-slate-400">{timeAgo(activity.occurredAt)}</span>
 										</li>
@@ -316,8 +316,8 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 								<div className="grid grid-cols-2 gap-4">
 									{items.map((report) => (
 										<div key={report.label}>
-											<p className="text-xs text-slate-500">{report.label}</p>
-											<p className="font-heading text-base font-bold text-navy-900">
+											<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">{report.label}</p>
+											<p className="font-heading text-base font-bold text-navy-900 dark:text-[#f8fafc]">
 												{formatMoneyMinorUnits(report.valueMinor, "USD")}{" "}
 												<span className="text-xs font-semibold text-green-600">
 													{report.trendPercent > 0 ? "+" : ""}
@@ -340,7 +340,7 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 								<Link
 									key={action.label}
 									to={action.to}
-									className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 p-4 text-center text-xs font-medium text-navy-900 hover:border-green-500 hover:text-green-600"
+									className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 dark:border-[#334155] p-4 text-center text-xs font-medium text-navy-900 dark:text-[#f8fafc] hover:border-green-500 hover:text-green-600"
 								>
 									<span className="text-green-600">{action.icon}</span>
 									{action.label}

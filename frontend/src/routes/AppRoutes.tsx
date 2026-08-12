@@ -27,6 +27,7 @@ import { PlatformUsersPage } from "../features/platformAdmin/PlatformUsersPage";
 import { PlatformReportsPage } from "../features/reporting/PlatformReportsPage";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { SwagShopOrderFlow } from "../features/swagshop/SwagShopOrderFlow";
+import { TeamRosterPage } from "../features/teams/TeamRosterPage";
 import { HelpArticlePage } from "../features/support/HelpArticlePage";
 import { HelpCenterPage } from "../features/support/HelpCenterPage";
 import { PlatformHelpArticlesPage } from "../features/support/PlatformHelpArticlesPage";
@@ -119,6 +120,7 @@ export function AppRoutes() {
 					<Route path="organizations/:organizationId/swag-shop/order" element={<SwagShopOrderFlow />} />
 					<Route path="organizations/:organizationId/events/:eventId" element={<EventDetailPage />} />
 					<Route path="organizations/:organizationId/teams/:teamId/events" element={<EventsPage scopeType="team" />} />
+					<Route path="organizations/:organizationId/teams/:teamId/roster" element={<TeamRosterPage />} />
 					<Route path="organizations/:organizationId/tournaments/:tournamentId/events" element={<EventsPage scopeType="tournament" />} />
 					<Route path="organizations/:organizationId/participants/:participantId/events" element={<EventsPage scopeType="participant" />} />
 					<Route path="organizations/:organizationId/households/:householdId" element={<HouseholdDetailPage />} />

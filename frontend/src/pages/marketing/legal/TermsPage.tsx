@@ -10,7 +10,7 @@ export function TermsPage() {
 			</p>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Eligibility and accounts</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Eligibility and accounts</h2>
 				<p className="mt-2">
 					Rally26 accounts are created by adults (18 years or older) acting on behalf of an organization
 					or household. Rally26 does not create accounts for children. You are responsible for the
@@ -20,7 +20,7 @@ export function TermsPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Organization responsibilities</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Organization responsibilities</h2>
 				<p className="mt-2">
 					An organization is responsible for the accuracy of the public pages, fee assignments, and
 					fundraising campaigns it publishes, and for managing who on its staff has access to which parts
@@ -30,7 +30,7 @@ export function TermsPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Acceptable use</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Acceptable use</h2>
 				<p className="mt-2">Accounts may not be used to:</p>
 				<ul className="mt-3 flex list-disc flex-col gap-2 pl-5">
 					<li>Collect or store information about a child beyond what an adult explicitly enters on that child&rsquo;s behalf;</li>
@@ -42,7 +42,7 @@ export function TermsPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Fees, pricing, and payment</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Fees, pricing, and payment</h2>
 				<p className="mt-2">
 					Applicable Rally26 subscription fees, transaction fees, and any other service fees are
 					disclosed to an organization before they take effect. Once live payment processing is available,
@@ -52,7 +52,7 @@ export function TermsPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Family credits</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Family credits</h2>
 				<p className="mt-2">
 					Where offered, family credits are organization-approved credits that may be applied only against
 					eligible fees within the issuing organization. Family credits are not cash, are not withdrawable,
@@ -62,7 +62,7 @@ export function TermsPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Content and public pages</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Content and public pages</h2>
 				<p className="mt-2">
 					An organization retains ownership of the content (text, logos, and images) it uploads, and grants
 					Rally26 the right to host, display, and distribute that content as needed to operate the
@@ -71,7 +71,7 @@ export function TermsPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Third-party services</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Third-party services</h2>
 				<p className="mt-2">
 					Rally26 relies on third-party providers for functions such as identity/authentication, hosting,
 					and — once live — payment processing. Those providers&rsquo; own terms and privacy practices apply
@@ -80,7 +80,7 @@ export function TermsPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Disclaimers and limitation of liability</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Disclaimers and limitation of liability</h2>
 				<p className="mt-2">
 					Rally26 is provided on an "as is" and "as available" basis. To the fullest extent permitted by
 					law, Rally26 disclaims warranties of any kind, and Rally26&rsquo;s liability for any claim
@@ -90,7 +90,7 @@ export function TermsPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Termination</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Termination</h2>
 				<p className="mt-2">
 					Either party may stop using or offering the service as described in an organization&rsquo;s
 					subscription agreement. We may suspend or terminate access to an account that violates these
@@ -99,7 +99,7 @@ export function TermsPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Changes to these terms</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Changes to these terms</h2>
 				<p className="mt-2">
 					We may update these terms as the product changes. We will update the date at the top of this
 					page when we do, and will provide organizations with reasonable notice of material changes.
@@ -107,12 +107,12 @@ export function TermsPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Governing law</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Governing law</h2>
 				<p className="mt-2">To be finalized during legal review.</p>
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Questions</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Questions</h2>
 				<p className="mt-2">
 					Contact us through the{" "}
 					<Link to="/contact" className="text-green-600 hover:underline">

@@ -17,6 +17,9 @@ import com.rally26.communication.persistence.AnnouncementRepository
 import com.rally26.membership.application.MembershipService
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.outbox.application.OutboxWriter
+import com.rally26.settings.application.NotificationDeliveryResolver
+import com.rally26.settings.domain.NotificationDeliveryDecision
+import com.rally26.settings.domain.NotificationTopic
 import com.rally26.team.persistence.TeamRepository
 import com.rally26.tournament.persistence.TournamentRepository
 import io.mockk.every
@@ -52,6 +55,20 @@ class AnnouncementServiceTest {
             auditService,
             ObjectMapper(),
             clock,
+        )
+    private val notificationDeliveryResolver = mockk<NotificationDeliveryResolver>()
+    private val serviceWithResolver =
+        AnnouncementService(
+            repository,
+            membershipService,
+            authorizationService,
+            teamRepository,
+            tournamentRepository,
+            outboxWriter,
+            auditService,
+            ObjectMapper(),
+            clock,
+            notificationDeliveryResolver,
         )
     private val organizationId = UUID.randomUUID()
     private val user = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")
@@ -153,5 +170,69 @@ class AnnouncementServiceTest {
 
         verify(exactly = 0) { repository.publish(any(), any(), any(), any()) }
         verify(exactly = 0) { outboxWriter.write(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a guardian who disabled email for this topic gets no email delivery even though a candidate email was resolved`() {
+        val draft = announcement()
+        val published =
+            draft.copy(
+                status = AnnouncementStatus.PUBLISHED,
+                publishedByUserId = user.userId,
+                publishedAt = Instant.now(clock),
+                recipientCount = 1,
+            )
+        val guardianId = UUID.randomUUID()
+        val candidate =
+            AnnouncementRecipientCandidate(
+                recipientType = AnnouncementRecipientType.GUARDIAN,
+                userId = guardianId,
+                householdId = UUID.randomUUID(),
+                displayName = "Jamie Guardian",
+                email = "guardian@example.com",
+                phone = null,
+            )
+        every { repository.findById(draft.id, organizationId) } returnsMany listOf(draft, published)
+        every { membershipService.requireManagerRole(organizationId, user) } returns membership
+        every { repository.listOrganizationStaff(organizationId) } returns emptyList()
+        every { repository.listOrganizationGuardians(organizationId) } returns listOf(candidate)
+        every { repository.listOrganizationAthletes(organizationId) } returns emptyList()
+        every {
+            notificationDeliveryResolver.resolve(
+                guardianId,
+                candidate.householdId,
+                NotificationTopic.ANNOUNCEMENTS,
+                "guardian@example.com",
+                null,
+            )
+        } returns NotificationDeliveryDecision(inApp = true, email = null, sms = null)
+        every {
+            repository.insertRecipient(
+                draft.id,
+                organizationId,
+                any(),
+                candidate.copy(email = null, phone = null),
+                true,
+                DeliveryStatus.NONE,
+                DeliveryStatus.NONE,
+            )
+        } just runs
+        every { repository.publish(draft.id, organizationId, user.userId, Instant.now(clock)) } returns 1
+        every { outboxWriter.write("announcement", draft.id, organizationId, "announcement.published", any()) } just runs
+        every { auditService.record(user.userId, organizationId, "announcement.published", "ANNOUNCEMENT", draft.id, any()) } just runs
+
+        serviceWithResolver.publish(organizationId, draft.id, user)
+
+        verify(exactly = 1) {
+            repository.insertRecipient(
+                draft.id,
+                organizationId,
+                any(),
+                candidate.copy(email = null, phone = null),
+                true,
+                DeliveryStatus.NONE,
+                DeliveryStatus.NONE,
+            )
+        }
     }
 }

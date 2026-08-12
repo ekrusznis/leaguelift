@@ -76,7 +76,7 @@ function MockupWithOverlay({
 }) {
 	if (!mockupUrl) return null;
 	return (
-		<div className="relative h-48 w-48 overflow-hidden rounded-lg border border-slate-gray/20 bg-ice-white">
+		<div className="relative h-48 w-48 overflow-hidden rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a]">
 			<img src={mockupUrl} alt={altLabel} className="h-full w-full object-cover" />
 			{showLogo && logoPreviewUrl && (
 				<img
@@ -148,7 +148,7 @@ export function SwagPersonalizationPreview({
 						number={isBack ? "" : number}
 						textTopPct={frontTextTopPct}
 					/>
-					<span className="text-xs text-slate-gray">Front</span>
+					<span className="text-xs text-slate-gray dark:text-[#cbd5e1]">Front</span>
 				</div>
 				{isBack && mockupBackUrl && (
 					<div className="flex flex-col items-center gap-1">
@@ -162,11 +162,11 @@ export function SwagPersonalizationPreview({
 							number={number}
 							textTopPct={35}
 						/>
-						<span className="text-xs text-slate-gray">Back — your name/number prints here</span>
+						<span className="text-xs text-slate-gray dark:text-[#cbd5e1]">Back — your name/number prints here</span>
 					</div>
 				)}
 			</div>
-			<p className="text-xs text-slate-gray">Preview is approximate — final placement is set at checkout.</p>
+			<p className="text-xs text-slate-gray dark:text-[#cbd5e1]">Preview is approximate — final placement is set at checkout.</p>
 		</div>
 	);
 }

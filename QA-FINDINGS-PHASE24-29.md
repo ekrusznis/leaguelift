@@ -112,8 +112,10 @@ Same typo/consistency concern as #9 applies to `features/teams/schema.ts` and `T
 ### 13. Backend logging is DEBUG-heavy; email body is deliberately never logged
 Not a bug — `LoggingEmailProvider` deliberately never logs a verification token/link. Meant retrieving a real verification link for browser QA required a direct DB write. Worth a documented dev-only way to retrieve one (e.g., a local-only debug endpoint) if QA passes keep needing this.
 
-### 14. [High, broad impact] Dark mode: white-on-white text across most "light card" panels app-wide
-`grep -rl "bg-pure-white" frontend/src` returns **54 files**. With `<html class="dark">` active, a `bg-pure-white` card's `text-navy` text computes to near-white instead of navy — illegible, though the elements remain functionally clickable. **Founder direction:** the fix is a full per-component dark-mode inversion (real `dark:` background+text treatment), not a contrast patch. Reproduced on both the Swag Shop page and Messages page under different accounts. Not fixed this pass — recommend a dedicated pass given the file count.
+### 14. [High, broad impact] Dark mode: white-on-white text across most "light card" panels app-wide — **RESOLVED 2026-08-11 (Phase 37.5, ADR-113)**
+`grep -rl "bg-pure-white" frontend/src` returns **54 files**. With `<html class="dark">` active, a `bg-pure-white` card's `text-navy` text computes to near-white instead of navy — illegible, though the elements remain functionally clickable. **Founder direction:** the fix is a full per-component dark-mode inversion (real `dark:` background+text treatment), not a contrast patch. Reproduced on both the Swag Shop page and Messages page under different accounts.
+
+Fixed via a real per-component `dark:` utility treatment (not a contrast patch, per the founder's own direction above) — see ADR-113. Live-reverified against the real toggle: the Messages page cited here renders fully inverted and legible in dark mode.
 
 ### 15. [Low, cosmetic] Broken "Logo" image swatch on the public athlete storefront live preview
 On `/swag-shop/athlete/{slug}`, a small `<img alt="Logo placement preview">` renders broken (`naturalWidth: 0`) — the org logo asset isn't served correctly by the local media stub. Everything else on that preview (the real Printify-hosted mockup, the live name/number back-view preview) works correctly.

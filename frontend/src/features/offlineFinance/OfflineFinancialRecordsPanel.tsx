@@ -168,16 +168,16 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 
 	return (
 		<div className="flex flex-col gap-6">
-			<section className="rounded-xl border border-amber-300 bg-amber-50 p-4" aria-label="Offline payment boundary">
-				<h3 className="font-heading font-semibold text-navy">Recorded in Rally26—not processed by Rally26</h3>
-				<p className="mt-1 text-sm text-slate-gray">Use this workspace only after money was received through cash, check, bank transfer, an external terminal, or another outside method. Verification records balanced ledger activity but never creates Stripe IDs or payout-eligible Rally26 earnings.</p>
+			<section className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950 p-4" aria-label="Offline payment boundary">
+				<h3 className="font-heading font-semibold text-navy dark:text-[#f8fafc]">Recorded in Rally26—not processed by Rally26</h3>
+				<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Use this workspace only after money was received through cash, check, bank transfer, an external terminal, or another outside method. Verification records balanced ledger activity but never creates Stripe IDs or payout-eligible Rally26 earnings.</p>
 				<Link className="mt-2 inline-flex text-sm font-medium text-info-blue underline-offset-2 hover:underline" to={appPaths.helpArticle("recording-and-verifying-offline-payments")}>Read the offline-payment how-to</Link>
 			</section>
 
-			<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5" aria-labelledby="offline-entry-heading">
+			<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5" aria-labelledby="offline-entry-heading">
 				<div>
-					<h3 id="offline-entry-heading" className="font-heading text-lg font-semibold text-navy">Record an offline transaction</h3>
-					<p className="mt-1 text-sm text-slate-gray">Create a pending record for a second-person review, or verify immediately when your organization’s controls allow it.</p>
+					<h3 id="offline-entry-heading" className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Record an offline transaction</h3>
+					<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Create a pending record for a second-person review, or verify immediately when your organization’s controls allow it.</p>
 				</div>
 				<div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Offline transaction type">
 					{(["CONTRIBUTION", "SPONSORSHIP", "ORDER"] as const).map((item) => (
@@ -194,7 +194,7 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 							<Field label="Amount" id="offline-contribution-amount" required><input id="offline-contribution-amount" type="number" min="1" step="0.01" value={contributionAmount} onChange={(event) => setContributionAmount(event.target.value)} className={inputClass} placeholder="100.00" /></Field>
 							<Field label="Supporter name" id="offline-contributor-name"><input id="offline-contributor-name" value={contributorName} onChange={(event) => setContributorName(event.target.value)} disabled={anonymous} className={inputClass} /></Field>
 							<Field label="Supporter email" id="offline-contributor-email"><input id="offline-contributor-email" type="email" value={contributorEmail} onChange={(event) => setContributorEmail(event.target.value)} className={inputClass} /></Field>
-							<label className="flex items-center gap-2 text-sm text-navy sm:col-span-2"><input type="checkbox" checked={anonymous} onChange={(event) => setAnonymous(event.target.checked)} /> Record publicly as anonymous</label>
+							<label className="flex items-center gap-2 text-sm text-navy dark:text-[#f8fafc] sm:col-span-2"><input type="checkbox" checked={anonymous} onChange={(event) => setAnonymous(event.target.checked)} /> Record publicly as anonymous</label>
 						</div>
 					)}
 
@@ -234,19 +234,19 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 						<Field label="Received at" id="offline-received-at" required><input id="offline-received-at" type="datetime-local" value={receivedAt} onChange={(event) => setReceivedAt(event.target.value)} className={inputClass} /></Field>
 						<Field label="Internal notes" id="offline-notes"><textarea id="offline-notes" rows={3} value={internalNotes} onChange={(event) => setInternalNotes(event.target.value)} className={inputClass} /></Field>
 					</div>
-					<div className="grid gap-2 rounded-lg bg-ice-white p-4 text-sm text-navy">
+					<div className="grid gap-2 rounded-lg bg-ice-white dark:bg-[#0f172a] p-4 text-sm text-navy dark:text-[#f8fafc]">
 						<label className="flex items-start gap-2"><input type="checkbox" checked={markVerified} onChange={(event) => setMarkVerified(event.target.checked)} className="mt-1" /><span><strong>Verify now.</strong> Use only when the receipt, deposit, or external payment source has already been checked.</span></label>
-						<label className={`flex items-start gap-2 ${acknowledgementEmailAvailable ? "" : "text-slate-gray"}`}><input type="checkbox" checked={sendAcknowledgement && acknowledgementEmailAvailable} disabled={!acknowledgementEmailAvailable} onChange={(event) => setSendAcknowledgement(event.target.checked)} className="mt-1" /><span>Send an acknowledgement after verification. Enter a payer email to enable this option.</span></label>
+						<label className={`flex items-start gap-2 ${acknowledgementEmailAvailable ? "" : "text-slate-gray dark:text-[#cbd5e1]"}`}><input type="checkbox" checked={sendAcknowledgement && acknowledgementEmailAvailable} disabled={!acknowledgementEmailAvailable} onChange={(event) => setSendAcknowledgement(event.target.checked)} className="mt-1" /><span>Send an acknowledgement after verification. Enter a payer email to enable this option.</span></label>
 					</div>
-					{formError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-error-red">{formError}</p>}
-					{successMessage && <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">{successMessage}</p>}
+					{formError && <p role="alert" className="rounded-lg bg-red-50 dark:bg-red-950 p-3 text-sm text-error-red">{formError}</p>}
+					{successMessage && <p role="status" className="rounded-lg bg-green-50 dark:bg-green-950 p-3 text-sm text-green-800">{successMessage}</p>}
 					<Button type="submit" className="justify-self-start" disabled={isSubmitting}>{isSubmitting ? "Recording…" : markVerified ? "Record and verify" : "Record for verification"}</Button>
 				</form>
 			</section>
 
-			<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5" aria-labelledby="offline-records-heading">
+			<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5" aria-labelledby="offline-records-heading">
 				<div className="flex flex-wrap items-start justify-between gap-3">
-					<div><h3 id="offline-records-heading" className="font-heading text-lg font-semibold text-navy">Offline financial records</h3><p className="mt-1 text-sm text-slate-gray">Pending records do not affect confirmed totals until an authorized manager verifies them.</p></div>
+					<div><h3 id="offline-records-heading" className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Offline financial records</h3><p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Pending records do not affect confirmed totals until an authorized manager verifies them.</p></div>
 					<div className="flex flex-wrap gap-2">
 						<label className="sr-only" htmlFor="offline-status-filter">Verification status</label><select id="offline-status-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as OfflineVerificationStatus | "")} className={inputClass}><option value="">All statuses</option><option value="PENDING_VERIFICATION">Pending verification</option><option value="VERIFIED">Verified</option><option value="REVERSED">Reversed</option></select>
 						<label className="sr-only" htmlFor="offline-type-filter">Record type</label><select id="offline-type-filter" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as OfflineFinancialRecordType | "")} className={inputClass}><option value="">All types</option><option value="CONTRIBUTION">Contributions</option><option value="SPONSORSHIP">Sponsorships</option><option value="ORDER">Orders</option></select>
@@ -258,8 +258,8 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 				{records.data && records.data.items.length > 0 && (
 					<div className="mt-4 overflow-x-auto">
 						<table className="min-w-full border-separate border-spacing-0 text-left text-sm">
-							<thead><tr className="text-slate-gray"><th className="border-b border-slate-gray/20 px-3 py-2">Received</th><th className="border-b border-slate-gray/20 px-3 py-2">Type</th><th className="border-b border-slate-gray/20 px-3 py-2">Details</th><th className="border-b border-slate-gray/20 px-3 py-2">Method</th><th className="border-b border-slate-gray/20 px-3 py-2">Amount</th><th className="border-b border-slate-gray/20 px-3 py-2">Status</th><th className="border-b border-slate-gray/20 px-3 py-2"><span className="sr-only">Actions</span></th></tr></thead>
-							<tbody>{records.data.items.map((record) => <tr key={record.id}><td className="border-b border-slate-gray/10 px-3 py-3 whitespace-nowrap">{new Date(record.receivedAt).toLocaleDateString()}</td><td className="border-b border-slate-gray/10 px-3 py-3">{humanize(record.recordType)}</td><td className="border-b border-slate-gray/10 px-3 py-3"><p className="font-medium text-navy">{record.displayLabel}</p><p className="text-xs text-slate-gray">{record.payerName ?? "No payer name"}{record.paymentReference ? ` · ${record.paymentReference}` : ""}</p></td><td className="border-b border-slate-gray/10 px-3 py-3">{humanize(record.paymentMethod)}</td><td className="border-b border-slate-gray/10 px-3 py-3 whitespace-nowrap">{formatMoney(record.amountMinor, record.currency)}</td><td className="border-b border-slate-gray/10 px-3 py-3"><span className={`rounded-full px-2 py-1 text-xs font-medium ${record.verificationStatus === "VERIFIED" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>{humanize(record.verificationStatus)}</span></td><td className="border-b border-slate-gray/10 px-3 py-3">{record.verificationStatus === "PENDING_VERIFICATION" && <Button type="button" variant="secondary" disabled={verifyRecord.isPending} onClick={() => verifyRecord.mutate(record.id)}>Verify</Button>}</td></tr>)}</tbody>
+							<thead><tr className="text-slate-gray dark:text-[#cbd5e1]"><th className="border-b border-slate-gray/20 px-3 py-2">Received</th><th className="border-b border-slate-gray/20 px-3 py-2">Type</th><th className="border-b border-slate-gray/20 px-3 py-2">Details</th><th className="border-b border-slate-gray/20 px-3 py-2">Method</th><th className="border-b border-slate-gray/20 px-3 py-2">Amount</th><th className="border-b border-slate-gray/20 px-3 py-2">Status</th><th className="border-b border-slate-gray/20 px-3 py-2"><span className="sr-only">Actions</span></th></tr></thead>
+							<tbody>{records.data.items.map((record) => <tr key={record.id}><td className="border-b border-slate-gray/10 px-3 py-3 whitespace-nowrap">{new Date(record.receivedAt).toLocaleDateString()}</td><td className="border-b border-slate-gray/10 px-3 py-3">{humanize(record.recordType)}</td><td className="border-b border-slate-gray/10 px-3 py-3"><p className="font-medium text-navy dark:text-[#f8fafc]">{record.displayLabel}</p><p className="text-xs text-slate-gray dark:text-[#cbd5e1]">{record.payerName ?? "No payer name"}{record.paymentReference ? ` · ${record.paymentReference}` : ""}</p></td><td className="border-b border-slate-gray/10 px-3 py-3">{humanize(record.paymentMethod)}</td><td className="border-b border-slate-gray/10 px-3 py-3 whitespace-nowrap">{formatMoney(record.amountMinor, record.currency)}</td><td className="border-b border-slate-gray/10 px-3 py-3"><span className={`rounded-full px-2 py-1 text-xs font-medium ${record.verificationStatus === "VERIFIED" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>{humanize(record.verificationStatus)}</span></td><td className="border-b border-slate-gray/10 px-3 py-3">{record.verificationStatus === "PENDING_VERIFICATION" && <Button type="button" variant="secondary" disabled={verifyRecord.isPending} onClick={() => verifyRecord.mutate(record.id)}>Verify</Button>}</td></tr>)}</tbody>
 						</table>
 					</div>
 				)}
@@ -280,9 +280,9 @@ function OrderLineEditor({ organizationId, line, index, products, onChange, onRe
 }
 
 function Field({ label, id, required = false, children }: { label: string; id: string; required?: boolean; children: ReactNode }) {
-	return <div className="flex flex-col gap-1"><label htmlFor={id} className="text-sm font-medium text-navy">{label}{required && <span aria-hidden> *</span>}</label>{children}</div>;
+	return <div className="flex flex-col gap-1"><label htmlFor={id} className="text-sm font-medium text-navy dark:text-[#f8fafc]">{label}{required && <span aria-hidden> *</span>}</label>{children}</div>;
 }
 
-const inputClass = "min-h-11 rounded-md border border-slate-gray/30 bg-pure-white px-3 py-2 text-navy";
+const inputClass = "min-h-11 rounded-md border border-slate-gray/30 bg-pure-white dark:bg-[#111827] px-3 py-2 text-navy dark:text-[#f8fafc]";
 function formatMoney(amountMinor: number, currency: string) { return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amountMinor / 100); }
 function humanize(value: string) { return value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }

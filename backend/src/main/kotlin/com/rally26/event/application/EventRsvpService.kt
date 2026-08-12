@@ -20,6 +20,9 @@ import com.rally26.identity.persistence.AppUserRepository
 import com.rally26.outbox.application.OutboxWriter
 import com.rally26.participant.domain.Participant
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.settings.application.NotificationDeliveryResolver
+import com.rally26.settings.domain.NotificationDeliveryDecision
+import com.rally26.settings.domain.NotificationTopic
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -54,6 +57,7 @@ class EventRsvpService(
     private val eventService: EventService,
     private val appUserRepository: AppUserRepository,
     private val outboxWriter: OutboxWriter,
+    private val notificationDeliveryResolver: NotificationDeliveryResolver? = null,
 ) {
     @Transactional
     fun submit(
@@ -109,7 +113,18 @@ class EventRsvpService(
             authorizationService
                 .listTeamStaffUserIds(event.organizationId, teamId, Capabilities.EVENT_RSVP_READ_TEAM)
                 .filter { it != currentUser.userId }
-                .mapNotNull { appUserRepository.findById(it)?.email }
+                .mapNotNull { staffId ->
+                    val email = appUserRepository.findById(staffId)?.email ?: return@mapNotNull null
+                    val decision =
+                        notificationDeliveryResolver?.resolve(
+                            userId = staffId,
+                            householdId = null,
+                            topic = NotificationTopic.RSVP,
+                            candidateEmail = email,
+                            candidatePhone = null,
+                        ) ?: NotificationDeliveryDecision(inApp = true, email = email, sms = null)
+                    decision.email
+                }
         val displayTitle = eventService.displayTitleFor(event, event.organizationId)
         outboxWriter.write(
             aggregateType = "event_rsvp",

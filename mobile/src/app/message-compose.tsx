@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
@@ -97,10 +97,11 @@ export default function MessageComposeScreen() {
   const sending = createThread.isPending || createConversation.isPending;
 
   return (
-    <ThemedView style={styles.container}>
-      <ScreenHeader
-        title={step === 'audience' ? 'New Message' : step === 'contacts' ? 'Select Recipients' : 'Message'}
-      />
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ThemedView style={styles.container}>
+        <ScreenHeader
+          title={step === 'audience' ? 'New Message' : step === 'contacts' ? 'Select Recipients' : 'Message'}
+        />
 
       {step === 'audience' && (
         <ScrollView contentContainerStyle={styles.list}>
@@ -159,7 +160,7 @@ export default function MessageComposeScreen() {
 
       {step === 'compose' && (
         <View style={styles.composeContainer}>
-          <ScrollView contentContainerStyle={styles.list}>
+          <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
             <ThemedText type="small" themeColor="textSecondary">
               Title
             </ThemedText>
@@ -189,7 +190,8 @@ export default function MessageComposeScreen() {
           </View>
         </View>
       )}
-    </ThemedView>
+      </ThemedView>
+    </KeyboardAvoidingView>
   );
 }
 

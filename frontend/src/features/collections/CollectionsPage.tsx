@@ -44,13 +44,13 @@ export function CollectionsPage() {
 				<Link to={`/app/organizations/${organizationId}`} className="mb-2 inline-block text-sm text-azure-blue hover:underline">
 					← Back to organization
 				</Link>
-				<h1 className="font-heading text-2xl font-bold text-navy">Collections</h1>
-				<p className="text-slate-gray">Org-wide fee balances across all households.</p>
+				<h1 className="font-heading text-2xl font-bold text-navy dark:text-[#f8fafc]">Collections</h1>
+				<p className="text-slate-gray dark:text-[#cbd5e1]">Org-wide fee balances across all households.</p>
 			</div>
 
 			<div className="flex flex-wrap items-end gap-3">
 				<div className="flex flex-col gap-1">
-					<label htmlFor="collections-status" className="text-sm font-medium text-navy">Status</label>
+					<label htmlFor="collections-status" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Status</label>
 					<select
 						id="collections-status"
 						value={status}
@@ -67,7 +67,7 @@ export function CollectionsPage() {
 				</div>
 				<div className="flex items-center gap-2 pb-1">
 					<input id="collections-overdue" type="checkbox" checked={overdueOnly} onChange={(e) => setOverdueOnly(e.target.checked)} className="h-4 w-4" />
-					<label htmlFor="collections-overdue" className="text-sm font-medium text-navy">Overdue only</label>
+					<label htmlFor="collections-overdue" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Overdue only</label>
 				</div>
 				<Button type="button" variant="secondary" onClick={handleExport} disabled={isExporting}>
 					{isExporting ? "Exporting…" : "Export CSV"}
@@ -83,7 +83,7 @@ export function CollectionsPage() {
 			{data && data.items.length > 0 && (
 				<div className="overflow-x-auto rounded-lg border border-slate-gray/20">
 					<table className="w-full text-left text-sm">
-						<thead className="bg-ice-white text-slate-gray">
+						<thead className="bg-ice-white dark:bg-[#0f172a] text-slate-gray dark:text-[#cbd5e1]">
 							<tr>
 								<th className="p-3 font-medium">Household</th>
 								<th className="p-3 font-medium">Participant</th>
@@ -104,13 +104,13 @@ export function CollectionsPage() {
 											{row.householdName}
 										</Link>
 									</td>
-									<td className="p-3 text-slate-gray">{row.participantName ?? "—"}</td>
+									<td className="p-3 text-slate-gray dark:text-[#cbd5e1]">{row.participantName ?? "—"}</td>
 									<td className="p-3">{row.description}</td>
 									<td className="p-3">{formatAmount(row.originalAmountMinor, row.currency)}</td>
 									<td className="p-3">{formatAmount(row.paidMinor, row.currency)}</td>
 									<td className="p-3">{formatAmount(row.adjustedMinor, row.currency)}</td>
 									<td className="p-3 font-semibold">{formatAmount(row.balanceMinor, row.currency)}</td>
-									<td className="p-3 text-slate-gray">{row.dueDate ?? "—"}</td>
+									<td className="p-3 text-slate-gray dark:text-[#cbd5e1]">{row.dueDate ?? "—"}</td>
 									<td className="p-3">
 										<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[row.status]}`}>
 											{STATUS_LABELS[row.status]}

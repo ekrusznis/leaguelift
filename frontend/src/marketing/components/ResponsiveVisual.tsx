@@ -22,7 +22,7 @@ type ResponsiveVisualProps = {
  */
 export function ResponsiveVisual({ src, alt, width, height }: ResponsiveVisualProps) {
 	return (
-		<div className="overflow-hidden rounded-[22px] border border-white/[0.12] bg-white shadow-[0_22px_60px_rgba(0,0,0,0.22)]">
+		<div className="overflow-hidden rounded-[22px] border border-white/[0.12] bg-white dark:bg-[#111827] shadow-[0_22px_60px_rgba(0,0,0,0.22)]">
 			<img src={src} alt={alt} width={width} height={height} loading="lazy" className="h-auto w-full" />
 		</div>
 	);

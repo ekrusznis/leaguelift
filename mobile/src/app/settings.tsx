@@ -129,6 +129,10 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <ThemedText type="smallBold">Notifications</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          Default means something different per channel: in-app stays on, email follows your household&rsquo;s email-reminder setting, and SMS is always off until
+          you grant consent below and set that topic to On.
+        </ThemedText>
         {notifications.isPending && <LoadingState label="Loading…" />}
         {notifications.isError && <ErrorState message="Could not load notification preferences." onRetry={() => notifications.refetch()} />}
         {notifications.data && (
@@ -171,7 +175,7 @@ export default function SettingsScreen() {
             {(['inApp', 'email', 'sms'] as const).map((channel) => (
               <View key={channel} style={styles.channelRow}>
                 <ThemedText type="small" themeColor="textSecondary" style={styles.channelLabel}>
-                  {channel === 'inApp' ? 'In-app' : channel === 'email' ? 'Email' : 'SMS'}
+                  {channel === 'inApp' ? 'In-app' : channel === 'email' ? 'Email (Default follows household setting)' : 'SMS (Default is always off)'}
                 </ThemedText>
                 <View style={styles.optionRow}>
                   {(['DEFAULT', 'ENABLED', 'DISABLED'] as const).map((state) => {

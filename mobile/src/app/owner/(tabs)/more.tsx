@@ -37,6 +37,9 @@ export default function OwnerMoreScreen() {
       onPress: () => router.push(webEmbedRoute(`/app/organizations/${organizationId}/sponsorships`, 'Sponsorships')),
     },
     { icon: 'notifications-outline', label: 'My Announcements', onPress: () => router.push('/announcements') },
+    { icon: 'document-text-outline', label: 'Documents', onPress: () => router.push('/owner/documents') },
+    { icon: 'checkbox-outline', label: 'Action Center', onPress: () => router.push('/action-center') },
+    { icon: 'help-circle-outline', label: 'Help Center', onPress: () => router.push('/help') },
     { icon: 'settings-outline', label: 'Settings', onPress: () => router.push('/settings') },
   ];
 

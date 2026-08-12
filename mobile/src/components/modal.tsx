@@ -1,21 +1,29 @@
 import type { ReactNode } from 'react';
-import { Modal as RNModal, Pressable, StyleSheet } from 'react-native';
+import { KeyboardAvoidingView, Modal as RNModal, Platform, Pressable, StyleSheet } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
 
 import { ThemedView } from './themed-view';
 
-/** Bottom-sheet-style modal — RN's built-in Modal, no extra gesture-library dependency at this scaffold stage. */
+/**
+ * Bottom-sheet-style modal — RN's built-in Modal, no extra gesture-library dependency
+ * at this scaffold stage. RN's Modal renders in its own native window/layer, so
+ * KeyboardAvoidingView must live inside it (wrapping from outside the RNModal has no
+ * effect) — any caller passing a TextInput as a child now gets the keyboard pushed
+ * above the field automatically instead of covering it (Phase 37 slice, founder report).
+ */
 export function Modal({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: ReactNode }) {
   return (
     <RNModal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.sheetBackdrop} onPress={onClose}>
-        <Pressable onPress={(e) => e.stopPropagation()}>
-          <ThemedView type="backgroundElement" style={styles.sheet}>
-            {children}
-          </ThemedView>
+      <KeyboardAvoidingView style={styles.sheetBackdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <Pressable style={styles.sheetBackdrop} onPress={onClose}>
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <ThemedView type="backgroundElement" style={styles.sheet}>
+              {children}
+            </ThemedView>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </RNModal>
   );
 }

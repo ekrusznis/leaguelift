@@ -11,7 +11,7 @@ export function PrivacyPage() {
 			</p>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Who this policy covers</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Who this policy covers</h2>
 				<p className="mt-2">
 					Rally26 accounts are created and controlled by adults. This includes organization owners and
 					administrators, coaches and team staff, and parents or guardians managing a household. Rally26
@@ -20,7 +20,7 @@ export function PrivacyPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Information we collect</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Information we collect</h2>
 				<p className="mt-2">We collect the following categories of information:</p>
 				<ul className="mt-3 flex list-disc flex-col gap-2 pl-5">
 					<li>
@@ -57,7 +57,7 @@ export function PrivacyPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Children&rsquo;s information</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Children&rsquo;s information</h2>
 				<p className="mt-2">
 					Rally26 does not knowingly collect information directly from children, and children do not have
 					their own Rally26 login. Any participant (athlete) record is entered and controlled by the
@@ -68,7 +68,7 @@ export function PrivacyPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">How we use information</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">How we use information</h2>
 				<p className="mt-2">We use the information above to:</p>
 				<ul className="mt-3 flex list-disc flex-col gap-2 pl-5">
 					<li>Operate organization, team, tournament, and household accounts;</li>
@@ -80,7 +80,7 @@ export function PrivacyPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">How we share information</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">How we share information</h2>
 				<p className="mt-2">
 					We do not sell personal information. We share information only:
 				</p>
@@ -92,7 +92,7 @@ export function PrivacyPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Data retention</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Data retention</h2>
 				<p className="mt-2">
 					We retain account, organization, household, and financial records for as long as the account is
 					active, plus any additional period needed for legal, accounting, or audit purposes. Audit records
@@ -102,7 +102,7 @@ export function PrivacyPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Your choices and rights</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Your choices and rights</h2>
 				<p className="mt-2">
 					You may ask us to access, correct, export, or delete information associated with your account or
 					household by contacting us. We will honor these requests to the extent we are able, subject to
@@ -113,7 +113,7 @@ export function PrivacyPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Security</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Security</h2>
 				<p className="mt-2">
 					See our{" "}
 					<Link to="/security" className="text-green-600 hover:underline">
@@ -124,7 +124,7 @@ export function PrivacyPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Changes to this policy</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Changes to this policy</h2>
 				<p className="mt-2">
 					We may update this policy as the product changes. We will update the date at the top of this page
 					when we do.
@@ -132,7 +132,7 @@ export function PrivacyPage() {
 			</section>
 
 			<section>
-				<h2 className="font-heading text-lg font-bold text-navy-900">Questions</h2>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Questions</h2>
 				<p className="mt-2">
 					Contact us through the{" "}
 					<Link to="/contact" className="text-green-600 hover:underline">

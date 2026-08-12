@@ -54,7 +54,7 @@ export function MobileNavigation({ open, onClose }: MobileNavigationProps) {
 			<nav className="flex flex-1 flex-col gap-6 px-5 py-4" aria-label="Primary">
 				{PRIMARY_NAV.map((group) => (
 					<div key={group.label}>
-						<p className="font-heading text-xs font-semibold uppercase tracking-wide text-slate-500">{group.label}</p>
+						<p className="font-heading text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-[#cbd5e1]">{group.label}</p>
 						<ul className="mt-2 flex flex-col">
 							{group.items.map((item) => (
 								<li key={item.label}>

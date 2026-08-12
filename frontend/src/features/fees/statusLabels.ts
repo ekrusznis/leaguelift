@@ -12,6 +12,6 @@ export const STATUS_COLORS: Record<FeeAssignmentStatus, string> = {
 	OPEN: "bg-amber-100 text-amber-800",
 	PARTIALLY_PAID: "bg-blue-100 text-blue-800",
 	PAID: "bg-green-100 text-green-800",
-	WAIVED: "bg-slate-100 text-slate-600",
+	WAIVED: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-[#cbd5e1]",
 	CANCELLED: "bg-red-100 text-red-700",
 };

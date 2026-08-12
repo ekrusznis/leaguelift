@@ -29,9 +29,9 @@ function statusClasses(status: Rally26Event["status"]) {
 			return "bg-gold-100 text-gold-800";
 		case "SCHEDULED":
 		case "COMPLETED":
-			return "bg-green-50 text-green-700";
+			return "bg-green-50 dark:bg-green-950 text-green-700";
 		default:
-			return "bg-slate-100 text-slate-600";
+			return "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-[#cbd5e1]";
 	}
 }
 
@@ -92,7 +92,7 @@ export function EventListPanel({
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex flex-wrap items-center justify-between gap-3">
-				<p className="text-sm text-slate-gray">
+				<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 					{events.length} event{events.length === 1 ? "" : "s"}
 				</p>
 				{canManage && mutableScope && (
@@ -141,11 +141,11 @@ export function EventListPanel({
 						if (participantId) search.set("participantId", participantId);
 						search.set("returnTo", `${location.pathname}${location.search}`);
 						return (
-							<li key={event.id} className="rounded-xl border border-slate-gray/20 bg-pure-white p-4">
+							<li key={event.id} className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-4">
 								<div className="flex flex-wrap items-start justify-between gap-3">
 									<div className="min-w-0 flex-1">
 										<div className="flex flex-wrap items-center gap-2">
-											<Link to={appPaths.event(event.organizationId, event.id, search)} className="break-words font-heading font-semibold text-navy hover:text-azure-blue hover:underline">
+											<Link to={appPaths.event(event.organizationId, event.id, search)} className="break-words font-heading font-semibold text-navy dark:text-[#f8fafc] hover:text-azure-blue hover:underline">
 												{event.displayTitle}
 											</Link>
 											<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusClasses(event.status)}`}>{event.status}</span>
@@ -156,11 +156,11 @@ export function EventListPanel({
 												? `${formatEventAllDayDate(event.allDayDate)} (all day)`
 												: (formatEventDateTime(event.startAt, event.timezone) ?? "To be determined")}
 										</p>
-										<p className="mt-1 text-sm text-slate-gray">
+										<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">
 											{event.allDayDate ? "All day" : formatDateTime(event.startAt, event.timezone)}
 											{event.arrivalAt ? ` · Arrive ${formatDateTime(event.arrivalAt, event.timezone)}` : ""}
 										</p>
-										<p className="text-sm text-slate-gray">
+										<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 											{[event.venueName, event.area, event.address].filter(Boolean).join(" · ") || "Location to be determined"}
 										</p>
 									</div>
@@ -168,7 +168,7 @@ export function EventListPanel({
 										<Button type="button" variant="secondary" onClick={() => downloadCalendar(event)}>Add to calendar</Button>
 										<Link
 											to={appPaths.event(event.organizationId, event.id, search)}
-											className="inline-flex min-h-11 items-center rounded-md border border-slate-gray/30 bg-pure-white px-4 py-2 text-sm font-medium text-navy hover:bg-ice-white"
+											className="inline-flex min-h-11 items-center rounded-md border border-slate-gray/30 bg-pure-white dark:bg-[#111827] px-4 py-2 text-sm font-medium text-navy dark:text-[#f8fafc] hover:bg-ice-white hover:dark:bg-[#0f172a]"
 										>
 											View details
 										</Link>
@@ -268,7 +268,7 @@ function CreateEventForm({
 
 	return (
 		<form
-			className="rounded-xl border border-slate-gray/20 bg-ice-white p-4"
+			className="rounded-xl border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4"
 			onSubmit={async (event) => {
 				event.preventDefault();
 				const startInstant = isAllDay ? null : toInstant(startAt);
@@ -293,26 +293,26 @@ function CreateEventForm({
 				});
 			}}
 		>
-			<h3 className="font-heading text-base font-semibold text-navy">New event</h3>
-			<p className="mt-1 text-sm text-slate-gray">The event starts as a draft. A template only supplies defaults; every field can be reviewed before creation.</p>
+			<h3 className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">New event</h3>
+			<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">The event starts as a draft. A template only supplies defaults; every field can be reviewed before creation.</p>
 			<div className="mt-4 grid gap-3 md:grid-cols-2">
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
 					Reusable template
 					<select
 						value={selectedTemplateId}
 						onChange={(event) => selectTemplate(event.target.value)}
 						disabled={templatesQuery.isLoading || templatesQuery.isError}
-						className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2"
+						className="min-h-11 rounded-md border border-slate-gray/30 bg-white dark:bg-[#111827] px-3 py-2"
 					>
 						<option value="">Start without a template</option>
 						{templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
 					</select>
 					{templatesQuery.isError && <span className="text-xs font-normal text-error-red">Templates could not be loaded. You can still create the event manually.</span>}
-					{selectedTemplate && templateTimingSummary(selectedTemplate) && <span className="text-xs font-normal text-slate-gray">{templateTimingSummary(selectedTemplate)}</span>}
+					{selectedTemplate && templateTimingSummary(selectedTemplate) && <span className="text-xs font-normal text-slate-gray dark:text-[#cbd5e1]">{templateTimingSummary(selectedTemplate)}</span>}
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Event type
-					<select value={eventType} onChange={(event) => setEventType(event.target.value as EventType)} className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2">
+					<select value={eventType} onChange={(event) => setEventType(event.target.value as EventType)} className="min-h-11 rounded-md border border-slate-gray/30 bg-white dark:bg-[#111827] px-3 py-2">
 						<option value="COMPETITION">Game / match / competition</option>
 						<option value="PRACTICE">Practice</option>
 						<option value="MEETING">Meeting</option>
@@ -320,19 +320,19 @@ function CreateEventForm({
 						<option value="OTHER">Other</option>
 					</select>
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Title
 					<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Optional custom title" maxLength={200} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
 					Description
 					<textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} rows={3} className="rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Opponent
 					<input value={opponentName} onChange={(event) => setOpponentName(event.target.value)} placeholder="External opponent name" maxLength={120} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Timezone
 					<input
 						required
@@ -345,7 +345,7 @@ function CreateEventForm({
 						className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
 					/>
 				</label>
-				<label className="flex min-h-11 items-center gap-2 text-sm font-medium text-navy md:col-span-2">
+				<label className="flex min-h-11 items-center gap-2 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
 					<input
 						type="checkbox"
 						checked={isAllDay}
@@ -355,53 +355,53 @@ function CreateEventForm({
 					All-day event
 				</label>
 				{isAllDay ? (
-					<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+					<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 						Date
 						<input type="date" value={allDayDate} onChange={(event) => setAllDayDate(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 					</label>
 				) : (
 					<>
-						<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 							Start time
 							<input type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 						</label>
-						<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 							End time
 							<input type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 						</label>
-						<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 							Arrival time
 							<input type="datetime-local" value={arrivalAt} onChange={(event) => setArrivalAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 						</label>
-						<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 							Meeting time
 							<input type="datetime-local" value={meetingAt} onChange={(event) => setMeetingAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 						</label>
 					</>
 				)}
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Venue
 					<input value={venueName} onChange={(event) => setVenueName(event.target.value)} maxLength={200} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Field / court / area
 					<input value={area} onChange={(event) => setArea(event.target.value)} maxLength={120} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
 					Address
 					<input value={address} onChange={(event) => setAddress(event.target.value)} maxLength={300} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
 					Meeting point
 					<input value={meetingPoint} onChange={(event) => setMeetingPoint(event.target.value)} maxLength={300} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
 					Directions notes
 					<textarea value={directionsNotes} onChange={(event) => setDirectionsNotes(event.target.value)} maxLength={1000} rows={3} className="rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Visibility
-					<select value={visibility} onChange={(event) => setVisibility(event.target.value as EventVisibility)} className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2">
+					<select value={visibility} onChange={(event) => setVisibility(event.target.value as EventVisibility)} className="min-h-11 rounded-md border border-slate-gray/30 bg-white dark:bg-[#111827] px-3 py-2">
 						<option value="TEAM">Team</option>
 						<option value="ORGANIZATION">Organization</option>
 						<option value="PUBLIC">Public</option>

@@ -6,12 +6,12 @@ function ChecklistItem({ done, label }: { done: boolean; label: string }) {
 			<span
 				aria-hidden="true"
 				className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${
-					done ? "bg-victory-green text-pure-white" : "border border-slate-gray/40 text-slate-gray"
+					done ? "bg-victory-green text-pure-white" : "border border-slate-gray/40 text-slate-gray dark:text-[#cbd5e1]"
 				}`}
 			>
 				{done ? "✓" : ""}
 			</span>
-			<span className={done ? "text-navy" : "text-slate-gray"}>{label}</span>
+			<span className={done ? "text-navy dark:text-[#f8fafc]" : "text-slate-gray dark:text-[#cbd5e1]"}>{label}</span>
 			<span className="sr-only">{done ? "complete" : "incomplete"}</span>
 		</li>
 	);
@@ -26,7 +26,7 @@ export function OnboardingChecklist({ organizationId }: { organizationId: string
 
 	return (
 		<div className="rounded-lg border border-championship-gold/40 bg-championship-gold/10 p-4">
-			<h2 className="font-heading font-semibold text-navy">Onboarding</h2>
+			<h2 className="font-heading font-semibold text-navy dark:text-[#f8fafc]">Onboarding</h2>
 			<ul className="mt-2 flex flex-col gap-1">
 				<ChecklistItem done={data.profileComplete} label="Complete organization profile (sports + contact email)" />
 				<ChecklistItem done={data.hasAdditionalAdministrator} label="Invite a second administrator" />

@@ -22,6 +22,8 @@ export default function MoreScreen() {
       onPress: () => router.push(webEmbedRoute(`/app/organizations/${organizationId}/swag-shop/order`, 'Swag Shop')),
     },
     { icon: 'megaphone-outline', label: 'Announcements', onPress: () => router.push('/announcements') },
+    { icon: 'checkbox-outline', label: 'Action Center', onPress: () => router.push('/action-center') },
+    { icon: 'help-circle-outline', label: 'Help Center', onPress: () => router.push('/help') },
     { icon: 'settings-outline', label: 'Settings', onPress: () => router.push('/settings') },
   ];
 

@@ -107,11 +107,11 @@ export function HelpPage() {
 				</PageContainer>
 			</section>
 
-			<section className="bg-white py-16 sm:py-20">
+			<section className="bg-white dark:bg-[#111827] py-16 sm:py-20">
 				<PageContainer className="mx-auto flex max-w-3xl flex-col gap-10">
 					{HELP_CATEGORIES.map((category) => (
 						<div key={category.category}>
-							<h2 className="font-heading text-lg font-bold text-navy-900">{category.category}</h2>
+							<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">{category.category}</h2>
 							<div className="mt-4">
 								<FaqAccordion items={category.items} />
 							</div>

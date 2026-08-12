@@ -24,12 +24,12 @@ export function PlatformReportsPage() {
 		<div className="flex flex-col gap-6">
 			<div>
 				<Link to={appPaths.dashboard()} className="mb-2 inline-block text-sm text-azure-blue hover:underline">← Back to platform dashboard</Link>
-				<h1 className="font-heading text-2xl font-bold text-navy">Platform Reports</h1>
-				<p className="mt-1 text-slate-gray">Platform growth, transaction volume, refunds, and integration health.</p>
+				<h1 className="font-heading text-2xl font-bold text-navy dark:text-[#f8fafc]">Platform Reports</h1>
+				<p className="mt-1 text-slate-gray dark:text-[#cbd5e1]">Platform growth, transaction volume, refunds, and integration health.</p>
 			</div>
-			<div className="flex flex-wrap gap-3 rounded-xl border border-slate-gray/20 bg-ice-white p-4">
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">From<input type="date" value={range.from} onChange={(event) => setRange((current) => ({ ...current, from: event.target.value }))} className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2" /></label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">To<input type="date" value={range.to} onChange={(event) => setRange((current) => ({ ...current, to: event.target.value }))} className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2" /></label>
+			<div className="flex flex-wrap gap-3 rounded-xl border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">From<input type="date" value={range.from} onChange={(event) => setRange((current) => ({ ...current, from: event.target.value }))} className="min-h-11 rounded-md border border-slate-gray/30 bg-white dark:bg-[#111827] px-3 py-2" /></label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">To<input type="date" value={range.to} onChange={(event) => setRange((current) => ({ ...current, to: event.target.value }))} className="min-h-11 rounded-md border border-slate-gray/30 bg-white dark:bg-[#111827] px-3 py-2" /></label>
 			</div>
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				<Metric label="New organizations" value={String(report.data.newOrganizations)} />
@@ -46,5 +46,5 @@ export function PlatformReportsPage() {
 }
 
 function Metric({ label, value, detail }: { label: string; value: string; detail?: string }) {
-	return <div className="rounded-xl border border-slate-gray/20 bg-pure-white p-4"><p className="text-xs font-medium uppercase tracking-wide text-slate-gray">{label}</p><p className="mt-2 font-heading text-2xl font-bold text-navy">{value}</p>{detail && <p className="mt-1 text-xs text-slate-gray">{detail}</p>}</div>;
+	return <div className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-4"><p className="text-xs font-medium uppercase tracking-wide text-slate-gray dark:text-[#cbd5e1]">{label}</p><p className="mt-2 font-heading text-2xl font-bold text-navy dark:text-[#f8fafc]">{value}</p>{detail && <p className="mt-1 text-xs text-slate-gray dark:text-[#cbd5e1]">{detail}</p>}</div>;
 }

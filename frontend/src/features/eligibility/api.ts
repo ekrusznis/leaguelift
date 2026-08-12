@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/apiClient";
 import type {
+	ClearanceStatus,
 	CreateEligibilityRequirementRequest,
 	CreateEligibilityRequirementVersionRequest,
+	EligibilityClearance,
 	EligibilityRequirement,
 	ParticipantRequirement,
 	SubmitGuardianEvidenceRequest,
@@ -74,5 +76,17 @@ export function useSubmitGuardianEvidence(organizationId: string, participantId:
 				{ method: "POST", body: values },
 			),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: participantRequirementsQueryKey(organizationId, participantId) }),
+	});
+}
+
+/** GET .../teams/{teamId}/eligibility/clearance?status= — coach roster clearance view (Phase 31 slice 31.1, wired to a real UI in Phase 37 slice 37.1). */
+export function useTeamEligibilityClearance(organizationId: string, teamId: string, statusFilter?: ClearanceStatus | null) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "teams", teamId, "eligibility", "clearance", statusFilter ?? null],
+		queryFn: () =>
+			apiFetch<EligibilityClearance[]>(
+				`/organizations/${organizationId}/teams/${teamId}/eligibility/clearance${statusFilter ? `?status=${statusFilter}` : ""}`,
+			),
+		enabled: !!organizationId && !!teamId,
 	});
 }

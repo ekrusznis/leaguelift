@@ -77,27 +77,27 @@ export function SettingsPage() {
 		<div className="flex flex-col gap-6">
 			<div>
 				<p className="text-sm font-semibold uppercase tracking-wide text-victory-green">Personal settings</p>
-				<h1 className="mt-1 font-heading text-3xl font-bold text-navy-900">Settings</h1>
-				<p className="mt-2 max-w-3xl text-sm text-slate-600">
+				<h1 className="mt-1 font-heading text-3xl font-bold text-navy-900 dark:text-[#f8fafc]">Settings</h1>
+				<p className="mt-2 max-w-3xl text-sm text-slate-600 dark:text-[#cbd5e1]">
 					Your personal preferences follow your Rally26 account. Organization controls appear only when your role and the underlying domain allow them.
 				</p>
 			</div>
 
-			<section className="rounded-xl border border-slate-200 bg-white p-5" aria-labelledby="account-settings-heading">
-				<h2 id="account-settings-heading" className="font-heading text-xl font-semibold text-navy-900">Account</h2>
+			<section className="rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-5" aria-labelledby="account-settings-heading">
+				<h2 id="account-settings-heading" className="font-heading text-xl font-semibold text-navy-900 dark:text-[#f8fafc]">Account</h2>
 				<dl className="mt-4 grid gap-4 sm:grid-cols-2">
-					<div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Name</dt><dd className="mt-1 text-sm text-navy-900">{user?.displayName ?? "Signed-in user"}</dd></div>
-					<div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</dt><dd className="mt-1 text-sm text-navy-900">{user?.email ?? "—"}</dd></div>
+					<div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-[#cbd5e1]">Name</dt><dd className="mt-1 text-sm text-navy-900 dark:text-[#f8fafc]">{user?.displayName ?? "Signed-in user"}</dd></div>
+					<div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-[#cbd5e1]">Email</dt><dd className="mt-1 text-sm text-navy-900 dark:text-[#f8fafc]">{user?.email ?? "—"}</dd></div>
 				</dl>
-				<p className="mt-4 text-sm text-slate-600">
+				<p className="mt-4 text-sm text-slate-600 dark:text-[#cbd5e1]">
 					Profile-photo, password, and verified-email changes continue through their existing protected workflows; Settings does not bypass profile-correction or identity-verification rules.
 				</p>
 			</section>
 
-			<section className="rounded-xl border border-slate-200 bg-white p-5" aria-labelledby="appearance-settings-heading">
+			<section className="rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-5" aria-labelledby="appearance-settings-heading">
 				<div>
-					<h2 id="appearance-settings-heading" className="font-heading text-xl font-semibold text-navy-900">Appearance</h2>
-					<p className="mt-1 text-sm text-slate-600">Choose how Rally26 looks on authenticated pages.</p>
+					<h2 id="appearance-settings-heading" className="font-heading text-xl font-semibold text-navy-900 dark:text-[#f8fafc]">Appearance</h2>
+					<p className="mt-1 text-sm text-slate-600 dark:text-[#cbd5e1]">Choose how Rally26 looks on authenticated pages.</p>
 				</div>
 				{preferences.isPending && <div className="mt-4"><LoadingState label="Loading appearance preference…" /></div>}
 				{preferences.isError && <div className="mt-4"><ErrorState message="Could not load your settings." onRetry={() => preferences.refetch()} /></div>}
@@ -107,32 +107,34 @@ export function SettingsPage() {
 						{APPEARANCE_OPTIONS.map((option) => {
 							const selected = appearancePreferences.appearance === option.value;
 							return (
-								<label key={option.value} className={`cursor-pointer rounded-xl border p-4 ${selected ? "border-victory-green bg-victory-green/5" : "border-slate-200 bg-ice-white"}`}>
+								<label key={option.value} className={`cursor-pointer rounded-xl border p-4 ${selected ? "border-victory-green bg-victory-green/5" : "border-slate-200 dark:border-[#334155] bg-ice-white dark:bg-[#0f172a]"}`}>
 									<input type="radio" name="appearance" value={option.value} checked={selected} onChange={() => selectAppearance(option.value)} className="mr-2" />
-									<span className="font-semibold text-navy-900">{option.title}</span>
-									<span className="mt-2 block text-sm text-slate-600">{option.description}</span>
+									<span className="font-semibold text-navy-900 dark:text-[#f8fafc]">{option.title}</span>
+									<span className="mt-2 block text-sm text-slate-600 dark:text-[#cbd5e1]">{option.description}</span>
 								</label>
 							);
 						})}
 					</fieldset>
 				)}
-				{update.isPending && <p role="status" className="mt-3 text-sm text-slate-600">Saving appearance…</p>}
+				{update.isPending && <p role="status" className="mt-3 text-sm text-slate-600 dark:text-[#cbd5e1]">Saving appearance…</p>}
 				{update.isSuccess && <p role="status" className="mt-3 text-sm font-medium text-victory-green">Appearance saved.</p>}
 				{update.isError && <p role="alert" className="mt-3 text-sm font-medium text-rose-700">Could not save appearance. Your previous preference is unchanged.</p>}
 			</section>
 
-			<section className="rounded-xl border border-slate-200 bg-white p-5" aria-labelledby="notification-settings-heading">
+			<section className="rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-5" aria-labelledby="notification-settings-heading">
 				<div>
-					<h2 id="notification-settings-heading" className="font-heading text-xl font-semibold text-navy-900">Notifications</h2>
-					<p className="mt-1 text-sm text-slate-600">
-						Optional in-app and email notifications default on. SMS defaults off and requires your individual consent plus an explicit topic setting.
+					<h2 id="notification-settings-heading" className="font-heading text-xl font-semibold text-navy-900 dark:text-[#f8fafc]">Notifications</h2>
+					<p className="mt-1 text-sm text-slate-600 dark:text-[#cbd5e1]">
+						"Default" resolves differently per channel, not the same thing everywhere: in-app stays on unless you turn it off; email follows your household's
+						email-reminder setting, so Default can mean off if your household has opted out; SMS's Default is always off — SMS only ever sends once you both
+						grant consent below and set that topic's SMS choice to On.
 					</p>
 				</div>
 				{notifications.isPending && <div className="mt-4"><LoadingState label="Loading notification preferences…" /></div>}
 				{notifications.isError && <div className="mt-4"><ErrorState message="Could not load notification preferences." onRetry={() => notifications.refetch()} /></div>}
 				{notificationPreferences && (
 					<div className="mt-5 space-y-5">
-						<label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-ice-white p-4">
+						<label className="flex items-start gap-3 rounded-xl border border-slate-200 dark:border-[#334155] bg-ice-white dark:bg-[#0f172a] p-4">
 							<input
 								type="checkbox"
 								checked={notificationPreferences.smsConsent}
@@ -141,22 +143,33 @@ export function SettingsPage() {
 								className="mt-1"
 							/>
 							<span>
-								<span className="block font-semibold text-navy-900">Allow optional SMS notifications</span>
-								<span className="mt-1 block text-sm text-slate-600">Consent alone does not enable every SMS topic. You must also set that topic's SMS choice to On.</span>
+								<span className="block font-semibold text-navy-900 dark:text-[#f8fafc]">Allow optional SMS notifications</span>
+								<span className="mt-1 block text-sm text-slate-600 dark:text-[#cbd5e1]">Consent alone does not enable every SMS topic. You must also set that topic's SMS choice to On.</span>
 							</span>
 						</label>
 
-						<div className="overflow-x-auto rounded-xl border border-slate-200">
-							<table className="min-w-full divide-y divide-slate-200 text-sm">
-								<thead className="bg-ice-white text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-									<tr><th className="px-4 py-3">Topic</th><th className="px-4 py-3">In-app</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">SMS</th></tr>
+						<div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-[#334155]">
+							<table className="min-w-full divide-y divide-slate-200 dark:divide-[#334155] text-sm">
+								<thead className="bg-ice-white dark:bg-[#0f172a] text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-[#cbd5e1]">
+									<tr>
+										<th className="px-4 py-3">Topic</th>
+										<th className="px-4 py-3">In-app</th>
+										<th className="px-4 py-3">
+											Email
+											<span className="mt-0.5 block text-[10px] font-normal normal-case text-slate-400">Default follows your household setting</span>
+										</th>
+										<th className="px-4 py-3">
+											SMS
+											<span className="mt-0.5 block text-[10px] font-normal normal-case text-slate-400">Default is always off</span>
+										</th>
+									</tr>
 								</thead>
-								<tbody className="divide-y divide-slate-200 bg-white">
+								<tbody className="divide-y divide-slate-200 dark:divide-[#334155] bg-white dark:bg-[#111827]">
 									{notificationPreferences.topics.map((preference) => {
 										const label = TOPIC_LABELS[preference.topic];
 										return (
 											<tr key={preference.topic}>
-												<td className="px-4 py-4"><span className="font-semibold text-navy-900">{label.title}</span><span className="mt-1 block max-w-md text-xs text-slate-600">{label.description}</span></td>
+												<td className="px-4 py-4"><span className="font-semibold text-navy-900 dark:text-[#f8fafc]">{label.title}</span><span className="mt-1 block max-w-md text-xs text-slate-600 dark:text-[#cbd5e1]">{label.description}</span></td>
 												{(["inApp", "email", "sms"] as const).map((channel) => (
 													<td key={channel} className="px-4 py-4 align-top">
 														<select
@@ -164,7 +177,7 @@ export function SettingsPage() {
 															value={preference[channel]}
 															disabled={updateNotification.isPending || (channel === "sms" && !notificationPreferences.smsConsent)}
 															onChange={(event: ChangeEvent<HTMLSelectElement>) => updateTopic(preference, channel, event.target.value as NotificationPreferenceState)}
-															className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-navy-900"
+															className="rounded-lg border border-slate-300 dark:border-[#334155] bg-white dark:bg-[#111827] px-3 py-2 text-sm text-navy-900 dark:text-[#f8fafc]"
 														>
 															{STATE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
 														</select>
@@ -178,9 +191,9 @@ export function SettingsPage() {
 						</div>
 
 						<div className="rounded-xl border border-victory-green/30 bg-victory-green/5 p-4">
-							<h3 className="font-semibold text-navy-900">Always on</h3>
-							<p className="mt-1 text-sm text-slate-600">These required communications are not controlled by optional notification preferences.</p>
-							<ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
+							<h3 className="font-semibold text-navy-900 dark:text-[#f8fafc]">Always on</h3>
+							<p className="mt-1 text-sm text-slate-600 dark:text-[#cbd5e1]">These required communications are not controlled by optional notification preferences.</p>
+							<ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700 dark:text-[#cbd5e1]">
 								{notificationPreferences.requiredCommunications.map((item) => <li key={item.key}>{item.label}</li>)}
 							</ul>
 						</div>
@@ -192,13 +205,13 @@ export function SettingsPage() {
 
 			<OrganizationSettingsDirectory />
 
-			<section className="rounded-xl border border-slate-200 bg-white p-5" aria-labelledby="settings-links-heading">
-				<h2 id="settings-links-heading" className="font-heading text-xl font-semibold text-navy-900">Account tools</h2>
-				<p className="mt-1 text-sm text-slate-600">Settings links to existing modules instead of duplicating their data or permissions.</p>
+			<section className="rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-5" aria-labelledby="settings-links-heading">
+				<h2 id="settings-links-heading" className="font-heading text-xl font-semibold text-navy-900 dark:text-[#f8fafc]">Account tools</h2>
+				<p className="mt-1 text-sm text-slate-600 dark:text-[#cbd5e1]">Settings links to existing modules instead of duplicating their data or permissions.</p>
 				<div className="mt-4 flex flex-wrap gap-3">
-					<Link to="/app/history" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-navy-900 hover:bg-ice-white">History</Link>
-					<Link to="/app/integrations" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-navy-900 hover:bg-ice-white">Integrations</Link>
-					<Link to="/app/help" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-navy-900 hover:bg-ice-white">Help</Link>
+					<Link to="/app/history" className="rounded-lg border border-slate-300 dark:border-[#334155] px-4 py-2 text-sm font-semibold text-navy-900 dark:text-[#f8fafc] hover:bg-ice-white hover:dark:bg-[#0f172a]">History</Link>
+					<Link to="/app/integrations" className="rounded-lg border border-slate-300 dark:border-[#334155] px-4 py-2 text-sm font-semibold text-navy-900 dark:text-[#f8fafc] hover:bg-ice-white hover:dark:bg-[#0f172a]">Integrations</Link>
+					<Link to="/app/help" className="rounded-lg border border-slate-300 dark:border-[#334155] px-4 py-2 text-sm font-semibold text-navy-900 dark:text-[#f8fafc] hover:bg-ice-white hover:dark:bg-[#0f172a]">Help</Link>
 				</div>
 			</section>
 

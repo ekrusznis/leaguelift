@@ -16,11 +16,11 @@ export function HelpArticlePage({ authenticated = false }: { authenticated?: boo
 		<PageContainer className="max-w-3xl py-10 sm:py-14">
 			<Seo title={article.data.title} description={article.data.summary} />
 			<Link to={base} className="text-sm font-semibold text-info-blue hover:underline">← Back to Help Center</Link>
-			<article className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-9">
+			<article className="mt-6 rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-6 shadow-sm sm:p-9">
 				<p className="text-xs font-semibold uppercase tracking-[0.16em] text-green-700">{article.data.category}</p>
-				<h1 className="mt-3 font-heading text-3xl font-extrabold text-navy-900">{article.data.title}</h1>
-				<p className="mt-4 text-lg leading-7 text-slate-600">{article.data.summary}</p>
-				<div className="my-7 border-t border-slate-200" />
+				<h1 className="mt-3 font-heading text-3xl font-extrabold text-navy-900 dark:text-[#f8fafc]">{article.data.title}</h1>
+				<p className="mt-4 text-lg leading-7 text-slate-600 dark:text-[#cbd5e1]">{article.data.summary}</p>
+				<div className="my-7 border-t border-slate-200 dark:border-[#334155]" />
 				<SupportMarkdown body={article.data.bodyMarkdown} />
 			</article>
 			<div className="mt-6 rounded-xl bg-navy-950 p-5 text-white sm:flex sm:items-center sm:justify-between">

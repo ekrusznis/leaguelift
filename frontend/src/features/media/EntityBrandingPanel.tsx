@@ -105,8 +105,8 @@ export function EntityBrandingPanel({
 	}
 
 	return (
-		<div className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-4">
-			<p className="text-sm text-slate-gray">
+		<div className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4">
+			<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 				Images are private until the matching public page is published. Replacing an image retires the prior assignment.
 			</p>
 			{(["LOGO", "COVER"] as const).map((usageSlot) => {
@@ -114,7 +114,7 @@ export function EntityBrandingPanel({
 				const state = slotStates[usageSlot];
 				const inputId = `${entityType.toLowerCase()}-${entityId}-${usageSlot.toLowerCase()}`;
 				return (
-					<div key={usageSlot} className="flex flex-wrap items-center gap-4 rounded-lg bg-pure-white p-3">
+					<div key={usageSlot} className="flex flex-wrap items-center gap-4 rounded-lg bg-pure-white dark:bg-[#111827] p-3">
 						{usageSlot === "LOGO" && assignment?.url ? (
 							<TeamLogo src={assignment.url} alt={assignment.altText ?? `${entityName} logo`} size="lg" />
 						) : usageSlot === "LOGO" ? (
@@ -129,7 +129,7 @@ export function EntityBrandingPanel({
 							</span>
 						)}
 						<div className="min-w-0 flex-1">
-							<label htmlFor={inputId} className="block text-sm font-medium text-navy">
+							<label htmlFor={inputId} className="block text-sm font-medium text-navy dark:text-[#f8fafc]">
 								{SLOT_LABELS[usageSlot]}
 							</label>
 							<input
@@ -141,7 +141,7 @@ export function EntityBrandingPanel({
 								onChange={(event) => handleFileSelected(usageSlot, event.target.files?.[0])}
 								className="mt-1 max-w-full text-sm"
 							/>
-							{state.status === "uploading" && <p className="mt-1 text-sm text-slate-gray">Uploading…</p>}
+							{state.status === "uploading" && <p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Uploading…</p>}
 							{state.status === "error" && <p role="alert" className="mt-1 text-sm text-error-red">{state.error}</p>}
 						</div>
 						{assignment && (

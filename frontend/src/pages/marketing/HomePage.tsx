@@ -402,7 +402,7 @@ export function HomePage() {
 	}, [scrollToPendingSection]);
 
 	return (
-		<div className="flex min-h-screen flex-col bg-ice-50">
+		<div className="flex min-h-screen flex-col bg-ice-50 dark:bg-[#0f172a]">
 			<Seo
 				title="Rally26 | Revenue Tools for Youth Sports Organizations"
 				description="Rally26 helps youth sports leagues, clubs, teams, and tournaments create public pages, run fundraisers, sell apparel, manage dues, and apply approved family fee credits."
@@ -480,22 +480,22 @@ export function HomePage() {
 					</PageContainer>
 				</section>
 
-				<section className="border-b border-slate-200 bg-white py-12">
+				<section className="border-b border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] py-12">
 					<PageContainer className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
 						{STATS.map((stat) => (
-							<div key={stat.label} className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-5">
+							<div key={stat.label} className="flex flex-col gap-3 rounded-2xl border border-slate-200 dark:border-[#334155] p-5">
 								<span className="flex size-10 items-center justify-center rounded-full bg-navy-900 text-orange-400">{stat.icon}</span>
 								<div>
 									<p className="font-heading text-2xl font-extrabold text-orange-500 sm:text-3xl">{stat.value}</p>
-									<p className="font-heading text-sm font-bold text-navy-900">{stat.label}</p>
+									<p className="font-heading text-sm font-bold text-navy-900 dark:text-[#f8fafc]">{stat.label}</p>
 								</div>
-								<p className="text-sm leading-relaxed text-slate-500">{stat.copy}</p>
+								<p className="text-sm leading-relaxed text-slate-500 dark:text-[#cbd5e1]">{stat.copy}</p>
 							</div>
 						))}
 					</PageContainer>
 				</section>
 
-				<section id={HOMEPAGE_SECTION_IDS.solutions} className={`bg-ice-50 py-20 sm:py-28 ${SCROLL_MT}`}>
+				<section id={HOMEPAGE_SECTION_IDS.solutions} className={`bg-ice-50 dark:bg-[#0f172a] py-20 sm:py-28 ${SCROLL_MT}`}>
 					<PageContainer className="flex flex-col gap-12">
 						<SectionHeading
 							eyebrow="Solutions"
@@ -521,15 +521,15 @@ export function HomePage() {
 					</PageContainer>
 				</section>
 
-				<section id={HOMEPAGE_SECTION_IDS.platform} className={`bg-white py-20 sm:py-28 ${SCROLL_MT}`}>
+				<section id={HOMEPAGE_SECTION_IDS.platform} className={`bg-white dark:bg-[#111827] py-20 sm:py-28 ${SCROLL_MT}`}>
 					<PageContainer className="flex flex-col items-center gap-12 text-center">
 						<SectionHeading heading="One platform. Everything." copy="Every revenue tool your organization needs, connected — not six separate logins." />
 						<div className="grid w-full gap-5 sm:grid-cols-2 lg:grid-cols-3">
 							{PLATFORM_MODULES.map((module) => (
-								<div key={module.heading} className="flex flex-col items-start gap-3 rounded-[18px] border border-slate-200 bg-ice-50 p-6 text-left">
+								<div key={module.heading} className="flex flex-col items-start gap-3 rounded-[18px] border border-slate-200 dark:border-[#334155] bg-ice-50 dark:bg-[#0f172a] p-6 text-left">
 									<span className="flex size-11 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500">{module.icon}</span>
-									<h3 className="font-heading text-base font-bold text-navy-900">{module.heading}</h3>
-									<p className="text-sm leading-relaxed text-slate-600">{module.copy}</p>
+									<h3 className="font-heading text-base font-bold text-navy-900 dark:text-[#f8fafc]">{module.heading}</h3>
+									<p className="text-sm leading-relaxed text-slate-600 dark:text-[#cbd5e1]">{module.copy}</p>
 								</div>
 							))}
 						</div>
@@ -559,7 +559,7 @@ export function HomePage() {
 					</PageContainer>
 				</section>
 
-				<section id={HOMEPAGE_SECTION_IDS.audiences} className={`bg-white py-20 sm:py-28 ${SCROLL_MT}`}>
+				<section id={HOMEPAGE_SECTION_IDS.audiences} className={`bg-white dark:bg-[#111827] py-20 sm:py-28 ${SCROLL_MT}`}>
 					<PageContainer className="flex flex-col gap-16">
 						<div className="flex flex-col gap-8">
 							<SectionHeading heading="Built for the organizations that make youth sports possible." />
@@ -581,7 +581,7 @@ export function HomePage() {
 					</PageContainer>
 				</section>
 
-				<section id={HOMEPAGE_SECTION_IDS.pricing} className={`bg-ice-50 py-20 sm:py-28 ${SCROLL_MT}`}>
+				<section id={HOMEPAGE_SECTION_IDS.pricing} className={`bg-ice-50 dark:bg-[#0f172a] py-20 sm:py-28 ${SCROLL_MT}`}>
 					<PageContainer className="flex flex-col gap-12">
 						<SectionHeading heading="Simple pricing. Real transparency." copy="Rally26 combines organization subscriptions with clearly disclosed transaction fees and optional implementation services." />
 
@@ -594,7 +594,7 @@ export function HomePage() {
 											? tier.badge
 												? "border-2 border-orange-500 bg-navy-900 text-white shadow-[0_28px_70px_rgba(242,96,12,0.28)] lg:-translate-y-3"
 												: "border border-orange-500/30 bg-navy-900 text-white"
-											: "border border-slate-200 bg-white text-navy-900"
+											: "border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] text-navy-900 dark:text-[#f8fafc]"
 									}`}
 								>
 									{tier.badge && (
@@ -602,16 +602,16 @@ export function HomePage() {
 											{tier.badge}
 										</span>
 									)}
-									<p className={`font-heading text-xs font-semibold uppercase tracking-wide ${tier.tone === "dark" ? "text-orange-400" : "text-slate-500"}`}>
+									<p className={`font-heading text-xs font-semibold uppercase tracking-wide ${tier.tone === "dark" ? "text-orange-400" : "text-slate-500 dark:text-[#cbd5e1]"}`}>
 										{tier.name}
 									</p>
 									<p className="mt-3 flex items-baseline gap-1 font-heading text-3xl font-extrabold">
 										{tier.price}
 										{tier.cadence && <span className="text-base font-medium">{tier.cadence}</span>}
 									</p>
-									{tier.billingNote && <p className={`mt-1 text-xs ${tier.tone === "dark" ? "text-slate-400" : "text-slate-500"}`}>{tier.billingNote}</p>}
-									<p className={`mt-3 text-sm ${tier.tone === "dark" ? "text-slate-300" : "text-slate-700"}`}>{tier.description}</p>
-									<ul className={`mt-6 flex flex-col gap-2 text-sm ${tier.tone === "dark" ? "text-slate-200" : "text-slate-700"}`}>
+									{tier.billingNote && <p className={`mt-1 text-xs ${tier.tone === "dark" ? "text-slate-400" : "text-slate-500 dark:text-[#cbd5e1]"}`}>{tier.billingNote}</p>}
+									<p className={`mt-3 text-sm ${tier.tone === "dark" ? "text-slate-300" : "text-slate-700 dark:text-[#cbd5e1]"}`}>{tier.description}</p>
+									<ul className={`mt-6 flex flex-col gap-2 text-sm ${tier.tone === "dark" ? "text-slate-200" : "text-slate-700 dark:text-[#cbd5e1]"}`}>
 										{tier.features.map((item) => (
 											<CheckItem key={item}>{item}</CheckItem>
 										))}
@@ -629,7 +629,7 @@ export function HomePage() {
 							))}
 						</div>
 
-						<p className="mx-auto max-w-2xl text-center text-sm text-slate-500">
+						<p className="mx-auto max-w-2xl text-center text-sm text-slate-500 dark:text-[#cbd5e1]">
 							Applicable transaction, payment-processing, fulfillment, and optional service fees are disclosed before launch and are never bundled into the base subscription price.
 						</p>
 
@@ -639,29 +639,29 @@ export function HomePage() {
 					</PageContainer>
 				</section>
 
-				<section id={HOMEPAGE_SECTION_IDS.about} className={`bg-white py-20 sm:py-28 ${SCROLL_MT}`}>
+				<section id={HOMEPAGE_SECTION_IDS.about} className={`bg-white dark:bg-[#111827] py-20 sm:py-28 ${SCROLL_MT}`}>
 					<PageContainer className="mx-auto flex max-w-3xl flex-col gap-10">
 						<SectionHeading align="left" heading="Better revenue tools for the people who keep youth sports running." />
 						<div>
-							<h3 className="font-heading text-xl font-bold text-navy-900">The founding idea</h3>
-							<p className="mt-3 leading-relaxed text-slate-700">
+							<h3 className="font-heading text-xl font-bold text-navy-900 dark:text-[#f8fafc]">The founding idea</h3>
+							<p className="mt-3 leading-relaxed text-slate-700 dark:text-[#cbd5e1]">
 								Rally26 was created around a simple idea: youth sports organizations should have better ways to
 								generate and manage revenue than repeatedly raising family fees or relying on already-busy
 								volunteers.
 							</p>
 						</div>
 						<div>
-							<h3 className="font-heading text-xl font-bold text-navy-900">Mission</h3>
-							<p className="mt-3 leading-relaxed text-slate-700">
+							<h3 className="font-heading text-xl font-bold text-navy-900 dark:text-[#f8fafc]">Mission</h3>
+							<p className="mt-3 leading-relaxed text-slate-700 dark:text-[#cbd5e1]">
 								Help youth sports organizations build sustainable programs while making costs clearer and more
 								manageable for families.
 							</p>
 						</div>
 						<div>
-							<h3 className="font-heading text-xl font-bold text-navy-900">Values</h3>
+							<h3 className="font-heading text-xl font-bold text-navy-900 dark:text-[#f8fafc]">Values</h3>
 							<ul className="mt-4 grid gap-3 sm:grid-cols-2">
 								{ABOUT_VALUES.map((value) => (
-									<li key={value} className="flex items-center gap-2 text-slate-700">
+									<li key={value} className="flex items-center gap-2 text-slate-700 dark:text-[#cbd5e1]">
 										<svg className="size-4 shrink-0 text-green-600" viewBox="0 0 16 16" fill="none" aria-hidden="true">
 											<path d="m3 8.5 3 3 7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
 										</svg>
@@ -673,7 +673,7 @@ export function HomePage() {
 					</PageContainer>
 				</section>
 
-				<section id={HOMEPAGE_SECTION_IDS.faq} className={`bg-ice-50 py-20 sm:py-28 ${SCROLL_MT}`}>
+				<section id={HOMEPAGE_SECTION_IDS.faq} className={`bg-ice-50 dark:bg-[#0f172a] py-20 sm:py-28 ${SCROLL_MT}`}>
 					<PageContainer className="flex flex-col gap-10">
 						<SectionHeading heading="Frequently asked questions" />
 						<div className="mx-auto w-full max-w-3xl">

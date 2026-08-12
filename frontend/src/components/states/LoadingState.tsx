@@ -1,6 +1,6 @@
 export function LoadingState({ label = "Loading…" }: { label?: string }) {
 	return (
-		<div role="status" aria-live="polite" className="flex items-center gap-3 p-6 text-slate-gray">
+		<div role="status" aria-live="polite" className="flex items-center gap-3 p-6 text-slate-gray dark:text-[#cbd5e1]">
 			<span
 				aria-hidden="true"
 				className="h-4 w-4 animate-spin rounded-full border-2 border-slate-gray border-t-transparent"

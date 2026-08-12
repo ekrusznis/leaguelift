@@ -24,9 +24,18 @@ interface Slide {
   image: ImageSourcePropType;
   title: string;
   body: string;
+  /** 'top' pins the image's top edge to the frame's top edge instead of centering the cover-crop, so illustration content near the top of the source file isn't clipped. */
+  imageAlign?: 'center' | 'top';
 }
 
-/** First-launch-only walkthrough. Real founder-supplied illustrations (docs/design/splash2-4.png, ADR-107) — replaces the earlier Ionicons/color-block stand-in from ADR-101. */
+/**
+ * First-launch-only walkthrough. Real founder-supplied illustrations
+ * (docs/design/splash2-4.png, ADR-107) — replaces the earlier Ionicons/color-block
+ * stand-in from ADR-101. Slides 2 and 3 use `imageAlign: 'top'` (Phase 37 slice
+ * 37.13) — `resizeMode="cover"` always center-crops in React Native's built-in Image
+ * component (no `object-position` equivalent), which was clipping the top of those
+ * two illustrations; slide 1's framing already reads correctly centered.
+ */
 const SLIDES: Slide[] = [
   {
     image: require('../../assets/images/onboarding-1.png'),
@@ -37,11 +46,13 @@ const SLIDES: Slide[] = [
     image: require('../../assets/images/onboarding-2.png'),
     title: 'Stay in the Loop',
     body: 'Get updates, reminders, and important info — all in one place.',
+    imageAlign: 'top',
   },
   {
     image: require('../../assets/images/onboarding-3.png'),
     title: 'Focus on What Matters',
     body: 'Less admin. More team. Let’s make this your best season yet.',
+    imageAlign: 'top',
   },
 ];
 
@@ -82,7 +93,13 @@ export default function OnboardingScreen() {
         onMomentumScrollEnd={onScroll}
         renderItem={({ item }) => (
           <View style={[styles.slide, { width: SCREEN_WIDTH }]}>
-            <Image source={item.image} resizeMode="cover" style={styles.slideImage} />
+            <View style={styles.slideImageFrame}>
+              <Image
+                source={item.image}
+                resizeMode="cover"
+                style={item.imageAlign === 'top' ? styles.slideImageTopAligned : styles.slideImage}
+              />
+            </View>
             <View style={styles.slideTextWrap}>
               <ThemedText type="title" style={styles.slideTitle}>
                 {item.title}
@@ -122,9 +139,22 @@ const styles = StyleSheet.create({
   slide: {
     flex: 1,
   },
-  slideImage: {
+  slideImageFrame: {
     width: '100%',
     height: '55%',
+    overflow: 'hidden',
+  },
+  slideImage: {
+    width: '100%',
+    height: '100%',
+  },
+  slideImageTopAligned: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
+    height: '135%',
   },
   slideTextWrap: {
     flex: 1,

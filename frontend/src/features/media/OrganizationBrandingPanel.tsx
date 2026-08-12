@@ -101,7 +101,7 @@ export function OrganizationBrandingPanel({
 				return (
 					<div
 						key={usageSlot}
-						className="flex items-center gap-4 rounded-lg border border-slate-gray/20 bg-pure-white p-4"
+						className="flex items-center gap-4 rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-4"
 					>
 						{usageSlot === "LOGO" ? (
 							<OrganizationLogo name={organizationName} src={assignment?.url} />
@@ -112,12 +112,12 @@ export function OrganizationBrandingPanel({
 								className="h-14 w-24 rounded-md object-cover"
 							/>
 						) : (
-							<span className="flex h-14 w-24 shrink-0 items-center justify-center rounded-md bg-navy-900 text-xs text-slate-gray">
+							<span className="flex h-14 w-24 shrink-0 items-center justify-center rounded-md bg-navy-900 text-xs text-slate-gray dark:text-[#cbd5e1]">
 								No cover
 							</span>
 						)}
 						<div className="flex flex-1 flex-col gap-1">
-							<label htmlFor={`media-upload-${usageSlot}`} className="text-sm font-medium text-navy">
+							<label htmlFor={`media-upload-${usageSlot}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								{SLOT_LABELS[usageSlot]}
 							</label>
 							<input
@@ -129,7 +129,7 @@ export function OrganizationBrandingPanel({
 								disabled={slotState.status === "uploading"}
 								className="text-sm"
 							/>
-							{slotState.status === "uploading" && <p className="text-sm text-slate-gray">Uploading…</p>}
+							{slotState.status === "uploading" && <p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Uploading…</p>}
 							{slotState.status === "error" && (
 								<p role="alert" className="text-sm text-error-red">
 									{slotState.error}

@@ -38,9 +38,9 @@ function ColorField({
 	}
 
 	return (
-		<div className="flex flex-col gap-2 rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+		<div className="flex flex-col gap-2 rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3">
 			<div className="flex items-center justify-between">
-				<span className="text-sm font-medium text-navy">{label}</span>
+				<span className="text-sm font-medium text-navy dark:text-[#f8fafc]">{label}</span>
 				{!isDefault && (
 					<button type="button" onClick={onReset} className="text-xs font-medium text-info-blue hover:underline">
 						Reset to default
@@ -66,7 +66,7 @@ function ColorField({
 					aria-label={`${label} hex value`}
 					placeholder="#0B1F33"
 					maxLength={7}
-					className="w-28 rounded-md border border-slate-gray/30 px-2 py-1.5 font-mono text-sm text-navy"
+					className="w-28 rounded-md border border-slate-gray/30 px-2 py-1.5 font-mono text-sm text-navy dark:text-[#f8fafc]"
 				/>
 				{!isValid && <span className="text-xs text-error-red">Enter a 6-digit hex value.</span>}
 			</div>
@@ -102,8 +102,8 @@ export function TeamColorsPanel({ organizationId, team }: { organizationId: stri
 	}
 
 	return (
-		<div className="flex flex-col gap-4 rounded-lg border border-slate-gray/20 bg-ice-white p-4">
-			<p className="text-sm text-slate-gray">
+		<div className="flex flex-col gap-4 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4">
+			<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 				These colors appear on {team.name}'s Swag Shop storefront and public team page. Leave a color at its default to use
 				Rally26's own brand colors.
 			</p>
@@ -126,7 +126,7 @@ export function TeamColorsPanel({ organizationId, team }: { organizationId: stri
 			</div>
 
 			<div>
-				<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-gray">Live preview</p>
+				<p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-gray dark:text-[#cbd5e1]">Live preview</p>
 				<div className="overflow-hidden rounded-lg border border-slate-gray/20">
 					<div className="flex items-center justify-between px-4 py-3" style={{ backgroundColor: primaryColor }}>
 						<span className="flex items-center gap-2 text-sm font-bold text-white">
@@ -145,12 +145,12 @@ export function TeamColorsPanel({ organizationId, team }: { organizationId: stri
 							Swag Shop
 						</span>
 					</div>
-					<div className="bg-pure-white p-4">
+					<div className="bg-pure-white dark:bg-[#111827] p-4">
 						<p className="text-xs font-semibold uppercase tracking-wide" style={{ color: primaryColor }}>
 							Upcoming event
 						</p>
-						<p className="mt-1 text-sm font-semibold text-navy">Saturday scrimmage vs. Riverside</p>
-						<p className="mt-1 text-xs text-slate-gray">Sat, Sep 12 · 9:00 AM</p>
+						<p className="mt-1 text-sm font-semibold text-navy dark:text-[#f8fafc]">Saturday scrimmage vs. Riverside</p>
+						<p className="mt-1 text-xs text-slate-gray dark:text-[#cbd5e1]">Sat, Sep 12 · 9:00 AM</p>
 						<button
 							type="button"
 							disabled
@@ -168,7 +168,7 @@ export function TeamColorsPanel({ organizationId, team }: { organizationId: stri
 					{updateColors.isPending ? "Saving…" : "Save colors"}
 				</Button>
 				{updateColors.isError && <p role="alert" className="text-sm text-error-red">Could not save colors. Please try again.</p>}
-				{updateColors.isSuccess && !dirty && <p role="status" className="text-sm text-slate-gray">Saved.</p>}
+				{updateColors.isSuccess && !dirty && <p role="status" className="text-sm text-slate-gray dark:text-[#cbd5e1]">Saved.</p>}
 			</div>
 		</div>
 	);

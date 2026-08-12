@@ -2,7 +2,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { ErrorState } from '@/components/error-state';
@@ -188,9 +188,9 @@ function EventFormFields({
   const saving = createEvent.isPending || updateEvent.isPending;
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScreenHeader title={isEdit ? 'Edit Event' : 'New Event'} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {!isEdit && (
           <>
             <ThemedText type="small" themeColor="textSecondary">
@@ -330,7 +330,7 @@ function EventFormFields({
           {isEdit ? 'Save Changes' : 'Create Event'}
         </Button>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

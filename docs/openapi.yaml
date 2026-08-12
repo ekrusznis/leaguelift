@@ -1008,6 +1008,84 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /auth/oauth/google:
+    post:
+      tags: [auth]
+      summary: Sign in with a Google-issued ID token (Phase 37, mobile only)
+      description: >-
+        Verifies the ID token's signature against Google's own JWKS
+        (https://www.googleapis.com/oauth2/v3/certs), issues Rally26's own
+        session on success. Returns 503 if Rally26's Google OAuth client id is
+        not yet configured.
+      operationId: signInWithGoogle
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OAuthSignInRequest"
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: The token could not be verified, had no email claim, or the linked account is suspended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Google sign-in is not yet configured for Rally26
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/oauth/apple:
+    post:
+      tags: [auth]
+      summary: Sign in with an Apple-issued ID token (Phase 37, mobile only)
+      description: >-
+        Verifies the ID token's signature against Apple's own JWKS
+        (https://appleid.apple.com/auth/keys), issues Rally26's own session
+        on success. Returns 503 if Rally26's Apple bundle identifier is not
+        yet registered for Sign in with Apple.
+      operationId: signInWithApple
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OAuthSignInRequest"
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: The token could not be verified, had no email claim, or the linked account is suspended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Apple sign-in is not yet configured for Rally26
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /bootstrap:
     post:
       tags: [identity]
@@ -10956,6 +11034,13 @@ components:
           format: email
         password:
           type: string
+    OAuthSignInRequest:
+      type: object
+      required: [idToken]
+      properties:
+        idToken:
+          type: string
+          description: The provider-issued (Google or Apple) ID token from the mobile app's native sign-in SDK.
     VerifyEmailRequest:
       type: object
       required: [token]

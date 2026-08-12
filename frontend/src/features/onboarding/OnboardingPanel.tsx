@@ -48,15 +48,15 @@ function csvEscape(value: string) {
 function BulkResultSummary({ result }: { result: BulkActionResult | null }) {
 	if (!result) return null;
 	return (
-		<div className="rounded-lg border border-slate-gray/20 bg-ice-white p-3 text-sm">
-			<p className="font-medium text-navy">
+		<div className="rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-3 text-sm">
+			<p className="font-medium text-navy dark:text-[#f8fafc]">
 				{result.succeededCount} succeeded, {result.skippedCount} skipped, {result.failedCount} failed.
 			</p>
 			{result.items.some((item) => item.status !== "SUCCEEDED") && (
-				<ul className="mt-2 flex max-h-40 flex-col gap-1 overflow-auto text-slate-gray">
+				<ul className="mt-2 flex max-h-40 flex-col gap-1 overflow-auto text-slate-gray dark:text-[#cbd5e1]">
 					{result.items.filter((item) => item.status !== "SUCCEEDED").map((item, index) => (
 						<li key={`${item.reference}-${index}`}>
-							<span className={item.status === "FAILED" ? "text-error-red" : "text-slate-gray"}>
+							<span className={item.status === "FAILED" ? "text-error-red" : "text-slate-gray dark:text-[#cbd5e1]"}>
 								{item.reference}: {item.message ?? item.status.toLowerCase()}
 							</span>
 						</li>
@@ -81,7 +81,7 @@ function SelectionList({
 	const allSelected = items.length > 0 && items.every((item) => selected.has(item.id));
 	return (
 		<fieldset className="rounded-lg border border-slate-gray/20 p-3">
-			<legend className="font-medium text-navy">{label}</legend>
+			<legend className="font-medium text-navy dark:text-[#f8fafc]">{label}</legend>
 			<div className="flex justify-end">
 				<button
 					type="button"
@@ -92,7 +92,7 @@ function SelectionList({
 				</button>
 			</div>
 			<div className="mt-2 grid max-h-52 gap-2 overflow-auto sm:grid-cols-2">
-				{items.length === 0 && <p className="text-sm text-slate-gray">No records available.</p>}
+				{items.length === 0 && <p className="text-sm text-slate-gray dark:text-[#cbd5e1]">No records available.</p>}
 				{items.map((item) => (
 					<label key={item.id} className="flex min-w-0 items-start gap-2 rounded-md border border-slate-gray/15 p-2">
 						<input
@@ -109,8 +109,8 @@ function SelectionList({
 							className="mt-1 size-4 shrink-0"
 						/>
 						<span className="min-w-0">
-							<span className="block break-words text-sm font-medium text-navy">{item.label}</span>
-							{item.detail && <span className="block break-words text-xs text-slate-gray">{item.detail}</span>}
+							<span className="block break-words text-sm font-medium text-navy dark:text-[#f8fafc]">{item.label}</span>
+							{item.detail && <span className="block break-words text-xs text-slate-gray dark:text-[#cbd5e1]">{item.detail}</span>}
 						</span>
 					</label>
 				))}
@@ -203,11 +203,11 @@ function CsvOnboardingImport({ organizationId }: { organizationId: string }) {
 	}
 
 	return (
-		<section className="flex flex-col gap-4 rounded-xl border border-slate-gray/20 bg-pure-white p-5">
+		<section className="flex flex-col gap-4 rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5">
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div>
-					<h3 className="font-heading text-base font-semibold text-navy">CSV onboarding import</h3>
-					<p className="mt-1 max-w-3xl text-sm text-slate-gray">
+					<h3 className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">CSV onboarding import</h3>
+					<p className="mt-1 max-w-3xl text-sm text-slate-gray dark:text-[#cbd5e1]">
 						Preview teams, household shells, guardian contacts, participants, and participant-team assignments before writing anything.
 						Stable external IDs make repeat imports update or match instead of duplicate.
 					</p>
@@ -219,16 +219,16 @@ function CsvOnboardingImport({ organizationId }: { organizationId: string }) {
 
 			<div className="flex flex-wrap items-end gap-3">
 				<div className="flex min-w-64 flex-1 flex-col gap-1">
-					<label htmlFor="onboarding-csv-file" className="text-sm font-medium text-navy">CSV file</label>
-					<input ref={fileRef} id="onboarding-csv-file" type="file" accept=".csv,text/csv" onChange={selectFile} className="text-sm text-navy" />
-					{fileName && <p className="text-xs text-slate-gray">Selected: {fileName}</p>}
+					<label htmlFor="onboarding-csv-file" className="text-sm font-medium text-navy dark:text-[#f8fafc]">CSV file</label>
+					<input ref={fileRef} id="onboarding-csv-file" type="file" accept=".csv,text/csv" onChange={selectFile} className="text-sm text-navy dark:text-[#f8fafc]" />
+					{fileName && <p className="text-xs text-slate-gray dark:text-[#cbd5e1]">Selected: {fileName}</p>}
 				</div>
 				<Button type="button" onClick={previewSelectedFile} disabled={previewImport.isPending || !csvContent}>
 					{previewImport.isPending ? "Previewing…" : "Preview import"}
 				</Button>
 			</div>
 
-			<p className="text-xs text-slate-gray">
+			<p className="text-xs text-slate-gray dark:text-[#cbd5e1]">
 				Required columns: <span className="font-mono">record_type</span> and <span className="font-mono">external_id</span>.
 				Guardian and participant rows reference <span className="font-mono">household_external_id</span>; participant rows may also reference{" "}
 				<span className="font-mono">team_external_id</span>. The source file itself is not retained.
@@ -239,16 +239,16 @@ function CsvOnboardingImport({ organizationId }: { organizationId: string }) {
 			{preview && (
 				<div className="flex flex-col gap-3 rounded-lg border border-info-blue/30 bg-info-blue/5 p-4">
 					<div className="grid gap-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
-						<div><span className="block text-slate-gray">Rows</span><strong className="text-navy">{preview.totalRows}</strong></div>
-						<div><span className="block text-slate-gray">Valid</span><strong className="text-navy">{preview.validRows}</strong></div>
-						<div><span className="block text-slate-gray">Errors</span><strong className={preview.errorRows ? "text-error-red" : "text-navy"}>{preview.errorRows}</strong></div>
-						<div><span className="block text-slate-gray">Create</span><strong className="text-navy">{preview.createCount}</strong></div>
-						<div><span className="block text-slate-gray">Update</span><strong className="text-navy">{preview.updateCount}</strong></div>
-						<div><span className="block text-slate-gray">Match</span><strong className="text-navy">{preview.matchCount}</strong></div>
+						<div><span className="block text-slate-gray dark:text-[#cbd5e1]">Rows</span><strong className="text-navy dark:text-[#f8fafc]">{preview.totalRows}</strong></div>
+						<div><span className="block text-slate-gray dark:text-[#cbd5e1]">Valid</span><strong className="text-navy dark:text-[#f8fafc]">{preview.validRows}</strong></div>
+						<div><span className="block text-slate-gray dark:text-[#cbd5e1]">Errors</span><strong className={preview.errorRows ? "text-error-red" : "text-navy dark:text-[#f8fafc]"}>{preview.errorRows}</strong></div>
+						<div><span className="block text-slate-gray dark:text-[#cbd5e1]">Create</span><strong className="text-navy dark:text-[#f8fafc]">{preview.createCount}</strong></div>
+						<div><span className="block text-slate-gray dark:text-[#cbd5e1]">Update</span><strong className="text-navy dark:text-[#f8fafc]">{preview.updateCount}</strong></div>
+						<div><span className="block text-slate-gray dark:text-[#cbd5e1]">Match</span><strong className="text-navy dark:text-[#f8fafc]">{preview.matchCount}</strong></div>
 					</div>
-					<div className="max-h-80 overflow-auto rounded-md border border-slate-gray/20 bg-pure-white">
+					<div className="max-h-80 overflow-auto rounded-md border border-slate-gray/20 bg-pure-white dark:bg-[#111827]">
 						<table className="w-full min-w-[720px] text-left text-sm">
-							<thead className="sticky top-0 bg-ice-white text-slate-gray">
+							<thead className="sticky top-0 bg-ice-white dark:bg-[#0f172a] text-slate-gray dark:text-[#cbd5e1]">
 								<tr><th className="p-2">Row</th><th className="p-2">Type</th><th className="p-2">External ID</th><th className="p-2">Record</th><th className="p-2">Action</th><th className="p-2">Notes</th></tr>
 							</thead>
 							<tbody>
@@ -261,7 +261,7 @@ function CsvOnboardingImport({ organizationId }: { organizationId: string }) {
 										<td className="p-2">{row.action.replace("_", " ")}</td>
 										<td className="p-2">
 											{row.errors.length > 0 && <span className="text-error-red">{row.errors.join(" ")}</span>}
-											{row.errors.length === 0 && row.warnings.length > 0 && <span className="text-slate-gray">{row.warnings.join(" ")}</span>}
+											{row.errors.length === 0 && row.warnings.length > 0 && <span className="text-slate-gray dark:text-[#cbd5e1]">{row.warnings.join(" ")}</span>}
 											{row.errors.length === 0 && row.warnings.length === 0 && "Ready"}
 										</td>
 									</tr>
@@ -280,7 +280,7 @@ function CsvOnboardingImport({ organizationId }: { organizationId: string }) {
 
 			{result && (
 				<div className="rounded-lg border border-victory-green/30 bg-victory-green/5 p-4 text-sm">
-					<p className="font-medium text-navy">
+					<p className="font-medium text-navy dark:text-[#f8fafc]">
 						Import complete: {result.createdCount} created, {result.updatedCount} updated, {result.matchedCount} matched,{" "}
 						{result.teamAssignmentsCreated} team assignment{result.teamAssignmentsCreated === 1 ? "" : "s"} created.
 					</p>
@@ -323,16 +323,16 @@ function BulkStaffInvitations({ organizationId }: { organizationId: string }) {
 	}
 
 	return (
-		<section className="flex flex-col gap-4 rounded-xl border border-slate-gray/20 bg-pure-white p-5">
+		<section className="flex flex-col gap-4 rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5">
 			<div>
-				<h3 className="font-heading text-base font-semibold text-navy">Bulk staff invitations</h3>
-				<p className="mt-1 text-sm text-slate-gray">
+				<h3 className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">Bulk staff invitations</h3>
+				<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">
 					Send one organization role to several adults. This reuses the existing single-use invitation and email-outbox flow; it never creates passwords or active accounts.
 				</p>
 			</div>
 			<form onSubmit={submit} className="grid gap-3 lg:grid-cols-[1fr_240px_auto] lg:items-end">
 				<div className="flex flex-col gap-1">
-					<label htmlFor="bulk-invite-emails" className="text-sm font-medium text-navy">Email addresses</label>
+					<label htmlFor="bulk-invite-emails" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Email addresses</label>
 					<textarea
 						id="bulk-invite-emails"
 						value={emails}
@@ -343,14 +343,14 @@ function BulkStaffInvitations({ organizationId }: { organizationId: string }) {
 					/>
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor="bulk-invite-role" className="text-sm font-medium text-navy">Organization role</label>
+					<label htmlFor="bulk-invite-role" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Organization role</label>
 					<select id="bulk-invite-role" value={role} onChange={(event) => setRole(event.target.value as typeof role)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 						{STAFF_ROLES.map((item) => <option key={item} value={item}>{item.replaceAll("_", " ")}</option>)}
 					</select>
 				</div>
 				<Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Sending…" : "Send invitations"}</Button>
 			</form>
-			<p className="text-xs text-slate-gray">
+			<p className="text-xs text-slate-gray dark:text-[#cbd5e1]">
 				Guardian contacts imported from CSV remain household shells. Guardian account activation requires the dedicated guardian-invitation workflow and is not converted into a broad organization membership here.
 			</p>
 			{error && <p role="alert" className="text-sm text-error-red">{error}</p>}
@@ -445,10 +445,10 @@ function BulkAssignments({ organizationId }: { organizationId: string }) {
 	}
 
 	return (
-		<section className="flex flex-col gap-5 rounded-xl border border-slate-gray/20 bg-pure-white p-5">
+		<section className="flex flex-col gap-5 rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5">
 			<div>
-				<h3 className="font-heading text-base font-semibold text-navy">Bulk assignments</h3>
-				<p className="mt-1 text-sm text-slate-gray">Apply existing teams, fee templates, and uploaded organization documents to selected records. Repeating an identical assignment is skipped.</p>
+				<h3 className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">Bulk assignments</h3>
+				<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Apply existing teams, fee templates, and uploaded organization documents to selected records. Repeating an identical assignment is skipped.</p>
 			</div>
 			{error && <p role="alert" className="text-sm text-error-red">{error}</p>}
 			{selectionsLoading && <LoadingState label="Loading onboarding records…" />}
@@ -459,8 +459,8 @@ function BulkAssignments({ organizationId }: { organizationId: string }) {
 			)}
 
 			<div className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 p-4">
-				<h4 className="font-medium text-navy">Assign participants to a team</h4>
-				<label htmlFor="bulk-team-id" className="text-sm font-medium text-navy">Team</label>
+				<h4 className="font-medium text-navy dark:text-[#f8fafc]">Assign participants to a team</h4>
+				<label htmlFor="bulk-team-id" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Team</label>
 				<select id="bulk-team-id" value={teamId} onChange={(event) => setTeamId(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 					<option value="">Choose a team</option>
 					{teams.data?.items.filter((team) => team.status === "ACTIVE").map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
@@ -471,17 +471,17 @@ function BulkAssignments({ organizationId }: { organizationId: string }) {
 			</div>
 
 			<div className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 p-4">
-				<h4 className="font-medium text-navy">Assign a fee template to households</h4>
+				<h4 className="font-medium text-navy dark:text-[#f8fafc]">Assign a fee template to households</h4>
 				<div className="grid gap-3 sm:grid-cols-2">
 					<div className="flex flex-col gap-1">
-						<label htmlFor="bulk-fee-template-id" className="text-sm font-medium text-navy">Fee template</label>
+						<label htmlFor="bulk-fee-template-id" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Fee template</label>
 						<select id="bulk-fee-template-id" value={feeTemplateId} onChange={(event) => setFeeTemplateId(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 						<option value="">Choose a fee template</option>
 							{feeTemplates.data?.items.filter((template) => template.status === "ACTIVE").map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
 						</select>
 					</div>
 					<div className="flex flex-col gap-1">
-						<label htmlFor="bulk-fee-due-date" className="text-sm font-medium text-navy">Due date (optional)</label>
+						<label htmlFor="bulk-fee-due-date" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Due date (optional)</label>
 						<input id="bulk-fee-due-date" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 					</div>
 				</div>
@@ -491,17 +491,17 @@ function BulkAssignments({ organizationId }: { organizationId: string }) {
 			</div>
 
 			<div className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 p-4">
-				<h4 className="font-medium text-navy">Assign an uploaded document to households</h4>
+				<h4 className="font-medium text-navy dark:text-[#f8fafc]">Assign an uploaded document to households</h4>
 				<div className="grid gap-3 sm:grid-cols-2">
 					<div className="flex flex-col gap-1">
-						<label htmlFor="bulk-document-asset-id" className="text-sm font-medium text-navy">Organization document</label>
+						<label htmlFor="bulk-document-asset-id" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Organization document</label>
 						<select id="bulk-document-asset-id" value={assetId} onChange={(event) => setAssetId(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 						<option value="">Choose an organization document</option>
 							{documents.data?.items.map((document) => <option key={document.id} value={document.assetId}>{document.title ?? document.assetId}</option>)}
 						</select>
 					</div>
 					<div className="flex flex-col gap-1">
-						<label htmlFor="bulk-document-title" className="text-sm font-medium text-navy">Household-facing title (optional)</label>
+						<label htmlFor="bulk-document-title" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Household-facing title (optional)</label>
 						<input id="bulk-document-title" value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} placeholder="Household-facing title (optional)" className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 					</div>
 				</div>

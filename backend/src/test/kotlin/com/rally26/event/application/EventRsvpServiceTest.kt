@@ -28,10 +28,14 @@ import com.rally26.participant.domain.Participant
 import com.rally26.participant.domain.ParticipantStatus
 import com.rally26.participant.domain.ParticipantTeamAssignment
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.settings.application.NotificationDeliveryResolver
+import com.rally26.settings.domain.NotificationDeliveryDecision
+import com.rally26.settings.domain.NotificationTopic
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import io.mockk.slot
 import io.mockk.verify
 import java.time.Instant
 import java.util.UUID
@@ -50,6 +54,7 @@ class EventRsvpServiceTest {
     private val eventService = mockk<EventService>()
     private val appUserRepository = mockk<AppUserRepository>()
     private val outboxWriter = mockk<OutboxWriter>()
+    private val notificationDeliveryResolver = mockk<NotificationDeliveryResolver>()
     private val service =
         EventRsvpService(
             eventRsvpRepository,
@@ -62,6 +67,20 @@ class EventRsvpServiceTest {
             eventService,
             appUserRepository,
             outboxWriter,
+        )
+    private val serviceWithResolver =
+        EventRsvpService(
+            eventRsvpRepository,
+            eventRepository,
+            participantRepository,
+            guardianRelationshipRepository,
+            authorizationService,
+            auditService,
+            ObjectMapper(),
+            eventService,
+            appUserRepository,
+            outboxWriter,
+            notificationDeliveryResolver,
         )
 
     private val orgId = UUID.randomUUID()
@@ -260,6 +279,33 @@ class EventRsvpServiceTest {
 
         verify(exactly = 1) { outboxWriter.write(any(), any(), any(), eq("event.rsvp_changed"), any()) }
         verify(exactly = 0) { appUserRepository.findById(currentUser.userId) }
+    }
+
+    @Test
+    fun `a coach who disabled RSVP email notifications is excluded from the staff notification payload`() {
+        val coachUserId = UUID.randomUUID()
+        every { eventRepository.findById(eventId, orgId) } returns event()
+        every { participantRepository.findById(participantId, orgId) } returns participant()
+        every { participantRepository.listTeamAssignments(participantId, orgId) } returns listOf(onTeamAssignment())
+        every { authorizationService.hasParticipantCapability(currentUser, participantId, Capabilities.EVENT_RSVP_SELF) } returns true
+        every { eventRsvpRepository.findByEventAndParticipant(eventId, participantId) } returns null
+        every {
+            eventRsvpRepository.upsert(eventId, participantId, RsvpResponse.ATTENDING, null, currentUser.userId, RsvpSource.SELF)
+        } returns rsvp(RsvpResponse.ATTENDING, RsvpSource.SELF)
+        every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+        every { eventService.displayTitleFor(any(), orgId) } returns "Varsity Soccer Practice"
+        every { authorizationService.listTeamStaffUserIds(orgId, teamId, Capabilities.EVENT_RSVP_READ_TEAM) } returns setOf(coachUserId)
+        every { appUserRepository.findById(coachUserId) } returns
+            AppUser(coachUserId, "coach@example.com", "Coach", AppUserStatus.ACTIVE, null, Instant.now(), Instant.now())
+        every {
+            notificationDeliveryResolver.resolve(coachUserId, null, NotificationTopic.RSVP, "coach@example.com", null)
+        } returns NotificationDeliveryDecision(inApp = true, email = null, sms = null)
+        val payloadSlot = slot<String>()
+        every { outboxWriter.write(any(), any(), any(), any(), capture(payloadSlot)) } just runs
+
+        serviceWithResolver.submit(orgId, eventId, participantId, RsvpResponse.ATTENDING, null, currentUser)
+
+        assertTrue(!payloadSlot.captured.contains("coach@example.com"))
     }
 
     @Test

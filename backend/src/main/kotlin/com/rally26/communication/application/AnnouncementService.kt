@@ -21,6 +21,9 @@ import com.rally26.communication.domain.MyAnnouncement
 import com.rally26.communication.persistence.AnnouncementRepository
 import com.rally26.membership.application.MembershipService
 import com.rally26.outbox.application.OutboxWriter
+import com.rally26.settings.application.NotificationDeliveryResolver
+import com.rally26.settings.domain.NotificationDeliveryDecision
+import com.rally26.settings.domain.NotificationTopic
 import com.rally26.team.persistence.TeamRepository
 import com.rally26.tournament.persistence.TournamentRepository
 import org.springframework.dao.DuplicateKeyException
@@ -41,6 +44,7 @@ class AnnouncementService(
     private val auditService: AuditService,
     private val objectMapper: ObjectMapper,
     private val clock: Clock,
+    private val notificationDeliveryResolver: NotificationDeliveryResolver? = null,
 ) {
     fun listForManagement(
         organizationId: UUID,
@@ -259,20 +263,41 @@ class AnnouncementService(
     ): Announcement {
         val candidates = resolveRecipients(announcement)
         val merged = mergeRecipients(candidates)
+        val topic = notificationTopicFor(announcement.kind)
         var inserted = 0
         for ((key, candidate) in merged) {
-            val inApp = candidate.userId != null
+            val delivery =
+                notificationDeliveryResolver?.resolve(
+                    userId = candidate.userId,
+                    householdId = candidate.householdId,
+                    topic = topic,
+                    candidateEmail = candidate.email,
+                    candidatePhone = candidate.phone,
+                ) ?: NotificationDeliveryDecision(
+                    inApp = candidate.userId != null,
+                    email = candidate.email,
+                    sms = candidate.phone,
+                )
+            val resolvedCandidate = candidate.copy(email = delivery.email, phone = delivery.sms)
             val emailStatus =
                 if (announcement.emailEnabled &&
-                    !candidate.email.isNullOrBlank()
+                    !delivery.email.isNullOrBlank()
                 ) {
                     DeliveryStatus.PENDING
                 } else {
                     DeliveryStatus.NONE
                 }
-            val smsStatus = if (announcement.smsEnabled && !candidate.phone.isNullOrBlank()) DeliveryStatus.PENDING else DeliveryStatus.NONE
-            if (!inApp && emailStatus == DeliveryStatus.NONE && smsStatus == DeliveryStatus.NONE) continue
-            repository.insertRecipient(announcement.id, announcement.organizationId, key, candidate, inApp, emailStatus, smsStatus)
+            val smsStatus = if (announcement.smsEnabled && !delivery.sms.isNullOrBlank()) DeliveryStatus.PENDING else DeliveryStatus.NONE
+            if (!delivery.inApp && emailStatus == DeliveryStatus.NONE && smsStatus == DeliveryStatus.NONE) continue
+            repository.insertRecipient(
+                announcement.id,
+                announcement.organizationId,
+                key,
+                resolvedCandidate,
+                delivery.inApp,
+                emailStatus,
+                smsStatus,
+            )
             inserted++
         }
         if (inserted ==
@@ -340,6 +365,15 @@ class AnnouncementService(
             AnnouncementAudience.ATHLETES -> athletes
         }
     }
+
+    private fun notificationTopicFor(kind: AnnouncementKind): NotificationTopic =
+        when (kind) {
+            AnnouncementKind.GENERAL -> NotificationTopic.ANNOUNCEMENTS
+            AnnouncementKind.CAMPAIGN_LAUNCH -> NotificationTopic.FUNDRAISING
+            AnnouncementKind.EVENT_REMINDER -> NotificationTopic.EVENTS_SCHEDULE
+            AnnouncementKind.FEE_REMINDER -> NotificationTopic.FEES_PAYMENTS
+            AnnouncementKind.DOCUMENT_REMINDER, AnnouncementKind.ELIGIBILITY_REMINDER -> NotificationTopic.DOCUMENTS_ELIGIBILITY
+        }
 
     private fun mergeRecipients(candidates: List<AnnouncementRecipientCandidate>): Map<String, AnnouncementRecipientCandidate> {
         val merged = linkedMapOf<String, AnnouncementRecipientCandidate>()

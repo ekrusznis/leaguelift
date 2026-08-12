@@ -70,7 +70,7 @@ export function ContactUsSection() {
 	});
 
 	return (
-		<section id={HOMEPAGE_SECTION_IDS.contactUs} className="scroll-mt-28 bg-white py-20 sm:py-28">
+		<section id={HOMEPAGE_SECTION_IDS.contactUs} className="scroll-mt-28 bg-white dark:bg-[#111827] py-20 sm:py-28">
 			<PageContainer className="mx-auto flex max-w-2xl flex-col items-center gap-8">
 				<SectionHeading
 					eyebrow="Get in touch"
@@ -78,7 +78,7 @@ export function ContactUsSection() {
 					copy="Tell us about your organization and what you're looking for — a real person will follow up."
 				/>
 
-				<div className="w-full rounded-[24px] border border-slate-200 bg-ice-50 p-6 shadow-sm sm:p-9">
+				<div className="w-full rounded-[24px] border border-slate-200 dark:border-[#334155] bg-ice-50 dark:bg-[#0f172a] p-6 shadow-sm sm:p-9">
 					{createCase.isSuccess ? (
 						<InlineAlert tone="success" title="Thanks — your message has been received.">
 							We'll follow up at the email address you provided.
@@ -92,7 +92,7 @@ export function ContactUsSection() {
 							</div>
 							<FormField label="Organization" hint="Optional" error={errors.organization?.message} {...register("organization")} />
 							<div className="flex flex-col gap-1.5">
-								<label htmlFor="contact-us-message" className="text-sm font-semibold text-navy-900">
+								<label htmlFor="contact-us-message" className="text-sm font-semibold text-navy-900 dark:text-[#f8fafc]">
 									Message <span aria-hidden="true" className="text-error-600">*</span>
 								</label>
 								<textarea
@@ -101,8 +101,8 @@ export function ContactUsSection() {
 									required
 									aria-invalid={!!errors.message}
 									aria-describedby={errors.message ? "contact-us-message-error" : undefined}
-									className={`rounded-[10px] border px-3.5 py-2.5 text-navy-900 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400 ${
-										errors.message ? "border-error-600" : "border-slate-200"
+									className={`rounded-[10px] border px-3.5 py-2.5 text-navy-900 dark:text-[#f8fafc] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400 ${
+										errors.message ? "border-error-600" : "border-slate-200 dark:border-[#334155]"
 									}`}
 									{...register("message")}
 								/>

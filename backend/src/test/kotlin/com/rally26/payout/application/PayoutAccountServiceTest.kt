@@ -112,7 +112,7 @@ class PayoutAccountServiceTest {
         every { membershipService.requireManagerRole(orgId, owner) } returns ownerMembership()
         every { payoutAccountRepository.findByOrganizationId(orgId) } returnsMany listOf(existing, updated)
         every { stripeConnectClient.retrieveAccountStatus(existing.stripeAccountId) } returns StripeAccountStatus(true, true, true)
-        every { payoutAccountRepository.updateStatus(orgId, true, true, true) } returns 1
+        every { payoutAccountRepository.updateStatus(orgId, true, true, true, null) } returns 1
 
         val result = service.refreshStatus(orgId, owner)
 
@@ -200,6 +200,32 @@ class PayoutAccountServiceTest {
         verify(
             exactly = 1,
         ) { auditService.record(owner.userId, orgId, "payout.transfer_triggered", "organization_payout_account", account.id) }
+    }
+
+    @Test
+    fun `syncFromWebhook is a no-op for a Stripe account id Rally26 never created`() {
+        every { payoutAccountRepository.findByStripeAccountId("acct_unknown") } returns null
+
+        val result = service.syncFromWebhook("acct_unknown", StripeAccountStatus(true, true, true))
+
+        assertEquals(null, result)
+        verify(exactly = 0) { payoutAccountRepository.updateStatus(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `syncFromWebhook updates status and disabled reason and records an audit event`() {
+        val account = samplePayoutAccount()
+        every { payoutAccountRepository.findByStripeAccountId(account.stripeAccountId) } returns account
+        every { payoutAccountRepository.updateStatus(orgId, false, false, false, "requirements.past_due") } returns 1
+        every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+
+        val result = service.syncFromWebhook(account.stripeAccountId, StripeAccountStatus(false, false, false, "requirements.past_due"))
+
+        assertEquals(account.id, result)
+        verify(exactly = 1) { payoutAccountRepository.updateStatus(orgId, false, false, false, "requirements.past_due") }
+        verify(exactly = 1) {
+            auditService.record(null, orgId, "payout.account_status_synced", "organization_payout_account", account.id, any())
+        }
     }
 
     private fun earningEntry(

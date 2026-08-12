@@ -17,10 +17,10 @@ function inline(text: string): ReactNode[] {
 export function SupportMarkdown({ body }: { body: string }) {
 	const blocks = body.replace(/\r\n/g, "\n").split(/\n\s*\n/).map((block) => block.trim()).filter(Boolean);
 	return (
-		<div className="flex flex-col gap-5 text-slate-700">
+		<div className="flex flex-col gap-5 text-slate-700 dark:text-[#cbd5e1]">
 			{blocks.map((block, index) => {
-				if (block.startsWith("### ")) return <h3 key={index} className="font-heading text-lg font-bold text-navy-900">{inline(block.slice(4))}</h3>;
-				if (block.startsWith("## ")) return <h2 key={index} className="font-heading text-xl font-bold text-navy-900">{inline(block.slice(3))}</h2>;
+				if (block.startsWith("### ")) return <h3 key={index} className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">{inline(block.slice(4))}</h3>;
+				if (block.startsWith("## ")) return <h2 key={index} className="font-heading text-xl font-bold text-navy-900 dark:text-[#f8fafc]">{inline(block.slice(3))}</h2>;
 				const lines = block.split("\n");
 				if (lines.every((line) => /^[-*] /.test(line))) {
 					return <ul key={index} className="list-disc space-y-2 pl-6">{lines.map((line) => <li key={line}>{inline(line.slice(2))}</li>)}</ul>;

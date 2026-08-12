@@ -17,7 +17,7 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(funct
 
 	return (
 		<div className="flex flex-col gap-1.5">
-			<label htmlFor={fieldId} className="text-sm font-semibold text-navy-900">
+			<label htmlFor={fieldId} className="text-sm font-semibold text-navy-900 dark:text-[#f8fafc]">
 				{label}
 				{required && (
 					<span aria-hidden="true" className="text-error-600">
@@ -33,8 +33,8 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(funct
 				aria-invalid={!!error}
 				aria-describedby={errorId}
 				defaultValue={defaultValue ?? ""}
-				className={`min-h-12 rounded-[10px] border bg-white px-3.5 py-2.5 text-navy-900 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400 ${
-					error ? "border-error-600" : "border-slate-200"
+				className={`min-h-12 rounded-[10px] border bg-white dark:bg-[#111827] px-3.5 py-2.5 text-navy-900 dark:text-[#f8fafc] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400 ${
+					error ? "border-error-600" : "border-slate-200 dark:border-[#334155]"
 				} ${className}`}
 				{...props}
 			>

@@ -104,19 +104,19 @@ export function AnnouncementsPage() {
 		<div className="flex flex-col gap-8">
 			<header>
 				<p className="text-sm font-semibold uppercase tracking-wide text-victory-green">One-way communications</p>
-				<h1 className="mt-1 font-heading text-3xl font-bold text-navy">Announcements</h1>
-				<p className="mt-2 max-w-3xl text-slate-gray">
+				<h1 className="mt-1 font-heading text-3xl font-bold text-navy dark:text-[#f8fafc]">Announcements</h1>
+				<p className="mt-2 max-w-3xl text-slate-gray dark:text-[#cbd5e1]">
 					Read messages sent to your account. Authorized staff can also prepare and publish organization, team, or tournament announcements. This is not a chat or reply thread.
 				</p>
 			</header>
 
-			<section aria-labelledby="announcement-inbox-heading" className="rounded-xl border border-slate-gray/20 bg-pure-white p-5">
+			<section aria-labelledby="announcement-inbox-heading" className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5">
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<div>
-						<h2 id="announcement-inbox-heading" className="font-heading text-xl font-semibold text-navy">Your inbox</h2>
-						<p className="mt-1 text-sm text-slate-gray">Published messages addressed to your activated Rally26 account.</p>
+						<h2 id="announcement-inbox-heading" className="font-heading text-xl font-semibold text-navy dark:text-[#f8fafc]">Your inbox</h2>
+						<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Published messages addressed to your activated Rally26 account.</p>
 					</div>
-					{inbox.data && <span className="text-sm text-slate-gray">{inbox.data.totalElements} message{inbox.data.totalElements === 1 ? "" : "s"}</span>}
+					{inbox.data && <span className="text-sm text-slate-gray dark:text-[#cbd5e1]">{inbox.data.totalElements} message{inbox.data.totalElements === 1 ? "" : "s"}</span>}
 				</div>
 				<div className="mt-4">
 					{inbox.isLoading && <LoadingState label="Loading announcements…" />}
@@ -125,16 +125,16 @@ export function AnnouncementsPage() {
 					{inbox.data && inbox.data.items.length > 0 && (
 						<ul className="flex flex-col gap-3" aria-label="Announcement inbox">
 							{inbox.data.items.map(({ announcement, readAt }) => (
-								<li key={announcement.id} className={`rounded-lg border p-4 ${readAt ? "border-slate-gray/20 bg-ice-white" : "border-victory-green/40 bg-victory-green/5"}`}>
+								<li key={announcement.id} className={`rounded-lg border p-4 ${readAt ? "border-slate-gray/20 bg-ice-white dark:bg-[#0f172a]" : "border-victory-green/40 bg-victory-green/5"}`}>
 									<div className="flex flex-wrap items-start justify-between gap-3">
 										<div className="min-w-0 flex-1">
-											<div className="flex flex-wrap items-center gap-2 text-xs text-slate-gray">
+											<div className="flex flex-wrap items-center gap-2 text-xs text-slate-gray dark:text-[#cbd5e1]">
 												{!readAt && <span className="rounded-full bg-victory-green px-2 py-1 font-semibold text-white">New</span>}
 												<span>{announcement.scopeName ?? announcement.scopeType}</span>
 												{announcement.publishedAt && <span>{formatDate(announcement.publishedAt)}</span>}
 											</div>
-											<h3 className="mt-2 font-heading text-lg font-semibold text-navy">{announcement.title}</h3>
-											<p className="mt-2 whitespace-pre-wrap text-sm text-slate-gray">{announcement.body}</p>
+											<h3 className="mt-2 font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">{announcement.title}</h3>
+											<p className="mt-2 whitespace-pre-wrap text-sm text-slate-gray dark:text-[#cbd5e1]">{announcement.body}</p>
 										</div>
 										{!readAt && (
 											<Button type="button" variant="secondary" disabled={markRead.isPending} onClick={() => markRead.mutate(announcement.id)}>
@@ -150,12 +150,12 @@ export function AnnouncementsPage() {
 			</section>
 
 			{scopes.length > 0 && (
-				<section aria-labelledby="announcement-management-heading" className="rounded-xl border border-slate-gray/20 bg-pure-white p-5">
-					<h2 id="announcement-management-heading" className="font-heading text-xl font-semibold text-navy">Manage communications</h2>
-					<p className="mt-1 text-sm text-slate-gray">Create a draft, review the exact content and delivery channels, then publish it once.</p>
+				<section aria-labelledby="announcement-management-heading" className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5">
+					<h2 id="announcement-management-heading" className="font-heading text-xl font-semibold text-navy dark:text-[#f8fafc]">Manage communications</h2>
+					<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Create a draft, review the exact content and delivery channels, then publish it once.</p>
 
 					<div className="mt-4 max-w-xl">
-						<label htmlFor="announcement-scope" className="text-sm font-medium text-navy">Communication scope</label>
+						<label htmlFor="announcement-scope" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Communication scope</label>
 						<select
 							id="announcement-scope"
 							value={selectedScope ? `${selectedScope.scopeType}:${selectedScope.scopeId}` : ""}
@@ -169,40 +169,40 @@ export function AnnouncementsPage() {
 							{scopes.map((scope) => <option key={`${scope.scopeType}:${scope.scopeId}`} value={`${scope.scopeType}:${scope.scopeId}`}>{scope.label} · {scope.scopeType.toLowerCase()}</option>)}
 						</select>
 						{selectedScope?.scopeType === "TOURNAMENT" && (
-							<p className="mt-2 text-xs text-slate-gray">Tournament-wide guardian and athlete delivery is unavailable until Rally26 has a participating-team relationship model. Tournament announcements currently resolve staff recipients only.</p>
+							<p className="mt-2 text-xs text-slate-gray dark:text-[#cbd5e1]">Tournament-wide guardian and athlete delivery is unavailable until Rally26 has a participating-team relationship model. Tournament announcements currently resolve staff recipients only.</p>
 						)}
 					</div>
 
-					<form onSubmit={(event) => void createDraft(event)} className="mt-5 grid gap-4 rounded-lg bg-ice-white p-4" noValidate>
+					<form onSubmit={(event) => void createDraft(event)} className="mt-5 grid gap-4 rounded-lg bg-ice-white dark:bg-[#0f172a] p-4" noValidate>
 						<div>
-							<label htmlFor="announcement-title" className="text-sm font-medium text-navy">Title</label>
+							<label htmlFor="announcement-title" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Title</label>
 							<input id="announcement-title" value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={180} className="mt-1 min-h-11 w-full rounded-md border border-slate-gray/30 px-3 py-2" />
 						</div>
 						<div>
-							<label htmlFor="announcement-body" className="text-sm font-medium text-navy">Message</label>
+							<label htmlFor="announcement-body" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Message</label>
 							<textarea id="announcement-body" value={body} onChange={(event) => setBody(event.target.value)} required maxLength={5000} rows={5} className="mt-1 w-full rounded-md border border-slate-gray/30 px-3 py-2" />
 						</div>
 						<div className="grid gap-4 sm:grid-cols-2">
 							<div>
-								<label htmlFor="announcement-audience" className="text-sm font-medium text-navy">Audience</label>
+								<label htmlFor="announcement-audience" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Audience</label>
 								<select id="announcement-audience" value={audience} onChange={(event) => setAudience(event.target.value as AnnouncementAudience)} className="mt-1 min-h-11 w-full rounded-md border border-slate-gray/30 px-3 py-2">
 									{audienceOptions.map((value) => <option key={value} value={value}>{AUDIENCE_LABELS[value]}</option>)}
 								</select>
 							</div>
 							<fieldset>
-								<legend className="text-sm font-medium text-navy">Delivery</legend>
-								<label className="mt-2 flex items-center gap-2 text-sm text-slate-gray"><input type="checkbox" checked={emailEnabled} onChange={(event) => setEmailEnabled(event.target.checked)} /> Email</label>
-								<label className="mt-2 flex items-center gap-2 text-sm text-slate-gray"><input type="checkbox" checked={smsEnabled} onChange={(event) => setSmsEnabled(event.target.checked)} /> SMS to opted-in households</label>
+								<legend className="text-sm font-medium text-navy dark:text-[#f8fafc]">Delivery</legend>
+								<label className="mt-2 flex items-center gap-2 text-sm text-slate-gray dark:text-[#cbd5e1]"><input type="checkbox" checked={emailEnabled} onChange={(event) => setEmailEnabled(event.target.checked)} /> Email</label>
+								<label className="mt-2 flex items-center gap-2 text-sm text-slate-gray dark:text-[#cbd5e1]"><input type="checkbox" checked={smsEnabled} onChange={(event) => setSmsEnabled(event.target.checked)} /> SMS to opted-in households</label>
 							</fieldset>
 						</div>
-						<p className="text-xs text-slate-gray">Every resolved recipient receives an in-app copy. Household email opt-outs and SMS opt-ins are enforced when recipients are snapshotted at publication.</p>
+						<p className="text-xs text-slate-gray dark:text-[#cbd5e1]">Every resolved recipient receives an in-app copy. Household email opt-outs and SMS opt-ins are enforced when recipients are snapshotted at publication.</p>
 						<div><Button type="submit" disabled={createAnnouncement.isPending || updateAnnouncement.isPending || !title.trim() || !body.trim()}>{createAnnouncement.isPending || updateAnnouncement.isPending ? "Saving…" : editingId ? "Save draft changes" : "Create draft"}</Button>{editingId && <Button type="button" variant="secondary" className="ml-2" onClick={() => { setEditingId(null); setTitle(""); setBody(""); setAudience("ALL"); }}>Cancel edit</Button>}</div>
-						{notice && <p role="status" className="text-sm text-slate-gray">{notice}</p>}
+						{notice && <p role="status" className="text-sm text-slate-gray dark:text-[#cbd5e1]">{notice}</p>}
 					</form>
 
 					<div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-						<h3 className="font-heading text-lg font-semibold text-navy">Scope history</h3>
-						<label className="flex items-center gap-2 text-sm text-slate-gray">Status
+						<h3 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Scope history</h3>
+						<label className="flex items-center gap-2 text-sm text-slate-gray dark:text-[#cbd5e1]">Status
 							<select value={managementStatus} onChange={(event) => setManagementStatus(event.target.value as AnnouncementStatus | "")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 								<option value="">All</option>
 								<option value="DRAFT">Draft</option>
@@ -221,10 +221,10 @@ export function AnnouncementsPage() {
 									<li key={item.id} className="rounded-lg border border-slate-gray/20 p-4">
 										<div className="flex flex-wrap items-start justify-between gap-3">
 											<div className="min-w-0 flex-1">
-												<div className="flex flex-wrap gap-2 text-xs text-slate-gray"><span>{STATUS_LABELS[item.status]}</span><span>{item.kind.replaceAll("_", " ")}</span><span>{AUDIENCE_LABELS[item.audience]}</span></div>
-												<h4 className="mt-2 font-heading font-semibold text-navy">{item.title}</h4>
-												<p className="mt-1 whitespace-pre-wrap text-sm text-slate-gray">{item.body}</p>
-												{item.status === "PUBLISHED" && <p className="mt-2 text-xs text-slate-gray">{item.recipientCount} recipients · Email {item.emailSentCount} sent / {item.emailFailedCount} failed · SMS {item.smsSentCount} sent / {item.smsFailedCount} failed</p>}
+												<div className="flex flex-wrap gap-2 text-xs text-slate-gray dark:text-[#cbd5e1]"><span>{STATUS_LABELS[item.status]}</span><span>{item.kind.replaceAll("_", " ")}</span><span>{AUDIENCE_LABELS[item.audience]}</span></div>
+												<h4 className="mt-2 font-heading font-semibold text-navy dark:text-[#f8fafc]">{item.title}</h4>
+												<p className="mt-1 whitespace-pre-wrap text-sm text-slate-gray dark:text-[#cbd5e1]">{item.body}</p>
+												{item.status === "PUBLISHED" && <p className="mt-2 text-xs text-slate-gray dark:text-[#cbd5e1]">{item.recipientCount} recipients · Email {item.emailSentCount} sent / {item.emailFailedCount} failed · SMS {item.smsSentCount} sent / {item.smsFailedCount} failed</p>}
 											</div>
 											<div className="flex shrink-0 flex-wrap gap-2">
 												{item.status === "DRAFT" && <Button type="button" variant="secondary" onClick={() => { setEditingId(item.id); setTitle(item.title); setBody(item.body); setAudience(item.audience); setEmailEnabled(item.emailEnabled); setSmsEnabled(item.smsEnabled); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</Button>}

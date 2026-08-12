@@ -50,23 +50,23 @@ export function ProfileCorrectionForm({
 			}}
 			aria-label={`Request a correction for ${targetLabel}`}
 		>
-			<p className="text-sm text-slate-gray">
+			<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 				Request an organization-reviewed change. The current profile remains unchanged until an owner or administrator approves it.
 			</p>
 			<div className="grid gap-3 sm:grid-cols-2">
 				<div className="flex flex-col gap-1">
-					<label htmlFor={`correction-field-${targetId}`} className="text-sm font-medium text-navy">Field</label>
+					<label htmlFor={`correction-field-${targetId}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">Field</label>
 					<select
 						id={`correction-field-${targetId}`}
 						value={field}
 						onChange={(event) => { setField(event.target.value as ProfileCorrectionField); setProposedValue(""); }}
-						className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2"
+						className="min-h-11 rounded-md border border-slate-gray/30 bg-white dark:bg-[#111827] px-3 py-2"
 					>
 						{fields.map((item) => <option key={item} value={item}>{PROFILE_CORRECTION_FIELD_LABELS[item]}</option>)}
 					</select>
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor={`correction-value-${targetId}`} className="text-sm font-medium text-navy">Requested value</label>
+					<label htmlFor={`correction-value-${targetId}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">Requested value</label>
 					<input
 						id={`correction-value-${targetId}`}
 						type={inputType(field)}
@@ -79,7 +79,7 @@ export function ProfileCorrectionForm({
 				</div>
 			</div>
 			<div className="flex flex-col gap-1">
-				<label htmlFor={`correction-reason-${targetId}`} className="text-sm font-medium text-navy">Why is this correction needed?</label>
+				<label htmlFor={`correction-reason-${targetId}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">Why is this correction needed?</label>
 				<textarea
 					id={`correction-reason-${targetId}`}
 					value={reason}

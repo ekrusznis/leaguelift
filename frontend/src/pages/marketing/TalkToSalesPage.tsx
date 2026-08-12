@@ -101,7 +101,7 @@ export function TalkToSalesPage() {
 
 	if (submitted) {
 		return (
-			<section className="bg-ice-50 py-24">
+			<section className="bg-ice-50 dark:bg-[#0f172a] py-24">
 				<PageContainer className="mx-auto flex max-w-xl flex-col items-center gap-4 text-center">
 					<Seo title="Request Received" description="Your Rally26 request has been received." noIndex />
 					<span className="flex size-14 items-center justify-center rounded-full bg-green-500/15 text-green-600">
@@ -109,9 +109,9 @@ export function TalkToSalesPage() {
 							<path d="m5 12.5 4.5 4.5L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 						</svg>
 					</span>
-					<h1 className="font-heading text-3xl font-extrabold text-navy-900">Thank you, {submitted.organizationName}</h1>
-					<p className="text-slate-700">Your request has been received. A member of our team will follow up.</p>
-					<p className="text-sm text-slate-500">Reference: {submitted.reference}</p>
+					<h1 className="font-heading text-3xl font-extrabold text-navy-900 dark:text-[#f8fafc]">Thank you, {submitted.organizationName}</h1>
+					<p className="text-slate-700 dark:text-[#cbd5e1]">Your request has been received. A member of our team will follow up.</p>
+					<p className="text-sm text-slate-500 dark:text-[#cbd5e1]">Reference: {submitted.reference}</p>
 					<PrimaryButton to="/" className="mt-4">
 						Return Home
 					</PrimaryButton>
@@ -145,16 +145,16 @@ export function TalkToSalesPage() {
 				</PageContainer>
 			</section>
 
-			<section className="bg-white py-16">
+			<section className="bg-white dark:bg-[#111827] py-16">
 				<PageContainer>
 					<GuidedOnboardingCard />
 				</PageContainer>
 			</section>
 
-			<section className="bg-ice-50 py-16 sm:py-20">
+			<section className="bg-ice-50 dark:bg-[#0f172a] py-16 sm:py-20">
 				<PageContainer className="mx-auto max-w-3xl">
-					<h2 className="font-heading text-2xl font-bold text-navy-900">Tell us about your organization</h2>
-					<p className="mt-2 text-slate-700">There is no obligation, and requests are reviewed on a rolling basis.</p>
+					<h2 className="font-heading text-2xl font-bold text-navy-900 dark:text-[#f8fafc]">Tell us about your organization</h2>
+					<p className="mt-2 text-slate-700 dark:text-[#cbd5e1]">There is no obligation, and requests are reviewed on a rolling basis.</p>
 
 					<form onSubmit={onSubmit} noValidate className="mt-8 flex flex-col gap-10">
 						<input
@@ -167,7 +167,7 @@ export function TalkToSalesPage() {
 						/>
 
 						<fieldset className="flex flex-col gap-5">
-							<legend className="font-heading text-lg font-bold text-navy-900">Contact information</legend>
+							<legend className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Contact information</legend>
 							<div className="grid gap-5 sm:grid-cols-2">
 								<FormField label="First name" required error={errors.firstName?.message} {...register("firstName")} />
 								<FormField label="Last name" required error={errors.lastName?.message} {...register("lastName")} />
@@ -187,7 +187,7 @@ export function TalkToSalesPage() {
 						</fieldset>
 
 						<fieldset className="flex flex-col gap-5">
-							<legend className="font-heading text-lg font-bold text-navy-900">Organization</legend>
+							<legend className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Organization</legend>
 							<FormField label="Organization name" required error={errors.organizationName?.message} {...register("organizationName")} />
 							<div className="grid gap-5 sm:grid-cols-2">
 								<FormField label="Organization website" hint="Optional" error={errors.organizationWebsite?.message} {...register("organizationWebsite")} />
@@ -218,7 +218,7 @@ export function TalkToSalesPage() {
 						</fieldset>
 
 						<fieldset className="flex flex-col gap-5">
-							<legend className="font-heading text-lg font-bold text-navy-900">Current workflow</legend>
+							<legend className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Current workflow</legend>
 							<div className="grid gap-5 sm:grid-cols-2">
 								<FormField label="Current sports-management software" hint="Optional" {...register("currentSoftware")} />
 								<FormField label="Current merchandise provider or method" hint="Optional" {...register("currentMerchProvider")} />
@@ -232,7 +232,7 @@ export function TalkToSalesPage() {
 						</fieldset>
 
 						<fieldset className="flex flex-col gap-4">
-							<legend className="font-heading text-lg font-bold text-navy-900">Product interest</legend>
+							<legend className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Product interest</legend>
 							{errors.productInterest && (
 								<p role="alert" className="text-sm text-error-600">
 									{errors.productInterest.message}
@@ -240,21 +240,21 @@ export function TalkToSalesPage() {
 							)}
 							<div className="grid gap-3 sm:grid-cols-2">
 								{PRODUCT_INTEREST_OPTIONS.map((option) => (
-									<label key={option.value} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5">
+									<label key={option.value} className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-3.5">
 										<input
 											type="checkbox"
 											value={option.value}
 											{...register("productInterest")}
-											className="size-5 rounded border-slate-300 text-green-500 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400"
+											className="size-5 rounded border-slate-300 dark:border-[#334155] text-green-500 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400"
 										/>
-										<span className="text-sm font-medium text-navy-900">{option.label}</span>
+										<span className="text-sm font-medium text-navy-900 dark:text-[#f8fafc]">{option.label}</span>
 									</label>
 								))}
 							</div>
 						</fieldset>
 
 						<fieldset className="flex flex-col gap-5">
-							<legend className="font-heading text-lg font-bold text-navy-900">Needs</legend>
+							<legend className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Needs</legend>
 							<FormField
 								label="Biggest current revenue or administration challenge"
 								hint="Optional"
@@ -271,12 +271,12 @@ export function TalkToSalesPage() {
 						</fieldset>
 
 						<fieldset className="flex flex-col gap-5">
-							<legend className="font-heading text-lg font-bold text-navy-900">How did you hear about Rally26?</legend>
+							<legend className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">How did you hear about Rally26?</legend>
 							<FormField label="How did you hear about us?" hint="Optional" {...register("howHeard")} />
 						</fieldset>
 
 						<fieldset className="flex flex-col gap-4">
-							<legend className="font-heading text-lg font-bold text-navy-900">Consent</legend>
+							<legend className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Consent</legend>
 							<CheckboxField label="I consent to be contacted about this request." error={errors.consentContacted?.message} {...register("consentContacted")} />
 							<CheckboxField label="I confirm I am at least 18 years old." error={errors.confirmAdult?.message} {...register("confirmAdult")} />
 							<CheckboxField label="I agree to the Privacy Policy." error={errors.agreePrivacy?.message} {...register("agreePrivacy")} />

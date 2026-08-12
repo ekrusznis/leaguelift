@@ -53,7 +53,7 @@ export function PersonalIntegrationsPage() {
 		? "bg-green-500/15 text-victory-green"
 		: connection?.status === "DEGRADED"
 			? "bg-amber-500/15 text-amber-800"
-			: "bg-slate-gray/10 text-slate-gray";
+			: "bg-slate-gray/10 text-slate-gray dark:text-[#cbd5e1]";
 	const calendars = useGoogleCalendars(Boolean(isConnected));
 
 	useEffect(() => {
@@ -80,22 +80,22 @@ export function PersonalIntegrationsPage() {
 	return (
 		<div className="flex flex-col gap-6">
 			<div>
-				<h1 className="font-heading text-2xl font-bold text-navy">My Integrations</h1>
-				<p className="mt-1 text-slate-gray">Personal connections belong to you, not to an organization. Organization accounting and sports-data connections remain in each organization’s Integrations workspace.</p>
+				<h1 className="font-heading text-2xl font-bold text-navy dark:text-[#f8fafc]">My Integrations</h1>
+				<p className="mt-1 text-slate-gray dark:text-[#cbd5e1]">Personal connections belong to you, not to an organization. Organization accounting and sports-data connections remain in each organization’s Integrations workspace.</p>
 			</div>
 
 			{callbackStatus && (
-				<div role="status" className="flex items-center justify-between gap-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-navy">
+				<div role="status" className="flex items-center justify-between gap-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-navy dark:text-[#f8fafc]">
 					<span>{callbackStatus === "connected" ? "The provider authorization completed." : "The provider returned to Rally26. Review the connection status below."}</span>
 					<button type="button" className="font-medium text-azure-blue hover:underline" onClick={() => { searchParams.delete("integration"); searchParams.delete("provider"); setSearchParams(searchParams, { replace: true }); }}>Dismiss</button>
 				</div>
 			)}
 
-			<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5" aria-labelledby="google-calendar-title">
+			<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5" aria-labelledby="google-calendar-title">
 				<div className="flex flex-wrap items-start justify-between gap-4">
 					<div className="max-w-2xl">
-						<h2 id="google-calendar-title" className="font-heading text-lg font-semibold text-navy">Google Calendar</h2>
-						<p className="mt-1 text-sm text-slate-gray">{catalog.description}</p>
+						<h2 id="google-calendar-title" className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Google Calendar</h2>
+						<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">{catalog.description}</p>
 					</div>
 					<span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusTone}`}>
 						{statusLabel(catalog.readiness, connection?.status)}
@@ -105,13 +105,13 @@ export function PersonalIntegrationsPage() {
 				{connection?.lastErrorMessage && <p role="alert" className="mt-3 rounded-md bg-error-red/10 p-3 text-sm text-error-red">{connection.lastErrorMessage}</p>}
 
 				{!isConnected && (
-					<div className="mt-5 rounded-lg border border-slate-gray/20 bg-ice-white p-4">
-						<p className="text-sm text-slate-gray">{catalog.activationRequirement}</p>
+					<div className="mt-5 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4">
+						<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">{catalog.activationRequirement}</p>
 						<div className="mt-3 flex flex-wrap gap-2">
 							<Button type="button" onClick={() => void connect()} disabled={!canStart || busy}>{startAuthorization.isPending ? "Starting…" : connection?.status === "DEGRADED" ? "Reauthorize" : "Connect Google Calendar"}</Button>
 							{connection && connection.status !== "DISCONNECTED" && <Button type="button" variant="secondary" onClick={() => disconnect.mutate(connection.id)} disabled={busy}>Disconnect locally</Button>}
 						</div>
-						{catalog.readiness !== "AVAILABLE" && <p className="mt-2 text-xs text-slate-gray">Rally26 does not request Google credentials until the verified provider application is enabled.</p>}
+						{catalog.readiness !== "AVAILABLE" && <p className="mt-2 text-xs text-slate-gray dark:text-[#cbd5e1]">Rally26 does not request Google credentials until the verified provider application is enabled.</p>}
 					</div>
 				)}
 
@@ -125,12 +125,12 @@ export function PersonalIntegrationsPage() {
 						</div>
 
 						<div>
-							<label htmlFor="google-calendar-selection" className="text-sm font-medium text-navy">Destination calendar</label>
-							{calendars.isLoading ? <p className="mt-2 text-sm text-slate-gray">Loading calendars…</p> : calendars.isError ? (
+							<label htmlFor="google-calendar-selection" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Destination calendar</label>
+							{calendars.isLoading ? <p className="mt-2 text-sm text-slate-gray dark:text-[#cbd5e1]">Loading calendars…</p> : calendars.isError ? (
 								<p role="alert" className="mt-2 text-sm text-error-red">Calendar discovery is not available until the official provider client is activated.</p>
 							) : (
 								<div className="mt-2 flex flex-wrap gap-2">
-									<select id="google-calendar-selection" value={selectedCalendarId} onChange={(event) => setSelectedCalendarId(event.target.value)} className="min-h-11 min-w-64 rounded-md border border-slate-gray/30 bg-pure-white px-3 py-2 text-navy">
+									<select id="google-calendar-selection" value={selectedCalendarId} onChange={(event) => setSelectedCalendarId(event.target.value)} className="min-h-11 min-w-64 rounded-md border border-slate-gray/30 bg-pure-white dark:bg-[#111827] px-3 py-2 text-navy dark:text-[#f8fafc]">
 										<option value="">Choose a writable calendar</option>
 										{calendars.data?.filter((calendar) => calendar.writable).map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}{calendar.primary ? " (Primary)" : ""}</option>)}
 									</select>
@@ -150,9 +150,9 @@ export function PersonalIntegrationsPage() {
 				)}
 			</section>
 
-			<section className="rounded-xl border border-slate-gray/20 bg-ice-white p-5">
-				<h2 className="font-heading text-lg font-semibold text-navy">ICS always remains available</h2>
-				<p className="mt-1 text-sm text-slate-gray">Event pages and authorized schedules can still download standards-based ICS files without connecting a Google account. Google synchronization is optional and will begin as Rally26-to-Google only.</p>
+			<section className="rounded-xl border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-5">
+				<h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">ICS always remains available</h2>
+				<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Event pages and authorized schedules can still download standards-based ICS files without connecting a Google account. Google synchronization is optional and will begin as Rally26-to-Google only.</p>
 				<Link to="/app/help/connecting-google-calendar" className="mt-3 inline-block text-sm font-medium text-azure-blue hover:underline">Read the Google Calendar guide →</Link>
 			</section>
 		</div>
@@ -160,5 +160,5 @@ export function PersonalIntegrationsPage() {
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
-	return <div className="rounded-lg border border-slate-gray/20 bg-ice-white p-3"><p className="text-xs font-medium uppercase tracking-wide text-slate-gray">{label}</p><p className="mt-1 break-words text-sm font-semibold text-navy">{value}</p></div>;
+	return <div className="rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-3"><p className="text-xs font-medium uppercase tracking-wide text-slate-gray dark:text-[#cbd5e1]">{label}</p><p className="mt-1 break-words text-sm font-semibold text-navy dark:text-[#f8fafc]">{value}</p></div>;
 }

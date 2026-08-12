@@ -92,9 +92,9 @@ export function GlobalSearchBox({ scope, organizationId }: { scope: SearchScope;
 				/>
 			</div>
 			{open && debouncedQuery.trim().length >= 2 && (
-				<div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
-					{isFetching && <p className="px-2 py-2 text-sm text-slate-500">Searching…</p>}
-					{!isFetching && data && items.length === 0 && <p className="px-2 py-2 text-sm text-slate-500">No results.</p>}
+				<div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-80 overflow-y-auto rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-2 shadow-lg">
+					{isFetching && <p className="px-2 py-2 text-sm text-slate-500 dark:text-[#cbd5e1]">Searching…</p>}
+					{!isFetching && data && items.length === 0 && <p className="px-2 py-2 text-sm text-slate-500 dark:text-[#cbd5e1]">No results.</p>}
 					{!isFetching && items.length > 0 && (
 						<ul id={listboxId} role="listbox" className="flex flex-col">
 							{items.map((hit, index) => (
@@ -108,14 +108,14 @@ export function GlobalSearchBox({ scope, organizationId }: { scope: SearchScope;
 										onMouseEnter={() => setHighlightedIndex(index)}
 										onClick={() => handleSelect(hit)}
 										className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left ${
-											index === highlightedIndex ? "bg-ice-50" : "hover:bg-ice-50"
+											index === highlightedIndex ? "bg-ice-50 dark:bg-[#0f172a]" : "hover:bg-ice-50 hover:dark:bg-[#0f172a]"
 										}`}
 									>
 										<span className="min-w-0">
-											<span className="block truncate text-sm font-medium text-navy-900">{hit.label}</span>
-											{hit.subtitle && <span className="block truncate text-xs text-slate-500">{hit.subtitle}</span>}
+											<span className="block truncate text-sm font-medium text-navy-900 dark:text-[#f8fafc]">{hit.label}</span>
+											{hit.subtitle && <span className="block truncate text-xs text-slate-500 dark:text-[#cbd5e1]">{hit.subtitle}</span>}
 										</span>
-										<span className="shrink-0 rounded-full bg-ice-50 px-2 py-0.5 text-xs text-slate-500">{TYPE_LABELS[hit.type]}</span>
+										<span className="shrink-0 rounded-full bg-ice-50 dark:bg-[#0f172a] px-2 py-0.5 text-xs text-slate-500 dark:text-[#cbd5e1]">{TYPE_LABELS[hit.type]}</span>
 									</button>
 								</li>
 							))}

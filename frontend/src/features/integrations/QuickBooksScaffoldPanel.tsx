@@ -101,29 +101,29 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 	}
 
 	return (
-		<section className="rounded-xl border border-slate-200 bg-white p-5" aria-labelledby="quickbooks-heading">
+		<section className="rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-5" aria-labelledby="quickbooks-heading">
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div>
-					<h3 id="quickbooks-heading" className="font-heading text-lg font-semibold text-navy-900">
+					<h3 id="quickbooks-heading" className="font-heading text-lg font-semibold text-navy-900 dark:text-[#f8fafc]">
 						QuickBooks Online readiness
 					</h3>
-					<p className="mt-1 text-sm text-slate-500">
+					<p className="mt-1 text-sm text-slate-500 dark:text-[#cbd5e1]">
 						Owner/admin accounting setup. Readiness is gate-based: saved connection metadata never proves live Intuit verification or write activation.
 					</p>
 				</div>
-				<span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+				<span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-[#cbd5e1]">
 					{status.replaceAll("_", " ")}
 				</span>
 			</div>
 
 			<div className="mt-4 grid gap-4 md:grid-cols-2">
-				<div className="rounded-lg border border-slate-200 p-4">
-					<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">QuickBooks company context</p>
-					<p className="mt-2 font-medium text-navy-900">{setting?.companyName ?? "No company authorized"}</p>
-					<p className="mt-1 text-sm text-slate-500">
+				<div className="rounded-lg border border-slate-200 dark:border-[#334155] p-4">
+					<p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-[#cbd5e1]">QuickBooks company context</p>
+					<p className="mt-2 font-medium text-navy-900 dark:text-[#f8fafc]">{setting?.companyName ?? "No company authorized"}</p>
+					<p className="mt-1 text-sm text-slate-500 dark:text-[#cbd5e1]">
 						{setting?.realmId ? `Realm ${setting.realmId}` : catalog.activationRequirement}
 					</p>
-					<p className="mt-2 text-xs text-slate-500">
+					<p className="mt-2 text-xs text-slate-500 dark:text-[#cbd5e1]">
 						{activationReadiness.credentialedProviderVerified
 							? "Credentialed Intuit verification is recorded."
 							: "No credentialed Intuit verification is claimed yet; realm/company metadata alone is only setup context."}
@@ -149,32 +149,32 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 						</div>
 					)}
 				</div>
-				<div className="rounded-lg border border-slate-200 p-4">
-					<p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Export policy</p>
-					<p className="mt-2 font-medium text-navy-900">Provider writes disabled</p>
-					<p className="mt-1 text-sm text-slate-500">
+				<div className="rounded-lg border border-slate-200 dark:border-[#334155] p-4">
+					<p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-[#cbd5e1]">Export policy</p>
+					<p className="mt-2 font-medium text-navy-900 dark:text-[#f8fafc]">Provider writes disabled</p>
+					<p className="mt-1 text-sm text-slate-500 dark:text-[#cbd5e1]">
 						Sandbox verification, credentialed activation, and accounting approval are required before Rally26 can send accounting data.
 					</p>
 				</div>
 			</div>
 
-			<div className="mt-5 rounded-lg border border-slate-200 p-4">
+			<div className="mt-5 rounded-lg border border-slate-200 dark:border-[#334155] p-4">
 				<div className="flex flex-wrap items-start justify-between gap-3">
 					<div>
-						<h4 className="font-medium text-navy-900">Activation readiness gates</h4>
-						<p className="mt-1 text-sm text-slate-500">
+						<h4 className="font-medium text-navy-900 dark:text-[#f8fafc]">Activation readiness gates</h4>
+						<p className="mt-1 text-sm text-slate-500 dark:text-[#cbd5e1]">
 							These gates distinguish local setup from verified provider access. Phase 29 cannot satisfy or bypass the future credential, sandbox, accounting-approval, or write-policy gates.
 						</p>
 					</div>
-					<span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+					<span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-[#cbd5e1]">
 						{activationReadiness.activationAllowed ? "Activation allowed" : "Activation blocked"}
 					</span>
 				</div>
 				<ul className="mt-3 grid gap-2 md:grid-cols-2">
 					{activationReadiness.gates.map((gate) => (
-						<li key={gate.code} className="rounded-md bg-slate-50 p-3 text-xs text-slate-600">
+						<li key={gate.code} className="rounded-md bg-slate-50 dark:bg-[#1e293b] p-3 text-xs text-slate-600 dark:text-[#cbd5e1]">
 							<div className="flex items-start justify-between gap-2">
-								<span className="font-semibold text-navy-900">{gate.label}</span>
+								<span className="font-semibold text-navy-900 dark:text-[#f8fafc]">{gate.label}</span>
 								<span className="font-semibold">
 									{gate.status === "SATISFIED"
 										? "Satisfied"
@@ -192,8 +192,8 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 			<div className="mt-5">
 				<div className="flex flex-wrap items-start justify-between gap-3">
 					<div>
-						<h4 className="font-medium text-navy-900">Chart-of-accounts mapping</h4>
-						<p className="mt-1 text-sm text-slate-500">
+						<h4 className="font-medium text-navy-900 dark:text-[#f8fafc]">Chart-of-accounts mapping</h4>
+						<p className="mt-1 text-sm text-slate-500 dark:text-[#cbd5e1]">
 							Choose the accounts your organization already uses. Rally26 recommends compatible account types, but the owner/accountant controls the final mapping.
 						</p>
 					</div>
@@ -221,12 +221,12 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 				)}
 
 				{validationQuery.data && (
-					<div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-						<p className="text-sm font-medium text-navy-900">Latest mapping check</p>
+					<div className="mt-3 rounded-lg border border-slate-200 dark:border-[#334155] bg-slate-50 dark:bg-[#1e293b] p-3">
+						<p className="text-sm font-medium text-navy-900 dark:text-[#f8fafc]">Latest mapping check</p>
 						<ul className="mt-2 grid gap-2 md:grid-cols-2">
 							{validationQuery.data.map((item) => (
-								<li key={item.mappingType} className="text-xs text-slate-600">
-									<span className="font-semibold text-navy-900">{validationLabel(item.status)}:</span> {item.message}
+								<li key={item.mappingType} className="text-xs text-slate-600 dark:text-[#cbd5e1]">
+									<span className="font-semibold text-navy-900 dark:text-[#f8fafc]">{validationLabel(item.status)}:</span> {item.message}
 								</li>
 							))}
 						</ul>
@@ -250,11 +250,11 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 						});
 
 						return (
-							<div key={type} className="rounded-lg border border-slate-200 p-3">
-								<label htmlFor={`quickbooks-${type}`} className="text-sm font-medium text-navy-900">
+							<div key={type} className="rounded-lg border border-slate-200 dark:border-[#334155] p-3">
+								<label htmlFor={`quickbooks-${type}`} className="text-sm font-medium text-navy-900 dark:text-[#f8fafc]">
 									{definition.label}
 								</label>
-								<p className="mt-1 text-xs text-slate-500">{definition.description}</p>
+								<p className="mt-1 text-xs text-slate-500 dark:text-[#cbd5e1]">{definition.description}</p>
 								<select
 									id={`quickbooks-${type}`}
 									value={selected}
@@ -263,7 +263,7 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 										setWarningAcknowledgements((current) => ({ ...current, [type]: false }));
 									}}
 									disabled={!providerReadAvailable || accountsQuery.isLoading}
-									className="mt-2 min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-navy-900 disabled:bg-slate-50"
+									className="mt-2 min-h-11 w-full rounded-md border border-slate-300 dark:border-[#334155] bg-white dark:bg-[#111827] px-3 py-2 text-sm text-navy-900 dark:text-[#f8fafc] disabled:bg-slate-50 disabled:dark:bg-[#1e293b]"
 								>
 									<option value="">{existing ? existing.externalAccountName : "Choose an account"}</option>
 									{sortedAccounts.map((account) => {
@@ -281,7 +281,7 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 								</select>
 
 								{selectedAccount && compatibility && (
-									<p className="mt-2 text-xs text-slate-600">
+									<p className="mt-2 text-xs text-slate-600 dark:text-[#cbd5e1]">
 										<strong>{compatibilityLabel(compatibility)}.</strong>{" "}
 										{compatibility === "RECOMMENDED"
 											? `This ${selectedAccount.accountType} account matches Rally26's recommended accounting role.`
@@ -292,7 +292,7 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 								)}
 
 								{warningRequired && (
-									<label className="mt-2 flex items-start gap-2 text-xs text-slate-700">
+									<label className="mt-2 flex items-start gap-2 text-xs text-slate-700 dark:text-[#cbd5e1]">
 										<input
 											type="checkbox"
 											checked={warningAcknowledgements[type] === true}
@@ -306,7 +306,7 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 								)}
 
 								<div className="mt-2 flex items-center justify-between gap-2">
-									<span className="text-xs text-slate-500">
+									<span className="text-xs text-slate-500 dark:text-[#cbd5e1]">
 										{existing
 											? `Mapped to ${existing.externalAccountFullyQualifiedName ?? existing.externalAccountName}`
 											: "Owner/accountant selection required before later export activation"}
@@ -332,30 +332,30 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 				</div>
 			</div>
 
-			<div className="mt-5 rounded-lg border border-slate-200 p-4">
-				<h4 className="font-medium text-navy-900">Export-readiness preview</h4>
-				<p className="mt-1 text-sm text-slate-500">
+			<div className="mt-5 rounded-lg border border-slate-200 dark:border-[#334155] p-4">
+				<h4 className="font-medium text-navy-900 dark:text-[#f8fafc]">Export-readiness preview</h4>
+				<p className="mt-1 text-sm text-slate-500 dark:text-[#cbd5e1]">
 					Counts Rally26 source records and revalidates saved mappings. It never sends data to QuickBooks in Phase 29.
 				</p>
 				<div className="mt-3 flex flex-wrap items-end gap-3">
 					<div>
-						<label htmlFor="quickbooks-period-start" className="block text-sm font-medium text-navy-900">Period start</label>
+						<label htmlFor="quickbooks-period-start" className="block text-sm font-medium text-navy-900 dark:text-[#f8fafc]">Period start</label>
 						<input
 							id="quickbooks-period-start"
 							type="date"
 							value={periodStart}
 							onChange={(event) => setPeriodStart(event.target.value)}
-							className="mt-1 min-h-11 rounded-md border border-slate-300 px-3 py-2"
+							className="mt-1 min-h-11 rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2"
 						/>
 					</div>
 					<div>
-						<label htmlFor="quickbooks-period-end" className="block text-sm font-medium text-navy-900">Period end</label>
+						<label htmlFor="quickbooks-period-end" className="block text-sm font-medium text-navy-900 dark:text-[#f8fafc]">Period end</label>
 						<input
 							id="quickbooks-period-end"
 							type="date"
 							value={periodEnd}
 							onChange={(event) => setPeriodEnd(event.target.value)}
-							className="mt-1 min-h-11 rounded-md border border-slate-300 px-3 py-2"
+							className="mt-1 min-h-11 rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2"
 						/>
 					</div>
 					<Button
@@ -370,8 +370,8 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 					<p role="alert" className="mt-3 text-sm text-error-red">Could not create the export preview.</p>
 				)}
 				{preview && (
-					<div role="status" className="mt-3 rounded-md bg-ice-50 p-3 text-sm text-slate-700">
-						<p className="font-medium text-navy-900">{preview.counts.total} candidate records</p>
+					<div role="status" className="mt-3 rounded-md bg-ice-50 dark:bg-[#0f172a] p-3 text-sm text-slate-700 dark:text-[#cbd5e1]">
+						<p className="font-medium text-navy-900 dark:text-[#f8fafc]">{preview.counts.total} candidate records</p>
 						<p className="mt-1">
 							{preview.counts.contributions} contributions · {preview.counts.sponsorships} sponsorships · {preview.counts.orders} orders · {preview.counts.feePayments} fee payments · {preview.counts.corrections} corrections
 						</p>
@@ -388,12 +388,12 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 
 			{recentBatches.length > 0 && (
 				<div className="mt-4">
-					<h4 className="font-medium text-navy-900">Recent export previews</h4>
+					<h4 className="font-medium text-navy-900 dark:text-[#f8fafc]">Recent export previews</h4>
 					<ul className="mt-2 space-y-2">
 						{recentBatches.slice(0, 5).map((batch) => (
-							<li key={batch.id} className="flex flex-wrap justify-between gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm">
+							<li key={batch.id} className="flex flex-wrap justify-between gap-2 rounded-md border border-slate-200 dark:border-[#334155] px-3 py-2 text-sm">
 								<span>{batch.periodStart} – {batch.periodEnd}</span>
-								<span className="text-slate-500">{batch.candidateCount} candidates · {batch.status}</span>
+								<span className="text-slate-500 dark:text-[#cbd5e1]">{batch.candidateCount} candidates · {batch.status}</span>
 							</li>
 						))}
 					</ul>

@@ -63,18 +63,18 @@ function PendingTransfersPanel({ organizationId }: { organizationId: string }) {
 	}
 
 	return (
-		<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5">
-			<h3 className="font-heading text-base font-semibold text-navy">Pending Credit Transfers</h3>
-			<p className="mt-1 text-sm text-slate-gray">Family-to-family credit transfers are held until approved here — nothing moves without your review.</p>
+		<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5">
+			<h3 className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">Pending Credit Transfers</h3>
+			<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Family-to-family credit transfers are held until approved here — nothing moves without your review.</p>
 			{pending.data.length === 0 ? (
-				<p className="mt-4 text-sm text-slate-gray">No pending transfer requests.</p>
+				<p className="mt-4 text-sm text-slate-gray dark:text-[#cbd5e1]">No pending transfer requests.</p>
 			) : (
 				<ul className="mt-4 flex flex-col gap-3">
 					{pending.data.map((item) => (
-						<li key={item.id} className="rounded-md bg-ice-white p-3 text-sm">
+						<li key={item.id} className="rounded-md bg-ice-white dark:bg-[#0f172a] p-3 text-sm">
 							<div className="flex flex-wrap items-center justify-between gap-2">
 								<span>
-									<span className="font-medium text-navy">{formatMoneyMinorUnits(item.amountMinor, "USD")}</span>{" "}
+									<span className="font-medium text-navy dark:text-[#f8fafc]">{formatMoneyMinorUnits(item.amountMinor, "USD")}</span>{" "}
 									from household <code className="text-xs">{item.fromHouseholdId.slice(0, 8)}</code> to <code className="text-xs">{item.toHouseholdId.slice(0, 8)}</code>
 								</span>
 								<span className="flex items-center gap-2">
@@ -83,12 +83,12 @@ function PendingTransfersPanel({ organizationId }: { organizationId: string }) {
 								</span>
 							</div>
 							{rejectingId === item.id && (
-								<div className="mt-3 flex flex-col gap-2 border-t border-slate-200 pt-3">
+								<div className="mt-3 flex flex-col gap-2 border-t border-slate-200 dark:border-[#334155] pt-3">
 									<input
 										placeholder="Optional reason for the family"
 										value={rejectNote}
 										onChange={(event) => setRejectNote(event.target.value)}
-										className="min-h-11 rounded-md border border-slate-300 px-3 py-2 text-sm"
+										className="min-h-11 rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2 text-sm"
 									/>
 									<Button type="button" variant="secondary" disabled={reject.isPending} onClick={() => submitReject(item.id)}>
 										{reject.isPending ? "Rejecting…" : "Confirm reject"}
@@ -136,11 +136,11 @@ function CreditSettingsForm({ organizationId }: { organizationId: string }) {
 	}
 
 	return (
-		<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5">
-			<h3 className="font-heading text-base font-semibold text-navy">Family Credit</h3>
-			<p className="mt-1 text-sm text-slate-gray">Control what percentage of a household-attributed contribution becomes family credit, whether it expires, and whether families can send credit to each other.</p>
+		<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5">
+			<h3 className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">Family Credit</h3>
+			<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Control what percentage of a household-attributed contribution becomes family credit, whether it expires, and whether families can send credit to each other.</p>
 			<form onSubmit={onSubmit} className="mt-4 flex flex-col gap-4" noValidate>
-				<label className="flex max-w-xs flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex max-w-xs flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Default credit percent (%)
 					<input
 						type="number"
@@ -149,33 +149,33 @@ function CreditSettingsForm({ organizationId }: { organizationId: string }) {
 						step="0.01"
 						value={current.defaultCreditPercent / 100}
 						onChange={(event) => setForm({ ...current, defaultCreditPercent: Math.round(Number(event.target.value) * 100) })}
-						className="min-h-11 rounded-md border border-slate-300 px-3 py-2 font-normal"
+						className="min-h-11 rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2 font-normal"
 					/>
 				</label>
-				<label className="flex max-w-xs flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex max-w-xs flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Expiration policy
 					<select
 						value={current.expirationPolicy}
 						onChange={(event) => setForm({ ...current, expirationPolicy: event.target.value as OrganizationCreditSettings["expirationPolicy"] })}
-						className="min-h-11 rounded-md border border-slate-300 px-3 py-2 font-normal"
+						className="min-h-11 rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2 font-normal"
 					>
 						<option value="ROLLOVER">Never expires (rolls over)</option>
 						<option value="EXPIRES">Expires after a fixed window</option>
 					</select>
 				</label>
 				{current.expirationPolicy === "EXPIRES" && (
-					<label className="flex max-w-xs flex-col gap-1 text-sm font-medium text-navy">
+					<label className="flex max-w-xs flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 						Expires after (months)
 						<input
 							type="number"
 							min="1"
 							value={current.expirationMonths ?? ""}
 							onChange={(event) => setForm({ ...current, expirationMonths: event.target.value ? Number(event.target.value) : null })}
-							className="min-h-11 rounded-md border border-slate-300 px-3 py-2 font-normal"
+							className="min-h-11 rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2 font-normal"
 						/>
 					</label>
 				)}
-				<label className="flex items-center gap-2 text-sm font-medium text-navy">
+				<label className="flex items-center gap-2 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					<input
 						type="checkbox"
 						checked={current.p2pTransferEnabled}
@@ -233,13 +233,13 @@ function MarkupRulesPanel({ organizationId }: { organizationId: string }) {
 	}
 
 	return (
-		<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5">
-			<h3 className="font-heading text-base font-semibold text-navy">Swag Shop Markup</h3>
-			<p className="mt-1 text-sm text-slate-gray">Set the org-wide default markup applied over Printify's cost, plus optional overrides for specific apparel types. Prices left blank when adding a variant are computed from these rules.</p>
+		<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5">
+			<h3 className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">Swag Shop Markup</h3>
+			<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Set the org-wide default markup applied over Printify's cost, plus optional overrides for specific apparel types. Prices left blank when adding a variant are computed from these rules.</p>
 
 			<div className="mt-4 flex flex-col gap-2 text-sm">
-				<div className="flex items-center justify-between rounded-md bg-ice-white p-3">
-					<span className="font-medium text-navy">Org-wide default</span>
+				<div className="flex items-center justify-between rounded-md bg-ice-white dark:bg-[#0f172a] p-3">
+					<span className="font-medium text-navy dark:text-[#f8fafc]">Org-wide default</span>
 					<span className="flex items-center gap-3">
 						<span>{defaultRule ? formatMarkup(defaultRule.markupType, defaultRule.markupValue) : "40% (system default)"}</span>
 						{defaultRule && (
@@ -248,37 +248,37 @@ function MarkupRulesPanel({ organizationId }: { organizationId: string }) {
 					</span>
 				</div>
 				{overrideRules.map((rule) => (
-					<div key={rule.id} className="flex items-center justify-between rounded-md bg-ice-white p-3">
-						<span className="font-medium text-navy">{blueprintTitle(rule.printifyBlueprintId as number)}</span>
+					<div key={rule.id} className="flex items-center justify-between rounded-md bg-ice-white dark:bg-[#0f172a] p-3">
+						<span className="font-medium text-navy dark:text-[#f8fafc]">{blueprintTitle(rule.printifyBlueprintId as number)}</span>
 						<span className="flex items-center gap-3">
 							<span>{formatMarkup(rule.markupType, rule.markupValue)}</span>
 							<Button type="button" variant="secondary" disabled={deleteRule.isPending} onClick={() => deleteRule.mutate(rule.id)}>Remove</Button>
 						</span>
 					</div>
 				))}
-				{overrideRules.length === 0 && <p className="text-slate-gray">No per-apparel-type overrides yet.</p>}
+				{overrideRules.length === 0 && <p className="text-slate-gray dark:text-[#cbd5e1]">No per-apparel-type overrides yet.</p>}
 			</div>
 
 			<form onSubmit={onSubmit} className="mt-4 flex flex-wrap items-end gap-3 border-t border-slate-gray/20 pt-4">
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Apparel type
-					<select value={printifyBlueprintId} onChange={(event) => setPrintifyBlueprintId(event.target.value)} className="min-h-11 rounded-md border border-slate-300 px-3 py-2 font-normal">
+					<select value={printifyBlueprintId} onChange={(event) => setPrintifyBlueprintId(event.target.value)} className="min-h-11 rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2 font-normal">
 						<option value="">Org-wide default</option>
 						{(blueprints.data ?? []).map((blueprint) => (
 							<option key={blueprint.id} value={blueprint.id}>{blueprint.title}</option>
 						))}
 					</select>
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Type
-					<select value={markupType} onChange={(event) => setMarkupType(event.target.value as "PERCENTAGE" | "FLAT")} className="min-h-11 rounded-md border border-slate-300 px-3 py-2 font-normal">
+					<select value={markupType} onChange={(event) => setMarkupType(event.target.value as "PERCENTAGE" | "FLAT")} className="min-h-11 rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2 font-normal">
 						<option value="PERCENTAGE">Percentage</option>
 						<option value="FLAT">Flat amount</option>
 					</select>
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					{markupType === "PERCENTAGE" ? "Markup %" : "Markup $"}
-					<input type="number" min="0" step="0.01" value={markupValue} onChange={(event) => setMarkupValue(event.target.value)} className="min-h-11 w-32 rounded-md border border-slate-300 px-3 py-2 font-normal" />
+					<input type="number" min="0" step="0.01" value={markupValue} onChange={(event) => setMarkupValue(event.target.value)} className="min-h-11 w-32 rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2 font-normal" />
 				</label>
 				<Button type="submit" disabled={upsertRule.isPending}>{upsertRule.isPending ? "Saving…" : "Save rule"}</Button>
 			</form>

@@ -42,7 +42,7 @@ export function FeeTemplateList({ organizationId }: { organizationId: string }) 
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex items-center justify-between">
-				<span className="text-sm text-slate-gray">
+				<span className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 					{data ? `${data.totalElements} template${data.totalElements !== 1 ? "s" : ""}` : ""}
 				</span>
 				<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
@@ -53,13 +53,13 @@ export function FeeTemplateList({ organizationId }: { organizationId: string }) 
 			{showForm && (
 				<form
 					onSubmit={onSubmit}
-					className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-4"
+					className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4"
 					noValidate
 					aria-label="Create a fee template"
 				>
 					<div className="flex flex-wrap gap-3">
 						<div className="flex flex-col gap-1">
-							<label htmlFor="tpl-name" className="text-sm font-medium text-navy">
+							<label htmlFor="tpl-name" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Name <span aria-hidden>*</span>
 							</label>
 							<input
@@ -74,7 +74,7 @@ export function FeeTemplateList({ organizationId }: { organizationId: string }) 
 							{errors.name && <p id="tpl-name-error" role="alert" className="text-sm text-error-red">{errors.name.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
-							<label htmlFor="tpl-amount" className="text-sm font-medium text-navy">
+							<label htmlFor="tpl-amount" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Amount (cents) <span aria-hidden>*</span>
 							</label>
 							<input
@@ -91,7 +91,7 @@ export function FeeTemplateList({ organizationId }: { organizationId: string }) 
 							{errors.amountMinor && <p id="tpl-amount-error" role="alert" className="text-sm text-error-red">{errors.amountMinor.message}</p>}
 						</div>
 						<div className="flex flex-col gap-1">
-							<label htmlFor="tpl-desc" className="text-sm font-medium text-navy">
+							<label htmlFor="tpl-desc" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 								Description
 							</label>
 							<input
@@ -123,11 +123,11 @@ export function FeeTemplateList({ organizationId }: { organizationId: string }) 
 					{data.items.map((tpl) => (
 						<li
 							key={tpl.id}
-							className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-3"
+							className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3"
 						>
 							<div className="min-w-0 flex-1">
-								<p className="break-words font-medium text-navy">{tpl.name}</p>
-								<p className="text-sm text-slate-gray">
+								<p className="break-words font-medium text-navy dark:text-[#f8fafc]">{tpl.name}</p>
+								<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 									{formatAmount(tpl.amountMinor, tpl.currency)}
 									{tpl.description ? ` · ${tpl.description}` : ""}
 								</p>

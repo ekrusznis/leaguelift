@@ -31,10 +31,13 @@ object UploadLimits {
     // a new set of numbers.
     private val SPONSOR_LOGO_CONTENT_TYPES = LOGO_CONTENT_TYPES
 
-    // PDF only for this slice — waivers/forms/uploads (DESIGN-DOC.md section 13).
-    // Word/Office formats are zip-based and need a different magic-byte check; not
-    // worth the extra surface until a real need for them shows up.
-    private val DOCUMENT_CONTENT_TYPES = setOf("application/pdf")
+    // PDF plus PNG/JPEG (Phase 37.9, ADR-118) — waivers/forms/uploads (DESIGN-DOC.md
+    // section 13). PNG/JPEG were added specifically for mobile's native camera/photo-
+    // library upload: a guardian is far more likely to photograph a paper form (a
+    // physical exam, a birth certificate) than to already have it saved as a PDF on
+    // their phone. Word/Office formats are zip-based and need a different magic-byte
+    // check; not worth the extra surface until a real need for them shows up.
+    private val DOCUMENT_CONTENT_TYPES = setOf("application/pdf", "image/png", "image/jpeg")
 
     fun allowedContentTypes(slot: MediaUsageSlot): Set<String> =
         when (slot) {

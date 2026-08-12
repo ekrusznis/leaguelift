@@ -19,7 +19,7 @@ export function DashCard({ id, title, action, children, className = "", tone = "
 	const surface =
 		tone === "dark"
 			? "border-white/10 bg-navy-900 text-white"
-			: "border-slate-200 bg-white text-navy-900";
+			: "border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] text-navy-900 dark:text-[#f8fafc]";
 
 	return (
 		<section id={id} className={`scroll-mt-24 rounded-2xl border p-5 shadow-[0_8px_24px_rgba(11,31,51,0.06)] ${surface} ${className}`}>

@@ -4,11 +4,14 @@ import com.rally26.config.StripeProperties
 import com.rally26.fundraising.application.ContributionService
 import com.rally26.order.application.OrderService
 import com.rally26.order.domain.ShippingAddress
+import com.rally26.payout.application.PayoutAccountService
+import com.rally26.payout.infra.StripeConnectClient
 import com.rally26.sponsorship.application.SponsorshipService
 import com.rally26.subscription.application.OrganizationSubscriptionService
 import com.rally26.webhook.domain.WebhookProcessingStatus
 import com.rally26.webhook.persistence.WebhookEventRepository
 import com.stripe.exception.SignatureVerificationException
+import com.stripe.model.Account
 import com.stripe.model.Invoice
 import com.stripe.model.Subscription
 import com.stripe.model.checkout.Session
@@ -32,11 +35,14 @@ private const val PROVIDER = "stripe"
  * confirms campaign
  * contributions (`fundraising/application/ContributionService.kt`), store
  * orders (`order/application/OrderService.kt`), and sponsorship purchases
- * (`sponsorship/application/SponsorshipService.kt`) — Stripe Connect account-status
- * webhooks remain Phase 5. A session's own metadata (`orderId`/`sponsorshipId`
- * present or not) disambiguates which one a given event is for, since all three use
- * the same event type. Phase 24.6/26.1 also consumes organization-subscription and
- * payment-failure events; signed subscription state is authoritative for activation.
+ * (`sponsorship/application/SponsorshipService.kt`). A session's own metadata
+ * (`orderId`/`sponsorshipId` present or not) disambiguates which one a given event
+ * is for, since all three use the same event type. Phase 24.6/26.1 also consumes
+ * organization-subscription and payment-failure events; signed subscription state
+ * is authoritative for activation. Phase 37.8 (ADR-117) adds `account.updated` —
+ * Connect account restrictions/disablement Stripe applies after initial onboarding
+ * are otherwise invisible until a manager happens to click "refresh status" again.
+ * Dispute/chargeback handling and Stripe Tax remain open, DESIGN-DOC.md section 14.4.
  * Processed synchronously inline (no outbox-consumer worker
  * exists yet, and doesn't need to for one lightweight event type): a genuine
  * processing failure returns 500 so Stripe's own automatic retry schedule covers
@@ -51,6 +57,8 @@ class StripeWebhookController(
     private val orderService: OrderService,
     private val sponsorshipService: SponsorshipService,
     private val organizationSubscriptionService: OrganizationSubscriptionService? = null,
+    private val payoutAccountService: PayoutAccountService? = null,
+    private val stripeConnectClient: StripeConnectClient? = null,
 ) {
     @PostMapping
     fun receive(
@@ -116,6 +124,21 @@ class StripeWebhookController(
                         val subscription = event.dataObjectDeserializer.deserializeUnsafe() as Subscription
                         relatedEntityType = "organization_subscription"
                         relatedEntityId = organizationSubscriptionService?.handleSubscriptionChanged(subscription)
+                        WebhookProcessingStatus.PROCESSED
+                    }
+                    "account.updated" -> {
+                        val account = event.dataObjectDeserializer.deserializeUnsafe() as Account
+                        relatedEntityType = "organization_payout_account"
+                        relatedEntityId =
+                            stripeConnectClient?.let { client ->
+                                payoutAccountService?.syncFromWebhook(account.id, client.statusFrom(account))
+                            }
+                        WebhookProcessingStatus.PROCESSED
+                    }
+                    "customer.subscription.trial_will_end" -> {
+                        val subscription = event.dataObjectDeserializer.deserializeUnsafe() as Subscription
+                        relatedEntityType = "organization_subscription"
+                        relatedEntityId = organizationSubscriptionService?.handleTrialWillEnd(subscription)
                         WebhookProcessingStatus.PROCESSED
                     }
                     "invoice.payment_failed" -> {

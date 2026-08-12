@@ -46,11 +46,11 @@ export function EventTemplatePanel({ organizationId }: { organizationId: string 
 	}
 
 	return (
-		<div className="rounded-xl border border-slate-gray/20 bg-pure-white p-4">
+		<div className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-4">
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div>
-					<h3 className="font-heading text-lg font-semibold text-navy">Reusable event templates</h3>
-					<p className="mt-1 max-w-3xl text-sm text-slate-gray">
+					<h3 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Reusable event templates</h3>
+					<p className="mt-1 max-w-3xl text-sm text-slate-gray dark:text-[#cbd5e1]">
 						Save common practice, game, meeting, and tournament defaults. Selecting a template pre-fills a normal draft event; it never creates a recurring schedule or publishes automatically.
 					</p>
 				</div>
@@ -100,15 +100,15 @@ export function EventTemplatePanel({ organizationId }: { organizationId: string 
 				) : (
 					<ul className="flex flex-col gap-3" aria-label="Active event templates">
 						{active.map((template) => (
-							<li key={template.id} className="rounded-lg border border-slate-gray/20 bg-ice-white p-4">
+							<li key={template.id} className="rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4">
 								<div className="flex flex-wrap items-start justify-between gap-3">
 									<div className="min-w-0 flex-1">
 										<div className="flex flex-wrap items-center gap-2">
-											<p className="break-words font-heading font-semibold text-navy">{template.name}</p>
+											<p className="break-words font-heading font-semibold text-navy dark:text-[#f8fafc]">{template.name}</p>
 											<span className="rounded-full bg-info-50 px-2 py-0.5 text-xs font-medium text-info-700">{EVENT_TYPE_LABELS[template.eventType]}</span>
 										</div>
-										<p className="mt-1 text-sm text-slate-gray">{timingSummary(template)}</p>
-										<p className="text-sm text-slate-gray">
+										<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">{timingSummary(template)}</p>
+										<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 											{[template.venueName, template.area, template.address].filter(Boolean).join(" · ") || "No default location"}
 										</p>
 									</div>
@@ -150,11 +150,11 @@ export function EventTemplatePanel({ organizationId }: { organizationId: string 
 
 			{archived.length > 0 && (
 				<details className="mt-4 rounded-lg border border-slate-gray/20 p-3">
-					<summary className="cursor-pointer font-medium text-navy">Archived templates ({archived.length})</summary>
+					<summary className="cursor-pointer font-medium text-navy dark:text-[#f8fafc]">Archived templates ({archived.length})</summary>
 					<ul className="mt-3 flex flex-col gap-2" aria-label="Archived event templates">
 						{archived.map((template) => (
-							<li key={template.id} className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-gray">
-								<span className="font-medium text-navy">{template.name}</span> · {EVENT_TYPE_LABELS[template.eventType]}
+							<li key={template.id} className="rounded-md bg-slate-50 dark:bg-[#1e293b] px-3 py-2 text-sm text-slate-gray dark:text-[#cbd5e1]">
+								<span className="font-medium text-navy dark:text-[#f8fafc]">{template.name}</span> · {EVENT_TYPE_LABELS[template.eventType]}
 							</li>
 						))}
 					</ul>
@@ -203,7 +203,7 @@ function EventTemplateForm({
 
 	return (
 		<form
-			className="rounded-xl border border-slate-gray/20 bg-ice-white p-4"
+			className="rounded-xl border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4"
 			onSubmit={async (event) => {
 				event.preventDefault();
 				await onSubmit({
@@ -224,65 +224,65 @@ function EventTemplateForm({
 				});
 			}}
 		>
-			<h4 className="font-heading text-base font-semibold text-navy">{template ? `Edit ${template.name}` : "New event template"}</h4>
+			<h4 className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">{template ? `Edit ${template.name}` : "New event template"}</h4>
 			<div className="mt-4 grid gap-3 md:grid-cols-2">
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Template name
 					<input required minLength={2} maxLength={120} value={name} onChange={(event) => setName(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Event type
-					<select value={eventType} onChange={(event) => setEventType(event.target.value as EventType)} className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2">
+					<select value={eventType} onChange={(event) => setEventType(event.target.value as EventType)} className="min-h-11 rounded-md border border-slate-gray/30 bg-white dark:bg-[#111827] px-3 py-2">
 						{Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
 					</select>
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
 					Default title
 					<input maxLength={200} value={title} onChange={(event) => setTitle(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
 					Default description
 					<textarea maxLength={2000} rows={3} value={description} onChange={(event) => setDescription(event.target.value)} className="rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Duration in minutes
 					<input type="number" min={1} max={1440} value={durationMinutes} onChange={(event) => setDurationMinutes(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Arrival minutes before start
 					<input type="number" min={0} max={1440} value={arrivalOffsetMinutes} onChange={(event) => setArrivalOffsetMinutes(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Meeting minutes before start
 					<input type="number" min={0} max={1440} value={meetingOffsetMinutes} onChange={(event) => setMeetingOffsetMinutes(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Timezone
 					<input required maxLength={100} value={timezone} onChange={(event) => setTimezone(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Venue
 					<input maxLength={200} value={venueName} onChange={(event) => setVenueName(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Field / court / area
 					<input maxLength={120} value={area} onChange={(event) => setArea(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
 					Address
 					<input maxLength={300} value={address} onChange={(event) => setAddress(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
 					Meeting point
 					<input maxLength={300} value={meetingPoint} onChange={(event) => setMeetingPoint(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy md:col-span-2">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
 					Directions notes
 					<textarea maxLength={1000} rows={3} value={directionsNotes} onChange={(event) => setDirectionsNotes(event.target.value)} className="rounded-md border border-slate-gray/30 px-3 py-2" />
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Visibility
-					<select value={visibility} onChange={(event) => setVisibility(event.target.value as EventVisibility)} className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2">
+					<select value={visibility} onChange={(event) => setVisibility(event.target.value as EventVisibility)} className="min-h-11 rounded-md border border-slate-gray/30 bg-white dark:bg-[#111827] px-3 py-2">
 						<option value="TEAM">Team</option>
 						<option value="ORGANIZATION">Organization</option>
 						<option value="PUBLIC">Public</option>

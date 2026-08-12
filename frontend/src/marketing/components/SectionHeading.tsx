@@ -8,8 +8,8 @@ type SectionHeadingProps = {
 
 export function SectionHeading({ eyebrow, heading, copy, align = "center", tone = "light" }: SectionHeadingProps) {
 	const alignClass = align === "center" ? "mx-auto text-center" : "text-left";
-	const headingColor = tone === "dark" ? "text-white" : "text-navy-900";
-	const copyColor = tone === "dark" ? "text-slate-300" : "text-slate-700";
+	const headingColor = tone === "dark" ? "text-white" : "text-navy-900 dark:text-[#f8fafc]";
+	const copyColor = tone === "dark" ? "text-slate-300" : "text-slate-700 dark:text-[#cbd5e1]";
 
 	return (
 		<div className={`max-w-2xl ${alignClass}`}>

@@ -92,8 +92,8 @@ export function EventDetailPage() {
 				<Link to={safeReturnTo} className="mb-2 inline-block text-sm text-azure-blue hover:underline">← Back to schedule</Link>
 				<div className="flex flex-wrap items-start justify-between gap-4">
 					<div>
-						<h1 className="font-heading text-2xl font-bold text-navy">{event.displayTitle}</h1>
-						<p className="mt-1 text-slate-gray">{event.eventType} · {event.status}</p>
+						<h1 className="font-heading text-2xl font-bold text-navy dark:text-[#f8fafc]">{event.displayTitle}</h1>
+						<p className="mt-1 text-slate-gray dark:text-[#cbd5e1]">{event.eventType} · {event.status}</p>
 						<p className="mt-0.5 text-xs text-slate-gray/80">
 							{event.allDayDate
 								? `${formatEventAllDayDate(event.allDayDate)} (all day)`
@@ -103,7 +103,7 @@ export function EventDetailPage() {
 					<div className="flex flex-wrap gap-2">
 						<Button type="button" variant="secondary" onClick={downloadCalendar}>Add to calendar</Button>
 						{directions.data?.url && (
-							<a href={directions.data.url} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center rounded-md border border-slate-gray/30 bg-pure-white px-4 py-2 text-sm font-medium text-navy hover:bg-ice-white">
+							<a href={directions.data.url} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center rounded-md border border-slate-gray/30 bg-pure-white dark:bg-[#111827] px-4 py-2 text-sm font-medium text-navy dark:text-[#f8fafc] hover:bg-ice-white hover:dark:bg-[#0f172a]">
 								Open directions
 							</a>
 						)}
@@ -114,8 +114,8 @@ export function EventDetailPage() {
 			{actionError && <p role="alert" className="text-sm text-error-red">{actionError}</p>}
 
 			<div className="grid gap-5 lg:grid-cols-2">
-				<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5">
-					<h2 className="font-heading text-lg font-semibold text-navy">Event details</h2>
+				<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5">
+					<h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Event details</h2>
 					<dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
 						<Detail label="Starts" value={event.allDayDate ? `${formatEventAllDayDate(event.allDayDate)} (all day)` : formatDateTime(event.startAt, event.timezone)} />
 						<Detail label="Ends" value={event.allDayDate ? `${formatEventAllDayDate(event.allDayDate)} (all day)` : formatDateTime(event.endAt, event.timezone)} />
@@ -126,14 +126,14 @@ export function EventDetailPage() {
 						<Detail label="Address" value={event.address ?? "To be determined"} />
 						<Detail label="Meeting point" value={event.meetingPoint ?? "Not specified"} />
 					</dl>
-					{event.description && <p className="mt-4 whitespace-pre-wrap text-sm text-slate-gray">{event.description}</p>}
-					{event.directionsNotes && <p className="mt-3 rounded-lg bg-ice-white p-3 text-sm text-slate-gray"><strong className="text-navy">Directions notes:</strong> {event.directionsNotes}</p>}
+					{event.description && <p className="mt-4 whitespace-pre-wrap text-sm text-slate-gray dark:text-[#cbd5e1]">{event.description}</p>}
+					{event.directionsNotes && <p className="mt-3 rounded-lg bg-ice-white dark:bg-[#0f172a] p-3 text-sm text-slate-gray dark:text-[#cbd5e1]"><strong className="text-navy dark:text-[#f8fafc]">Directions notes:</strong> {event.directionsNotes}</p>}
 				</section>
 
-				<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5">
-					<h2 className="font-heading text-lg font-semibold text-navy">RSVP</h2>
+				<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5">
+					<h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">RSVP</h2>
 					{rsvps.isLoading && <LoadingState label="Loading RSVP status…" />}
-					{rsvps.isError && <p className="mt-3 text-sm text-slate-gray">RSVP status is not available for this event or account.</p>}
+					{rsvps.isError && <p className="mt-3 text-sm text-slate-gray dark:text-[#cbd5e1]">RSVP status is not available for this event or account.</p>}
 					{rsvps.data && (
 						<div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
 							<RsvpCount label="Attending" value={rsvps.data.summary.attending} />
@@ -160,9 +160,9 @@ export function EventDetailPage() {
 					{rsvps.data && rsvps.data.responses.length > 0 && (
 						<ul className="mt-5 flex flex-col gap-2" aria-label="Individual RSVP responses">
 							{rsvps.data.responses.map((response) => (
-								<li key={response.id} className="flex items-center justify-between rounded-lg bg-ice-white px-3 py-2 text-sm">
-									<span className="text-slate-gray">{response.participantName ?? `Participant ${response.participantId.slice(0, 8)}`}</span>
-									<span className="font-medium text-navy">{response.response.replace("_", " ")}</span>
+								<li key={response.id} className="flex items-center justify-between rounded-lg bg-ice-white dark:bg-[#0f172a] px-3 py-2 text-sm">
+									<span className="text-slate-gray dark:text-[#cbd5e1]">{response.participantName ?? `Participant ${response.participantId.slice(0, 8)}`}</span>
+									<span className="font-medium text-navy dark:text-[#f8fafc]">{response.response.replace("_", " ")}</span>
 								</li>
 							))}
 						</ul>
@@ -200,7 +200,7 @@ function RsvpParticipantControls({
 
 	return (
 		<div className="rounded-lg border border-slate-gray/20 p-3">
-			<p className="font-medium text-navy">{participant.firstName} {participant.lastName}</p>
+			<p className="font-medium text-navy dark:text-[#f8fafc]">{participant.firstName} {participant.lastName}</p>
 			<div className="mt-3 flex flex-wrap gap-2">
 				{(["ATTENDING", "NOT_ATTENDING", "MAYBE"] as RsvpResponse[]).map((response) => (
 					<Button
@@ -219,18 +219,18 @@ function RsvpParticipantControls({
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
-	return <div><dt className="text-xs font-medium uppercase tracking-wide text-slate-gray">{label}</dt><dd className="mt-1 text-navy">{value}</dd></div>;
+	return <div><dt className="text-xs font-medium uppercase tracking-wide text-slate-gray dark:text-[#cbd5e1]">{label}</dt><dd className="mt-1 text-navy dark:text-[#f8fafc]">{value}</dd></div>;
 }
 
 function RsvpCount({ label, value }: { label: string; value: number }) {
-	return <div className="rounded-lg bg-ice-white p-3 text-center"><p className="font-heading text-xl font-bold text-navy">{value}</p><p className="text-xs text-slate-gray">{label}</p></div>;
+	return <div className="rounded-lg bg-ice-white dark:bg-[#0f172a] p-3 text-center"><p className="font-heading text-xl font-bold text-navy dark:text-[#f8fafc]">{value}</p><p className="text-xs text-slate-gray dark:text-[#cbd5e1]">{label}</p></div>;
 }
 
 function EventManagementActions({ organizationId, event, publish, cancel, postpone, detach }: { organizationId: string; event: Rally26Event; publish: () => void; cancel: () => void; postpone: () => void; detach: () => void }) {
 	return (
-		<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5">
-			<h2 className="font-heading text-lg font-semibold text-navy">Event actions</h2>
-			<p className="mt-1 text-sm text-slate-gray">Only actions allowed by the backend for your role will succeed.</p>
+		<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5">
+			<h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Event actions</h2>
+			<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Only actions allowed by the backend for your role will succeed.</p>
 			<div className="mt-4 flex flex-wrap gap-2">
 				{event.status === "DRAFT" && <Button type="button" onClick={publish}>Publish</Button>}
 				{event.status !== "DRAFT" && event.status !== "CANCELLED" && event.status !== "COMPLETED" && event.startAt && new Date(event.startAt).getTime() > Date.now() && (

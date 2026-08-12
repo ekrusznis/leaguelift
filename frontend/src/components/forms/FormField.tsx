@@ -20,8 +20,8 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(function F
 	const fieldId = id ?? generatedId;
 	const hintId = hint ? `${fieldId}-hint` : undefined;
 	const errorId = error ? `${fieldId}-error` : undefined;
-	const labelClassName = tone === "dark" ? "text-white" : "text-navy-900";
-	const hintClassName = tone === "dark" ? "text-slate-300" : "text-slate-500";
+	const labelClassName = tone === "dark" ? "text-white" : "text-navy-900 dark:text-[#f8fafc]";
+	const hintClassName = tone === "dark" ? "text-slate-300" : "text-slate-500 dark:text-[#cbd5e1]";
 	const requiredClassName = tone === "dark" ? "text-gold-400" : "text-error-600";
 	const errorClassName = tone === "dark" ? "text-gold-400" : "text-error-600";
 
@@ -42,8 +42,8 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(function F
 				required={required}
 				aria-invalid={!!error}
 				aria-describedby={[hintId, errorId].filter(Boolean).join(" ") || undefined}
-				className={`min-h-12 rounded-[10px] border bg-white px-3.5 py-2.5 text-navy-900 placeholder:text-slate-500 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400 disabled:cursor-not-allowed disabled:bg-slate-200/40 ${
-					error ? "border-error-600" : "border-slate-200"
+				className={`min-h-12 rounded-[10px] border bg-white dark:bg-[#111827] px-3.5 py-2.5 text-navy-900 dark:text-[#f8fafc] placeholder:text-slate-500 placeholder:dark:text-[#cbd5e1] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-green-400 disabled:cursor-not-allowed disabled:bg-slate-200/40 ${
+					error ? "border-error-600" : "border-slate-200 dark:border-[#334155]"
 				} ${className}`}
 				{...props}
 			/>

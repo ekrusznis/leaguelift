@@ -7,7 +7,7 @@ const TONE_STYLES: Record<Tone, string> = {
 	warning: "bg-gold-500/15 text-warning-600",
 	error: "bg-error-600/12 text-error-600",
 	info: "bg-info-600/12 text-info-600",
-	neutral: "bg-slate-200 text-slate-600",
+	neutral: "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-[#cbd5e1]",
 	purple: "bg-purple-500/12 text-purple-600",
 };
 

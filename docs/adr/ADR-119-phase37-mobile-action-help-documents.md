@@ -1,0 +1,26 @@
+# ADR-119 — Phase 37.10-12: mobile Action Center, Help Center, owner Documents
+
+**Status:** Accepted
+**Date:** 2026-08-11
+
+## Context
+
+Three cross-persona/owner surfaces had no mobile equivalent at all: Action Center (a cross-persona to-do list), Help Center (article browse/search + support ticketing), and owner-side organization document management. ADR-106 (the WebView-embed decision for Swag Shop/Fundraising/Sponsorships) explicitly named these three as "open, native-first candidates, not committed to WebView" — this ADR builds them natively, closing that gap rather than leaving it open indefinitely.
+
+## Decision
+
+**Action Center** (`mobile/src/features/actionCenter/`, `app/action-center.tsx`) mirrors `GET /me/action-center`'s real aggregation across every organization context the signed-in user has — the same endpoint every persona's web dashboard already calls. **Item-to-destination mapping is deliberately conservative, not a blanket "guess a native route" approach**: `ActionCenterService.kt` was read directly to confirm what `contextId`/`contextType` actually mean per item `type` — they are *not* a uniform "entity this item is about" id. `FEE_PAYMENT`'s `contextId` is a `householdId`, not a fee-assignment id; `EVENT_RSVP`'s is a `participantId`, not an event id. Neither matches what `fee-details.tsx`/`event-details.tsx` expect as their own `id` param, so routing those types there would have landed on the wrong entity. Only two types (`DOCUMENT_ACKNOWLEDGMENT` → `/documents`, `SUPPORT_CASE_RESPONSE` → `/support-request`, both confirmed by source to need no specific context id) get a native destination; everything else — including every platform-admin/org-financial-review type mobile has no screen for at all — falls back to the same WebView embed (ADR-106) via the item's own `actionPath`, never a guessed route.
+
+**Help Center** (`mobile/src/features/support/`, `app/help.tsx`, `app/help/[slug].tsx`, `app/support-request.tsx`) mirrors web's authenticated article search/category-filter, article detail, and ticket-creation-plus-recent-cases flow against the same `/help/articles`, `/help/articles/{slug}`, `/support-cases` endpoints. **`SupportMarkdown` is ported, not replaced with a new dependency** — web's own implementation isn't a markdown library, it's a ~35-line hand-rolled parser recognizing headings/lists/bold/links only, explicitly never interpreting raw HTML; porting the identical block/inline split logic to `View`/`ThemedText`/`Linking.openURL` keeps article rendering behavior identical across platforms without adding mobile's first markdown dependency. The ticket form auto-attaches the current dashboard-context organization rather than replicating web's explicit multi-organization picker — mobile has no org-switcher UI yet to hang that on, and a user's dashboard context is already the organization they're acting in.
+
+**Owner Documents** (`app/owner/documents.tsx`) reuses the exact `mobile/src/features/media` upload trio built for eligibility document upload (Phase 37.9) unchanged — confirmed against `MediaUploadService.requestUpload` that omitting `entityType`/`entityId` (as web's own `DocumentUploadForm.tsx` does for org-level uploads) correctly falls back to a manager-role check server-side rather than needing a different usage slot or a new backend endpoint. New `useOrganizationDocuments`/`useAssignOrganizationDocument`/`useBroadcastDocumentToAllHouseholds`/`useRemoveDocument` hooks extend mobile's existing (household-only) `features/documents/api.ts` 1:1 against web's own query-key/endpoint shape. The upload picker (camera/photo-library/PDF) is the same three-source pattern as the eligibility upload form, not a shared component — the two forms differ enough (a title field, no `entityType`, broadcast-vs-single-assign branching) that extracting a shared component now would be a premature abstraction for two call sites.
+
+**Navigation**: mobile has no central nav registry (confirmed during research) — each of the four personas' `(tabs)/more.tsx` is a hand-maintained array, so Action Center and Help Center entries were added to all four individually; Documents only to Owner's. Every new screen was also added to `_layout.tsx`'s explicit `Stack.Screen` list, matching this codebase's established (not-fully-auto-registering) Expo Router convention.
+
+**Verification:** `tsc --noEmit`, `expo lint` (one real unescaped-apostrophe catch, fixed), and `expo-doctor` (18/18) all clean.
+
+## Consequences
+
+- All three items ADR-106 explicitly left open as native-first candidates are now built — the mobile-web parity gap analysis's "native-only, no mobile equivalent" list for these three is closed.
+- Action Center's WebView fallback for platform-admin/org-financial-review item types means those specific items open a webview rather than a native screen when tapped on mobile — an honest, working destination rather than a broken or silently-ignored tap, and consistent with treating WebView as the fallback tier ADR-106 already established, not a regression from "should have been native."
+- This closes out Phase 37 (Gap Closeout) in full — all twelve numbered slices (37.1-37.12) plus the founder-interrupt items (mobile onboarding images, keyboard avoidance, Google/Apple sign-in) are shipped and committed on `feature/gap_closeout`.

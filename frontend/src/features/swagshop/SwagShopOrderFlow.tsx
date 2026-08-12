@@ -96,11 +96,11 @@ export function SwagShopOrderFlow() {
 					← Back to organization
 				</Link>
 				<img src="/demo-assets/swagshop/swagshoplogo.png" alt="Swag Shop" className="h-16 w-auto" />
-				<p className="mt-2 text-slate-gray">Order personalized team apparel — the team logo is added automatically.</p>
+				<p className="mt-2 text-slate-gray dark:text-[#cbd5e1]">Order personalized team apparel — the team logo is added automatically.</p>
 			</div>
 
 			{checkoutStatus === "success" && (
-				<div role="status" className="rounded-lg border border-green-600/30 bg-green-50 p-4 text-green-800">
+				<div role="status" className="rounded-lg border border-green-600/30 bg-green-50 dark:bg-green-950 p-4 text-green-800">
 					<p className="font-medium">Order placed!</p>
 					<p className="mt-1 text-sm">
 						{returnedOrderId ? `Order ${returnedOrderId.slice(0, 8)} is confirmed. ` : ""}
@@ -109,14 +109,14 @@ export function SwagShopOrderFlow() {
 				</div>
 			)}
 			{checkoutStatus === "canceled" && (
-				<div role="status" className="rounded-lg border border-slate-gray/30 bg-ice-white p-4 text-slate-gray">
+				<div role="status" className="rounded-lg border border-slate-gray/30 bg-ice-white dark:bg-[#0f172a] p-4 text-slate-gray dark:text-[#cbd5e1]">
 					Checkout was canceled — no order was placed.
 				</div>
 			)}
 
 			{teams.length > 1 && (
 				<div className="flex flex-col gap-1">
-					<label htmlFor="swagshop-team" className="text-sm font-medium text-navy">Ordering for team</label>
+					<label htmlFor="swagshop-team" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Ordering for team</label>
 					<select
 						id="swagshop-team"
 						value={selectedTeamId ?? ""}
@@ -131,13 +131,13 @@ export function SwagShopOrderFlow() {
 			)}
 
 			{apparelTypes.data && apparelTypes.data.length === 0 && (
-				<p className="text-slate-gray">No apparel types are set up yet — ask an organization admin or coach to enable the Swag Shop.</p>
+				<p className="text-slate-gray dark:text-[#cbd5e1]">No apparel types are set up yet — ask an organization admin or coach to enable the Swag Shop.</p>
 			)}
 
 			{apparelTypes.data && apparelTypes.data.length > 0 && (
-				<div className="flex flex-col gap-4 rounded-lg border border-slate-gray/20 bg-pure-white p-4">
+				<div className="flex flex-col gap-4 rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-4">
 					<div className="flex flex-col gap-1">
-						<label htmlFor="swagshop-product" className="text-sm font-medium text-navy">Apparel type</label>
+						<label htmlFor="swagshop-product" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Apparel type</label>
 						<select
 							id="swagshop-product"
 							value={productId}
@@ -153,7 +153,7 @@ export function SwagShopOrderFlow() {
 
 					{selectedProduct && (
 						<div className="flex flex-col gap-1">
-							<label htmlFor="swagshop-variant" className="text-sm font-medium text-navy">Size / color</label>
+							<label htmlFor="swagshop-variant" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Size / color</label>
 							<select
 								id="swagshop-variant"
 								value={variantId}
@@ -183,7 +183,7 @@ export function SwagShopOrderFlow() {
 
 					{combinedParticipants.length > 0 && (
 						<div className="flex flex-col gap-1">
-							<label htmlFor="swagshop-participant" className="text-sm font-medium text-navy">Athlete</label>
+							<label htmlFor="swagshop-participant" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Athlete</label>
 							<select
 								id="swagshop-participant"
 								value={participantId}
@@ -199,27 +199,27 @@ export function SwagShopOrderFlow() {
 					)}
 
 					{selectedProduct && !canPersonalize && (
-						<p className="text-sm text-slate-gray">This apparel type isn&rsquo;t set up for name/number personalization yet — you can still order it as-is.</p>
+						<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">This apparel type isn&rsquo;t set up for name/number personalization yet — you can still order it as-is.</p>
 					)}
 
 					{selectedProduct && canPersonalize && (
-						<div className="flex flex-col gap-3 rounded-md bg-ice-white p-3">
-							<label className="flex items-center gap-2 text-sm font-medium text-navy">
+						<div className="flex flex-col gap-3 rounded-md bg-ice-white dark:bg-[#0f172a] p-3">
+							<label className="flex items-center gap-2 text-sm font-medium text-navy dark:text-[#f8fafc]">
 								<input type="checkbox" checked={wantsPersonalization} onChange={(e) => setWantsPersonalization(e.target.checked)} className="h-4 w-4" />
 								Add name and/or number
 							</label>
 							{wantsPersonalization && (
 								<div className="flex flex-wrap gap-3">
 									<div className="flex flex-col gap-1">
-										<label htmlFor="swagshop-name" className="text-sm font-medium text-navy">Name</label>
+										<label htmlFor="swagshop-name" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Name</label>
 										<input id="swagshop-name" type="text" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 									</div>
 									<div className="flex flex-col gap-1">
-										<label htmlFor="swagshop-number" className="text-sm font-medium text-navy">Number</label>
+										<label htmlFor="swagshop-number" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Number</label>
 										<input id="swagshop-number" type="text" maxLength={20} value={number} onChange={(e) => setNumber(e.target.value)} className="min-h-11 w-24 rounded-md border border-slate-gray/30 px-3 py-2" />
 									</div>
 									<div className="flex flex-col gap-1">
-										<label htmlFor="swagshop-placement" className="text-sm font-medium text-navy">Placement</label>
+										<label htmlFor="swagshop-placement" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Placement</label>
 										<select id="swagshop-placement" value={placement} onChange={(e) => setPlacement(e.target.value as PersonalizationPlacement)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 											{PLACEMENT_OPTIONS.map((opt) => (
 												<option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -227,7 +227,7 @@ export function SwagShopOrderFlow() {
 										</select>
 									</div>
 									<div className="flex flex-col gap-1">
-										<label htmlFor="swagshop-logo-size" className="text-sm font-medium text-navy">Logo size</label>
+										<label htmlFor="swagshop-logo-size" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Logo size</label>
 										<select id="swagshop-logo-size" value={logoSize} onChange={(e) => setLogoSize(e.target.value as SwagLogoSize)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 											{LOGO_SIZE_OPTIONS.map((opt) => (
 												<option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -236,12 +236,12 @@ export function SwagShopOrderFlow() {
 									</div>
 								</div>
 							)}
-							<p className="text-xs text-slate-gray">Team logo will be printed on the front. {wantsPersonalization ? `Name/number placement: ${PLACEMENT_OPTIONS.find((o) => o.value === placement)?.label}.` : ""}</p>
+							<p className="text-xs text-slate-gray dark:text-[#cbd5e1]">Team logo will be printed on the front. {wantsPersonalization ? `Name/number placement: ${PLACEMENT_OPTIONS.find((o) => o.value === placement)?.label}.` : ""}</p>
 						</div>
 					)}
 
 					{selectedVariant && (
-						<p className="text-lg font-semibold text-navy">{formatMoneyMinorUnits(selectedVariant.priceMinor, selectedVariant.currency)}</p>
+						<p className="text-lg font-semibold text-navy dark:text-[#f8fafc]">{formatMoneyMinorUnits(selectedVariant.priceMinor, selectedVariant.currency)}</p>
 					)}
 
 					{submitError && <p role="alert" className="text-sm text-error-red">{submitError}</p>}

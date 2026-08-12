@@ -103,7 +103,7 @@ export function SignInPage() {
 				</p>
 			</div>
 
-			<p className="text-center text-sm text-slate-700">
+			<p className="text-center text-sm text-slate-700 dark:text-[#cbd5e1]">
 				Need help?{" "}
 				<Link to="/contact" className="font-medium text-green-700 hover:underline">
 					Contact support

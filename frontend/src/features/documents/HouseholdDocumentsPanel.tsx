@@ -62,12 +62,12 @@ export function HouseholdDocumentsPanel({
 					{data.items.map((doc) => {
 						const justAcknowledged = acknowledgedIds.has(doc.id);
 						return (
-							<li key={doc.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+							<li key={doc.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3">
 								<div className="min-w-0">
 									<a href={doc.url} target="_blank" rel="noreferrer" className="font-medium text-azure-blue hover:underline">
 										{doc.title ?? "Document"}
 									</a>
-									<p className="text-sm text-slate-gray">{formatBytes(doc.byteSizeBytes)}</p>
+									<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">{formatBytes(doc.byteSizeBytes)}</p>
 								</div>
 								<div className="flex items-center gap-2">
 									{canAcknowledge && (

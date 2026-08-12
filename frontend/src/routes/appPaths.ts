@@ -32,6 +32,8 @@ export const appPaths = {
 	organizationEvents: (organizationId: string) => `/app/organizations/${organizationId}/events`,
 	teamEvents: (organizationId: string, teamId: string) =>
 		`/app/organizations/${organizationId}/teams/${teamId}/events`,
+	teamRoster: (organizationId: string, teamId: string) =>
+		`/app/organizations/${organizationId}/teams/${teamId}/roster`,
 	tournamentEvents: (organizationId: string, tournamentId: string) =>
 		`/app/organizations/${organizationId}/tournaments/${tournamentId}/events`,
 	householdEvents: (organizationId: string, householdId: string) =>

@@ -87,19 +87,19 @@ export function AthleteStorefrontPanel({ organizationId }: { organizationId: str
 	}
 
 	return (
-		<section className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-4" aria-labelledby="athlete-storefronts-heading">
+		<section className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4" aria-labelledby="athlete-storefronts-heading">
 			<div className="flex flex-wrap items-center justify-between gap-3">
 				<div>
-					<h3 id="athlete-storefronts-heading" className="font-heading text-base font-semibold text-navy">Athlete Storefronts</h3>
-					<p className="text-sm text-slate-gray">A public, no-login storefront for one athlete with a stable link and QR code.</p>
+					<h3 id="athlete-storefronts-heading" className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">Athlete Storefronts</h3>
+					<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">A public, no-login storefront for one athlete with a stable link and QR code.</p>
 				</div>
 				<Button type="button" variant="secondary" onClick={() => setShowForm((value) => !value)}>{showForm ? "Cancel" : "Add storefront"}</Button>
 			</div>
 			{mutationError && <p role="alert" className="text-sm text-error-red">{mutationError}</p>}
 			{showForm && (
-				<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-4" noValidate aria-label="Create an athlete storefront">
+				<form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-4" noValidate aria-label="Create an athlete storefront">
 					<div className="grid gap-3 md:grid-cols-2">
-						<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 							Team
 							<select {...register("teamId")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 								<option value="">Select a team…</option>
@@ -107,7 +107,7 @@ export function AthleteStorefrontPanel({ organizationId }: { organizationId: str
 							</select>
 							{errors.teamId && <span role="alert" className="text-sm text-error-red">{errors.teamId.message}</span>}
 						</label>
-						<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 							Athlete
 							<select {...register("participantId")} disabled={!watchedTeamId} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 								<option value="">{watchedTeamId ? "Select an athlete…" : "Choose a team first"}</option>
@@ -115,7 +115,7 @@ export function AthleteStorefrontPanel({ organizationId }: { organizationId: str
 							</select>
 							{errors.participantId && <span role="alert" className="text-sm text-error-red">{errors.participantId.message}</span>}
 						</label>
-						<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 							Swag Shop
 							<select {...register("storeId")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 								<option value="">Select a Swag Shop…</option>
@@ -123,20 +123,20 @@ export function AthleteStorefrontPanel({ organizationId }: { organizationId: str
 							</select>
 							{errors.storeId && <span role="alert" className="text-sm text-error-red">{errors.storeId.message}</span>}
 						</label>
-						<label className="flex flex-col gap-1 text-sm font-medium text-navy">
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 							Public URL slug
 							<input {...register("slug")} placeholder="maya-johnson" className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 							{errors.slug && <span role="alert" className="text-sm text-error-red">{errors.slug.message}</span>}
 						</label>
 					</div>
 					<fieldset className="flex flex-col gap-1">
-						<legend className="text-sm font-medium text-navy">Approved products</legend>
-						{!watchedStoreId && <p className="text-sm text-slate-gray">Choose a Swag Shop to see its active products.</p>}
-						{watchedStoreId && activeProducts.length === 0 && <p className="text-sm text-slate-gray">This Swag Shop has no active products yet.</p>}
+						<legend className="text-sm font-medium text-navy dark:text-[#f8fafc]">Approved products</legend>
+						{!watchedStoreId && <p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Choose a Swag Shop to see its active products.</p>}
+						{watchedStoreId && activeProducts.length === 0 && <p className="text-sm text-slate-gray dark:text-[#cbd5e1]">This Swag Shop has no active products yet.</p>}
 						{activeProducts.length > 0 && (
 							<div className="grid gap-1 sm:grid-cols-2">
 								{activeProducts.map((product) => (
-									<label key={product.id} className="flex items-center gap-2 text-sm text-navy">
+									<label key={product.id} className="flex items-center gap-2 text-sm text-navy dark:text-[#f8fafc]">
 										<input type="checkbox" value={product.id} {...register("productIds")} /> {product.name}
 									</label>
 								))}
@@ -217,14 +217,14 @@ function AthleteStorefrontRow({
 	}
 
 	return (
-		<li className="rounded-lg border border-slate-gray/20 bg-pure-white p-3">
+		<li className="rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3">
 			<div className="flex flex-wrap items-center justify-between gap-3">
 				<div className="min-w-0 flex-1">
-					<p className="break-words font-medium text-navy">
+					<p className="break-words font-medium text-navy dark:text-[#f8fafc]">
 						{athleteName}
-						<span className="ml-2 rounded-full bg-ice-white px-2 py-0.5 text-xs font-medium text-slate-gray">{storefront.status}</span>
+						<span className="ml-2 rounded-full bg-ice-white dark:bg-[#0f172a] px-2 py-0.5 text-xs font-medium text-slate-gray dark:text-[#cbd5e1]">{storefront.status}</span>
 					</p>
-					<p className="text-sm text-slate-gray">/swag-shop/athlete/{storefront.slug} · {storeName}{teamName ? ` · ${teamName}` : ""}</p>
+					<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">/swag-shop/athlete/{storefront.slug} · {storeName}{teamName ? ` · ${teamName}` : ""}</p>
 				</div>
 				<div className="flex shrink-0 flex-wrap gap-2">
 					{storefront.status === "DRAFT" && <Button type="button" variant="secondary" onClick={() => onTransition("publish")} disabled={pending}>Publish</Button>}
@@ -240,10 +240,10 @@ function AthleteStorefrontRow({
 			</div>
 			{showShare && (
 				<div className="mt-3 flex flex-col items-start gap-2 border-t border-slate-gray/20 pt-3">
-					{buildShareLink.isPending && <p className="text-sm text-slate-gray">Generating QR code…</p>}
+					{buildShareLink.isPending && <p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Generating QR code…</p>}
 					{buildShareLink.isError && <p role="alert" className="text-sm text-error-red">Could not generate a QR code.</p>}
 					{buildShareLink.data && <img src={buildShareLink.data.qrDataUri} alt={`QR code for ${publicUrl}`} className="h-32 w-32 rounded-md border border-slate-gray/20" />}
-					<p className="break-all text-xs text-slate-gray">{publicUrl}</p>
+					<p className="break-all text-xs text-slate-gray dark:text-[#cbd5e1]">{publicUrl}</p>
 				</div>
 			)}
 		</li>

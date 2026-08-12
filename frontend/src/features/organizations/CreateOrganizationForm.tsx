@@ -47,7 +47,7 @@ export function CreateOrganizationForm({ onCreated }: { onCreated?: () => void }
 	return (
 		<form onSubmit={onSubmit} className="flex max-w-md flex-col gap-4" noValidate>
 			<div className="flex flex-col gap-1">
-				<label htmlFor="org-name" className="text-sm font-medium text-navy">
+				<label htmlFor="org-name" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Organization name
 				</label>
 				<input
@@ -66,7 +66,7 @@ export function CreateOrganizationForm({ onCreated }: { onCreated?: () => void }
 			</div>
 
 			<div className="flex flex-col gap-1">
-				<label htmlFor="org-slug" className="text-sm font-medium text-navy">
+				<label htmlFor="org-slug" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Public URL slug
 				</label>
 				<input
@@ -85,7 +85,7 @@ export function CreateOrganizationForm({ onCreated }: { onCreated?: () => void }
 			</div>
 
 			<div className="flex flex-col gap-1">
-				<label htmlFor="org-type" className="text-sm font-medium text-navy">
+				<label htmlFor="org-type" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Organization type
 				</label>
 				<select

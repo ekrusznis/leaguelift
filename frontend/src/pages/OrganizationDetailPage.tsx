@@ -12,6 +12,7 @@ import { OnboardingPanel } from "../features/onboarding/OnboardingPanel";
 import { OfflineFinancialRecordsPanel } from "../features/offlineFinance/OfflineFinancialRecordsPanel";
 import { FinancialCorrectionsPanel } from "../features/financialCorrections/FinancialCorrectionsPanel";
 import { CreditMarkupSettingsPanel } from "../features/credit/CreditMarkupSettingsPanel";
+import { SafeSportOrgPolicyPanel } from "../features/messaging/SafeSportPolicyPanel";
 import { ReconciliationPanel } from "../features/reconciliation/ReconciliationPanel";
 import { OrganizationCorrectionReviewPanel } from "../features/profileCorrections/OrganizationCorrectionReviewPanel";
 import { EventListPanel } from "../features/events/EventListPanel";
@@ -129,8 +130,8 @@ export function OrganizationDetailPage() {
 						<Link to={isPlatformSupportMode ? `/app/platform/organizations/${organization.id}` : "/app"} className="text-sm text-azure-blue hover:underline">
 							← {isPlatformSupportMode ? "Organization console" : "Dashboard"}
 						</Link>
-						<h1 className="font-heading text-2xl font-bold text-navy">{organization.name}</h1>
-						<p className="text-slate-gray">/{organization.slug}</p>
+						<h1 className="font-heading text-2xl font-bold text-navy dark:text-[#f8fafc]">{organization.name}</h1>
+						<p className="text-slate-gray dark:text-[#cbd5e1]">/{organization.slug}</p>
 					</div>
 				</div>
 			</div>
@@ -143,7 +144,7 @@ export function OrganizationDetailPage() {
 						key={item.id}
 						to={appPaths.organization(organization.id, item.id)}
 						aria-current={activeSection === item.id ? "page" : undefined}
-						className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium ${activeSection === item.id ? "bg-navy text-white" : "text-slate-gray hover:bg-ice-white hover:text-navy"}`}
+						className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium ${activeSection === item.id ? "bg-navy text-white" : "text-slate-gray dark:text-[#cbd5e1] hover:bg-ice-white hover:dark:bg-[#0f172a] hover:text-navy hover:dark:text-[#f8fafc]"}`}
 					>
 						{item.label}
 					</Link>
@@ -157,6 +158,7 @@ export function OrganizationDetailPage() {
 				canManageOrganization={canManageOrganization}
 				canManagePayouts={canManagePayouts}
 				canViewReports={canViewReports}
+				isPlatformSupportMode={isPlatformSupportMode}
 				visibleSections={visibleSections}
 			/>
 		</div>
@@ -170,6 +172,7 @@ function OrganizationSectionContent({
 	canManageOrganization,
 	canManagePayouts,
 	canViewReports,
+	isPlatformSupportMode,
 	visibleSections,
 }: {
 	section: OrganizationSection;
@@ -178,6 +181,7 @@ function OrganizationSectionContent({
 	canManageOrganization: boolean;
 	canManagePayouts: boolean;
 	canViewReports: boolean;
+	isPlatformSupportMode: boolean;
 	visibleSections: Array<{ id: OrganizationSection; label: string }>;
 }) {
 	switch (section) {
@@ -185,12 +189,12 @@ function OrganizationSectionContent({
 			return (
 				<div className="flex flex-col gap-6">
 					{canManageOrganization && <OnboardingChecklist organizationId={organization.id} />}
-					<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-5">
-						<h2 className="font-heading text-lg font-semibold text-navy">Organization workspace</h2>
-						<p className="mt-1 text-sm text-slate-gray">Use the sections above to manage teams, households, events, revenue programs, reports, documents, and integrations.</p>
+					<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5">
+						<h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Organization workspace</h2>
+						<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Use the sections above to manage teams, households, events, revenue programs, reports, documents, and integrations.</p>
 						<div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 							{visibleSections.filter((item) => !["overview", "settings"].includes(item.id)).slice(0, 9).map((item) => (
-								<Link key={item.id} to={appPaths.organization(organization.id, item.id)} className="rounded-lg border border-slate-gray/20 p-3 text-sm font-medium text-navy hover:border-green-500 hover:text-green-600">
+								<Link key={item.id} to={appPaths.organization(organization.id, item.id)} className="rounded-lg border border-slate-gray/20 p-3 text-sm font-medium text-navy dark:text-[#f8fafc] hover:border-green-500 hover:text-green-600">
 									{item.label} →
 								</Link>
 							))}
@@ -224,7 +228,7 @@ function OrganizationSectionContent({
 				</Section>
 			) : (
 				<Section title="Fees & Payments" description="Read-only collections and revenue reporting for your organization role.">
-					{canViewReports ? <OrganizationReportsPanel organizationId={organization.id} /> : <p className="text-sm text-slate-gray">You do not have permission to view financial reports.</p>}
+					{canViewReports ? <OrganizationReportsPanel organizationId={organization.id} /> : <p className="text-sm text-slate-gray dark:text-[#cbd5e1]">You do not have permission to view financial reports.</p>}
 				</Section>
 			);
 		case "fundraising":
@@ -266,6 +270,7 @@ function OrganizationSectionContent({
 							<Section title="Organization Profile"><OrganizationProfileForm organization={organization} /></Section>
 							<Section title="Public Pages"><PublicPagesPanel organizationId={organization.id} organizationName={organization.name} /></Section>
 							<Section title="Credit & Markup"><CreditMarkupSettingsPanel organizationId={organization.id} /></Section>
+							<Section title="Messaging Safety"><SafeSportOrgPolicyPanel organizationId={organization.id} canReview={isPlatformSupportMode} /></Section>
 						</>
 					)}
 					{canManagePayouts && (
@@ -283,7 +288,7 @@ function Section({ title, description, action, children }: { title: string; desc
 	return (
 		<section aria-label={title} className="flex flex-col gap-3">
 			<div className="flex flex-wrap items-start justify-between gap-3">
-				<div><h2 className="font-heading text-lg font-semibold text-navy">{title}</h2>{description && <p className="mt-1 text-sm text-slate-gray">{description}</p>}</div>
+				<div><h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">{title}</h2>{description && <p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">{description}</p>}</div>
 				{action}
 			</div>
 			{children}

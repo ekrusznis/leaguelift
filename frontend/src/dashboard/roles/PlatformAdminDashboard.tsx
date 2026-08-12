@@ -93,8 +93,8 @@ export function PlatformAdminDashboard() {
 				{supportAccess.data && <SupportAccessBanner access={supportAccess.data} />}
 
 				<div>
-					<h1 className="font-heading text-2xl font-bold text-navy-900">Platform Overview</h1>
-					<p className="mt-1 text-slate-500">Cross-organization customer health, revenue activity, and support operations.</p>
+					<h1 className="font-heading text-2xl font-bold text-navy-900 dark:text-[#f8fafc]">Platform Overview</h1>
+					<p className="mt-1 text-slate-500 dark:text-[#cbd5e1]">Cross-organization customer health, revenue activity, and support operations.</p>
 				</div>
 
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
@@ -109,15 +109,15 @@ export function PlatformAdminDashboard() {
 				<div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.85fr)]">
 					<DashCard title="Organizations" action={{ label: "View all organizations", to: appPaths.platformOrganizations() }}>
 						{organizations.isLoading ? (
-							<p className="py-8 text-center text-sm text-slate-500">Loading organizations…</p>
+							<p className="py-8 text-center text-sm text-slate-500 dark:text-[#cbd5e1]">Loading organizations…</p>
 						) : organizations.isError || !organizations.data ? (
 							<p className="py-8 text-center text-sm text-error-600">Organizations could not be loaded.</p>
 						) : organizations.data.items.length === 0 ? (
-							<p className="py-8 text-center text-sm text-slate-500">No organizations yet.</p>
+							<p className="py-8 text-center text-sm text-slate-500 dark:text-[#cbd5e1]">No organizations yet.</p>
 						) : (
 							<div className="overflow-x-auto">
 								<table className="w-full min-w-[760px] text-left text-sm">
-									<thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
+									<thead className="border-b border-slate-200 dark:border-[#334155] text-xs uppercase tracking-wide text-slate-400">
 										<tr>
 											<th className="pb-3 font-medium">Organization</th>
 											<th className="pb-3 font-medium">Owner</th>
@@ -127,23 +127,23 @@ export function PlatformAdminDashboard() {
 											<th className="pb-3 text-right font-medium">Gross volume</th>
 										</tr>
 									</thead>
-									<tbody className="divide-y divide-slate-100">
+									<tbody className="divide-y divide-slate-100 dark:divide-[#334155]">
 										{organizations.data.items.map((organization) => (
 											<tr key={organization.organizationId}>
 												<td className="py-3 pr-4">
-													<Link to={appPaths.platformOrganization(organization.organizationId)} className="font-semibold text-navy-900 hover:text-green-700 hover:underline">
+													<Link to={appPaths.platformOrganization(organization.organizationId)} className="font-semibold text-navy-900 dark:text-[#f8fafc] hover:text-green-700 hover:underline">
 														{organization.name}
 													</Link>
-													<p className="text-xs text-slate-500">/{organization.slug}</p>
+													<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">/{organization.slug}</p>
 												</td>
 												<td className="py-3 pr-4">
-													<p className="font-medium text-navy-900">{organization.primaryOwnerName ?? "Not assigned"}</p>
-													<p className="max-w-44 truncate text-xs text-slate-500">{organization.primaryOwnerEmail ?? organization.contactEmail ?? "—"}</p>
+													<p className="font-medium text-navy-900 dark:text-[#f8fafc]">{organization.primaryOwnerName ?? "Not assigned"}</p>
+													<p className="max-w-44 truncate text-xs text-slate-500 dark:text-[#cbd5e1]">{organization.primaryOwnerEmail ?? organization.contactEmail ?? "—"}</p>
 												</td>
 												<td className="py-3 pr-4"><Pill tone={organization.status === "ACTIVE" ? "success" : "neutral"}>{organization.status}</Pill></td>
-												<td className="py-3 text-right font-medium text-navy-900">{organization.activeMembers.toLocaleString()}</td>
-												<td className="py-3 text-right font-medium text-navy-900">{organization.teams.toLocaleString()}</td>
-												<td className="py-3 text-right font-semibold text-navy-900">{formatMoneyMinorUnits(organization.grossVolumeMinor, "USD")}</td>
+												<td className="py-3 text-right font-medium text-navy-900 dark:text-[#f8fafc]">{organization.activeMembers.toLocaleString()}</td>
+												<td className="py-3 text-right font-medium text-navy-900 dark:text-[#f8fafc]">{organization.teams.toLocaleString()}</td>
+												<td className="py-3 text-right font-semibold text-navy-900 dark:text-[#f8fafc]">{formatMoneyMinorUnits(organization.grossVolumeMinor, "USD")}</td>
 											</tr>
 										))}
 									</tbody>
@@ -163,17 +163,17 @@ export function PlatformAdminDashboard() {
 				<div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(300px,0.55fr)_minmax(0,1fr)]">
 					<DashCard title="Recent Audit Activity" action={{ label: "View full audit log", to: appPaths.platformAudit() }}>
 						{activity.isLoading ? (
-							<p className="py-8 text-center text-sm text-slate-500">Loading activity…</p>
+							<p className="py-8 text-center text-sm text-slate-500 dark:text-[#cbd5e1]">Loading activity…</p>
 						) : !activity.data || activity.data.items.length === 0 ? (
-							<p className="py-8 text-center text-sm text-slate-500">No recent platform activity.</p>
+							<p className="py-8 text-center text-sm text-slate-500 dark:text-[#cbd5e1]">No recent platform activity.</p>
 						) : (
 							<ul className="flex flex-col gap-4">
 								{activity.data.items.slice(0, 5).map((item) => (
 									<li key={item.id} className="flex items-start gap-3">
 										<IconBadge icon={<ChartIcon className="size-4" />} tone="info" />
 										<div className="min-w-0 flex-1">
-											<p className="text-sm font-medium text-navy-900">{describeActivityAction(item.action)}</p>
-											<p className="truncate text-xs text-slate-500">{item.organizationName ?? item.entityType}</p>
+											<p className="text-sm font-medium text-navy-900 dark:text-[#f8fafc]">{describeActivityAction(item.action)}</p>
+											<p className="truncate text-xs text-slate-500 dark:text-[#cbd5e1]">{item.organizationName ?? item.entityType}</p>
 										</div>
 										<span className="shrink-0 text-xs text-slate-400">{timeAgo(item.occurredAt)}</span>
 									</li>
@@ -185,7 +185,7 @@ export function PlatformAdminDashboard() {
 					<SupportAccessCard access={supportAccess.data} />
 
 					<DashCard title="Operational Queue Overview" action={{ label: "Review operations", to: appPaths.platformOperations() }}>
-						<div className="divide-y divide-slate-100">
+						<div className="divide-y divide-slate-100 dark:divide-[#334155]">
 							<QueueRow label="Pending orders" value={orders.data?.pending} tone="warning" />
 							<QueueRow label="Failed webhooks" value={webhook.data?.failed} tone="error" />
 							<QueueRow label="Failed outbox events" value={outbox.data?.failed} tone="error" />
@@ -218,12 +218,12 @@ function KpiCard({ label, value, icon, tone, detail }: { label: string; value: n
 		purple: "bg-purple-500/12 text-purple-600",
 	};
 	return (
-		<section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_24px_rgba(11,31,51,0.05)]">
+		<section className="rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-4 shadow-[0_8px_24px_rgba(11,31,51,0.05)]">
 			<div className="flex items-start gap-3">
 				<span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${tones[tone]}`}>{icon}</span>
 				<div className="min-w-0">
-					<p className="text-xs font-medium text-slate-500">{label}</p>
-					<p className="mt-1 font-heading text-2xl font-bold text-navy-900">{value === undefined ? "—" : value.toLocaleString()}</p>
+					<p className="text-xs font-medium text-slate-500 dark:text-[#cbd5e1]">{label}</p>
+					<p className="mt-1 font-heading text-2xl font-bold text-navy-900 dark:text-[#f8fafc]">{value === undefined ? "—" : value.toLocaleString()}</p>
 				</div>
 			</div>
 			<p className="mt-3 text-xs text-slate-400">{detail}</p>
@@ -242,8 +242,8 @@ function OrganizationSnapshot({ accessOrganizationId, accessOrganizationName, lo
 			<DashCard title="Organization Snapshot" action={{ label: "Select organization", to: appPaths.platformOrganizations() }}>
 				<div className="flex min-h-52 flex-col items-center justify-center text-center">
 					<IconBadge icon={<BuildingIcon className="size-4" />} tone="success" />
-					<p className="mt-3 font-semibold text-navy-900">No support organization selected</p>
-					<p className="mt-1 max-w-sm text-sm text-slate-500">Start a reasoned support session to see the customer snapshot and open its workspace.</p>
+					<p className="mt-3 font-semibold text-navy-900 dark:text-[#f8fafc]">No support organization selected</p>
+					<p className="mt-1 max-w-sm text-sm text-slate-500 dark:text-[#cbd5e1]">Start a reasoned support session to see the customer snapshot and open its workspace.</p>
 				</div>
 			</DashCard>
 		);
@@ -252,7 +252,7 @@ function OrganizationSnapshot({ accessOrganizationId, accessOrganizationName, lo
 	return (
 		<DashCard title={`Organization Snapshot: ${accessOrganizationName ?? "Selected organization"}`} action={{ label: "View organization", to: appPaths.platformOrganization(accessOrganizationId) }}>
 			{loading || !data ? (
-				<p className="py-12 text-center text-sm text-slate-500">Loading organization snapshot…</p>
+				<p className="py-12 text-center text-sm text-slate-500 dark:text-[#cbd5e1]">Loading organization snapshot…</p>
 			) : (
 				<div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-2 2xl:grid-cols-4">
 					<SnapshotMetric label="Teams" value={data.teams.toLocaleString()} />
@@ -271,9 +271,9 @@ function OrganizationSnapshot({ accessOrganizationId, accessOrganizationName, lo
 
 function SnapshotMetric({ label, value }: { label: string; value: string }) {
 	return (
-		<div className="rounded-xl border border-slate-200 bg-ice-50 p-3">
-			<p className="font-heading text-lg font-bold text-navy-900">{value}</p>
-			<p className="mt-0.5 text-xs text-slate-500">{label}</p>
+		<div className="rounded-xl border border-slate-200 dark:border-[#334155] bg-ice-50 dark:bg-[#0f172a] p-3">
+			<p className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">{value}</p>
+			<p className="mt-0.5 text-xs text-slate-500 dark:text-[#cbd5e1]">{label}</p>
 		</div>
 	);
 }
@@ -282,20 +282,20 @@ function SupportAccessCard({ access }: { access: ReturnType<typeof useCurrentSup
 	return (
 		<DashCard title="Support Access">
 			{access ? (
-				<div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+				<div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950 p-4">
 					<p className="text-xs font-medium uppercase tracking-wide text-amber-700">Currently supporting</p>
-					<p className="mt-2 font-heading text-lg font-bold text-navy-900">{access.organizationName}</p>
-					<p className="mt-1 line-clamp-3 text-sm text-slate-600">{access.reason}</p>
+					<p className="mt-2 font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">{access.organizationName}</p>
+					<p className="mt-1 line-clamp-3 text-sm text-slate-600 dark:text-[#cbd5e1]">{access.reason}</p>
 					<Link to={appPaths.platformOrganization(access.organizationId)} className="mt-4 flex min-h-10 items-center justify-center rounded-md bg-amber-800 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700">
 						Open support workspace
 					</Link>
-					<p className="mt-3 text-center text-[11px] text-slate-500">Access is logged and expires {new Date(access.expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.</p>
+					<p className="mt-3 text-center text-[11px] text-slate-500 dark:text-[#cbd5e1]">Access is logged and expires {new Date(access.expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.</p>
 				</div>
 			) : (
 				<div className="flex min-h-48 flex-col items-center justify-center text-center">
 					<IconBadge icon={<ShieldIcon className="size-4" />} tone="warning" />
-					<p className="mt-3 font-semibold text-navy-900">No active support session</p>
-					<p className="mt-1 text-sm text-slate-500">Select an organization and record a reason before viewing customer data.</p>
+					<p className="mt-3 font-semibold text-navy-900 dark:text-[#f8fafc]">No active support session</p>
+					<p className="mt-1 text-sm text-slate-500 dark:text-[#cbd5e1]">Select an organization and record a reason before viewing customer data.</p>
 					<Link to={appPaths.platformOrganizations()} className="mt-4 rounded-md bg-navy-900 px-4 py-2 text-sm font-semibold text-white hover:bg-navy-800">Browse organizations</Link>
 				</div>
 			)}
@@ -308,20 +308,20 @@ function QueueRow({ label, value, tone }: { label: string; value: number | undef
 		<div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
 			<div className="flex items-center gap-3">
 				<IconBadge icon={tone === "error" ? <AlertIcon className="size-4" /> : <PackageIcon className="size-4" />} tone={tone} />
-				<span className="text-sm font-medium text-navy-900">{label}</span>
+				<span className="text-sm font-medium text-navy-900 dark:text-[#f8fafc]">{label}</span>
 			</div>
-			<span className="font-heading text-lg font-bold text-navy-900">{value === undefined ? "—" : value.toLocaleString()}</span>
+			<span className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">{value === undefined ? "—" : value.toLocaleString()}</span>
 		</div>
 	);
 }
 
 function HealthTile({ label, healthy, detail }: { label: string; healthy: boolean; detail: string }) {
 	return (
-		<div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-ice-50 p-4">
+		<div className="flex items-start gap-3 rounded-xl border border-slate-200 dark:border-[#334155] bg-ice-50 dark:bg-[#0f172a] p-4">
 			<IconBadge icon={healthy ? <CheckCircleIcon className="size-4" /> : <AlertIcon className="size-4" />} tone={healthy ? "success" : "error"} />
 			<div>
-				<p className="text-sm font-semibold text-navy-900">{label}</p>
-				<p className="mt-1 text-xs text-slate-500">{detail}</p>
+				<p className="text-sm font-semibold text-navy-900 dark:text-[#f8fafc]">{label}</p>
+				<p className="mt-1 text-xs text-slate-500 dark:text-[#cbd5e1]">{detail}</p>
 				<p className={`mt-2 text-xs font-semibold ${healthy ? "text-green-700" : "text-error-600"}`}>{healthy ? "Healthy" : "Needs attention"}</p>
 			</div>
 		</div>

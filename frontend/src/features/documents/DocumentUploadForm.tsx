@@ -71,9 +71,9 @@ export function DocumentUploadForm({
 	}
 
 	return (
-		<form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-4" aria-label="Upload a document">
+		<form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4" aria-label="Upload a document">
 			<div className="flex flex-col gap-1">
-				<label htmlFor="document-title" className="text-sm font-medium text-navy">
+				<label htmlFor="document-title" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Title
 				</label>
 				<input
@@ -86,7 +86,7 @@ export function DocumentUploadForm({
 				/>
 			</div>
 			<div className="flex flex-col gap-1">
-				<label htmlFor="document-file" className="text-sm font-medium text-navy">
+				<label htmlFor="document-file" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 					PDF file
 				</label>
 				<input

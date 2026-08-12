@@ -88,7 +88,7 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 							<>
 								{items.map((athlete) => (
 									<DashCard key={athlete.participantId} id={`parent-athlete-${athlete.participantId}`}>
-										<p className="font-heading font-bold text-navy-900">{athlete.name}</p>
+										<p className="font-heading font-bold text-navy-900 dark:text-[#f8fafc]">{athlete.name}</p>
 										{athlete.teamNames.length > 0 ? (
 											<div className="mt-2 flex flex-wrap gap-2">
 												{athlete.teamNames.map((teamName) => (
@@ -98,7 +98,7 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 												))}
 											</div>
 										) : (
-											<p className="mt-2 text-xs text-slate-500">No team assignments yet</p>
+											<p className="mt-2 text-xs text-slate-500 dark:text-[#cbd5e1]">No team assignments yet</p>
 										)}
 									</DashCard>
 								))}
@@ -114,16 +114,16 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 								<ul className="flex flex-col gap-3">
 									{items.map((event) => (
 										<li key={event.id} className="flex items-center gap-3">
-											<div className="flex w-12 shrink-0 flex-col items-center rounded-lg bg-ice-50 py-1 text-xs font-semibold text-slate-500">
+											<div className="flex w-12 shrink-0 flex-col items-center rounded-lg bg-ice-50 dark:bg-[#0f172a] py-1 text-xs font-semibold text-slate-500 dark:text-[#cbd5e1]">
 												<span>{event.day}</span>
-												<span className="font-heading text-base text-navy-900">{event.date}</span>
+												<span className="font-heading text-base text-navy-900 dark:text-[#f8fafc]">{event.date}</span>
 											</div>
 											<div className="min-w-0 flex-1">
-												<Link to={appPaths.event(organizationId, event.id, eventSearch)} className="truncate font-medium text-navy-900 hover:text-green-600 hover:underline">{event.title}</Link>
-												<p className="text-xs text-slate-500">{event.subtitle}</p>
+												<Link to={appPaths.event(organizationId, event.id, eventSearch)} className="truncate font-medium text-navy-900 dark:text-[#f8fafc] hover:text-green-600 hover:underline">{event.title}</Link>
+												<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">{event.subtitle}</p>
 											</div>
 											<div className="text-right text-xs">
-												<p className="font-semibold text-navy-900">{event.time}</p>
+												<p className="font-semibold text-navy-900 dark:text-[#f8fafc]">{event.time}</p>
 												{event.tag && <p className={event.tag === "Home" ? "text-green-600" : "text-info-600"}>{event.tag}</p>}
 											</div>
 										</li>
@@ -144,22 +144,22 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 								<>
 									<div className="flex items-center justify-between">
 										<div>
-											<p className="text-xs text-slate-500">Total Due</p>
-											<p className="font-heading text-3xl font-extrabold text-navy-900">{formatMoneyMinorUnits(data.totalOutstandingMinor, data.currency)}</p>
+											<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">Total Due</p>
+											<p className="font-heading text-3xl font-extrabold text-navy-900 dark:text-[#f8fafc]">{formatMoneyMinorUnits(data.totalOutstandingMinor, data.currency)}</p>
 										</div>
 										{data.totalOutstandingMinor > 0 && <Pill tone="error">Outstanding</Pill>}
 									</div>
 									{data.lineItems.length > 0 ? (
-										<ul className="mt-4 flex flex-col gap-2 border-t border-slate-200 pt-3">
+										<ul className="mt-4 flex flex-col gap-2 border-t border-slate-200 dark:border-[#334155] pt-3">
 											{data.lineItems.map((line, index) => (
-												<li key={index} className="flex justify-between gap-3 text-sm text-slate-600">
+												<li key={index} className="flex justify-between gap-3 text-sm text-slate-600 dark:text-[#cbd5e1]">
 													<span className="min-w-0 flex-1 break-words">{line.description}</span>
-													<span className="shrink-0 font-medium text-navy-900">{formatMoneyMinorUnits(line.balanceMinor, data.currency)}</span>
+													<span className="shrink-0 font-medium text-navy-900 dark:text-[#f8fafc]">{formatMoneyMinorUnits(line.balanceMinor, data.currency)}</span>
 												</li>
 											))}
 										</ul>
 									) : (
-										<p className="mt-4 border-t border-slate-200 pt-3 text-sm text-slate-500">No fees outstanding.</p>
+										<p className="mt-4 border-t border-slate-200 dark:border-[#334155] pt-3 text-sm text-slate-500 dark:text-[#cbd5e1]">No fees outstanding.</p>
 									)}
 								</>
 							)}
@@ -181,10 +181,10 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 									{items.map((fundraiser) => (
 										<li key={fundraiser.campaignId}>
 											<div className="flex items-center justify-between text-sm">
-												<span className="font-medium text-navy-900">{fundraiser.name}</span>
+												<span className="font-medium text-navy-900 dark:text-[#f8fafc]">{fundraiser.name}</span>
 												<Pill tone="success">Active</Pill>
 											</div>
-											<p className="mt-1 text-xs text-slate-500">
+											<p className="mt-1 text-xs text-slate-500 dark:text-[#cbd5e1]">
 												{formatMoneyMinorUnits(fundraiser.raisedMinor, fundraiser.currency)} raised of {formatMoneyMinorUnits(fundraiser.goalMinor, fundraiser.currency)}
 												{fundraiser.isRaisedDemoData && " (demo)"}
 											</p>
@@ -206,15 +206,15 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 							{(items) => (
 								<ul className="flex flex-col gap-3">
 									{items.map((order) => (
-										<li key={order.id} className="flex items-center justify-between gap-3 border-b border-slate-200 pb-3 last:border-0 last:pb-0">
+										<li key={order.id} className="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-[#334155] pb-3 last:border-0 last:pb-0">
 											<div className="min-w-0 flex-1">
-												<p className="truncate font-medium text-navy-900">{order.productName}</p>
-												<p className="text-xs text-slate-500">{order.orderNumber} · {order.orderedAt}</p>
+												<p className="truncate font-medium text-navy-900 dark:text-[#f8fafc]">{order.productName}</p>
+												<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">{order.orderNumber} · {order.orderedAt}</p>
 											</div>
 											<div className="shrink-0 text-right">
 												<Pill tone={order.status === "DELIVERED" ? "success" : order.status === "NEEDS_ATTENTION" || order.status === "CANCELED" ? "error" : "neutral"}>{order.status}</Pill>
 												{order.creditGrantedMinor != null && (
-													<p className="mt-1 text-xs text-slate-500">
+													<p className="mt-1 text-xs text-slate-500 dark:text-[#cbd5e1]">
 														{order.creditStatus === "REVOKED" ? "Credit reversed" : `+${formatMoneyMinorUnits(order.creditGrantedMinor, "USD")} credit`}
 													</p>
 												)}

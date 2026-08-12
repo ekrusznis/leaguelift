@@ -38,7 +38,7 @@ export function InvitationsPanel({ organizationId }: { organizationId: string })
 		<div className="flex flex-col gap-6">
 			<form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3" noValidate aria-label="Invite an administrator">
 				<div className="flex flex-col gap-1">
-					<label htmlFor="invite-email" className="text-sm font-medium text-navy">
+					<label htmlFor="invite-email" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 						Email
 					</label>
 					<input
@@ -56,7 +56,7 @@ export function InvitationsPanel({ organizationId }: { organizationId: string })
 					)}
 				</div>
 				<div className="flex flex-col gap-1">
-					<label htmlFor="invite-role" className="text-sm font-medium text-navy">
+					<label htmlFor="invite-role" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
 						Role
 					</label>
 					<select
@@ -86,11 +86,11 @@ export function InvitationsPanel({ organizationId }: { organizationId: string })
 					{data.items.map((invitation) => (
 						<li
 							key={invitation.id}
-							className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white p-3"
+							className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3"
 						>
 							<div className="min-w-0 flex-1">
-								<p className="break-words font-medium text-navy">{invitation.email}</p>
-								<p className="text-sm text-slate-gray">{ROLE_LABELS[invitation.role]}</p>
+								<p className="break-words font-medium text-navy dark:text-[#f8fafc]">{invitation.email}</p>
+								<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">{ROLE_LABELS[invitation.role]}</p>
 							</div>
 							<Button
 								type="button"

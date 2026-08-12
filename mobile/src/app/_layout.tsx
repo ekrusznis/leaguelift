@@ -123,6 +123,11 @@ function RootNavigator() {
           <Stack.Screen name="web-embed" options={{ presentation: 'card' }} />
           <Stack.Screen name="messages/[threadId]" options={{ presentation: 'card' }} />
           <Stack.Screen name="settings" options={{ presentation: 'card' }} />
+          <Stack.Screen name="action-center" options={{ presentation: 'card' }} />
+          <Stack.Screen name="help" options={{ presentation: 'card' }} />
+          <Stack.Screen name="help/[slug]" options={{ presentation: 'card' }} />
+          <Stack.Screen name="support-request" options={{ presentation: 'card' }} />
+          <Stack.Screen name="owner/documents" options={{ presentation: 'card' }} />
         </Stack>
       )}
       {!loading && onboardingStatus === 'unseen' && <Redirect href="/onboarding" />}

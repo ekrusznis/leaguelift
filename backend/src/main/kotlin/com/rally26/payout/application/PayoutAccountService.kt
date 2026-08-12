@@ -10,6 +10,7 @@ import com.rally26.ledger.application.PayoutSummary
 import com.rally26.ledger.domain.signedAmountMinor
 import com.rally26.membership.application.MembershipService
 import com.rally26.payout.domain.OrganizationPayoutAccount
+import com.rally26.payout.infra.StripeAccountStatus
 import com.rally26.payout.infra.StripeConnectClient
 import com.rally26.payout.persistence.OrganizationPayoutAccountRepository
 import com.stripe.exception.StripeException
@@ -78,9 +79,50 @@ class PayoutAccountService(
                 ?: throw NotFoundException("PAYOUT_ACCOUNT_NOT_FOUND", "Payout onboarding hasn't been started for this organization.")
         return withStripeErrorTranslation {
             val status = stripeConnectClient.retrieveAccountStatus(account.stripeAccountId)
-            payoutAccountRepository.updateStatus(organizationId, status.detailsSubmitted, status.chargesEnabled, status.payoutsEnabled)
+            payoutAccountRepository.updateStatus(
+                organizationId,
+                status.detailsSubmitted,
+                status.chargesEnabled,
+                status.payoutsEnabled,
+                status.disabledReason,
+            )
             payoutAccountRepository.findByOrganizationId(organizationId)!!
         }
+    }
+
+    /**
+     * The `account.updated` webhook (Phase 37.8, ADR-117) — previously the only way
+     * Rally26 learned a connected account's status changed was a manager manually
+     * clicking "refresh status" after onboarding. Stripe can restrict/disable an
+     * already-connected account days or weeks later (a compliance flag, a dispute
+     * pattern, expired verification documents); without this, that change was
+     * invisible until someone happened to check again. Unrecognized `stripeAccountId`
+     * (an account this webhook fires for but Rally26 never created — shouldn't happen,
+     * defensive only) is a clean no-op, not an error, matching every other webhook
+     * handler's "not ours, ignore" posture in this codebase.
+     */
+    @Transactional
+    fun syncFromWebhook(
+        stripeAccountId: String,
+        status: StripeAccountStatus,
+    ): UUID? {
+        val account = payoutAccountRepository.findByStripeAccountId(stripeAccountId) ?: return null
+        payoutAccountRepository.updateStatus(
+            account.organizationId,
+            status.detailsSubmitted,
+            status.chargesEnabled,
+            status.payoutsEnabled,
+            status.disabledReason,
+        )
+        auditService.record(
+            actorUserId = null,
+            organizationId = account.organizationId,
+            action = "payout.account_status_synced",
+            entityType = "organization_payout_account",
+            entityId = account.id,
+            metadataJson = "{\"chargesEnabled\":${status.chargesEnabled},\"payoutsEnabled\":${status.payoutsEnabled}}",
+        )
+        return account.id
     }
 
     fun getPayoutSummary(

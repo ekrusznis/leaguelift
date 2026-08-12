@@ -59,10 +59,10 @@ export function OrganizationReportsPanel({ organizationId }: { organizationId: s
 
 	return (
 		<div className="flex flex-col gap-5">
-			<div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-slate-gray/20 bg-ice-white p-4">
+			<div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4">
 				<div className="flex flex-wrap gap-3">
-					<label className="flex flex-col gap-1 text-sm font-medium text-navy">From<input type="date" value={range.from} onChange={(event) => setRange((current) => ({ ...current, from: event.target.value }))} className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2" /></label>
-					<label className="flex flex-col gap-1 text-sm font-medium text-navy">To<input type="date" value={range.to} onChange={(event) => setRange((current) => ({ ...current, to: event.target.value }))} className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2" /></label>
+					<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">From<input type="date" value={range.from} onChange={(event) => setRange((current) => ({ ...current, from: event.target.value }))} className="min-h-11 rounded-md border border-slate-gray/30 bg-white dark:bg-[#111827] px-3 py-2" /></label>
+					<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">To<input type="date" value={range.to} onChange={(event) => setRange((current) => ({ ...current, to: event.target.value }))} className="min-h-11 rounded-md border border-slate-gray/30 bg-white dark:bg-[#111827] px-3 py-2" /></label>
 				</div>
 				<Button type="button" variant="secondary" onClick={downloadCsv}>Export revenue CSV</Button>
 			</div>
@@ -86,15 +86,15 @@ export function OrganizationReportsPanel({ organizationId }: { organizationId: s
 }
 
 function Metric({ label, value, detail }: { label: string; value: string; detail?: string }) {
-	return <div className="rounded-xl border border-slate-gray/20 bg-pure-white p-4"><p className="text-xs font-medium uppercase tracking-wide text-slate-gray">{label}</p><p className="mt-2 font-heading text-2xl font-bold text-navy">{value}</p>{detail && <p className="mt-1 text-xs text-slate-gray">{detail}</p>}</div>;
+	return <div className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-4"><p className="text-xs font-medium uppercase tracking-wide text-slate-gray dark:text-[#cbd5e1]">{label}</p><p className="mt-2 font-heading text-2xl font-bold text-navy dark:text-[#f8fafc]">{value}</p>{detail && <p className="mt-1 text-xs text-slate-gray dark:text-[#cbd5e1]">{detail}</p>}</div>;
 }
 
 function ReportTable({ title, headers, rows }: { title: string; headers: string[]; rows: string[][] }) {
 	return (
-		<section className="rounded-xl border border-slate-gray/20 bg-pure-white p-4">
-			<h3 className="font-heading text-base font-semibold text-navy">{title}</h3>
-			{rows.length === 0 ? <p className="mt-3 text-sm text-slate-gray">No data in this period.</p> : (
-				<div className="mt-3 overflow-x-auto"><table className="w-full min-w-[360px] text-left text-sm"><thead><tr className="border-b border-slate-gray/20 text-slate-gray">{headers.map((header) => <th key={header} className="pb-2 pr-3 font-medium">{header}</th>)}</tr></thead><tbody className="divide-y divide-slate-gray/10">{rows.map((row, index) => <tr key={`${row[0]}-${index}`}>{row.map((value, cell) => <td key={`${index}-${cell}`} className={`py-2 pr-3 ${cell === 0 ? "text-navy" : "text-slate-gray"}`}>{value}</td>)}</tr>)}</tbody></table></div>
+		<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-4">
+			<h3 className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">{title}</h3>
+			{rows.length === 0 ? <p className="mt-3 text-sm text-slate-gray dark:text-[#cbd5e1]">No data in this period.</p> : (
+				<div className="mt-3 overflow-x-auto"><table className="w-full min-w-[360px] text-left text-sm"><thead><tr className="border-b border-slate-gray/20 text-slate-gray dark:text-[#cbd5e1]">{headers.map((header) => <th key={header} className="pb-2 pr-3 font-medium">{header}</th>)}</tr></thead><tbody className="divide-y divide-slate-gray/10">{rows.map((row, index) => <tr key={`${row[0]}-${index}`}>{row.map((value, cell) => <td key={`${index}-${cell}`} className={`py-2 pr-3 ${cell === 0 ? "text-navy dark:text-[#f8fafc]" : "text-slate-gray dark:text-[#cbd5e1]"}`}>{value}</td>)}</tr>)}</tbody></table></div>
 			)}
 		</section>
 	);

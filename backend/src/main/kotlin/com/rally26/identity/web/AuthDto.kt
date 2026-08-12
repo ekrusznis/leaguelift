@@ -48,6 +48,12 @@ data class LoginRequest(
     val password: String,
 )
 
+/** Phase 37 — the mobile app's native Google/Apple SDK hands back this ID token; OAuthSignInService verifies it server-side, never trusting it unverified. */
+data class OAuthSignInRequest(
+    @field:NotBlank
+    val idToken: String,
+)
+
 data class VerifyEmailRequest(
     @field:NotBlank
     val token: String,

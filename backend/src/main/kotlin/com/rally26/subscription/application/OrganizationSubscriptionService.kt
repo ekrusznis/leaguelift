@@ -1,5 +1,6 @@
 package com.rally26.subscription.application
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
 import com.rally26.common.error.ConflictException
 import com.rally26.common.error.ForbiddenException
@@ -12,9 +13,11 @@ import com.rally26.common.web.PageResponse
 import com.rally26.config.FrontendProperties
 import com.rally26.identity.persistence.AppUserRepository
 import com.rally26.membership.application.MembershipService
+import com.rally26.membership.persistence.MembershipRepository
 import com.rally26.onboarding.owner.persistence.OwnerOnboardingRepository
 import com.rally26.organization.domain.OrganizationStatus
 import com.rally26.organization.persistence.OrganizationRepository
+import com.rally26.outbox.application.OutboxWriter
 import com.rally26.subscription.domain.BillingRecoveryState
 import com.rally26.subscription.domain.OrganizationAccessDecision
 import com.rally26.subscription.domain.OrganizationSubscription
@@ -35,12 +38,27 @@ import com.stripe.model.checkout.Session
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
+import java.time.ZoneOffset
 import java.util.UUID
 
 data class OrganizationBillingOverview(
     val subscription: OrganizationSubscription,
     val plan: SubscriptionPlan?,
     val recoveryState: BillingRecoveryState,
+)
+
+/** Shared by every organization_subscription lifecycle email handler (Phase 37.6, ADR-114) — who to notify and about which organization. */
+data class OrganizationBillingLifecyclePayload(
+    val organizationName: String,
+    val ownerEmails: List<String>,
+)
+
+/** organization_subscription.trial_ending only — Stripe's own trial-end date, so the email can say exactly when access changes. */
+data class OrganizationBillingTrialEndingPayload(
+    val organizationName: String,
+    val ownerEmails: List<String>,
+    val trialEndDate: String,
 )
 
 @Service
@@ -54,6 +72,9 @@ class OrganizationSubscriptionService(
     private val onboardingRepository: OwnerOnboardingRepository,
     private val frontendProperties: FrontendProperties,
     private val auditService: AuditService,
+    private val membershipRepository: MembershipRepository,
+    private val outboxWriter: OutboxWriter,
+    private val objectMapper: ObjectMapper,
 ) {
     private val log = LoggerFactory.getLogger(OrganizationSubscriptionService::class.java)
 
@@ -239,6 +260,7 @@ class OrganizationSubscriptionService(
             subscriptionRepository.findByStripeSubscriptionId(subscription.id)
                 ?: customerId?.let(subscriptionRepository::findByStripeCustomerId)
                 ?: return null
+        val previousStatus = local.status
         val mapped = stripeSubscriptionStatus(subscription.status)
         subscriptionRepository.syncExternalState(
             local.id,
@@ -255,6 +277,42 @@ class OrganizationSubscriptionService(
             entityType = "organization_subscription",
             entityId = local.id,
             metadataJson = "{\"status\":\"${mapped.name}\"}",
+        )
+        // Only a genuine new cancellation, not every webhook delivery of an
+        // already-canceled subscription (Stripe redelivers on retry/replay).
+        if (previousStatus != OrganizationSubscriptionStatus.CANCELED && mapped == OrganizationSubscriptionStatus.CANCELED) {
+            enqueueLifecycleEmail(local.organizationId, local.id, "organization_subscription.canceled")
+        }
+        return local.id
+    }
+
+    @Transactional
+    fun handleTrialWillEnd(subscription: Subscription): UUID? {
+        val customerId = subscription.customer
+        val local =
+            subscriptionRepository.findByStripeSubscriptionId(subscription.id)
+                ?: customerId?.let(subscriptionRepository::findByStripeCustomerId)
+                ?: return null
+        val organization = organizationRepository.findById(local.organizationId) ?: return local.id
+        val ownerEmails = ownerEmailsFor(local.organizationId)
+        if (ownerEmails.isEmpty()) return local.id
+        val trialEndDate =
+            subscription.trialEnd?.let {
+                Instant
+                    .ofEpochSecond(it)
+                    .atZone(ZoneOffset.UTC)
+                    .toLocalDate()
+                    .toString()
+            } ?: "soon"
+        outboxWriter.write(
+            aggregateType = "organization_subscription",
+            aggregateId = local.id,
+            organizationId = local.organizationId,
+            eventType = "organization_subscription.trial_ending",
+            payloadJson =
+                objectMapper.writeValueAsString(
+                    OrganizationBillingTrialEndingPayload(organization.name, ownerEmails, trialEndDate),
+                ),
         )
         return local.id
     }
@@ -297,6 +355,10 @@ class OrganizationSubscriptionService(
     fun handleInvoicePaid(invoice: Invoice): UUID? {
         val customerId = invoice.customer ?: return null
         val local = subscriptionRepository.findByStripeCustomerId(customerId) ?: return null
+        // Captured before markPaymentSuccess (which never touches status itself) so a
+        // routine monthly renewal charge — status already ACTIVE/TRIALING — doesn't send
+        // a "billing recovered" email; only a real recovery out of PAST_DUE does.
+        val wasPastDue = local.status == OrganizationSubscriptionStatus.PAST_DUE
         subscriptionRepository.markPaymentSuccess(local.id)
         auditService.record(
             actorUserId = null,
@@ -305,6 +367,9 @@ class OrganizationSubscriptionService(
             entityType = "organization_subscription",
             entityId = local.id,
         )
+        if (wasPastDue) {
+            enqueueLifecycleEmail(local.organizationId, local.id, "organization_subscription.payment_recovered")
+        }
         return local.id
     }
 
@@ -323,7 +388,31 @@ class OrganizationSubscriptionService(
             entityType = "organization_subscription",
             entityId = local.id,
         )
+        enqueueLifecycleEmail(local.organizationId, local.id, "organization_subscription.payment_failed")
         return local.id
+    }
+
+    /** Every active OWNER/ADMINISTRATOR — a billing problem is worth telling both roles about, not just the primary owner. */
+    private fun ownerEmailsFor(organizationId: UUID): List<String> =
+        membershipRepository
+            .listActiveManagers(organizationId)
+            .mapNotNull { appUserRepository.findById(it.userId)?.email }
+
+    private fun enqueueLifecycleEmail(
+        organizationId: UUID,
+        subscriptionId: UUID,
+        eventType: String,
+    ) {
+        val organization = organizationRepository.findById(organizationId) ?: return
+        val ownerEmails = ownerEmailsFor(organizationId)
+        if (ownerEmails.isEmpty()) return
+        outboxWriter.write(
+            aggregateType = "organization_subscription",
+            aggregateId = subscriptionId,
+            organizationId = organizationId,
+            eventType = eventType,
+            payloadJson = objectMapper.writeValueAsString(OrganizationBillingLifecyclePayload(organization.name, ownerEmails)),
+        )
     }
 
     private fun applyOrganizationAccess(

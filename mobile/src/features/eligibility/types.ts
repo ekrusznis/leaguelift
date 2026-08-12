@@ -35,6 +35,8 @@ export interface ParticipantRequirement {
 export interface SubmitGuardianEvidenceRequest {
   acceptanceMethod: AcceptanceMethod;
   enteredLegalName?: string;
+  /** Set only for acceptanceMethod: 'FILE_UPLOAD' — the assetId returned by the media upload/confirm flow (Phase 37.9). */
+  documentAssetId?: string;
 }
 
 /** Coach roster clearance view — operational status only, never evidence contents (DESIGN-DOC.md 14.1L §30.2). */

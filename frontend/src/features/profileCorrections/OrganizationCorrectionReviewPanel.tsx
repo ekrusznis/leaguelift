@@ -20,12 +20,12 @@ export function OrganizationCorrectionReviewPanel({ organizationId }: { organiza
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex flex-wrap items-center gap-2">
-				<label htmlFor="correction-status-filter" className="text-sm font-medium text-navy">Status</label>
+				<label htmlFor="correction-status-filter" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Status</label>
 				<select
 					id="correction-status-filter"
 					value={status}
 					onChange={(event) => setStatus(event.target.value as ProfileCorrectionStatus | "ALL")}
-					className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2"
+					className="min-h-11 rounded-md border border-slate-gray/30 bg-white dark:bg-[#111827] px-3 py-2"
 				>
 					<option value="PENDING">Pending</option>
 					<option value="APPROVED">Approved</option>
@@ -42,21 +42,21 @@ export function OrganizationCorrectionReviewPanel({ organizationId }: { organiza
 						const note = notes[request.id] ?? "";
 						const errorMessage = review.error instanceof ApiError ? review.error.message : review.isError ? "Could not review the request." : null;
 						return (
-							<li key={request.id} className="rounded-lg border border-slate-gray/20 bg-white p-4">
+							<li key={request.id} className="rounded-lg border border-slate-gray/20 bg-white dark:bg-[#111827] p-4">
 								<div className="flex flex-wrap items-start justify-between gap-3">
 									<div className="min-w-0 flex-1">
-										<p className="font-medium text-navy">{request.targetLabel} · {PROFILE_CORRECTION_FIELD_LABELS[request.field]}</p>
-										<p className="mt-1 break-words text-sm text-slate-gray">
+										<p className="font-medium text-navy dark:text-[#f8fafc]">{request.targetLabel} · {PROFILE_CORRECTION_FIELD_LABELS[request.field]}</p>
+										<p className="mt-1 break-words text-sm text-slate-gray dark:text-[#cbd5e1]">
 											<span className="font-medium">Current:</span> {request.currentValue || "Not on file"} → <span className="font-medium">Requested:</span> {request.proposedValue}
 										</p>
-										<p className="mt-2 text-sm text-slate-gray"><span className="font-medium">Reason:</span> {request.reason}</p>
-										<p className="mt-1 text-xs text-slate-gray">Requested by {request.requesterName} ({request.requesterEmail}) · {new Date(request.requestedAt).toLocaleString()}</p>
+										<p className="mt-2 text-sm text-slate-gray dark:text-[#cbd5e1]"><span className="font-medium">Reason:</span> {request.reason}</p>
+										<p className="mt-1 text-xs text-slate-gray dark:text-[#cbd5e1]">Requested by {request.requesterName} ({request.requesterEmail}) · {new Date(request.requestedAt).toLocaleString()}</p>
 									</div>
-									<span className="shrink-0 rounded-full bg-navy/10 px-2 py-1 text-xs font-medium text-navy">{PROFILE_CORRECTION_STATUS_LABELS[request.status]}</span>
+									<span className="shrink-0 rounded-full bg-navy/10 px-2 py-1 text-xs font-medium text-navy dark:text-[#f8fafc]">{PROFILE_CORRECTION_STATUS_LABELS[request.status]}</span>
 								</div>
 								{request.status === "PENDING" ? (
 									<div className="mt-4 flex flex-col gap-2">
-										<label htmlFor={`review-note-${request.id}`} className="text-sm font-medium text-navy">Review note</label>
+										<label htmlFor={`review-note-${request.id}`} className="text-sm font-medium text-navy dark:text-[#f8fafc]">Review note</label>
 										<textarea
 											id={`review-note-${request.id}`}
 											value={note}
@@ -73,7 +73,7 @@ export function OrganizationCorrectionReviewPanel({ organizationId }: { organiza
 										</div>
 									</div>
 								) : request.reviewNote ? (
-									<p className="mt-3 text-sm text-slate-gray"><span className="font-medium">Review note:</span> {request.reviewNote}</p>
+									<p className="mt-3 text-sm text-slate-gray dark:text-[#cbd5e1]"><span className="font-medium">Review note:</span> {request.reviewNote}</p>
 								) : null}
 							</li>
 						);

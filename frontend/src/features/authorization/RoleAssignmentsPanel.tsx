@@ -55,16 +55,16 @@ export function RoleAssignmentsPanel({
 	if (isError) return <ErrorState message="Could not load who has access." onRetry={onRetry} />;
 
 	return (
-		<div className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-4">
+		<div className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4">
 			{assignments && assignments.length > 0 ? (
 				<ul className="flex flex-col gap-2" aria-label="Current access">
 					{assignments.map((assignment) => (
-						<li key={assignment.id} className="flex items-center justify-between gap-3 rounded-md bg-pure-white p-2.5">
+						<li key={assignment.id} className="flex items-center justify-between gap-3 rounded-md bg-pure-white dark:bg-[#111827] p-2.5">
 							<div className="min-w-0">
-								<p className="truncate text-sm font-medium text-navy">
+								<p className="truncate text-sm font-medium text-navy dark:text-[#f8fafc]">
 									{assignment.userDisplayName ?? assignment.userEmail ?? assignment.userId}
 								</p>
-								<p className="text-xs text-slate-gray">{assignment.role.replaceAll("_", " ")}</p>
+								<p className="text-xs text-slate-gray dark:text-[#cbd5e1]">{assignment.role.replaceAll("_", " ")}</p>
 							</div>
 							<Button
 								type="button"
@@ -78,7 +78,7 @@ export function RoleAssignmentsPanel({
 					))}
 				</ul>
 			) : (
-				<p className="text-sm text-slate-gray">No one has been granted access yet.</p>
+				<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">No one has been granted access yet.</p>
 			)}
 
 			{grantableMembers.length > 0 ? (
@@ -91,7 +91,7 @@ export function RoleAssignmentsPanel({
 					}}
 				>
 					<div className="flex flex-col gap-1">
-						<label htmlFor="grant-member" className="text-xs font-medium text-navy">
+						<label htmlFor="grant-member" className="text-xs font-medium text-navy dark:text-[#f8fafc]">
 							Member
 						</label>
 						<select
@@ -109,7 +109,7 @@ export function RoleAssignmentsPanel({
 						</select>
 					</div>
 					<div className="flex flex-col gap-1">
-						<label htmlFor="grant-role" className="text-xs font-medium text-navy">
+						<label htmlFor="grant-role" className="text-xs font-medium text-navy dark:text-[#f8fafc]">
 							Role
 						</label>
 						<select
@@ -130,7 +130,7 @@ export function RoleAssignmentsPanel({
 					</Button>
 				</form>
 			) : (
-				<p className="border-t border-slate-gray/20 pt-3 text-xs text-slate-gray">
+				<p className="border-t border-slate-gray/20 pt-3 text-xs text-slate-gray dark:text-[#cbd5e1]">
 					Every current organization member already has access, or there are no other members to grant.
 				</p>
 			)}

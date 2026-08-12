@@ -37,10 +37,10 @@ export function AppShell() {
 		{ to: "/app/help", label: "Help" },
 	];
 	return (
-		<div className="flex min-h-screen flex-col bg-ice-white">
+		<div className="flex min-h-screen flex-col bg-ice-white dark:bg-[#0f172a]">
 			<a
 				href="#main-content"
-				className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-pure-white focus:p-2"
+				className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-pure-white focus:dark:bg-[#111827] focus:p-2"
 			>
 				Skip to main content
 			</a>

@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
@@ -79,12 +79,13 @@ export default function NewAthleteConversationScreen() {
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <ScreenHeader
-        title={step === 'team' ? 'New Conversation' : step === 'contacts' ? selectedTeam?.teamName ?? 'Contacts' : 'Message'}
-      />
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ThemedView style={styles.container}>
+        <ScreenHeader
+          title={step === 'team' ? 'New Conversation' : step === 'contacts' ? selectedTeam?.teamName ?? 'Contacts' : 'Message'}
+        />
 
-      {step === 'team' && (
+        {step === 'team' && (
         <ScrollView contentContainerStyle={styles.list}>
           {teamsQuery.isLoading && <LoadingState label="Loading teams…" />}
           {teamsQuery.isError && <ErrorState message="Could not load your teams." onRetry={() => teamsQuery.refetch()} />}
@@ -158,7 +159,7 @@ export default function NewAthleteConversationScreen() {
 
       {step === 'compose' && (
         <View style={styles.composeContainer}>
-          <ScrollView contentContainerStyle={styles.list}>
+          <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
             <ThemedText type="small" themeColor="textSecondary">
               Title
             </ThemedText>
@@ -190,8 +191,9 @@ export default function NewAthleteConversationScreen() {
             </Button>
           </View>
         </View>
-      )}
-    </ThemedView>
+        )}
+      </ThemedView>
+    </KeyboardAvoidingView>
   );
 }
 

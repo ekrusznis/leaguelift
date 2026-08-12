@@ -7,9 +7,9 @@ export function FaqAccordion({ items, tone = "light" }: { items: FaqItem[]; tone
 	const [openIndex, setOpenIndex] = useState<number | null>(null);
 	const baseId = useId();
 
-	const borderColor = tone === "dark" ? "border-white/15" : "border-slate-200";
-	const questionColor = tone === "dark" ? "text-white" : "text-navy-900";
-	const answerColor = tone === "dark" ? "text-slate-300" : "text-slate-700";
+	const borderColor = tone === "dark" ? "border-white/15" : "border-slate-200 dark:border-[#334155]";
+	const questionColor = tone === "dark" ? "text-white" : "text-navy-900 dark:text-[#f8fafc]";
+	const answerColor = tone === "dark" ? "text-slate-300" : "text-slate-700 dark:text-[#cbd5e1]";
 
 	return (
 		<div className={`rounded-2xl border ${borderColor}`}>
