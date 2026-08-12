@@ -70,9 +70,12 @@ class UploadLimitsTest {
     }
 
     @Test
-    fun `document allows pdf only`() {
+    fun `document allows pdf and photographed-form image types, not webp or svg`() {
         assertTrue(UploadLimits.isContentTypeAllowed(MediaUsageSlot.DOCUMENT, "application/pdf"))
-        assertFalse(UploadLimits.isContentTypeAllowed(MediaUsageSlot.DOCUMENT, "image/png"))
+        assertTrue(UploadLimits.isContentTypeAllowed(MediaUsageSlot.DOCUMENT, "image/png"))
+        assertTrue(UploadLimits.isContentTypeAllowed(MediaUsageSlot.DOCUMENT, "image/jpeg"))
+        assertFalse(UploadLimits.isContentTypeAllowed(MediaUsageSlot.DOCUMENT, "image/webp"))
+        assertFalse(UploadLimits.isContentTypeAllowed(MediaUsageSlot.DOCUMENT, "image/svg+xml"))
     }
 
     @Test

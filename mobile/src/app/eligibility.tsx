@@ -1,6 +1,8 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
@@ -13,9 +15,12 @@ import { useToast } from '@/components/toast';
 import { useDashboardContext } from '@/features/dashboard/api';
 import { useParticipantEligibilityRequirements, useSubmitGuardianEvidence } from '@/features/eligibility/api';
 import type { ParticipantRequirement } from '@/features/eligibility/types';
+import { useConfirmMediaUpload, useRequestMediaUpload } from '@/features/media/api';
+import { uploadToSignedUrl, type PickedFile } from '@/features/media/uploadToSignedUrl';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { webEmbedRoute } from '@/lib/webEmbed';
+
+const MAX_DOCUMENT_BYTES = 15 * 1024 * 1024;
 
 const STATUS_LABELS: Record<string, string> = {
   ACTIVE: 'Submitted',
@@ -26,12 +31,13 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 /**
- * Guardian/athlete-self eligibility requirements + native e-sign/acknowledge (Phase 31
- * slice 31.4, mirrors frontend/src/features/eligibility/ParticipantEligibilityPanel.tsx).
- * Reached from the Parent dashboard's athlete cards (with householdId, to enable a
- * "Continue on rally26.com" link for FILE_UPLOAD requirements) and from the Athlete
- * persona's More tab (without householdId — an athlete's own account has no household
- * page to redirect to, so that requirement type just explains what's needed instead).
+ * Guardian/athlete-self eligibility requirements + native e-sign/acknowledge/upload
+ * (Phase 31 slice 31.4; native FILE_UPLOAD added Phase 37.9, ADR-118) — mirrors
+ * frontend/src/features/eligibility/ParticipantEligibilityPanel.tsx. Reached from the
+ * Parent dashboard's athlete cards (with householdId, enabling the native document
+ * upload form below) and from the Athlete persona's More tab (without householdId — an
+ * athlete's own account has no upload capability here, so FILE_UPLOAD requirements just
+ * explain a guardian must do it instead).
  */
 export default function EligibilityScreen() {
   const { participantId, participantName, householdId } = useLocalSearchParams<{
@@ -116,28 +122,13 @@ function RequirementCard({
         </ThemedText>
       )}
 
-      {!isSatisfied && requirement.mode === 'FILE_UPLOAD' && (
-        <View style={styles.staffNote}>
-          <ThemedText type="small" themeColor="textSecondary">
-            Document upload isn&rsquo;t available in the app yet.
-            {householdId ? ' Continue on the Rally26 website to upload it.' : ' Ask a guardian to upload it from the Rally26 website.'}
-          </ThemedText>
-          {householdId && (
-            <Button
-              variant="secondary"
-              style={styles.uploadButton}
-              onPress={() =>
-                router.push(
-                  webEmbedRoute(
-                    `/app/organizations/${organizationId}/households/${householdId}/participants`,
-                    'Eligibility Documents',
-                  ),
-                )
-              }>
-              Continue on rally26.com
-            </Button>
-          )}
-        </View>
+      {!isSatisfied && requirement.mode === 'FILE_UPLOAD' && householdId && (
+        <DocumentUploadForm organizationId={organizationId} participantId={participantId} requirementId={requirement.id} />
+      )}
+      {!isSatisfied && requirement.mode === 'FILE_UPLOAD' && !householdId && (
+        <ThemedText type="small" themeColor="textSecondary" style={styles.staffNote}>
+          Ask a guardian to upload this document from their account.
+        </ThemedText>
       )}
 
       {!isSatisfied && requirement.mode !== 'STAFF_REVIEWED_EXTERNAL' && requirement.mode !== 'FILE_UPLOAD' && !actionOpen && (
@@ -257,6 +248,149 @@ function LegalNameSignForm({
   );
 }
 
+const REJECTION_MESSAGES: Record<string, string> = {
+  FILE_TOO_LARGE: 'That file is too large (max 15 MB). Try a smaller photo or file.',
+  UNRECOGNIZED_FILE_FORMAT: "That file type isn't supported. Use a PDF or a photo (JPEG/PNG).",
+  CONTENT_TYPE_MISMATCH: "That file's contents didn't match its file type. Try picking it again.",
+  INVALID_IMAGE: "That photo couldn't be read. Try picking it again.",
+  IMAGE_DIMENSIONS_TOO_LARGE: "That photo's resolution is too large. Try a smaller photo.",
+};
+
+/**
+ * Native document/photo upload for a FILE_UPLOAD eligibility requirement (Phase 37.9,
+ * ADR-118) — previously mobile had no upload capability at all and pushed guardians to
+ * the website. Mirrors frontend/src/features/eligibility/ParticipantEligibilityPanel.tsx's
+ * DocumentEvidenceForm's exact request-upload -> PUT -> confirm -> submit-evidence
+ * sequence. A guardian is far more likely to photograph a paper form than to already
+ * have a PDF saved on their phone, so both a camera/photo-library picker
+ * (expo-image-picker) and a file picker (expo-document-picker, for an existing PDF)
+ * are offered — the backend's DOCUMENT upload slot accepts PDF/PNG/JPEG (ADR-118).
+ */
+function DocumentUploadForm({
+  organizationId,
+  participantId,
+  requirementId,
+}: {
+  organizationId: string | null;
+  participantId: string | null;
+  requirementId: string;
+}) {
+  const requestUpload = useRequestMediaUpload(organizationId ?? '');
+  const confirmUpload = useConfirmMediaUpload(organizationId ?? '');
+  const submitEvidence = useSubmitGuardianEvidence(organizationId, participantId);
+  const toast = useToast();
+  const [uploading, setUploading] = useState(false);
+
+  async function upload(file: PickedFile) {
+    if (!organizationId || !participantId) return;
+    if (file.fileSizeBytes > MAX_DOCUMENT_BYTES) {
+      toast.show('That file is too large (max 15 MB).', 'error');
+      return;
+    }
+    setUploading(true);
+    try {
+      const requested = await requestUpload.mutateAsync({
+        usageSlot: 'DOCUMENT',
+        fileName: file.fileName,
+        contentType: file.mimeType,
+        fileSizeBytes: file.fileSizeBytes,
+        entityType: 'PARTICIPANT',
+        entityId: participantId,
+      });
+      await uploadToSignedUrl(requested.uploadUrl, file, requested.requiredHeaders);
+      const confirmed = await confirmUpload.mutateAsync(requested.assetId);
+      if (confirmed.status === 'REJECTED') {
+        toast.show(
+          (confirmed.rejectionReason && REJECTION_MESSAGES[confirmed.rejectionReason]) ?? 'That file could not be used. Please try another.',
+          'error',
+        );
+        return;
+      }
+      await submitEvidence.mutateAsync({ requirementId, acceptanceMethod: 'FILE_UPLOAD', documentAssetId: requested.assetId });
+    } catch {
+      toast.show('Could not upload that file. Please try again.', 'error');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function onTakePhoto() {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      toast.show('Camera access is needed to photograph a document.', 'error');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    await upload({
+      uri: asset.uri,
+      fileName: asset.fileName ?? 'document.jpg',
+      mimeType: asset.mimeType ?? 'image/jpeg',
+      fileSizeBytes: asset.fileSize ?? 0,
+    });
+  }
+
+  async function onChooseFromLibrary() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      toast.show('Photo library access is needed to choose a document photo.', 'error');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    await upload({
+      uri: asset.uri,
+      fileName: asset.fileName ?? 'document.jpg',
+      mimeType: asset.mimeType ?? 'image/jpeg',
+      fileSizeBytes: asset.fileSize ?? 0,
+    });
+  }
+
+  async function onChoosePdf() {
+    const result = await DocumentPicker.getDocumentAsync({ type: 'application/pdf' });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    await upload({
+      uri: asset.uri,
+      fileName: asset.name,
+      mimeType: asset.mimeType ?? 'application/pdf',
+      fileSizeBytes: asset.size ?? 0,
+    });
+  }
+
+  if (uploading) {
+    return (
+      <View style={[styles.inlineForm, styles.uploadingRow]}>
+        <ActivityIndicator />
+        <ThemedText type="small" themeColor="textSecondary">
+          Uploading…
+        </ThemedText>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.inlineForm}>
+      <ThemedText type="small" themeColor="textSecondary">
+        Upload a PDF, or take or choose a photo of the document.
+      </ThemedText>
+      <View style={styles.uploadButtonRow}>
+        <Button variant="secondary" style={styles.uploadButton} onPress={() => void onTakePhoto()}>
+          Take Photo
+        </Button>
+        <Button variant="secondary" style={styles.uploadButton} onPress={() => void onChooseFromLibrary()}>
+          Choose Photo
+        </Button>
+        <Button variant="secondary" style={styles.uploadButton} onPress={() => void onChoosePdf()}>
+          Choose PDF
+        </Button>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -307,6 +441,16 @@ const styles = StyleSheet.create({
   },
   uploadButton: {
     alignSelf: 'flex-start',
+  },
+  uploadButtonRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  uploadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   inlineForm: {
     marginTop: Spacing.two,

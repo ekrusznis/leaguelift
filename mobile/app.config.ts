@@ -39,6 +39,19 @@ const config: ExpoConfig = {
     // Developer account/App ID before Sign in with Apple actually works end to end.
     'expo-apple-authentication',
     '@react-native-community/datetimepicker',
+    // Phase 37.9 — native document/photo upload for FILE_UPLOAD eligibility
+    // requirements (a guardian photographing a physical exam form, birth
+    // certificate, etc.). microphonePermission: false since this only ever
+    // captures a still photo, never video/audio.
+    [
+      'expo-image-picker',
+      {
+        photosPermission: 'Rally26 uses your photo library to attach a document to an eligibility requirement.',
+        cameraPermission: 'Rally26 uses your camera to photograph a document for an eligibility requirement.',
+        microphonePermission: false,
+      },
+    ],
+    'expo-document-picker',
     [
       'expo-splash-screen',
       {
