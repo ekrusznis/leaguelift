@@ -67,6 +67,7 @@ services:
       RESEND_TEMPLATE_INVITATION_ID: ${RESEND_TEMPLATE_INVITATION_ID:-}
       RESEND_TEMPLATE_WELCOME_ID: ${RESEND_TEMPLATE_WELCOME_ID:-}
       RESEND_TEMPLATE_SUPPORT_CASE_UPDATE_ID: ${RESEND_TEMPLATE_SUPPORT_CASE_UPDATE_ID:-}
+      RESEND_TEMPLATE_RECEIPT_ID: ${RESEND_TEMPLATE_RECEIPT_ID:-}
       # ADR-059 — Google Workspace SMTP, support-case correspondence only (never the
       # ambient EmailProvider above). Blank SMTP_USERNAME/PASSWORD means SmtpEmailProvider
       # logs and no-ops instead of a real send.

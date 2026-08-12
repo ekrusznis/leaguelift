@@ -52,7 +52,7 @@ export function PlatformSupportCasesPage() {
 						</div>
 					</div>
 				)}
-				{sentCaseIds[item.id] && openEmailCaseId !== item.id && <p className="mt-2 text-xs text-green-700">Email sent.</p>}
+				{sentCaseIds[item.id] && openEmailCaseId !== item.id && <p role="status" className="mt-2 text-xs text-success-700 dark:text-success-400">Email sent.</p>}
 			</article>; })}</div>
 			{update.isError && <div className="mt-5"><ErrorState message="The support case update could not be saved. Resolved and closed cases require a resolution note." /></div>}
 		</section>

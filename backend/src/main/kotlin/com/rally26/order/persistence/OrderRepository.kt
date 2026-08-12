@@ -42,6 +42,15 @@ class OrderRepository(
             .optional()
             .orElse(null)
 
+    /** Dispute routing (2026-08-12) — a Stripe dispute references a payment_intent, not a checkout session. */
+    fun findByStripePaymentIntentId(paymentIntentId: String): Order? =
+        jdbcClient
+            .sql("""select $COLUMNS from "order" where stripe_payment_intent_id = :paymentIntentId""")
+            .param("paymentIntentId", paymentIntentId)
+            .query(::mapRow)
+            .optional()
+            .orElse(null)
+
     /** "Confirmed" here means "was ever confirmed" — a later refund still shows in this admin-facing history, just with status REFUNDED. */
     fun findByStore(
         storeId: UUID,

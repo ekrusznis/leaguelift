@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
+import { featureFlags } from "../../lib/featureFlags";
 import { OrganizationSettingsDirectory } from "./OrganizationSettingsDirectory";
 import {
 	useNotificationPreferences,
@@ -117,7 +118,7 @@ export function SettingsPage() {
 					</fieldset>
 				)}
 				{update.isPending && <p role="status" className="mt-3 text-sm text-slate-600 dark:text-[#cbd5e1]">Saving appearance…</p>}
-				{update.isSuccess && <p role="status" className="mt-3 text-sm font-medium text-victory-green">Appearance saved.</p>}
+				{update.isSuccess && <p role="status" className="mt-3 text-sm font-medium text-success-700 dark:text-success-400">Appearance saved.</p>}
 				{update.isError && <p role="alert" className="mt-3 text-sm font-medium text-rose-700">Could not save appearance. Your previous preference is unchanged.</p>}
 			</section>
 
@@ -125,28 +126,31 @@ export function SettingsPage() {
 				<div>
 					<h2 id="notification-settings-heading" className="font-heading text-xl font-semibold text-navy-900 dark:text-[#f8fafc]">Notifications</h2>
 					<p className="mt-1 text-sm text-slate-600 dark:text-[#cbd5e1]">
-						"Default" resolves differently per channel, not the same thing everywhere: in-app stays on unless you turn it off; email follows your household's
-						email-reminder setting, so Default can mean off if your household has opted out; SMS's Default is always off — SMS only ever sends once you both
-						grant consent below and set that topic's SMS choice to On.
+						{featureFlags.smsNotifications
+							? "\"Default\" resolves differently per channel, not the same thing everywhere: in-app stays on unless you turn it off; email follows your household's email-reminder setting, so Default can mean off if your household has opted out; SMS's Default is always off — SMS only ever sends once you both grant consent below and set that topic's SMS choice to On."
+							: "\"Default\" resolves differently per channel: in-app stays on unless you turn it off; email follows your household's email-reminder setting, so Default can mean off if your household has opted out."}
 					</p>
 				</div>
 				{notifications.isPending && <div className="mt-4"><LoadingState label="Loading notification preferences…" /></div>}
 				{notifications.isError && <div className="mt-4"><ErrorState message="Could not load notification preferences." onRetry={() => notifications.refetch()} /></div>}
 				{notificationPreferences && (
 					<div className="mt-5 space-y-5">
-						<label className="flex items-start gap-3 rounded-xl border border-slate-200 dark:border-[#334155] bg-ice-white dark:bg-[#0f172a] p-4">
-							<input
-								type="checkbox"
-								checked={notificationPreferences.smsConsent}
-								disabled={updateSmsConsent.isPending}
-								onChange={(event: ChangeEvent<HTMLInputElement>) => updateSmsConsent.mutate({ consented: event.target.checked })}
-								className="mt-1"
-							/>
-							<span>
-								<span className="block font-semibold text-navy-900 dark:text-[#f8fafc]">Allow optional SMS notifications</span>
-								<span className="mt-1 block text-sm text-slate-600 dark:text-[#cbd5e1]">Consent alone does not enable every SMS topic. You must also set that topic's SMS choice to On.</span>
-							</span>
-						</label>
+						{featureFlags.smsNotifications && (
+							// oxlint-disable-next-line jsx-a11y/label-has-associated-control -- label text is nested two spans deep, which the linter's shallow text check misses; browsers compute the accessible name from all descendant text regardless of depth, so this is accessible as written
+							<label className="flex items-start gap-3 rounded-xl border border-slate-200 dark:border-[#334155] bg-ice-white dark:bg-[#0f172a] p-4">
+								<input
+									type="checkbox"
+									checked={notificationPreferences.smsConsent}
+									disabled={updateSmsConsent.isPending}
+									onChange={(event: ChangeEvent<HTMLInputElement>) => updateSmsConsent.mutate({ consented: event.target.checked })}
+									className="mt-1"
+								/>
+								<span>
+									<span className="block font-semibold text-navy-900 dark:text-[#f8fafc]">Allow optional SMS notifications</span>
+									<span className="mt-1 block text-sm text-slate-600 dark:text-[#cbd5e1]">Consent alone does not enable every SMS topic. You must also set that topic's SMS choice to On.</span>
+								</span>
+							</label>
+						)}
 
 						<div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-[#334155]">
 							<table className="min-w-full divide-y divide-slate-200 dark:divide-[#334155] text-sm">
@@ -158,10 +162,12 @@ export function SettingsPage() {
 											Email
 											<span className="mt-0.5 block text-[10px] font-normal normal-case text-slate-400">Default follows your household setting</span>
 										</th>
-										<th className="px-4 py-3">
-											SMS
-											<span className="mt-0.5 block text-[10px] font-normal normal-case text-slate-400">Default is always off</span>
-										</th>
+										{featureFlags.smsNotifications && (
+											<th className="px-4 py-3">
+												SMS
+												<span className="mt-0.5 block text-[10px] font-normal normal-case text-slate-400">Default is always off</span>
+											</th>
+										)}
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-slate-200 dark:divide-[#334155] bg-white dark:bg-[#111827]">
@@ -170,7 +176,9 @@ export function SettingsPage() {
 										return (
 											<tr key={preference.topic}>
 												<td className="px-4 py-4"><span className="font-semibold text-navy-900 dark:text-[#f8fafc]">{label.title}</span><span className="mt-1 block max-w-md text-xs text-slate-600 dark:text-[#cbd5e1]">{label.description}</span></td>
-												{(["inApp", "email", "sms"] as const).map((channel) => (
+												{(["inApp", "email", "sms"] as const)
+													.filter((channel) => featureFlags.smsNotifications || channel !== "sms")
+													.map((channel) => (
 													<td key={channel} className="px-4 py-4 align-top">
 														<select
 															aria-label={`${label.title} ${channel}`}

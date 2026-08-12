@@ -67,6 +67,15 @@ class FeePaymentRepository(
             .query(Long::class.java)
             .single()
 
+    /** Dispute routing (2026-08-12) — a Stripe dispute references a payment_intent, not a checkout session. */
+    fun findByStripePaymentIntentId(paymentIntentId: String): FeePayment? =
+        jdbcClient
+            .sql("select $COLUMNS from fee_payment where stripe_payment_intent_id = :paymentIntentId")
+            .param("paymentIntentId", paymentIntentId)
+            .query(::mapRow)
+            .optional()
+            .orElse(null)
+
     fun findByStripeCheckoutSessionId(sessionId: String): FeePayment? =
         jdbcClient
             .sql("select $COLUMNS from fee_payment where stripe_checkout_session_id = :sessionId")

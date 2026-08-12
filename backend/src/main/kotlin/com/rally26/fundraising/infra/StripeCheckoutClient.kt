@@ -1,5 +1,7 @@
 package com.rally26.fundraising.infra
 
+import com.rally26.common.stripe.StripeTaxSupport
+import com.rally26.config.StripeTaxProperties
 import com.stripe.StripeClient
 import com.stripe.net.RequestOptions
 import com.stripe.param.RefundCreateParams
@@ -24,6 +26,7 @@ data class CheckoutSession(
 @Component
 class StripeCheckoutClient(
     private val stripeClient: StripeClient,
+    private val stripeTaxProperties: StripeTaxProperties,
 ) {
     fun createContributionCheckoutSession(
         contributionId: UUID,
@@ -33,7 +36,7 @@ class StripeCheckoutClient(
         successUrl: String,
         cancelUrl: String,
     ): CheckoutSession {
-        val params =
+        val builder =
             SessionCreateParams
                 .builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
@@ -50,14 +53,20 @@ class StripeCheckoutClient(
                                 .setCurrency(currency.lowercase())
                                 .setUnitAmount(amountMinor)
                                 .setProductData(
-                                    SessionCreateParams.LineItem.PriceData.ProductData
-                                        .builder()
-                                        .setName("Contribution to $campaignName")
-                                        .build(),
+                                    StripeTaxSupport.applyTaxCode(
+                                        SessionCreateParams.LineItem.PriceData.ProductData
+                                            .builder()
+                                            .setName("Contribution to $campaignName"),
+                                        stripeTaxProperties.contributionTaxCode,
+                                    ).build(),
                                 ).build(),
                         ).build(),
-                ).build()
-        val session = stripeClient.checkout().sessions().create(params)
+                )
+        // No shipping address is collected for a contribution, so automatic_tax needs billing-address collection instead.
+        if (stripeTaxProperties.contributionEnabled) {
+            StripeTaxSupport.applyAutomaticTax(builder, collectBillingAddress = true)
+        }
+        val session = stripeClient.checkout().sessions().create(builder.build())
         return CheckoutSession(sessionId = session.id, checkoutUrl = session.url)
     }
 

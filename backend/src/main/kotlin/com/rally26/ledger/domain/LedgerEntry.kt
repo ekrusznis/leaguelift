@@ -6,7 +6,7 @@ import java.util.UUID
 /**
  * The subset of DESIGN-DOC.md section 8.6's full entry-type list this slice
  * actually computes a rule for. SALES_TAX, SHIPPING_COLLECTED,
- * FULFILLMENT_SHIPPING_COST, TEAM_ALLOCATION, HOUSEHOLD_CREDIT, CHARGEBACK,
+ * FULFILLMENT_SHIPPING_COST, TEAM_ALLOCATION, HOUSEHOLD_CREDIT,
  * PAYOUT, and MANUAL_ADJUSTMENT remain design target.
  */
 enum class LedgerEntryType {
@@ -19,11 +19,15 @@ enum class LedgerEntryType {
     REFUND,
     OFFLINE_SETTLEMENT,
     MANUAL_ADJUSTMENT,
+    /** A Stripe dispute/chargeback (2026-08-12) — reverses the gross amount, distinct from REFUND for accounting/reporting purposes even though the ORGANIZATION_EARNING reversal it produces is identical in shape. */
+    CHARGEBACK,
+    /** Stripe's own non-refundable per-dispute fee. Rally26 absorbs this (founder decision, 2026-08-12) — see LedgerService.recordDisputeOpened, which deliberately never pairs this with an ORGANIZATION_EARNING debit. */
+    CHARGEBACK_FEE,
 }
 
 enum class LedgerDirection { CREDIT, DEBIT }
 
-enum class LedgerSourceType { CONTRIBUTION, ORDER, TRANSFER, REFUND, SPONSORSHIP, CORRECTION, FEE_PAYMENT }
+enum class LedgerSourceType { CONTRIBUTION, ORDER, TRANSFER, REFUND, SPONSORSHIP, CORRECTION, FEE_PAYMENT, DISPUTE }
 
 /**
  * Append-only (DESIGN-DOC.md section 8.6) — corrections are always a new

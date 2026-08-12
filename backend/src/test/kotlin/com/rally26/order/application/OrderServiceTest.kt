@@ -3,7 +3,9 @@ package com.rally26.order.application
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
 import com.rally26.authorization.application.AuthorizationService
+import com.rally26.authorization.domain.AuthorizationContext
 import com.rally26.authorization.domain.Capabilities
+import com.rally26.authorization.domain.ContextType
 import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
@@ -37,6 +39,7 @@ import com.rally26.order.infra.StripeOrderCheckoutClient
 import com.rally26.order.persistence.FulfillmentHistoryRepository
 import com.rally26.order.persistence.FulfillmentRepository
 import com.rally26.order.persistence.OrderItemRepository
+import com.rally26.order.persistence.OrderItemWithOrder
 import com.rally26.order.persistence.OrderRepository
 import com.rally26.outbox.application.OutboxWriter
 import com.rally26.participant.domain.Participant
@@ -1047,5 +1050,106 @@ class OrderServiceTest {
         service.refund(orgId, order.id, manager)
 
         verify(exactly = 0) { familyCreditService.reverseForRefundedOrder(any(), any()) }
+    }
+
+    private fun householdContext(householdId: UUID) =
+        AuthorizationContext(ContextType.HOUSEHOLD, householdId, orgId, "My household", "GUARDIAN", setOf(Capabilities.HOUSEHOLD_ORDER_CREATE))
+
+    private fun teamOrderContext(teamId: UUID) =
+        AuthorizationContext(ContextType.TEAM, teamId, orgId, "My team", "COACH", setOf(Capabilities.TEAM_ORDER_CREATE))
+
+    private fun confirmedItemRow(
+        storeId: UUID,
+        variantId: UUID,
+        participantId: UUID,
+    ) = OrderItemWithOrder(
+        orderId = UUID.randomUUID(),
+        storeId = storeId,
+        confirmedAt = Instant.now(),
+        currency = "USD",
+        item = OrderItem(UUID.randomUUID(), UUID.randomUUID(), variantId, 1, 2500L, 1200L, participantId, null, null, null, null),
+    )
+
+    @Test
+    fun `listMySwagShopOrders only returns items for the caller's own household, not another household's`() {
+        val currentUser = CurrentUser(UUID.randomUUID(), "guardian@example.com", "Sarah Johnson")
+        val myHouseholdId = UUID.randomUUID()
+        val myParticipant = participant(myHouseholdId)
+        val storeEntity = store()
+        val productEntity = product(storeEntity.id)
+        val variant = productVariant(productEntity.id)
+
+        every { authorizationService.listContexts(currentUser) } returns listOf(householdContext(myHouseholdId))
+        every { participantRepository.findByHousehold(myHouseholdId, orgId) } returns listOf(myParticipant)
+        every { orderItemRepository.findConfirmedByParticipants(orgId, listOf(myParticipant.id)) } returns
+            listOf(confirmedItemRow(storeEntity.id, variant.id, myParticipant.id))
+        every { participantRepository.findById(myParticipant.id, orgId) } returns myParticipant
+        every { productVariantRepository.findById(variant.id, orgId) } returns variant
+        every { productRepository.findById(productEntity.id, orgId) } returns productEntity
+        every { storeRepository.findById(storeEntity.id, orgId) } returns storeEntity
+
+        val result = service.listMySwagShopOrders(orgId, currentUser)
+
+        assertEquals(1, result.size)
+        assertEquals(myParticipant.id, result[0].participantId)
+        assertEquals(true, result[0].isReorderable)
+    }
+
+    @Test
+    fun `listMySwagShopOrders includes a coach's team roster items`() {
+        val currentUser = CurrentUser(UUID.randomUUID(), "coach@example.com", "Coach Lee")
+        val teamId = UUID.randomUUID()
+        val rosterParticipant = participant(UUID.randomUUID())
+        val storeEntity = store()
+        val productEntity = product(storeEntity.id)
+        val variant = productVariant(productEntity.id)
+
+        every { authorizationService.listContexts(currentUser) } returns listOf(teamOrderContext(teamId))
+        every { participantRepository.findActiveByTeam(teamId, orgId) } returns listOf(rosterParticipant)
+        every { orderItemRepository.findConfirmedByParticipants(orgId, listOf(rosterParticipant.id)) } returns
+            listOf(confirmedItemRow(storeEntity.id, variant.id, rosterParticipant.id))
+        every { participantRepository.findById(rosterParticipant.id, orgId) } returns rosterParticipant
+        every { productVariantRepository.findById(variant.id, orgId) } returns variant
+        every { productRepository.findById(productEntity.id, orgId) } returns productEntity
+        every { storeRepository.findById(storeEntity.id, orgId) } returns storeEntity
+
+        val result = service.listMySwagShopOrders(orgId, currentUser)
+
+        assertEquals(1, result.size)
+        assertEquals(rosterParticipant.id, result[0].participantId)
+    }
+
+    @Test
+    fun `listMySwagShopOrders marks an item non-reorderable when its variant is no longer active`() {
+        val currentUser = CurrentUser(UUID.randomUUID(), "guardian@example.com", "Sarah Johnson")
+        val householdId = UUID.randomUUID()
+        val myParticipant = participant(householdId)
+        val storeEntity = store()
+        val productEntity = product(storeEntity.id)
+        val variant = productVariant(productEntity.id).copy(isActive = false)
+
+        every { authorizationService.listContexts(currentUser) } returns listOf(householdContext(householdId))
+        every { participantRepository.findByHousehold(householdId, orgId) } returns listOf(myParticipant)
+        every { orderItemRepository.findConfirmedByParticipants(orgId, listOf(myParticipant.id)) } returns
+            listOf(confirmedItemRow(storeEntity.id, variant.id, myParticipant.id))
+        every { participantRepository.findById(myParticipant.id, orgId) } returns myParticipant
+        every { productVariantRepository.findById(variant.id, orgId) } returns variant
+        every { productRepository.findById(productEntity.id, orgId) } returns productEntity
+        every { storeRepository.findById(storeEntity.id, orgId) } returns storeEntity
+
+        val result = service.listMySwagShopOrders(orgId, currentUser)
+
+        assertEquals(false, result[0].isReorderable)
+    }
+
+    @Test
+    fun `listMySwagShopOrders returns an empty list when the caller has no household or order-capable team`() {
+        val currentUser = CurrentUser(UUID.randomUUID(), "stranger@example.com", "Stranger")
+        every { authorizationService.listContexts(currentUser) } returns emptyList()
+        every { orderItemRepository.findConfirmedByParticipants(orgId, emptyList()) } returns emptyList()
+
+        val result = service.listMySwagShopOrders(orgId, currentUser)
+
+        assertEquals(emptyList(), result)
     }
 }

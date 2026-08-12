@@ -24,7 +24,17 @@
 
 @theme {
   --color-navy: #0B1F33;
-  --color-victory-green: #20B26B;
+  /*
+   * ADR-057 completion (2026-08-12): the sales-site redesign already moved the
+   * primary CTA from green to orange in marketing/components/buttons.tsx, but
+   * never swept the rest of the app — victory-green and the green-* scale below
+   * were still the old LeagueLift-era color. Rather than rename every call site
+   * (same rationale as the gold->orange move below), the NAME is kept and the
+   * VALUE becomes the same accessible dark orange as the rest of the CTA scale,
+   * so every existing `bg-victory-green`/`text-green-*` call site picks up the
+   * rebrand automatically. No green remains in the palette.
+   */
+  --color-victory-green: #C94A09;
   --color-championship-gold: #F2600C;
   --color-ice-white: #F7F9FC;
   --color-slate-gray: #526275;
@@ -44,16 +54,31 @@
   --color-navy-800: #102B46;
   --color-navy-700: #173B5C;
 
-  --color-green-600: #159957;
-  --color-green-500: #20B26B;
-  --color-green-400: #3CCF83;
+  /*
+   * green-600/500/400 (ADR-057 completion, see victory-green above): values
+   * repointed to the orange equivalent each was standing in for — green-600 and
+   * green-500 (== victory-green) were used on light backgrounds, so they take the
+   * same accessible dark orange; green-400 was used on dark navy backgrounds, so
+   * it takes orange-400, which already passes comfortably there (6.4:1/5.6:1).
+   */
+  --color-green-600: #C94A09;
+  --color-green-500: #C94A09;
+  --color-green-400: #FF7A33;
 
   /* Rebranded gold -> orange (ADR-057); kept the `gold` name, see file header. */
   --color-gold-500: #F2600C;
   --color-gold-400: #FF7A33;
 
-  /* Explicit brand-orange aliases — use these in new code. */
-  --color-orange-600: #D9500A;
+  /*
+   * Explicit brand-orange aliases — use these in new code. orange-600/700 were
+   * darkened during the 2026-08-12 accessibility pass: white button text on the
+   * original orange-500 (#F2600C) measured only 3.25:1, and the original
+   * orange-600 (#D9500A) only 4.12:1 — both below the 4.5:1 WCAG AA minimum for
+   * normal text. orange-500 itself is unchanged and still fine for icons/accents/
+   * text-on-white, which were never the problem.
+   */
+  --color-orange-700: #A93C07;
+  --color-orange-600: #C24708;
   --color-orange-500: #F2600C;
   --color-orange-400: #FF7A33;
   --color-orange-300: #FFA366;
@@ -62,12 +87,28 @@
   --color-white: #FFFFFF;
 
   --color-slate-700: #526275;
-  --color-slate-500: #76869A;
+  /*
+   * slate-500 darkened in the same accessibility pass — #76869A measured only
+   * 3.71:1 on white/ice-white as body text (used across 25+ call sites),
+   * below the 4.5:1 AA minimum for normal text.
+   */
+  --color-slate-500: #5E6F82;
   --color-slate-300: #C9D2DD;
   --color-slate-200: #DDE4EC;
 
+  /*
+   * Genuine semantic success green (2026-08-12) — distinct from the orange CTA/
+   * brand scale above. Reserved for actual success confirmations (checkmark
+   * icons, "Saved."/"Email sent." status messages), not general brand accents.
+   * success-400 is the dark-background-safe counterpart to success-700.
+   */
+  --color-success-400: #34D399;
   --color-error-600: #C93636;
-  --color-warning-600: #BC7B00;
+  /*
+   * warning-600 darkened alongside the other contrast fixes above — #BC7B00 on
+   * its light warning-banner background (#FEEFE7) measured only 3.13:1.
+   */
+  --color-warning-600: #8A5A00;
   --color-info-600: #2F6FED;
   --color-success-700: #117A46;
 

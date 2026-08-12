@@ -25,7 +25,7 @@ export function Avatar({ name, size = "md", src }: AvatarProps) {
 		return (
 			<img
 				src={src}
-				alt={`Profile image for ${name}`}
+				alt={name}
 				className={`shrink-0 rounded-full object-cover ${dimension}`}
 			/>
 		);

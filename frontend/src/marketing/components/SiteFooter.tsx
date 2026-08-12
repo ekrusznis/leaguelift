@@ -14,7 +14,7 @@ export function SiteFooter() {
 				<div className="sm:col-span-2 lg:col-span-1">
 					<Logo tone="dark" />
 					<p className="mt-4 text-sm font-medium text-slate-200">More revenue. Lower fees. Stronger programs.</p>
-					<p className="mt-2 max-w-xs text-sm text-slate-500 dark:text-[#cbd5e1]">
+					<p className="mt-2 max-w-xs text-sm text-slate-300">
 						A revenue and payment-management platform for youth sports organizations.
 					</p>
 				</div>
@@ -36,7 +36,7 @@ export function SiteFooter() {
 			</PageContainer>
 
 			<div className="border-t border-white/10">
-				<PageContainer className="flex flex-col items-center gap-4 py-6 text-sm text-slate-500 dark:text-[#cbd5e1] sm:flex-row sm:justify-between">
+				<PageContainer className="flex flex-col items-center gap-4 py-6 text-sm text-slate-300 sm:flex-row sm:justify-between">
 					<p>
 						© {year} Rally26
 					</p>

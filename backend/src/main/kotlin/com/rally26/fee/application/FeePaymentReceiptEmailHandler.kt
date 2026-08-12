@@ -1,8 +1,10 @@
 package com.rally26.fee.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
+import com.rally26.notification.EmailTemplateRef
 import com.rally26.outbox.application.OutboxEventHandler
 import com.rally26.outbox.domain.OutboxEvent
 import org.springframework.stereotype.Component
@@ -13,6 +15,7 @@ import java.util.Locale
 @Component
 class FeePaymentReceiptEmailHandler(
     private val emailProvider: EmailProvider,
+    private val resendTemplateProperties: ResendTemplateProperties,
     private val objectMapper: ObjectMapper,
 ) : OutboxEventHandler {
     override val eventType: String = "fee_assignment.payment_confirmed_online"
@@ -27,6 +30,18 @@ class FeePaymentReceiptEmailHandler(
                 body =
                     "Hi ${payload.payerName ?: "there"},\n\n" +
                         "This confirms your payment of $amount for \"${payload.feeDescription}\" has been received.\n\n— Rally26",
+                template =
+                    resendTemplateProperties.receiptId.takeIf { it.isNotBlank() }?.let { templateId ->
+                        EmailTemplateRef(
+                            id = templateId,
+                            variables =
+                                mapOf(
+                                    "PAYER_NAME" to (payload.payerName ?: "there"),
+                                    "AMOUNT" to amount,
+                                    "FEE_DESCRIPTION" to payload.feeDescription,
+                                ),
+                        )
+                    },
             ),
         )
     }

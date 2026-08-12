@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../../../auth/AuthContext";
 import type { AuthorizationContext } from "../../../authorization/types";
 import type { Participant } from "../../households/types";
-import type { SwagShopApparelType } from "../../store/types";
+import type { SwagShopApparelType, SwagShopOrderHistoryItem } from "../../store/types";
 import { SwagShopOrderFlow } from "../SwagShopOrderFlow";
 
 const organizationId = "11111111-1111-1111-1111-111111111111";
@@ -89,9 +89,31 @@ const participant: Participant = {
 	updatedAt: new Date().toISOString(),
 };
 
-function stubFetch(): ReturnType<typeof vi.fn> {
+const pastOrder: SwagShopOrderHistoryItem = {
+	orderId: "88888888-8888-8888-8888-888888888888",
+	confirmedAt: new Date("2026-06-01T00:00:00Z").toISOString(),
+	participantId,
+	participantName: "Maya Johnson",
+	productId,
+	productName: "Team Tee",
+	variantId,
+	variantLabel: "M / Navy",
+	size: "M",
+	color: "Navy",
+	mockupFrontUrl: "https://signed.example.com/mockup-front.png",
+	personalizationName: "Johnson",
+	personalizationNumber: "7",
+	personalizationPlacement: "BACK",
+	personalizationLogoSize: "LARGE",
+	unitPriceMinor: 2500,
+	currency: "USD",
+	isReorderable: true,
+};
+
+function stubFetch(pastOrders: SwagShopOrderHistoryItem[] = []): ReturnType<typeof vi.fn> {
 	const fetchMock = vi.fn().mockImplementation((url: string) => {
 		if (url.includes("/me/contexts")) return Promise.resolve(jsonResponse([householdContext]));
+		if (url.includes("/swag-shop/my-orders")) return Promise.resolve(jsonResponse(pastOrders));
 		if (url.includes("/swag-shop/apparel-types")) return Promise.resolve(jsonResponse([apparelType]));
 		if (url.includes("/participants")) return Promise.resolve(jsonResponse([participant]));
 		if (url.includes("/swag-shop/orders")) {
@@ -149,5 +171,37 @@ describe("SwagShopOrderFlow", () => {
 			expect(body.personalizationPlacement).toBe("CENTER_FRONT");
 			expect(body.personalizationLogoSize).toBe("LARGE");
 		});
+	});
+
+	it("shows an empty state when there are no past orders", async () => {
+		stubFetch([]);
+		renderFlow();
+
+		expect(await screen.findByText(/no past orders yet/i)).toBeInTheDocument();
+	});
+
+	it("lists a past order and prefills the form on Reorder", async () => {
+		stubFetch([pastOrder]);
+		const user = userEvent.setup();
+		renderFlow();
+
+		expect(await screen.findByText(/team tee — m \/ navy/i)).toBeInTheDocument();
+		expect(screen.getByText(/for maya johnson/i)).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: /reorder/i }));
+
+		expect(await screen.findByLabelText(/size \/ color/i)).toHaveValue(variantId);
+		expect(screen.getByLabelText(/athlete/i)).toHaveValue(participantId);
+		expect(screen.getByLabelText(/add name and\/or number/i)).toBeChecked();
+		expect(screen.getByLabelText(/^name$/i)).toHaveValue("Johnson");
+		expect(screen.getByLabelText(/^number$/i)).toHaveValue("7");
+	});
+
+	it("disables Reorder and labels it unavailable when the item is no longer reorderable", async () => {
+		stubFetch([{ ...pastOrder, isReorderable: false }]);
+		renderFlow();
+
+		const button = await screen.findByRole("button", { name: /no longer available/i });
+		expect(button).toBeDisabled();
 	});
 });

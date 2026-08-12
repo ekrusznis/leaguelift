@@ -43,6 +43,13 @@ class OrderController(
                 currentUser,
             ).toResponse()
 
+    /** Swag Shop "my past orders": every confirmed order the caller could reorder today (own household's participants, plus any team roster they hold TEAM_ORDER_CREATE for). See OrderService.listMySwagShopOrders. */
+    @GetMapping("/swag-shop/my-orders")
+    fun listMySwagShopOrders(
+        @PathVariable organizationId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): List<SwagShopOrderHistoryItemDto> = orderService.listMySwagShopOrders(organizationId, currentUser).map { it.toResponse() }
+
     @GetMapping("/stores/{storeId}/orders")
     fun listForStore(
         @PathVariable organizationId: UUID,

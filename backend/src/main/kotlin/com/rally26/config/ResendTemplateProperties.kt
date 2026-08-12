@@ -21,4 +21,6 @@ data class ResendTemplateProperties(
     val welcomeId: String = "",
     /** ADR-059 — sent when a Platform Admin changes a support case's status (not on creation, which goes through SMTP instead — see SupportCaseCreatedEmailHandler). */
     val supportCaseUpdateId: String = "",
+    /** Online fee-payment receipt — see FeePaymentReceiptEmailHandler. */
+    val receiptId: String = "",
 )

@@ -45,9 +45,35 @@ export function TermsPage() {
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Fees, pricing, and payment</h2>
 				<p className="mt-2">
 					Applicable Rally26 subscription fees, transaction fees, and any other service fees are
-					disclosed to an organization before they take effect. Once live payment processing is available,
-					payments will be handled by a third-party payment processor under its own terms; Rally26 does
-					not store payment card numbers.
+					disclosed to an organization before they take effect. Payments are handled by a third-party
+					payment processor under its own terms; Rally26 does not store payment card numbers. For payments
+					processed through Rally26, Rally26 &mdash; not the receiving organization &mdash; is the merchant
+					of record, and may hold received funds for a brief period (currently up to seven days) before
+					transferring an organization&rsquo;s share, to account for processing, verification, and any
+					refund window described below.
+				</p>
+			</section>
+
+			<section>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Refunds</h2>
+				<p className="mt-2">
+					Where a refund is available, it is initiated by an organization administrator within a limited
+					window (currently 14 days) from when the original payment was confirmed. Rally26&rsquo;s platform
+					fee is not refunded. If a payment is instead disputed directly with the cardholder&rsquo;s bank
+					(a chargeback), Rally26 handles that process with the payment processor as merchant of record.
+				</p>
+			</section>
+
+			<section>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Electronic signatures and waivers</h2>
+				<p className="mt-2">
+					Where Rally26 offers an electronic signature or acknowledgment flow &mdash; for example, a
+					guardian completing a program waiver or eligibility document electronically &mdash; using that
+					flow means you consent to conduct that specific transaction electronically. You may request a
+					paper copy of an electronically signed document, or withdraw your consent to sign electronically
+					for future transactions, by contacting us; withdrawing consent may affect your ability to
+					complete certain actions online. Completing an electronic signature requires a device capable of
+					accessing the Rally26 application and a valid email address.
 				</p>
 			</section>
 
@@ -115,7 +141,7 @@ export function TermsPage() {
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Questions</h2>
 				<p className="mt-2">
 					Contact us through the{" "}
-					<Link to="/contact" className="text-green-600 hover:underline">
+					<Link to="/contact" className="text-green-600 underline">
 						Contact page
 					</Link>{" "}
 					with any questions about these terms.

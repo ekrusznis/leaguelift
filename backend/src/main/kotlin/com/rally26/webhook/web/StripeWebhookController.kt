@@ -1,6 +1,7 @@
 package com.rally26.webhook.web
 
 import com.rally26.config.StripeProperties
+import com.rally26.dispute.application.DisputeService
 import com.rally26.fee.application.FeeService
 import com.rally26.fundraising.application.ContributionService
 import com.rally26.order.application.OrderService
@@ -13,6 +14,7 @@ import com.rally26.webhook.domain.WebhookProcessingStatus
 import com.rally26.webhook.persistence.WebhookEventRepository
 import com.stripe.exception.SignatureVerificationException
 import com.stripe.model.Account
+import com.stripe.model.Dispute
 import com.stripe.model.Invoice
 import com.stripe.model.Subscription
 import com.stripe.model.checkout.Session
@@ -44,7 +46,8 @@ private const val PROVIDER = "stripe"
  * is authoritative for activation. Phase 37.8 (ADR-117) adds `account.updated` —
  * Connect account restrictions/disablement Stripe applies after initial onboarding
  * are otherwise invisible until a manager happens to click "refresh status" again.
- * Dispute/chargeback handling and Stripe Tax remain open, DESIGN-DOC.md section 14.4.
+ * DESIGN-DOC.md §14.6 item #4 (2026-08-12) adds `charge.dispute.created`/`.closed` —
+ * see `dispute/application/DisputeService.kt`. Stripe Tax remains open, §14.4.
  * Processed synchronously inline (no outbox-consumer worker
  * exists yet, and doesn't need to for one lightweight event type): a genuine
  * processing failure returns 500 so Stripe's own automatic retry schedule covers
@@ -62,6 +65,7 @@ class StripeWebhookController(
     private val organizationSubscriptionService: OrganizationSubscriptionService? = null,
     private val payoutAccountService: PayoutAccountService? = null,
     private val stripeConnectClient: StripeConnectClient? = null,
+    private val disputeService: DisputeService? = null,
 ) {
     @PostMapping
     fun receive(
@@ -160,6 +164,18 @@ class StripeWebhookController(
                         val invoice = event.dataObjectDeserializer.deserializeUnsafe() as Invoice
                         relatedEntityType = "organization_subscription"
                         relatedEntityId = organizationSubscriptionService?.handleInvoicePaid(invoice)
+                        WebhookProcessingStatus.PROCESSED
+                    }
+                    "charge.dispute.created" -> {
+                        val dispute = event.dataObjectDeserializer.deserializeUnsafe() as Dispute
+                        relatedEntityType = "payment_dispute"
+                        relatedEntityId = disputeService?.handleDisputeCreated(dispute)
+                        WebhookProcessingStatus.PROCESSED
+                    }
+                    "charge.dispute.closed" -> {
+                        val dispute = event.dataObjectDeserializer.deserializeUnsafe() as Dispute
+                        relatedEntityType = "payment_dispute"
+                        relatedEntityId = disputeService?.handleDisputeClosed(dispute)
                         WebhookProcessingStatus.PROCESSED
                     }
                     else -> WebhookProcessingStatus.IGNORED

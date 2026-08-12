@@ -2,6 +2,7 @@ package com.rally26.order.web
 
 import com.rally26.order.application.OrderCheckout
 import com.rally26.order.application.OrderLineItemRequest
+import com.rally26.order.application.SwagShopOrderHistoryItem
 import com.rally26.order.domain.Fulfillment
 import com.rally26.order.domain.FulfillmentHistory
 import com.rally26.order.domain.FulfillmentReprint
@@ -113,6 +114,49 @@ fun Order.toResponse() =
         confirmedAt,
         refundedAt,
         createdAt,
+    )
+
+data class SwagShopOrderHistoryItemDto(
+    val orderId: UUID,
+    val confirmedAt: Instant,
+    val participantId: UUID,
+    val participantName: String,
+    val productId: UUID,
+    val productName: String,
+    val variantId: UUID,
+    val variantLabel: String,
+    val size: String?,
+    val color: String?,
+    val mockupFrontUrl: String?,
+    val personalizationName: String?,
+    val personalizationNumber: String?,
+    val personalizationPlacement: PersonalizationPlacement?,
+    val personalizationLogoSize: SwagLogoSize?,
+    val unitPriceMinor: Long,
+    val currency: String,
+    val isReorderable: Boolean,
+)
+
+fun SwagShopOrderHistoryItem.toResponse() =
+    SwagShopOrderHistoryItemDto(
+        orderId,
+        confirmedAt,
+        participantId,
+        participantName,
+        productId,
+        productName,
+        variantId,
+        variantLabel,
+        size,
+        color,
+        mockupFrontUrl,
+        personalizationName,
+        personalizationNumber,
+        personalizationPlacement,
+        personalizationLogoSize,
+        unitPriceMinor,
+        currency,
+        isReorderable,
     )
 
 data class UpdateFulfillmentRequest(

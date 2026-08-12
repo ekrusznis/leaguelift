@@ -245,6 +245,67 @@ class LedgerServiceTest {
     }
 
     @Test
+    fun `recordDisputeOpened writes a CHARGEBACK debit, an ORGANIZATION_EARNING debit net of the platform fee, and a CHARGEBACK_FEE debit with no matching earning debit`() {
+        val sourceId = UUID.randomUUID()
+        val captured = mutableListOf<InsertCall>()
+        stubInsert(captured)
+
+        service.recordDisputeOpened(orgId, LedgerSourceType.ORDER, sourceId, 10_000L, "usd", 1_500L, "dp_test_123")
+
+        assertEquals(3, captured.size)
+        val chargeback = captured[0]
+        assertEquals(LedgerEntryType.CHARGEBACK, chargeback.entryType)
+        assertEquals(LedgerDirection.DEBIT, chargeback.direction)
+        assertEquals(10_000L, chargeback.amountMinor)
+        assertEquals("dp_test_123", chargeback.externalReference)
+
+        val earningReversal = captured[1]
+        assertEquals(LedgerEntryType.ORGANIZATION_EARNING, earningReversal.entryType)
+        assertEquals(LedgerDirection.DEBIT, earningReversal.direction)
+        assertEquals(9_500L, earningReversal.amountMinor) // 10,000 - 5% fee
+
+        val fee = captured[2]
+        assertEquals(LedgerEntryType.CHARGEBACK_FEE, fee.entryType)
+        assertEquals(LedgerDirection.DEBIT, fee.direction)
+        assertEquals(1_500L, fee.amountMinor)
+        // Rally26 absorbs the dispute fee (founder decision, 2026-08-12) — no third
+        // ORGANIZATION_EARNING debit is ever produced for it.
+        assertTrue(captured.count { it.entryType == LedgerEntryType.ORGANIZATION_EARNING } == 1)
+    }
+
+    @Test
+    fun `recordDisputeOpened omits the CHARGEBACK_FEE entry when the fee is zero`() {
+        val sourceId = UUID.randomUUID()
+        val captured = mutableListOf<InsertCall>()
+        stubInsert(captured)
+
+        service.recordDisputeOpened(orgId, LedgerSourceType.ORDER, sourceId, 10_000L, "usd", 0L, "dp_test_zero_fee")
+
+        assertEquals(2, captured.size)
+        assertTrue(captured.none { it.entryType == LedgerEntryType.CHARGEBACK_FEE })
+    }
+
+    @Test
+    fun `recordDisputeWon reinstates the CHARGEBACK and ORGANIZATION_EARNING amounts as credits`() {
+        val sourceId = UUID.randomUUID()
+        val captured = mutableListOf<InsertCall>()
+        stubInsert(captured)
+
+        service.recordDisputeWon(orgId, LedgerSourceType.ORDER, sourceId, 10_000L, "usd", "dp_test_123")
+
+        assertEquals(2, captured.size)
+        val chargeback = captured[0]
+        assertEquals(LedgerEntryType.CHARGEBACK, chargeback.entryType)
+        assertEquals(LedgerDirection.CREDIT, chargeback.direction)
+        assertEquals(10_000L, chargeback.amountMinor)
+
+        val earningReinstatement = captured[1]
+        assertEquals(LedgerEntryType.ORGANIZATION_EARNING, earningReinstatement.entryType)
+        assertEquals(LedgerDirection.CREDIT, earningReinstatement.direction)
+        assertEquals(9_500L, earningReinstatement.amountMinor)
+    }
+
+    @Test
     fun `recordCorrectionRefund appends refund and organization earning debits under the correction source`() {
         val correctionId = UUID.randomUUID()
         val captured = mutableListOf<InsertCall>()

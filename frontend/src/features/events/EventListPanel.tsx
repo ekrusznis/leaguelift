@@ -29,7 +29,7 @@ function statusClasses(status: Rally26Event["status"]) {
 			return "bg-gold-100 text-gold-800";
 		case "SCHEDULED":
 		case "COMPLETED":
-			return "bg-green-50 dark:bg-green-950 text-green-700";
+			return "bg-orange-50 dark:bg-orange-950 text-orange-700";
 		default:
 			return "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-[#cbd5e1]";
 	}

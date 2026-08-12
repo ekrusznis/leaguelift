@@ -26,6 +26,7 @@ export function NavDropdown({ group }: { group: NavGroup }) {
 	}, []);
 
 	return (
+		// oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- this div isn't itself interactive, it just listens for Escape bubbling up from the real interactive children (button/links) below to close the dropdown
 		<div
 			ref={containerRef}
 			className="relative"
@@ -75,6 +76,7 @@ export function NavDropdown({ group }: { group: NavGroup }) {
 						}
 
 						return (
+							// oxlint-disable-next-line jsx-a11y/interactive-supports-focus -- react-router's Link always renders a focusable <a href> here (item.to is always set on this branch), the linter just can't see through the component
 							<Link
 								key={label}
 								to={item.to}

@@ -185,7 +185,7 @@ function CreditSettingsForm({ organizationId }: { organizationId: string }) {
 					Allow families to transfer credit to each other
 				</label>
 				{error && <p role="alert" className="text-sm text-error-red">{error}</p>}
-				{saved && !error && <p className="text-sm text-green-600">Saved.</p>}
+				{saved && !error && <p role="status" className="text-sm text-success-700 dark:text-success-400">Saved.</p>}
 				<div>
 					<Button type="submit" disabled={updateSettings.isPending}>{updateSettings.isPending ? "Saving…" : "Save credit settings"}</Button>
 				</div>

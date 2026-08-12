@@ -90,9 +90,9 @@ export function ResetPasswordPage() {
 						</PrimaryButton>
 					</form>
 				)}
-				<p className="mt-6 text-center text-sm text-slate-400">
+				<p className="mt-6 text-center text-sm text-slate-700 dark:text-[#cbd5e1]">
 					Need help?{" "}
-					<Link to="/contact" className="text-green-400 hover:underline">
+					<Link to="/contact" className="text-orange-600 dark:text-orange-400 underline">
 						Contact support
 					</Link>
 				</p>

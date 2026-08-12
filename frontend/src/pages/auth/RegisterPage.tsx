@@ -139,11 +139,11 @@ export function RegisterPage() {
 								label={
 									<>
 										I agree to the{" "}
-										<Link to="/terms" className="text-green-400 hover:underline">
+										<Link to="/terms" className="text-green-400 underline">
 											Terms of Service
 										</Link>{" "}
 										and{" "}
-										<Link to="/privacy" className="text-green-400 hover:underline">
+										<Link to="/privacy" className="text-green-400 underline">
 											Privacy Policy
 										</Link>
 										.

@@ -53,7 +53,7 @@ export function AuthLayout() {
 					<ul className="grid grid-cols-2 gap-3">
 						{VALUE_STATEMENTS.map((statement) => (
 							<li key={statement} className="flex items-center gap-2 text-sm text-slate-200">
-								<svg className="size-4 shrink-0 text-green-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+								<svg className="size-4 shrink-0 text-success-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
 									<path d="m3 8.5 3 3 7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
 								</svg>
 								{statement}

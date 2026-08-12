@@ -34,7 +34,7 @@ export function AccessibilityPage() {
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Feedback</h2>
 				<p className="mt-2">
 					If you encounter an accessibility barrier using Rally26, contact us through the{" "}
-					<Link to="/contact" className="text-green-600 hover:underline">
+					<Link to="/contact" className="text-green-600 underline">
 						Contact page
 					</Link>{" "}
 					so we can address it.

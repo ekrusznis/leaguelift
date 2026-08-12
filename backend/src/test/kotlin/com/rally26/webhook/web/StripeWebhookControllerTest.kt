@@ -1,6 +1,7 @@
 package com.rally26.webhook.web
 
 import com.rally26.config.StripeProperties
+import com.rally26.dispute.application.DisputeService
 import com.rally26.fee.application.FeeService
 import com.rally26.fundraising.application.ContributionService
 import com.rally26.fundraising.domain.Contribution
@@ -242,6 +243,108 @@ class StripeWebhookControllerTest {
         assertEquals(HttpStatus.OK, response.statusCode)
         verify(exactly = 1) { payoutAccountService.syncFromWebhook("acct_test_1", any()) }
     }
+
+    @Test
+    fun `a charge_dispute_created event is routed to DisputeService`() {
+        val eventId = "evt_${UUID.randomUUID()}"
+        val disputeId = "dp_test_1"
+        val payload = disputeCreatedPayload(eventId, disputeId, "pi_test_1")
+        val signature = sign(payload, webhookSecret)
+        val disputeService = mockk<DisputeService>()
+        val controllerWithDispute =
+            StripeWebhookController(
+                stripeProperties,
+                webhookEventRepository,
+                contributionService,
+                orderService,
+                sponsorshipService,
+                feeService,
+                disputeService = disputeService,
+            )
+        val disputeRowId = UUID.randomUUID()
+        every { webhookEventRepository.findExisting("stripe", eventId) } returns null
+        every { disputeService.handleDisputeCreated(any()) } returns disputeRowId
+        every {
+            webhookEventRepository.insert(
+                "stripe",
+                eventId,
+                "charge.dispute.created",
+                payload,
+                any(),
+                true,
+                WebhookProcessingStatus.PROCESSED,
+                "payment_dispute",
+                disputeRowId,
+                null,
+            )
+        } returns sampleWebhookEvent()
+
+        val response = controllerWithDispute.receive(payload, signature)
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        verify(exactly = 1) { disputeService.handleDisputeCreated(any()) }
+    }
+
+    @Test
+    fun `a charge_dispute_closed event is routed to DisputeService`() {
+        val eventId = "evt_${UUID.randomUUID()}"
+        val disputeId = "dp_test_2"
+        val payload = disputeClosedPayload(eventId, disputeId, "pi_test_2", status = "won")
+        val signature = sign(payload, webhookSecret)
+        val disputeService = mockk<DisputeService>()
+        val controllerWithDispute =
+            StripeWebhookController(
+                stripeProperties,
+                webhookEventRepository,
+                contributionService,
+                orderService,
+                sponsorshipService,
+                feeService,
+                disputeService = disputeService,
+            )
+        val disputeRowId = UUID.randomUUID()
+        every { webhookEventRepository.findExisting("stripe", eventId) } returns null
+        every { disputeService.handleDisputeClosed(any()) } returns disputeRowId
+        every {
+            webhookEventRepository.insert(
+                "stripe",
+                eventId,
+                "charge.dispute.closed",
+                payload,
+                any(),
+                true,
+                WebhookProcessingStatus.PROCESSED,
+                "payment_dispute",
+                disputeRowId,
+                null,
+            )
+        } returns sampleWebhookEvent()
+
+        val response = controllerWithDispute.receive(payload, signature)
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        verify(exactly = 1) { disputeService.handleDisputeClosed(any()) }
+    }
+
+    private fun disputeCreatedPayload(
+        eventId: String,
+        disputeId: String,
+        paymentIntentId: String,
+    ): String =
+        """{"id":"$eventId","object":"event","api_version":"2025-03-31.basil","type":"charge.dispute.created","data":{"object":{""" +
+            """"id":"$disputeId","object":"dispute","amount":5000,"currency":"usd","charge":"ch_test_1",""" +
+            """"payment_intent":"$paymentIntentId","reason":"fraudulent","status":"needs_response",""" +
+            """"evidence_details":{"due_by":1735689600}}}}"""
+
+    private fun disputeClosedPayload(
+        eventId: String,
+        disputeId: String,
+        paymentIntentId: String,
+        status: String,
+    ): String =
+        """{"id":"$eventId","object":"event","api_version":"2025-03-31.basil","type":"charge.dispute.closed","data":{"object":{""" +
+            """"id":"$disputeId","object":"dispute","amount":5000,"currency":"usd","charge":"ch_test_1",""" +
+            """"payment_intent":"$paymentIntentId","reason":"fraudulent","status":"$status"}}}"""
 
     private fun accountUpdatedPayload(
         eventId: String,

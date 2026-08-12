@@ -35,6 +35,15 @@ rally26:
   stripe:
     secret-key: ${STRIPE_SECRET_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+    tax:
+      order-enabled: ${STRIPE_TAX_ORDER_ENABLED:false}
+      order-tax-code: ${STRIPE_TAX_ORDER_TAX_CODE:txcd_99999999}
+      contribution-enabled: ${STRIPE_TAX_CONTRIBUTION_ENABLED:false}
+      contribution-tax-code: ${STRIPE_TAX_CONTRIBUTION_TAX_CODE:}
+      sponsorship-enabled: ${STRIPE_TAX_SPONSORSHIP_ENABLED:false}
+      sponsorship-tax-code: ${STRIPE_TAX_SPONSORSHIP_TAX_CODE:}
+      fee-payment-enabled: ${STRIPE_TAX_FEE_PAYMENT_ENABLED:false}
+      fee-payment-tax-code: ${STRIPE_TAX_FEE_PAYMENT_TAX_CODE:}
   # Printify catalog/orders (Phase 4 slice 1) — catalog reads only need apiToken;
   # creating a draft order also needs shopId (a "Manual/API" Printify shop). Blank by
   # default; calls fail with a clear error until real Printify credentials are supplied.
@@ -96,6 +105,7 @@ rally26:
         invitation-id: ${RESEND_TEMPLATE_INVITATION_ID:}
         welcome-id: ${RESEND_TEMPLATE_WELCOME_ID:}
         support-case-update-id: ${RESEND_TEMPLATE_SUPPORT_CASE_UPDATE_ID:}
+        receipt-id: ${RESEND_TEMPLATE_RECEIPT_ID:}
     # ADR-059 — Google Workspace SMTP, used only for support-case correspondence
     # (SupportCaseCreatedEmailHandler), never as the ambient EmailProvider above. Blank
     # username until a real Google Workspace app password is supplied; SmtpEmailProvider

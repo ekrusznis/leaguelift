@@ -223,7 +223,19 @@ function OrganizationSectionContent({
 			return <Section title="Events" description="Manage organization-wide events or open a team/tournament schedule for scoped events."><EventListPanel scope={{ type: "organization", organizationId: organization.id }} canManage={canManageEvents} /></Section>;
 		case "fees":
 			return canManageOrganization ? (
-				<Section title="Fees & Payments" action={<Link to={appPaths.collections(organization.id)} className="text-sm font-medium text-azure-blue hover:underline">View collections and export →</Link>}>
+				<Section
+				title="Fees & Payments"
+				action={
+					<div className="flex flex-wrap gap-4">
+						<Link to={appPaths.disputes(organization.id)} className="text-sm font-medium text-azure-blue hover:underline">
+							View disputes
+						</Link>
+						<Link to={appPaths.collections(organization.id)} className="text-sm font-medium text-azure-blue hover:underline">
+							View collections and export →
+						</Link>
+					</div>
+				}
+			>
 					<FeeTemplateList organizationId={organization.id} />
 				</Section>
 			) : (

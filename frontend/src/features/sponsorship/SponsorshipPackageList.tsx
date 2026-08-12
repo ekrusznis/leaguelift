@@ -403,7 +403,7 @@ function SponsorContactForm({ organizationId, packageId, sponsorId }: { organiza
 					Could not save these details. Please try again.
 				</p>
 			)}
-			{updateSponsor.isSuccess && <p className="text-sm text-victory-green">Saved.</p>}
+			{updateSponsor.isSuccess && <p role="status" className="text-sm text-success-700 dark:text-success-400">Saved.</p>}
 			<div className="flex flex-wrap gap-2">
 				<div className="flex flex-col gap-1">
 					<label htmlFor={`sponsor-phone-${sponsorId}`} className="text-xs font-medium text-navy dark:text-[#f8fafc]">
