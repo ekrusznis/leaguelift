@@ -8,6 +8,7 @@ import { RequireCapability } from "../authorization/RequireCapability";
 import { ActionCenterPage } from "../features/actionCenter/ActionCenterPage";
 import { AnnouncementsPage } from "../features/communications/AnnouncementsPage";
 import { CollectionsPage } from "../features/collections/CollectionsPage";
+import { DisputesPage } from "../features/disputes/DisputesPage";
 import { EventDetailPage } from "../features/events/EventDetailPage";
 import { EventsPage } from "../features/events/EventsPage";
 import { PersonalIntegrationsPage } from "../features/integrations/PersonalIntegrationsPage";
@@ -117,6 +118,7 @@ export function AppRoutes() {
 					<Route path="organizations/:organizationId" element={<OrganizationDetailPage />} />
 					<Route path="organizations/:organizationId/billing" element={<OrganizationBillingPage />} />
 					<Route path="organizations/:organizationId/collections" element={<CollectionsPage />} />
+					<Route path="organizations/:organizationId/disputes" element={<DisputesPage />} />
 					<Route path="organizations/:organizationId/swag-shop/order" element={<SwagShopOrderFlow />} />
 					<Route path="organizations/:organizationId/events/:eventId" element={<EventDetailPage />} />
 					<Route path="organizations/:organizationId/teams/:teamId/events" element={<EventsPage scopeType="team" />} />

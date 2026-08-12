@@ -517,5 +517,102 @@ class LedgerService(
         }
     }
 
+    /**
+     * A Stripe dispute was opened (DESIGN-DOC.md §14.6 item #4). Structurally identical
+     * to [recordRefund] — CHARGEBACK debit for the gross amount, ORGANIZATION_EARNING
+     * debit net of the platform fee — plus one additional CHARGEBACK_FEE debit for
+     * Stripe's own non-refundable per-dispute fee. Rally26 absorbs that fee (founder
+     * decision, 2026-08-12): it's tagged with the organization for traceability/
+     * reporting, but deliberately gets no matching ORGANIZATION_EARNING debit, so it
+     * never reduces what the org is owed or appears in getPayoutSummary/getTransferableEntries.
+     */
+    @Transactional
+    fun recordDisputeOpened(
+        organizationId: UUID,
+        sourceType: LedgerSourceType,
+        sourceId: UUID,
+        grossAmountMinor: Long,
+        currency: String,
+        disputeFeeMinor: Long,
+        stripeDisputeId: String,
+    ) {
+        ledgerEntryRepository.insert(
+            organizationId = organizationId,
+            accountCode = LedgerEntryType.CHARGEBACK.name,
+            entryType = LedgerEntryType.CHARGEBACK,
+            direction = LedgerDirection.DEBIT,
+            amountMinor = grossAmountMinor,
+            currency = currency,
+            sourceType = sourceType,
+            sourceId = sourceId,
+            externalReference = stripeDisputeId,
+            description = "Stripe dispute opened, reversing the original gross amount",
+        )
+        val orgPortionMinor = grossAmountMinor - platformFeeProperties.feeMinorOf(grossAmountMinor)
+        ledgerEntryRepository.insert(
+            organizationId = organizationId,
+            accountCode = LedgerEntryType.ORGANIZATION_EARNING.name,
+            entryType = LedgerEntryType.ORGANIZATION_EARNING,
+            direction = LedgerDirection.DEBIT,
+            amountMinor = orgPortionMinor,
+            currency = currency,
+            sourceType = sourceType,
+            sourceId = sourceId,
+            externalReference = stripeDisputeId,
+            description = "Reversal of organization earning due to Stripe dispute",
+        )
+        if (disputeFeeMinor > 0) {
+            ledgerEntryRepository.insert(
+                organizationId = organizationId,
+                accountCode = LedgerEntryType.CHARGEBACK_FEE.name,
+                entryType = LedgerEntryType.CHARGEBACK_FEE,
+                direction = LedgerDirection.DEBIT,
+                amountMinor = disputeFeeMinor,
+                currency = currency,
+                sourceType = sourceType,
+                sourceId = sourceId,
+                externalReference = stripeDisputeId,
+                description = "Stripe's non-refundable dispute fee, absorbed by Rally26 (not billed to the organization)",
+            )
+        }
+    }
+
+    /** A previously-opened dispute was won — reverses [recordDisputeOpened]'s CHARGEBACK/ORGANIZATION_EARNING debits with matching credits. The CHARGEBACK_FEE is never reinstated: Stripe's dispute fee is non-refundable even when Rally26 wins. */
+    @Transactional
+    fun recordDisputeWon(
+        organizationId: UUID,
+        sourceType: LedgerSourceType,
+        sourceId: UUID,
+        grossAmountMinor: Long,
+        currency: String,
+        stripeDisputeId: String,
+    ) {
+        ledgerEntryRepository.insert(
+            organizationId = organizationId,
+            accountCode = LedgerEntryType.CHARGEBACK.name,
+            entryType = LedgerEntryType.CHARGEBACK,
+            direction = LedgerDirection.CREDIT,
+            amountMinor = grossAmountMinor,
+            currency = currency,
+            sourceType = sourceType,
+            sourceId = sourceId,
+            externalReference = stripeDisputeId,
+            description = "Stripe dispute won, reinstating the original gross amount",
+        )
+        val orgPortionMinor = grossAmountMinor - platformFeeProperties.feeMinorOf(grossAmountMinor)
+        ledgerEntryRepository.insert(
+            organizationId = organizationId,
+            accountCode = LedgerEntryType.ORGANIZATION_EARNING.name,
+            entryType = LedgerEntryType.ORGANIZATION_EARNING,
+            direction = LedgerDirection.CREDIT,
+            amountMinor = orgPortionMinor,
+            currency = currency,
+            sourceType = sourceType,
+            sourceId = sourceId,
+            externalReference = stripeDisputeId,
+            description = "Reinstatement of organization earning after winning a Stripe dispute",
+        )
+    }
+
     private fun holdingPeriodCutoff(): Instant = Instant.now().minus(Duration.ofDays(payoutProperties.holdingPeriodDays))
 }

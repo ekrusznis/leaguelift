@@ -33,6 +33,15 @@ class ContributionRepository(
             .optional()
             .orElse(null)
 
+    /** Dispute routing (2026-08-12) — a Stripe dispute references a payment_intent, not a checkout session. */
+    fun findByStripePaymentIntentId(paymentIntentId: String): Contribution? =
+        jdbcClient
+            .sql("select $COLUMNS from contribution where stripe_payment_intent_id = :paymentIntentId")
+            .param("paymentIntentId", paymentIntentId)
+            .query(::mapRow)
+            .optional()
+            .orElse(null)
+
     /** "Confirmed" here means "was ever confirmed" — a later refund still shows in this admin-facing history, just with status REFUNDED. */
     fun listConfirmedForCampaign(
         campaignId: UUID,
