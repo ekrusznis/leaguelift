@@ -8938,6 +8938,10 @@ paths:
       - name: code
         in: query
         schema: {type: string}
+      - name: organization_grant
+        in: query
+        description: SportsEngine's "Organization Authorization Flow" returns this instead of `code` — treated as an alternate source for the same authorization value (SportsEngineAuthorizationAdapter).
+        schema: {type: string}
       - name: state
         in: query
         schema: {type: string}

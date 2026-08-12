@@ -20,13 +20,13 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ToastProvider>
-          <OnboardingContext.Provider value={onboarding}>
-            <AppThemeProvider>
+        <AppThemeProvider>
+          <ToastProvider>
+            <OnboardingContext.Provider value={onboarding}>
               <NavigationThemeBridge />
-            </AppThemeProvider>
-          </OnboardingContext.Provider>
-        </ToastProvider>
+            </OnboardingContext.Provider>
+          </ToastProvider>
+        </AppThemeProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

@@ -67,15 +67,25 @@ class IntegrationController(
      * Provider redirects arrive without a Rally26 bearer token. The one-time state
      * record binds the callback to the initiating user/organization and is atomically
      * consumed before any credential is stored.
+     *
+     * [organizationGrant] (2026-08-12): SportsEngine's documented "Organization
+     * Authorization Flow" redirects back with an `organization_grant` query param
+     * (the approved organization's id) instead of the standard OAuth2 `code` param
+     * every other provider here uses — see `SportsEngineAuthorizationAdapter`'s
+     * class doc. Rather than adding a provider-specific callback path, this generic
+     * endpoint accepts either and forwards whichever is present through the same
+     * `completeAuthorization` call unchanged.
      */
     @GetMapping("/integrations/oauth/{provider}/callback")
     fun callback(
         @PathVariable provider: String,
         @RequestParam(required = false) code: String?,
+        @RequestParam(name = "organization_grant", required = false) organizationGrant: String?,
         @RequestParam(required = false) state: String?,
         @RequestParam(required = false) error: String?,
     ): RedirectView {
         val resolvedProvider = provider(provider)
+        val effectiveCode = code ?: organizationGrant
         var organizationId: UUID? = null
         val status =
             try {
@@ -88,7 +98,7 @@ class IntegrationController(
                             .completeAuthorization(
                                 resolvedProvider,
                                 state ?: throw ValidationException("The provider callback is missing authorization state."),
-                                code ?: throw ValidationException("The provider callback is missing an authorization code."),
+                                effectiveCode ?: throw ValidationException("The provider callback is missing an authorization code."),
                             ).organizationId
                     "connected"
                 }

@@ -61,6 +61,7 @@ export function useUpdateOrganizationProfile(organizationId: string) {
 					addressPostalCode: values.addressPostalCode || null,
 					addressCountry: values.addressCountry || null,
 					timezone: values.timezone || null,
+					zelleHandle: values.zelleHandle || null,
 				},
 			}),
 		onSuccess: () => {
