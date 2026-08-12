@@ -293,7 +293,7 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 				</p>
 			)}
 			{updateProfile.isSuccess && !isDirty && (
-				<p role="status" className="text-sm text-victory-green">
+				<p role="status" className="text-sm text-success-700 dark:text-success-400">
 					Saved.
 				</p>
 			)}

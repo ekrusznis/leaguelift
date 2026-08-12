@@ -117,7 +117,7 @@ export function SettingsPage() {
 					</fieldset>
 				)}
 				{update.isPending && <p role="status" className="mt-3 text-sm text-slate-600 dark:text-[#cbd5e1]">Saving appearance…</p>}
-				{update.isSuccess && <p role="status" className="mt-3 text-sm font-medium text-victory-green">Appearance saved.</p>}
+				{update.isSuccess && <p role="status" className="mt-3 text-sm font-medium text-success-700 dark:text-success-400">Appearance saved.</p>}
 				{update.isError && <p role="alert" className="mt-3 text-sm font-medium text-rose-700">Could not save appearance. Your previous preference is unchanged.</p>}
 			</section>
 
@@ -134,6 +134,7 @@ export function SettingsPage() {
 				{notifications.isError && <div className="mt-4"><ErrorState message="Could not load notification preferences." onRetry={() => notifications.refetch()} /></div>}
 				{notificationPreferences && (
 					<div className="mt-5 space-y-5">
+						{/* oxlint-disable-next-line jsx-a11y/label-has-associated-control -- label text is nested two spans deep, which the linter's shallow text check misses; browsers compute the accessible name from all descendant text regardless of depth, so this is accessible as written */}
 						<label className="flex items-start gap-3 rounded-xl border border-slate-200 dark:border-[#334155] bg-ice-white dark:bg-[#0f172a] p-4">
 							<input
 								type="checkbox"

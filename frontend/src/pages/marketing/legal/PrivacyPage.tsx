@@ -48,7 +48,7 @@ export function PrivacyPage() {
 					<li>
 						<strong>Usage information</strong> — privacy-safe product analytics (e.g. which page or button
 						was used) that never include names, emails, participant information, or payment details. See{" "}
-						<Link to="/security" className="text-green-600 hover:underline">
+						<Link to="/security" className="text-green-600 underline">
 							Security
 						</Link>{" "}
 						for how this is handled.
@@ -116,7 +116,7 @@ export function PrivacyPage() {
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Security</h2>
 				<p className="mt-2">
 					See our{" "}
-					<Link to="/security" className="text-green-600 hover:underline">
+					<Link to="/security" className="text-green-600 underline">
 						Security page
 					</Link>{" "}
 					for how we approach authentication, authorization, and data protection.
@@ -135,7 +135,7 @@ export function PrivacyPage() {
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Questions</h2>
 				<p className="mt-2">
 					Contact us through the{" "}
-					<Link to="/contact" className="text-green-600 hover:underline">
+					<Link to="/contact" className="text-green-600 underline">
 						Contact page
 					</Link>{" "}
 					with any privacy questions.

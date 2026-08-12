@@ -96,6 +96,7 @@ export function GlobalSearchBox({ scope, organizationId }: { scope: SearchScope;
 					{isFetching && <p className="px-2 py-2 text-sm text-slate-500 dark:text-[#cbd5e1]">Searching…</p>}
 					{!isFetching && data && items.length === 0 && <p className="px-2 py-2 text-sm text-slate-500 dark:text-[#cbd5e1]">No results.</p>}
 					{!isFetching && items.length > 0 && (
+						// oxlint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role -- ul/li elements re-rolled as listbox/option is the standard WAI-ARIA APG combobox pattern, not a mistake
 						<ul id={listboxId} role="listbox" className="flex flex-col">
 							{items.map((hit, index) => (
 								<li key={`${hit.type}-${hit.id}`} role="presentation">

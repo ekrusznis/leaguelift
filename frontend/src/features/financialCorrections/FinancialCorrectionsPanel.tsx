@@ -57,7 +57,7 @@ export function FinancialCorrectionsPanel({ organizationId }: { organizationId: 
 			<label className="grid gap-1 text-sm text-navy dark:text-[#f8fafc]">Reason<textarea className={inputClass} rows={2} value={reason} onChange={(e) => { setReason(e.target.value); setPreview(null); }} /></label>
 			<div className="lg:col-span-2"><Button type="submit" disabled={previewMutation.isPending}>{previewMutation.isPending ? "Previewing…" : "Preview correction"}</Button></div>
 		</form>
-		{error && <p role="alert" className="mt-3 text-sm text-error-red">{error}</p>}{message && <p role="status" className="mt-3 text-sm text-victory-green">{message}</p>}
+		{error && <p role="alert" className="mt-3 text-sm text-error-red">{error}</p>}{message && <p role="status" className="mt-3 text-sm text-success-700 dark:text-success-400">{message}</p>}
 		{preview && <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950 p-4">
 			<h4 className="font-semibold text-navy dark:text-[#f8fafc]">Confirm {preview.correctionType.toLowerCase()}</h4>
 			<p className="mt-1 text-sm text-navy dark:text-[#f8fafc]">{preview.targetLabel}: {money(preview.requestedAmountMinor, preview.currency)}. Remaining correctable amount: {money(preview.remainingAfterMinor, preview.currency)}.</p>

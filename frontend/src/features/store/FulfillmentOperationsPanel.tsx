@@ -143,7 +143,7 @@ export function FulfillmentOperationsPanel({
 			</div>
 
 			{error && <p role="alert" className="text-sm text-error-red">{error}</p>}
-			{success && <p role="status" className="text-sm text-green-700">{success}</p>}
+			{success && <p role="status" className="text-sm text-success-700 dark:text-success-400">{success}</p>}
 
 			<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
 				<Field label="Operational status" id={`fulfillment-status-${orderId}`}>

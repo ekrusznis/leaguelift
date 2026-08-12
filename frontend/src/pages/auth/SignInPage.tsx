@@ -92,11 +92,11 @@ export function SignInPage() {
 
 				<p className="mt-6 text-center text-sm text-slate-400">
 					By signing in, you agree to our{" "}
-					<Link to="/terms" className="text-green-400 hover:underline">
+					<Link to="/terms" className="text-green-400 underline">
 						Terms of Service
 					</Link>{" "}
 					and{" "}
-					<Link to="/privacy" className="text-green-400 hover:underline">
+					<Link to="/privacy" className="text-green-400 underline">
 						Privacy Policy
 					</Link>
 					.
@@ -105,7 +105,7 @@ export function SignInPage() {
 
 			<p className="text-center text-sm text-slate-700 dark:text-[#cbd5e1]">
 				Need help?{" "}
-				<Link to="/contact" className="font-medium text-green-700 hover:underline">
+				<Link to="/contact" className="font-medium text-orange-600 dark:text-orange-400 underline">
 					Contact support
 				</Link>
 			</p>

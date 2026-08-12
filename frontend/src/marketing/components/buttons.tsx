@@ -109,11 +109,14 @@ function renderAs(props: ButtonLikeProps, className: string) {
 /**
  * Primary CTA (section 10.1): Get Started, Sign In, Create Account, Continue.
  * Rebranded orange (ADR-057) — was green under the LeagueLift palette.
+ * Uses orange-600/700 rather than the lighter orange-500 (reserved for icons/
+ * accents/text-on-white, which are fine as-is): white button text on orange-500
+ * only measured 3.25:1, below the 4.5:1 WCAG AA minimum — see tokens.css.
  */
 export function PrimaryButton(props: ButtonLikeProps) {
 	return renderAs(
 		props,
-		buildClassName("bg-orange-500 text-white shadow-[0_12px_34px_rgba(242,96,12,0.30)] hover:bg-orange-400 active:bg-orange-600", props.className),
+		buildClassName("bg-orange-600 text-white shadow-[0_12px_34px_rgba(201,74,9,0.30)] hover:bg-orange-700 active:bg-orange-700", props.className),
 	);
 }
 

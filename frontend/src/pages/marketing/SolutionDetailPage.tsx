@@ -72,7 +72,7 @@ export function SolutionDetailPage() {
 						<ul className="mt-6 grid gap-3">
 							{solution.capabilities.map((capability) => (
 								<li key={capability} className="flex items-center gap-2 text-sm text-slate-700 dark:text-[#cbd5e1]">
-									<svg className="size-4 shrink-0 text-green-600" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+									<svg className="size-4 shrink-0 text-success-700 dark:text-success-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
 										<path d="m3 8.5 3 3 7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
 									</svg>
 									{capability}

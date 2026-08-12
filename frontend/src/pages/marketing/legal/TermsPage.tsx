@@ -115,7 +115,7 @@ export function TermsPage() {
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Questions</h2>
 				<p className="mt-2">
 					Contact us through the{" "}
-					<Link to="/contact" className="text-green-600 hover:underline">
+					<Link to="/contact" className="text-green-600 underline">
 						Contact page
 					</Link>{" "}
 					with any questions about these terms.

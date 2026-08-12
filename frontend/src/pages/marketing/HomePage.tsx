@@ -376,7 +376,7 @@ const ABOUT_VALUES = [
 function CheckItem({ children }: { children: string }) {
 	return (
 		<li className="flex items-center gap-2">
-			<svg className="size-4 shrink-0 text-green-600" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+			<svg className="size-4 shrink-0 text-success-700 dark:text-success-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
 				<path d="m3 8.5 3 3 7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
 			</svg>
 			{children}
@@ -423,7 +423,7 @@ export function HomePage() {
 				>
 					<PageContainer className="relative grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
 						<div>
-							<p className="inline-flex items-center gap-1.5 rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
+							<p className="inline-flex items-center gap-1.5 rounded-full bg-orange-600 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
 								<svg className="size-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
 									<path d="M10 1.5 12.4 7l6 .6-4.5 4 1.3 5.9L10 14.6l-5.2 2.9L6.1 11.6l-4.5-4 6-.6Z" />
 								</svg>
@@ -454,9 +454,6 @@ export function HomePage() {
 									See How It Works
 								</SecondaryDarkButton>
 							</div>
-							<TextButton to="/auth/sign-in" className="mt-6 inline-block text-slate-300 hover:text-white">
-								Log In
-							</TextButton>
 						</div>
 
 						<div className="relative">
@@ -603,7 +600,7 @@ export function HomePage() {
 									}`}
 								>
 									{tier.badge && (
-										<span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-orange-500 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
+										<span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-orange-600 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
 											{tier.badge}
 										</span>
 									)}
@@ -667,7 +664,7 @@ export function HomePage() {
 							<ul className="mt-4 grid gap-3 sm:grid-cols-2">
 								{ABOUT_VALUES.map((value) => (
 									<li key={value} className="flex items-center gap-2 text-slate-700 dark:text-[#cbd5e1]">
-										<svg className="size-4 shrink-0 text-green-600" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+										<svg className="size-4 shrink-0 text-success-700 dark:text-success-400" viewBox="0 0 16 16" fill="none" aria-hidden="true">
 											<path d="m3 8.5 3 3 7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
 										</svg>
 										{value}
