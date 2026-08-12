@@ -25,6 +25,7 @@ const organization: Organization = {
 	addressPostalCode: null,
 	addressCountry: null,
 	timezone: null,
+	zelleHandle: null,
 	createdAt: new Date().toISOString(),
 	updatedAt: new Date().toISOString(),
 };

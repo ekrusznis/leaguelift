@@ -28,6 +28,8 @@ export interface Organization {
 	addressCountry: string | null;
 	/** Phase 24 slice 24.5 (ADR-071): an IANA time zone id, or null until the owner confirms one. */
 	timezone: string | null;
+	/** Phase 32 scaffold — displayed to guardians as Zelle payment instructions, null until an owner/admin sets it. */
+	zelleHandle: string | null;
 	createdAt: string;
 	updatedAt: string;
 }

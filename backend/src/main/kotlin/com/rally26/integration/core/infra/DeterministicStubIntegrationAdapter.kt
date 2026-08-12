@@ -20,6 +20,14 @@ import java.time.Instant
  * Deterministic local/test adapter. RuntimeGuard makes this impossible in staging or
  * production. It simulates lifecycle behavior without claiming an official provider
  * contract or undocumented response field.
+ *
+ * SPORTSENGINE/TEAMSNAP deliberately excluded (2026-08-12) — real adapters now exist
+ * (`integration/sportsdata/infra/SportsEngineAuthorizationAdapter.kt`/
+ * `TeamSnapAuthorizationAdapter.kt`). Keeping both a stub and a real adapter
+ * claiming the same provider would make `IntegrationAdapterRegistry.find()`'s
+ * `firstOrNull` result non-deterministic in local stub-mode; local/stub testing
+ * for these two now exercises the real (but credential-less-and-so-cleanly-failing)
+ * adapters instead, which is more honest anyway.
  */
 @Component
 @ConditionalOnProperty(prefix = "rally26.integrations", name = ["stub-mode"], havingValue = "true")
@@ -28,8 +36,6 @@ class DeterministicStubIntegrationAdapter : IntegrationAuthorizationAdapter {
         setOf(
             IntegrationProvider.GOOGLE_CALENDAR,
             IntegrationProvider.QUICKBOOKS_ONLINE,
-            IntegrationProvider.SPORTSENGINE,
-            IntegrationProvider.TEAMSNAP,
         )
 
     override fun supports(provider: IntegrationProvider): Boolean = provider in supported

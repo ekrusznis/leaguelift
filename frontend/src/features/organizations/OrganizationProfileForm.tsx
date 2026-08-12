@@ -38,6 +38,7 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 			addressPostalCode: organization.addressPostalCode ?? "",
 			addressCountry: organization.addressCountry ?? "",
 			timezone: organization.timezone ?? "",
+			zelleHandle: organization.zelleHandle ?? "",
 		},
 	});
 	const updateProfile = useUpdateOrganizationProfile(organization.id);
@@ -232,6 +233,23 @@ export function OrganizationProfileForm({ organization }: { organization: Organi
 					</div>
 				</div>
 			</fieldset>
+
+			<div className="flex flex-col gap-1">
+				<label htmlFor="profile-zelle-handle" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
+					Zelle handle (optional)
+				</label>
+				<input
+					id="profile-zelle-handle"
+					type="text"
+					placeholder="e.g. payments@yourclub.org or (555) 555-0100"
+					{...register("zelleHandle")}
+					className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+				/>
+				<p className="text-xs text-slate-gray dark:text-[#cbd5e1]">
+					Shown to guardians as payment instructions on the household fee-payment screen. Zelle payments still settle
+					directly to your organization — staff record them manually once received.
+				</p>
+			</div>
 
 			<div className="flex flex-col gap-1">
 				<label htmlFor="profile-timezone" className="text-sm font-medium text-navy dark:text-[#f8fafc]">

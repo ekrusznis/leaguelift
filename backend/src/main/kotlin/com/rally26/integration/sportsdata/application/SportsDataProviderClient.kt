@@ -6,6 +6,8 @@ import com.rally26.integration.core.domain.IntegrationProvider
 import com.rally26.integration.sportsdata.domain.ProviderEligibilityCapability
 import com.rally26.integration.sportsdata.domain.SportsDataEntityType
 import com.rally26.integration.sportsdata.domain.SportsDataExternalRecord
+import com.rally26.integration.sportsdata.infra.SportsEngineDataClient
+import com.rally26.integration.sportsdata.infra.TeamSnapDataClient
 import org.springframework.stereotype.Component
 
 interface SportsDataProviderClient {
@@ -17,9 +19,18 @@ interface SportsDataProviderClient {
     ): List<SportsDataExternalRecord>
 }
 
+/**
+ * `stubMode` is a full behavioral switch, not just a token-format nuance: in stub
+ * mode, a non-stub-shaped token still fails closed with no network attempted
+ * (matters for CI — a unit test should never make a real HTTP call). Only outside
+ * stub mode does a real token reach [SportsEngineDataClient]/[TeamSnapDataClient]'s
+ * real HTTP transport (see their own class docs for the unverified-field-name
+ * caveat on what comes back).
+ */
 @Component
 class ScaffoldSportsEngineProviderClient(
     private val properties: IntegrationProperties,
+    private val realClient: SportsEngineDataClient = SportsEngineDataClient(),
 ) : SportsDataProviderClient {
     override fun supports(provider: IntegrationProvider): Boolean = provider == IntegrationProvider.SPORTSENGINE
 
@@ -27,7 +38,14 @@ class ScaffoldSportsEngineProviderClient(
         provider: IntegrationProvider,
         accessToken: String,
     ): List<SportsDataExternalRecord> {
-        if (!supports(provider) || !properties.stubMode || !accessToken.startsWith("stub-access-")) {
+        if (!supports(provider)) {
+            throw ServiceUnavailableException(
+                "SPORTSENGINE_CLIENT_NOT_ACTIVATED",
+                "SportsEngine is scaffolded but has not been activated against a verified current provider contract.",
+            )
+        }
+        if (!properties.stubMode) return realClient.fetchSnapshot(accessToken)
+        if (!accessToken.startsWith("stub-access-")) {
             throw ServiceUnavailableException(
                 "SPORTSENGINE_CLIENT_NOT_ACTIVATED",
                 "SportsEngine is scaffolded but has not been activated against a verified current provider contract.",
@@ -72,6 +90,7 @@ class ScaffoldSportsEngineProviderClient(
 @Component
 class ScaffoldTeamSnapProviderClient(
     private val properties: IntegrationProperties,
+    private val realClient: TeamSnapDataClient = TeamSnapDataClient(),
 ) : SportsDataProviderClient {
     override fun supports(provider: IntegrationProvider): Boolean = provider == IntegrationProvider.TEAMSNAP
 
@@ -79,7 +98,14 @@ class ScaffoldTeamSnapProviderClient(
         provider: IntegrationProvider,
         accessToken: String,
     ): List<SportsDataExternalRecord> {
-        if (!supports(provider) || !properties.stubMode || !accessToken.startsWith("stub-access-")) {
+        if (!supports(provider)) {
+            throw ServiceUnavailableException(
+                "TEAMSNAP_CLIENT_NOT_ACTIVATED",
+                "TeamSnap is scaffolded but has not been activated against a registered and verified developer application.",
+            )
+        }
+        if (!properties.stubMode) return realClient.fetchSnapshot(accessToken)
+        if (!accessToken.startsWith("stub-access-")) {
             throw ServiceUnavailableException(
                 "TEAMSNAP_CLIENT_NOT_ACTIVATED",
                 "TeamSnap is scaffolded but has not been activated against a registered and verified developer application.",

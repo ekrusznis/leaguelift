@@ -48,6 +48,8 @@ export const updateOrganizationProfileSchema = z.object({
 	addressCountry: z.string().trim().max(100).optional().or(z.literal("")),
 	/** Phase 24 slice 24.5 (ADR-071): submitting this field IS the owner's confirmation act — never auto-filled without a click. */
 	timezone: z.string().trim().max(100).optional().or(z.literal("")),
+	/** Phase 32 scaffold — shown to guardians as Zelle payment instructions on the household fee-payment screen. */
+	zelleHandle: z.string().trim().max(200).optional().or(z.literal("")),
 });
 
 export type UpdateOrganizationProfileFormValues = z.infer<typeof updateOrganizationProfileSchema>;
