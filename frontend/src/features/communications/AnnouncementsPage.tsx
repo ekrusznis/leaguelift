@@ -3,6 +3,7 @@ import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
+import { featureFlags } from "../../lib/featureFlags";
 import { useContexts } from "../../authorization/api";
 import { Capabilities } from "../../authorization/capabilityConstants";
 import { useArchiveAnnouncement, useCreateAnnouncement, useManagedAnnouncements, useMarkAnnouncementRead, useMyAnnouncements, usePublishAnnouncement, useUpdateAnnouncement } from "./api";
@@ -192,7 +193,7 @@ export function AnnouncementsPage() {
 							<fieldset>
 								<legend className="text-sm font-medium text-navy dark:text-[#f8fafc]">Delivery</legend>
 								<label className="mt-2 flex items-center gap-2 text-sm text-slate-gray dark:text-[#cbd5e1]"><input type="checkbox" checked={emailEnabled} onChange={(event) => setEmailEnabled(event.target.checked)} /> Email</label>
-								<label className="mt-2 flex items-center gap-2 text-sm text-slate-gray dark:text-[#cbd5e1]"><input type="checkbox" checked={smsEnabled} onChange={(event) => setSmsEnabled(event.target.checked)} /> SMS to opted-in households</label>
+								{featureFlags.smsNotifications && <label className="mt-2 flex items-center gap-2 text-sm text-slate-gray dark:text-[#cbd5e1]"><input type="checkbox" checked={smsEnabled} onChange={(event) => setSmsEnabled(event.target.checked)} /> SMS to opted-in households</label>}
 							</fieldset>
 						</div>
 						<p className="text-xs text-slate-gray dark:text-[#cbd5e1]">Every resolved recipient receives an in-app copy. Household email opt-outs and SMS opt-ins are enforced when recipients are snapshotted at publication.</p>
@@ -224,7 +225,12 @@ export function AnnouncementsPage() {
 												<div className="flex flex-wrap gap-2 text-xs text-slate-gray dark:text-[#cbd5e1]"><span>{STATUS_LABELS[item.status]}</span><span>{item.kind.replaceAll("_", " ")}</span><span>{AUDIENCE_LABELS[item.audience]}</span></div>
 												<h4 className="mt-2 font-heading font-semibold text-navy dark:text-[#f8fafc]">{item.title}</h4>
 												<p className="mt-1 whitespace-pre-wrap text-sm text-slate-gray dark:text-[#cbd5e1]">{item.body}</p>
-												{item.status === "PUBLISHED" && <p className="mt-2 text-xs text-slate-gray dark:text-[#cbd5e1]">{item.recipientCount} recipients · Email {item.emailSentCount} sent / {item.emailFailedCount} failed · SMS {item.smsSentCount} sent / {item.smsFailedCount} failed</p>}
+												{item.status === "PUBLISHED" && (
+											<p className="mt-2 text-xs text-slate-gray dark:text-[#cbd5e1]">
+												{item.recipientCount} recipients · Email {item.emailSentCount} sent / {item.emailFailedCount} failed
+												{featureFlags.smsNotifications && <> · SMS {item.smsSentCount} sent / {item.smsFailedCount} failed</>}
+											</p>
+										)}
 											</div>
 											<div className="flex shrink-0 flex-wrap gap-2">
 												{item.status === "DRAFT" && <Button type="button" variant="secondary" onClick={() => { setEditingId(item.id); setTitle(item.title); setBody(item.body); setAudience(item.audience); setEmailEnabled(item.emailEnabled); setSmsEnabled(item.smsEnabled); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</Button>}
