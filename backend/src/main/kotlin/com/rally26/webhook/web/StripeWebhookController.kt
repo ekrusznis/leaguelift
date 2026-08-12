@@ -118,6 +118,12 @@ class StripeWebhookController(
                         relatedEntityId = organizationSubscriptionService?.handleSubscriptionChanged(subscription)
                         WebhookProcessingStatus.PROCESSED
                     }
+                    "customer.subscription.trial_will_end" -> {
+                        val subscription = event.dataObjectDeserializer.deserializeUnsafe() as Subscription
+                        relatedEntityType = "organization_subscription"
+                        relatedEntityId = organizationSubscriptionService?.handleTrialWillEnd(subscription)
+                        WebhookProcessingStatus.PROCESSED
+                    }
                     "invoice.payment_failed" -> {
                         val invoice = event.dataObjectDeserializer.deserializeUnsafe() as Invoice
                         relatedEntityType = "organization_subscription"
