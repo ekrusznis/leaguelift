@@ -106,6 +106,7 @@ rally26:
         welcome-id: ${RESEND_TEMPLATE_WELCOME_ID:}
         support-case-update-id: ${RESEND_TEMPLATE_SUPPORT_CASE_UPDATE_ID:}
         receipt-id: ${RESEND_TEMPLATE_RECEIPT_ID:}
+        notification-id: ${RESEND_TEMPLATE_NOTIFICATION_ID:}
     # ADR-059 — Google Workspace SMTP, used only for support-case correspondence
     # (SupportCaseCreatedEmailHandler), never as the ambient EmailProvider above. Blank
     # username until a real Google Workspace app password is supplied; SmtpEmailProvider

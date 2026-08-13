@@ -1,6 +1,8 @@
 package com.rally26.sponsorship.application
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.rally26.config.FrontendProperties
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
 import com.rally26.outbox.domain.OutboxEvent
@@ -19,7 +21,7 @@ import kotlin.test.assertEquals
 class SponsorshipApprovedEmailHandlerTest {
     private val emailProvider = mockk<EmailProvider>()
     private val objectMapper = jacksonObjectMapper()
-    private val handler = SponsorshipApprovedEmailHandler(emailProvider, objectMapper)
+    private val handler = SponsorshipApprovedEmailHandler(emailProvider, ResendTemplateProperties(), FrontendProperties(), objectMapper)
 
     private fun eventWithPayload(payloadJson: String): OutboxEvent {
         val now = Instant.now()
@@ -42,7 +44,7 @@ class SponsorshipApprovedEmailHandlerTest {
 
     @Test
     fun `sends an email when the sponsor has a contact email`() {
-        val payload = objectMapper.writeValueAsString(SponsorshipApprovedPayload("sponsor@acme.test", "Acme Co", "Gold Sponsor"))
+        val payload = objectMapper.writeValueAsString(SponsorshipApprovedPayload("sponsor@acme.test", "Acme Co", "Gold Sponsor", "acme-co"))
         val messageSlot = slot<EmailMessage>()
         every { emailProvider.send(capture(messageSlot)) } just runs
 
@@ -54,7 +56,7 @@ class SponsorshipApprovedEmailHandlerTest {
 
     @Test
     fun `skips sending when the sponsor has no contact email`() {
-        val payload = objectMapper.writeValueAsString(SponsorshipApprovedPayload(null, "Acme Co", "Gold Sponsor"))
+        val payload = objectMapper.writeValueAsString(SponsorshipApprovedPayload(null, "Acme Co", "Gold Sponsor", "acme-co"))
 
         handler.handle(eventWithPayload(payload))
 

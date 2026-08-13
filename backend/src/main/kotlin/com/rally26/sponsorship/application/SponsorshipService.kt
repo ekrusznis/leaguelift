@@ -65,6 +65,7 @@ data class SponsorshipApprovedPayload(
     val sponsorContactEmail: String?,
     val sponsorName: String,
     val packageName: String,
+    val organizationSlug: String?,
 )
 
 /** `sponsorship.refunded` outbox payload (Phase 8 slice 2) — consumed by `SponsorshipRefundedEmailHandler`; covers both a general refund and a reject-triggered refund. */
@@ -74,6 +75,8 @@ data class SponsorshipRefundedPayload(
     val packageName: String,
     val amountMinor: Long,
     val currency: String,
+    val organizationSlug: String?,
+    val refundedAt: String,
 )
 
 /**
@@ -252,6 +255,7 @@ class SponsorshipService(
         val sponsor = sponsorRepository.findById(sponsorship.sponsorId)
         val sponsorshipPackage = sponsorshipPackageRepository.findById(sponsorship.packageId, organizationId)
         if (sponsor != null && sponsorshipPackage != null) {
+            val organization = organizationRepository.findById(organizationId)
             outboxWriter.write(
                 aggregateType = "sponsorship",
                 aggregateId = sponsorship.id,
@@ -259,7 +263,7 @@ class SponsorshipService(
                 eventType = "sponsorship.approved",
                 payloadJson =
                     objectMapper.writeValueAsString(
-                        SponsorshipApprovedPayload(sponsor.contactEmail, sponsor.name, sponsorshipPackage.name),
+                        SponsorshipApprovedPayload(sponsor.contactEmail, sponsor.name, sponsorshipPackage.name, organization?.slug),
                     ),
             )
         }
@@ -360,6 +364,7 @@ class SponsorshipService(
         val sponsor = sponsorRepository.findById(sponsorship.sponsorId)
         val sponsorshipPackage = sponsorshipPackageRepository.findById(sponsorship.packageId, organizationId)
         if (sponsor != null && sponsorshipPackage != null) {
+            val organization = organizationRepository.findById(organizationId)
             outboxWriter.write(
                 aggregateType = "sponsorship",
                 aggregateId = sponsorship.id,
@@ -373,6 +378,8 @@ class SponsorshipService(
                             sponsorshipPackage.name,
                             sponsorship.amountMinor,
                             sponsorship.currency,
+                            organization?.slug,
+                            Instant.now().toString(),
                         ),
                     ),
             )

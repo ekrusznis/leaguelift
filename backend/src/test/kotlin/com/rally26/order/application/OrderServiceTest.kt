@@ -457,6 +457,7 @@ class OrderServiceTest {
             history(fulfillment)
         val payload = slot<String>()
         every { outboxWriter.write("order", order.id, orgId, "order.confirmed", capture(payload)) } just runs
+        every { storeRepository.findById(order.storeId, orgId) } returns store
 
         service.confirmFromWebhook("cs_test_123", "paid", null, null)
 

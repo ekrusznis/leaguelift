@@ -230,6 +230,7 @@ class SponsorshipServiceTest {
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
         every { sponsorRepository.findById(sponsor.id) } returns sponsor
         every { sponsorshipPackageRepository.findById(pkg.id, orgId) } returns pkg
+        every { organizationRepository.findById(orgId) } returns sampleOrganization()
         every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
 
         val result = service.approve(orgId, confirmed.id, currentUser)
@@ -317,6 +318,7 @@ class SponsorshipServiceTest {
         } just runs
         every { sponsorRepository.findById(sponsor.id) } returns sponsor
         every { sponsorshipPackageRepository.findById(pkg.id, orgId) } returns pkg
+        every { organizationRepository.findById(orgId) } returns sampleOrganization()
         every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
 
         val result = service.reject(orgId, confirmed.id, currentUser)

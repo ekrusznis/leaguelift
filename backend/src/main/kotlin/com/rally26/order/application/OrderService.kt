@@ -102,6 +102,8 @@ data class OrderConfirmedPayload(
     val supporterName: String?,
     val totalMinor: Long,
     val currency: String,
+    val storeSlug: String,
+    val confirmedAt: String,
 )
 
 /**
@@ -549,6 +551,7 @@ class OrderService(
             createInitialFulfillment(order.id, order.organizationId, order.storeId)
             val totalMinor = items.sumOf { it.unitPriceMinor * it.quantity }
             if (order.supporterEmail != null) {
+                val store = storeRepository.findById(order.storeId, order.organizationId)
                 outboxWriter.write(
                     aggregateType = "order",
                     aggregateId = order.id,
@@ -556,7 +559,14 @@ class OrderService(
                     eventType = "order.confirmed",
                     payloadJson =
                         objectMapper.writeValueAsString(
-                            OrderConfirmedPayload(order.supporterEmail, order.supporterName, totalMinor, order.currency),
+                            OrderConfirmedPayload(
+                                order.supporterEmail,
+                                order.supporterName,
+                                totalMinor,
+                                order.currency,
+                                store?.slug ?: "",
+                                Instant.now().toString(),
+                            ),
                         ),
                 )
             }

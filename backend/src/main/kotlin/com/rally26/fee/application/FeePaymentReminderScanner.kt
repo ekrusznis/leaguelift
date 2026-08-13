@@ -20,6 +20,7 @@ private data class FeePaymentReminderPayload(
     val currency: String,
     val dueDate: String,
     val balanceMinor: Long,
+    val householdId: String,
 )
 
 /**
@@ -58,6 +59,7 @@ class FeePaymentReminderScanner(
                 currency = candidate.currency,
                 dueDate = candidate.dueDate.toString(),
                 balanceMinor = candidate.balanceMinor,
+                householdId = candidate.householdId.toString(),
             )
         outboxWriter.write(
             aggregateType = "fee_assignment",

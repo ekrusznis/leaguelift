@@ -1,6 +1,8 @@
 package com.rally26.order.application
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.rally26.config.FrontendProperties
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
 import com.rally26.outbox.domain.OutboxEvent
@@ -19,12 +21,12 @@ import kotlin.test.assertEquals
 class OrderConfirmationEmailHandlerTest {
     private val emailProvider = mockk<EmailProvider>()
     private val objectMapper = jacksonObjectMapper()
-    private val handler = OrderConfirmationEmailHandler(emailProvider, objectMapper)
+    private val handler = OrderConfirmationEmailHandler(emailProvider, ResendTemplateProperties(), FrontendProperties(), objectMapper)
 
     @Test
     fun `sends a confirmation email built from the payload`() {
         val now = Instant.now()
-        val payload = objectMapper.writeValueAsString(OrderConfirmedPayload("supporter@example.test", "Jane Doe", 5_000L, "USD"))
+        val payload = objectMapper.writeValueAsString(OrderConfirmedPayload("supporter@example.test", "Jane Doe", 5_000L, "USD", "spring-store", now.toString()))
         val event =
             OutboxEvent(
                 id = UUID.randomUUID(),

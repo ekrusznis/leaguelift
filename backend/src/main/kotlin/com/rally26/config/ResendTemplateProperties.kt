@@ -21,6 +21,8 @@ data class ResendTemplateProperties(
     val welcomeId: String = "",
     /** ADR-059 — sent when a Platform Admin changes a support case's status (not on creation, which goes through SMTP instead — see SupportCaseCreatedEmailHandler). */
     val supportCaseUpdateId: String = "",
-    /** Online fee-payment receipt — see FeePaymentReceiptEmailHandler. */
+    /** Generic payment/transaction receipt — RECEIPT_TITLE, RECEIPT_DATA (multi-line summary string), ORDER_URL. Used by every handler confirming a specific payment/transaction occurred (fee payments, swag shop orders, contributions, sponsorships, refunds, offline acknowledgements). */
     val receiptId: String = "",
+    /** Generic status/reminder notification — NOTIFICATION_TITLE, NOTIFICATION_DETAILS, ACTION_URL. Used by every other transactional email that isn't a payment receipt (reminders, status changes, messaging alerts, subscription lifecycle, disputes, event/RSVP changes). */
+    val notificationId: String = "",
 )

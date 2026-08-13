@@ -49,6 +49,9 @@ data class FeePaymentConfirmedPayload(
     val amountMinor: Long,
     val currency: String,
     val feeDescription: String,
+    val organizationId: UUID,
+    val householdId: UUID,
+    val paidAt: String,
 )
 
 data class FeePaymentCheckout(
@@ -382,6 +385,9 @@ class FeeService(
                                 payment.amountMinor,
                                 payment.currency,
                                 assignment.description,
+                                payment.organizationId,
+                                payment.householdId,
+                                payment.paidAt.toString(),
                             ),
                         ),
                 )

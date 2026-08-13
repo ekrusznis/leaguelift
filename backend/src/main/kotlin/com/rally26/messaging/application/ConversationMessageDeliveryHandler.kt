@@ -2,9 +2,12 @@ package com.rally26.messaging.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.communication.domain.DeliveryStatus
+import com.rally26.config.FrontendProperties
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.messaging.persistence.MessageRepository
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
+import com.rally26.notification.EmailTemplateRef
 import com.rally26.notification.SmsMessage
 import com.rally26.notification.SmsProvider
 import com.rally26.outbox.application.OutboxEventHandler
@@ -19,6 +22,8 @@ class ConversationMessageDeliveryHandler(
     private val repository: MessageRepository,
     private val emailProvider: EmailProvider,
     private val smsProvider: SmsProvider,
+    private val resendTemplateProperties: ResendTemplateProperties,
+    private val frontendProperties: FrontendProperties,
     private val objectMapper: ObjectMapper,
     private val clock: Clock,
 ) : OutboxEventHandler {
@@ -31,6 +36,7 @@ class ConversationMessageDeliveryHandler(
         val message = repository.findMessageById(messageId, organizationId) ?: error("Message $messageId no longer exists.")
         val thread =
             repository.findThreadById(message.threadId, organizationId) ?: error("Message thread ${message.threadId} no longer exists.")
+        val actionUrl = "${frontendProperties.baseUrl}/app/messages"
         var failures = 0
         for (recipient in repository.listDeliveries(messageId)) {
             if (recipient.emailStatus in setOf(DeliveryStatus.PENDING, DeliveryStatus.FAILED) && recipient.email != null) {
@@ -43,6 +49,18 @@ class ConversationMessageDeliveryHandler(
                                 "Hi ${recipient.displayName},\n\n${message.body}" +
                                     "\n\nOpen Rally26 Messages to view and reply.\n\n— Rally26",
                             idempotencyKey = "conversation-${message.id}-${recipient.id}-email",
+                            template =
+                                resendTemplateProperties.notificationId.takeIf { it.isNotBlank() }?.let { templateId ->
+                                    EmailTemplateRef(
+                                        id = templateId,
+                                        variables =
+                                            mapOf(
+                                                "NOTIFICATION_TITLE" to "New reply: ${thread.title}",
+                                                "NOTIFICATION_DETAILS" to message.body,
+                                                "ACTION_URL" to actionUrl,
+                                            ),
+                                    )
+                                },
                         ),
                     )
                     repository.markEmailSent(recipient.id, Instant.now(clock))

@@ -1,6 +1,8 @@
 package com.rally26.event.application
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.rally26.config.FrontendProperties
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
 import com.rally26.notification.SmsMessage
@@ -22,7 +24,15 @@ class EventChangeNotificationHandlerTest {
     private val emailProvider = mockk<EmailProvider>()
     private val smsProvider = mockk<SmsProvider>()
     private val objectMapper = jacksonObjectMapper()
-    private val handler = EventChangeNotificationHandler("event.time_changed", emailProvider, smsProvider, objectMapper)
+    private val handler =
+        EventChangeNotificationHandler(
+            "event.time_changed",
+            emailProvider,
+            smsProvider,
+            ResendTemplateProperties(),
+            FrontendProperties(),
+            objectMapper,
+        )
 
     private fun eventWithPayload(payloadJson: String): OutboxEvent {
         val now = Instant.now()

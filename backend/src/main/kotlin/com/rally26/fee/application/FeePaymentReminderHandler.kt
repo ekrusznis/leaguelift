@@ -1,8 +1,11 @@
 package com.rally26.fee.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.rally26.config.FrontendProperties
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
+import com.rally26.notification.EmailTemplateRef
 import com.rally26.notification.SmsMessage
 import com.rally26.notification.SmsProvider
 import com.rally26.outbox.application.OutboxEventHandler
@@ -28,6 +31,8 @@ private val log = LoggerFactory.getLogger(FeePaymentReminderHandler::class.java)
 class FeePaymentReminderHandler(
     private val emailProvider: EmailProvider,
     private val smsProvider: SmsProvider,
+    private val resendTemplateProperties: ResendTemplateProperties,
+    private val frontendProperties: FrontendProperties,
     private val objectMapper: ObjectMapper,
     private val planEntitlementService: PlanEntitlementService,
 ) : OutboxEventHandler {
@@ -41,6 +46,7 @@ class FeePaymentReminderHandler(
         val dueDate = payload.get("dueDate").asText()
         val balanceMinor = payload.get("balanceMinor").asLong()
         val participantName = payload.get("participantName")?.takeIf { !it.isNull }?.asText()
+        val householdId = payload.get("householdId")?.takeIf { !it.isNull }?.asText()
 
         if (contactEmail == null && contactPhone == null) {
             log.info(
@@ -53,6 +59,12 @@ class FeePaymentReminderHandler(
         }
         val amount = NumberFormat.getCurrencyInstance(Locale.US).format(balanceMinor / 100.0)
         val who = if (participantName != null) " for $participantName" else ""
+        val actionUrl =
+            if (householdId != null && event.organizationId != null) {
+                "${frontendProperties.baseUrl}/app/organizations/${event.organizationId}/households/$householdId/fees"
+            } else {
+                frontendProperties.baseUrl
+            }
 
         if (contactEmail != null) {
             emailProvider.send(
@@ -63,6 +75,18 @@ class FeePaymentReminderHandler(
                         "Hi there,\n\n" +
                             "This is a reminder that a payment of $amount$who ($description) is due on $dueDate. " +
                             "Sign in to your Rally26 household to make a payment.\n\n— Rally26",
+                    template =
+                        resendTemplateProperties.notificationId.takeIf { it.isNotBlank() }?.let { templateId ->
+                            EmailTemplateRef(
+                                id = templateId,
+                                variables =
+                                    mapOf(
+                                        "NOTIFICATION_TITLE" to "Payment reminder: $description",
+                                        "NOTIFICATION_DETAILS" to "A payment of $amount$who is due on $dueDate.",
+                                        "ACTION_URL" to actionUrl,
+                                    ),
+                            )
+                        },
                 ),
             )
         }

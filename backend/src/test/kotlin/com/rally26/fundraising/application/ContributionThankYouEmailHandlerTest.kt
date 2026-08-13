@@ -1,6 +1,8 @@
 package com.rally26.fundraising.application
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.rally26.config.FrontendProperties
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
 import com.rally26.outbox.domain.OutboxEvent
@@ -20,14 +22,14 @@ import kotlin.test.assertTrue
 class ContributionThankYouEmailHandlerTest {
     private val emailProvider = mockk<EmailProvider>()
     private val objectMapper = jacksonObjectMapper()
-    private val handler = ContributionThankYouEmailHandler(emailProvider, objectMapper)
+    private val handler = ContributionThankYouEmailHandler(emailProvider, ResendTemplateProperties(), FrontendProperties(), objectMapper)
 
     @Test
     fun `sends a thank-you email built from the payload`() {
         val now = Instant.now()
         val payload =
             objectMapper.writeValueAsString(
-                ContributionConfirmedPayload("supporter@example.test", "Jane Doe", 5_000L, "USD", "Fall Fundraiser"),
+                ContributionConfirmedPayload("supporter@example.test", "Jane Doe", 5_000L, "USD", "Fall Fundraiser", "fall-fundraiser", now.toString()),
             )
         val event =
             OutboxEvent(

@@ -2,6 +2,7 @@ package com.rally26.sponsorship.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.config.SponsorshipRenewalReminderProperties
+import com.rally26.organization.persistence.OrganizationRepository
 import com.rally26.outbox.application.OutboxWriter
 import com.rally26.sponsorship.persistence.SponsorshipRenewalCandidate
 import com.rally26.sponsorship.persistence.SponsorshipRepository
@@ -17,6 +18,7 @@ private data class RenewalReminderPayload(
     val sponsorContactEmail: String?,
     val packageName: String,
     val placementEndDate: String,
+    val organizationSlug: String?,
 )
 
 /**
@@ -40,6 +42,7 @@ private data class RenewalReminderPayload(
 @Component
 class SponsorshipRenewalScanner(
     private val sponsorshipRepository: SponsorshipRepository,
+    private val organizationRepository: OrganizationRepository,
     private val outboxWriter: OutboxWriter,
     private val properties: SponsorshipRenewalReminderProperties,
     private val objectMapper: ObjectMapper,
@@ -61,6 +64,7 @@ class SponsorshipRenewalScanner(
                 sponsorContactEmail = candidate.sponsorContactEmail,
                 packageName = candidate.packageName,
                 placementEndDate = candidate.placementEndDate.toString(),
+                organizationSlug = organizationRepository.findById(candidate.organizationId)?.slug,
             )
         outboxWriter.write(
             aggregateType = "sponsorship",

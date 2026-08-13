@@ -42,6 +42,8 @@ data class ContributionConfirmedPayload(
     val amountMinor: Long,
     val currency: String,
     val campaignName: String,
+    val campaignSlug: String?,
+    val confirmedAt: String,
 )
 
 /**
@@ -174,6 +176,8 @@ class ContributionService(
                                 contribution.amountMinor,
                                 contribution.currency,
                                 campaign?.name ?: "your campaign",
+                                campaign?.slug,
+                                Instant.now().toString(),
                             ),
                         ),
                 )

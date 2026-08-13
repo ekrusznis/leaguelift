@@ -1,6 +1,8 @@
 package com.rally26.fee.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.rally26.config.FrontendProperties
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
 import com.rally26.notification.SmsMessage
@@ -28,7 +30,15 @@ class FeePaymentReminderHandlerTest {
         mockk<PlanEntitlementService> {
             every { smsAllowed(any()) } returns true
         }
-    private val handler = FeePaymentReminderHandler(emailProvider, smsProvider, objectMapper, planEntitlementService)
+    private val handler =
+        FeePaymentReminderHandler(
+            emailProvider,
+            smsProvider,
+            ResendTemplateProperties(),
+            FrontendProperties(),
+            objectMapper,
+            planEntitlementService,
+        )
 
     private fun eventWithPayload(payloadJson: String): OutboxEvent {
         val now = Instant.now()

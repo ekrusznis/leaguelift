@@ -1,6 +1,8 @@
 package com.rally26.subscription.application
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.rally26.config.FrontendProperties
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
 import com.rally26.outbox.domain.OutboxEvent
@@ -19,7 +21,7 @@ import kotlin.test.assertTrue
 class SubscriptionTrialEndingEmailHandlerTest {
     private val emailProvider = mockk<EmailProvider>()
     private val objectMapper = jacksonObjectMapper()
-    private val handler = SubscriptionTrialEndingEmailHandler(emailProvider, objectMapper)
+    private val handler = SubscriptionTrialEndingEmailHandler(emailProvider, ResendTemplateProperties(), FrontendProperties(), objectMapper)
 
     private fun eventWithPayload(payload: OrganizationBillingTrialEndingPayload): OutboxEvent {
         val now = Instant.now()

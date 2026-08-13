@@ -3,8 +3,11 @@ package com.rally26.communication.application
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.communication.domain.DeliveryStatus
 import com.rally26.communication.persistence.AnnouncementRepository
+import com.rally26.config.FrontendProperties
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
+import com.rally26.notification.EmailTemplateRef
 import com.rally26.notification.SmsMessage
 import com.rally26.notification.SmsProvider
 import com.rally26.outbox.application.OutboxEventHandler
@@ -18,6 +21,8 @@ class AnnouncementDeliveryHandler(
     private val repository: AnnouncementRepository,
     private val emailProvider: EmailProvider,
     private val smsProvider: SmsProvider,
+    private val resendTemplateProperties: ResendTemplateProperties,
+    private val frontendProperties: FrontendProperties,
     private val objectMapper: ObjectMapper,
     private val clock: Clock,
 ) : OutboxEventHandler {
@@ -34,6 +39,7 @@ class AnnouncementDeliveryHandler(
         val announcement =
             repository.findById(announcementId, event.organizationId ?: error("Announcement event is missing organizationId."))
                 ?: error("Announcement $announcementId no longer exists.")
+        val actionUrl = "${frontendProperties.baseUrl}/app/announcements"
         var failures = 0
         for (recipient in repository.listDeliveries(announcementId)) {
             if (recipient.emailStatus in setOf(DeliveryStatus.PENDING, DeliveryStatus.FAILED) && recipient.email != null) {
@@ -44,6 +50,18 @@ class AnnouncementDeliveryHandler(
                             subject = announcement.title,
                             body = "Hi ${recipient.displayName},\n\n${announcement.body}\n\n— Rally26",
                             idempotencyKey = "announcement-${announcement.id}-${recipient.id}-email",
+                            template =
+                                resendTemplateProperties.notificationId.takeIf { it.isNotBlank() }?.let { templateId ->
+                                    EmailTemplateRef(
+                                        id = templateId,
+                                        variables =
+                                            mapOf(
+                                                "NOTIFICATION_TITLE" to announcement.title,
+                                                "NOTIFICATION_DETAILS" to announcement.body,
+                                                "ACTION_URL" to actionUrl,
+                                            ),
+                                    )
+                                },
                         ),
                     )
                     repository.markEmailSent(recipient.id, Instant.now(clock))

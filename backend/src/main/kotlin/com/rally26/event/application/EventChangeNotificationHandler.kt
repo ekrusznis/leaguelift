@@ -1,8 +1,11 @@
 package com.rally26.event.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.rally26.config.FrontendProperties
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
+import com.rally26.notification.EmailTemplateRef
 import com.rally26.notification.SmsMessage
 import com.rally26.notification.SmsProvider
 import com.rally26.outbox.application.OutboxEventHandler
@@ -30,6 +33,8 @@ class EventChangeNotificationHandler(
     override val eventType: String,
     private val emailProvider: EmailProvider,
     private val smsProvider: SmsProvider,
+    private val resendTemplateProperties: ResendTemplateProperties,
+    private val frontendProperties: FrontendProperties,
     private val objectMapper: ObjectMapper,
 ) : OutboxEventHandler {
     override fun handle(event: OutboxEvent) {
@@ -42,6 +47,8 @@ class EventChangeNotificationHandler(
             )
             return
         }
+        val actionUrl =
+            event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/events/${payload.eventId}" } ?: frontendProperties.baseUrl
         for (recipient in payload.recipients) {
             recipient.email?.let {
                 emailProvider.send(
@@ -49,6 +56,18 @@ class EventChangeNotificationHandler(
                         to = it,
                         subject = "Schedule update: ${payload.displayTitle}",
                         body = "${payload.changeSummary}\n\n— Rally26",
+                        template =
+                            resendTemplateProperties.notificationId.takeIf { id -> id.isNotBlank() }?.let { templateId ->
+                                EmailTemplateRef(
+                                    id = templateId,
+                                    variables =
+                                        mapOf(
+                                            "NOTIFICATION_TITLE" to "Schedule update: ${payload.displayTitle}",
+                                            "NOTIFICATION_DETAILS" to payload.changeSummary,
+                                            "ACTION_URL" to actionUrl,
+                                        ),
+                                )
+                            },
                     ),
                 )
             }
@@ -63,9 +82,12 @@ class EventChangeNotificationHandler(
 class EventNotificationHandlerConfig(
     private val emailProvider: EmailProvider,
     private val smsProvider: SmsProvider,
+    private val resendTemplateProperties: ResendTemplateProperties,
+    private val frontendProperties: FrontendProperties,
     private val objectMapper: ObjectMapper,
 ) {
-    private fun handlerFor(eventType: String) = EventChangeNotificationHandler(eventType, emailProvider, smsProvider, objectMapper)
+    private fun handlerFor(eventType: String) =
+        EventChangeNotificationHandler(eventType, emailProvider, smsProvider, resendTemplateProperties, frontendProperties, objectMapper)
 
     @Bean fun eventCreatedNotificationHandler() = handlerFor("event.created")
 

@@ -1,8 +1,11 @@
 package com.rally26.sponsorship.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.rally26.config.FrontendProperties
+import com.rally26.config.ResendTemplateProperties
 import com.rally26.notification.EmailMessage
 import com.rally26.notification.EmailProvider
+import com.rally26.notification.EmailTemplateRef
 import com.rally26.outbox.application.OutboxEventHandler
 import com.rally26.outbox.domain.OutboxEvent
 import org.slf4j.LoggerFactory
@@ -21,6 +24,8 @@ private val log = LoggerFactory.getLogger(SponsorshipRenewalReminderHandler::cla
 @Component
 class SponsorshipRenewalReminderHandler(
     private val emailProvider: EmailProvider,
+    private val resendTemplateProperties: ResendTemplateProperties,
+    private val frontendProperties: FrontendProperties,
     private val objectMapper: ObjectMapper,
 ) : OutboxEventHandler {
     override val eventType: String = "sponsorship.renewal_reminder_due"
@@ -31,6 +36,7 @@ class SponsorshipRenewalReminderHandler(
         val sponsorName = payload.get("sponsorName").asText()
         val packageName = payload.get("packageName").asText()
         val placementEndDate = payload.get("placementEndDate").asText()
+        val organizationSlug = payload.get("organizationSlug")?.takeIf { !it.isNull }?.asText()
 
         if (sponsorContactEmail == null) {
             log.info(
@@ -41,6 +47,7 @@ class SponsorshipRenewalReminderHandler(
             )
             return
         }
+        val actionUrl = organizationSlug?.let { "${frontendProperties.baseUrl}/sponsors/$it" } ?: frontendProperties.baseUrl
         emailProvider.send(
             EmailMessage(
                 to = sponsorContactEmail,
@@ -50,6 +57,18 @@ class SponsorshipRenewalReminderHandler(
                         "Your sponsorship placement for \"$packageName\" is scheduled to end on $placementEndDate. " +
                         "Reach out to the organization if you'd like to renew.\n\n" +
                         "— Rally26",
+                template =
+                    resendTemplateProperties.notificationId.takeIf { it.isNotBlank() }?.let { templateId ->
+                        EmailTemplateRef(
+                            id = templateId,
+                            variables =
+                                mapOf(
+                                    "NOTIFICATION_TITLE" to "Your sponsorship of $packageName is ending soon",
+                                    "NOTIFICATION_DETAILS" to "Your sponsorship placement for \"$packageName\" is scheduled to end on $placementEndDate. Reach out to the organization if you'd like to renew.",
+                                    "ACTION_URL" to actionUrl,
+                                ),
+                        )
+                    },
             ),
         )
     }
