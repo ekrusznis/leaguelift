@@ -32,6 +32,7 @@ import {
 	useCurrentSupportAccess,
 	usePlatformAdminOrganization,
 	usePlatformAdminOrganizations,
+	usePlatformPayments,
 	usePlatformSupportAccessList,
 } from "../../features/platformAdmin/api";
 import { SupportAccessBanner } from "../../features/platformAdmin/SupportAccessBanner";
@@ -59,6 +60,7 @@ export function PlatformAdminDashboard() {
 	const webhook = usePlatformWebhookHealth();
 	const outbox = usePlatformOutboxHealth();
 	const payouts = usePlatformPayoutsSummary();
+	const pendingPayments = usePlatformPayments({ status: "PENDING", page: 0, size: 1 });
 	const activity = useMyActivity();
 	const organizations = usePlatformAdminOrganizations({ page: 0, size: 5 });
 	const supportSessions = usePlatformSupportAccessList({ status: "ACTIVE", page: 0, size: 1 });
@@ -97,11 +99,12 @@ export function PlatformAdminDashboard() {
 					<p className="mt-1 text-slate-500 dark:text-[#cbd5e1]">Cross-organization customer health, revenue activity, and support operations.</p>
 				</div>
 
-				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-7">
 					<KpiCard label="Total Organizations" value={summary.data?.organizationCount} icon={<BuildingIcon className="size-5" />} tone="success" detail="Customer organizations" />
 					<KpiCard label="Total Users" value={summary.data?.userCount} icon={<UsersIcon className="size-5" />} tone="success" detail="Across every organization" />
 					<KpiCard label="Active Support Sessions" value={supportSessions.data?.totalElements} icon={<ShieldIcon className="size-5" />} tone="info" detail="Reasoned employee access" />
 					<KpiCard label="Pending Orders" value={orders.data?.pending} icon={<PackageIcon className="size-5" />} tone="warning" detail="Awaiting completion" />
+					<KpiCard label="Pending Payments" value={pendingPayments.data?.totalElements} icon={<DollarIcon className="size-5" />} tone="warning" detail="Across every payment type" to={appPaths.platformPayments()} />
 					<KpiCard label="Integration Exceptions" value={integrationExceptions} icon={<AlertIcon className="size-5" />} tone={integrationExceptions > 0 ? "error" : "success"} detail="Webhook and outbox failures" />
 					<KpiCard label="Payout-enabled Orgs" value={payouts.data?.organizationsPayoutEnabled} icon={<DollarIcon className="size-5" />} tone="purple" detail="Ready for transfers" />
 				</div>
@@ -209,7 +212,7 @@ export function PlatformAdminDashboard() {
 
 type KpiTone = "success" | "info" | "warning" | "error" | "purple";
 
-function KpiCard({ label, value, icon, tone, detail }: { label: string; value: number | undefined; icon: ReactNode; tone: KpiTone; detail: string }) {
+function KpiCard({ label, value, icon, tone, detail, to }: { label: string; value: number | undefined; icon: ReactNode; tone: KpiTone; detail: string; to?: string }) {
 	const tones: Record<KpiTone, string> = {
 		success: "bg-green-500/15 text-green-700",
 		info: "bg-info-600/12 text-info-600",
@@ -217,8 +220,10 @@ function KpiCard({ label, value, icon, tone, detail }: { label: string; value: n
 		error: "bg-error-600/12 text-error-600",
 		purple: "bg-purple-500/12 text-purple-600",
 	};
+	const Wrapper = to ? Link : "section";
+	const wrapperProps = to ? { to } : {};
 	return (
-		<section className="rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-4 shadow-[0_8px_24px_rgba(11,31,51,0.05)]">
+		<Wrapper {...wrapperProps} className="block rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-4 shadow-[0_8px_24px_rgba(11,31,51,0.05)] hover:border-green-500">
 			<div className="flex items-start gap-3">
 				<span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${tones[tone]}`}>{icon}</span>
 				<div className="min-w-0">
@@ -227,7 +232,7 @@ function KpiCard({ label, value, icon, tone, detail }: { label: string; value: n
 				</div>
 			</div>
 			<p className="mt-3 text-xs text-slate-400">{detail}</p>
-		</section>
+		</Wrapper>
 	);
 }
 

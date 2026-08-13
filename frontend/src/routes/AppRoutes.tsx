@@ -23,6 +23,7 @@ import { PlatformOrganizationConsolePage } from "../features/platformAdmin/Platf
 import { PlatformOrganizationsPage } from "../features/platformAdmin/PlatformOrganizationsPage";
 import { PlatformSupportSessionsPage } from "../features/platformAdmin/PlatformSupportSessionsPage";
 import { PlatformSwagShopPage } from "../features/platformAdmin/PlatformSwagShopPage";
+import { PlatformPaymentsPage } from "../features/platformAdmin/PlatformPaymentsPage";
 import { PlatformDuplicateIdentitiesPage } from "../features/platformAdmin/PlatformDuplicateIdentitiesPage";
 import { PlatformUsersPage } from "../features/platformAdmin/PlatformUsersPage";
 import { PlatformReportsPage } from "../features/reporting/PlatformReportsPage";
@@ -141,6 +142,7 @@ export function AppRoutes() {
 					<Route path="help-articles" element={platformGuard(Capabilities.PLATFORM_HELP_MANAGE, <PlatformHelpArticlesPage />)} />
 					<Route path="support-cases" element={platformGuard(Capabilities.PLATFORM_SUPPORT_CASE_MANAGE, <PlatformSupportCasesPage />)} />
 					<Route path="swag-shop" element={platformGuard(Capabilities.PLATFORM_SWAG_SHOP_VIEW, <PlatformSwagShopPage />)} />
+					<Route path="payments" element={platformGuard(Capabilities.PLATFORM_PAYMENTS_VIEW, <PlatformPaymentsPage />)} />
 					<Route path="subscriptions" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformSubscriptionsPage />)} />
 					<Route path="data-integrity/duplicates" element={platformGuard(Capabilities.PLATFORM_USER_VIEW, <PlatformDuplicateIdentitiesPage />)} />
 				</Route>

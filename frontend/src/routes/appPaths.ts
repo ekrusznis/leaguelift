@@ -61,5 +61,6 @@ export const appPaths = {
 	platformHelpArticles: () => "/app/platform/help-articles",
 	platformSupportCases: () => "/app/platform/support-cases",
 	platformSwagShop: () => "/app/platform/swag-shop",
+	platformPayments: () => "/app/platform/payments",
 	platformSubscriptions: () => "/app/platform/subscriptions",
 } as const;

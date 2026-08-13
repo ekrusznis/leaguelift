@@ -6,6 +6,7 @@ import type {
 	PageResponse,
 	PlatformOrganizationDetail,
 	PlatformOrganizationListItem,
+	PlatformPaymentListItem,
 	PlatformSupportAccess,
 	PlatformSupportAccessListItem,
 	PlatformSwagShopProductListItem,
@@ -45,6 +46,50 @@ export function usePlatformAdminOrganizations(filters: PlatformListFilters) {
 	return useQuery({
 		queryKey: ["platform", "admin", "organizations", filters],
 		queryFn: () => apiFetch<PageResponse<PlatformOrganizationListItem>>(`/platform/admin/organizations?${listQuery(filters)}`),
+	});
+}
+
+export interface PlatformPaymentListFilters extends PlatformListFilters {
+	type?: string;
+	organizationId?: string;
+	teamId?: string;
+	dateFrom?: string;
+	dateTo?: string;
+}
+
+export function usePlatformPayments(filters: PlatformPaymentListFilters) {
+	const params = new URLSearchParams(listQuery(filters));
+	if (filters.type) params.set("type", filters.type);
+	if (filters.organizationId) params.set("organizationId", filters.organizationId);
+	if (filters.teamId) params.set("teamId", filters.teamId);
+	if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+	if (filters.dateTo) params.set("dateTo", filters.dateTo);
+	return useQuery({
+		queryKey: ["platform", "admin", "payments", filters],
+		queryFn: () => apiFetch<PageResponse<PlatformPaymentListItem>>(`/platform/admin/payments?${params.toString()}`),
+	});
+}
+
+/** Refund/void a payment by calling its own domain's existing org-scoped endpoint directly — no new refund/void logic, this just routes to whichever one applies. */
+export function useRefundOrVoidPayment() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: async (payment: PlatformPaymentListItem) => {
+			switch (payment.type) {
+				case "ORDER":
+					return apiFetch(`/organizations/${payment.organizationId}/orders/${payment.id}/refund`, { method: "POST" });
+				case "CONTRIBUTION":
+					return apiFetch(`/organizations/${payment.organizationId}/campaigns/${payment.parentId}/contributions/${payment.id}/refund`, { method: "POST" });
+				case "SPONSORSHIP":
+					return apiFetch(`/organizations/${payment.organizationId}/sponsorships/${payment.id}/refund`, { method: "POST" });
+				case "FEE":
+					return apiFetch(`/organizations/${payment.organizationId}/fee-assignments/${payment.parentId}/payments/${payment.id}`, {
+						method: "DELETE",
+						body: { reason: "Voided from Platform Admin Payments" },
+					});
+			}
+		},
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["platform", "admin", "payments"] }),
 	});
 }
 

@@ -41,6 +41,7 @@ export type NavDestination =
 	| { type: "platform-help-articles" }
 	| { type: "platform-support-cases" }
 	| { type: "platform-swag-shop" }
+	| { type: "platform-payments" }
 	| { type: "platform-subscriptions" }
 	| { type: "organization-billing" }
 	| { type: "organization"; section: OrganizationSection }
@@ -159,6 +160,7 @@ export const NAV_REGISTRY: NavRegistryItem[] = [
 	{ id: "platform.help-articles", label: "Help Articles", icon: <HelpIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_HELP_MANAGE], destination: { type: "platform-help-articles" } },
 	{ id: "platform.support-cases", label: "Support Cases", icon: <MessageSquareIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_SUPPORT_CASE_MANAGE], destination: { type: "platform-support-cases" } },
 	{ id: "platform.swag-shop", label: "Swag Shop", icon: <ShirtIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_SWAG_SHOP_VIEW], destination: { type: "platform-swag-shop" } },
+	{ id: "platform.payments", label: "Payments", icon: <DollarIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_PAYMENTS_VIEW], destination: { type: "platform-payments" } },
 ];
 
 function resolveDestination(destination: NavDestination, context: NavRouteContext): string | null {
@@ -178,6 +180,7 @@ function resolveDestination(destination: NavDestination, context: NavRouteContex
 		case "platform-help-articles": return appPaths.platformHelpArticles();
 		case "platform-support-cases": return appPaths.platformSupportCases();
 		case "platform-swag-shop": return appPaths.platformSwagShop();
+		case "platform-payments": return appPaths.platformPayments();
 		case "platform-subscriptions": return appPaths.platformSubscriptions();
 		case "organization-billing": return context.organizationId ? appPaths.organizationBilling(context.organizationId) : null;
 		case "organization": return context.organizationId ? appPaths.organization(context.organizationId, destination.section) : null;

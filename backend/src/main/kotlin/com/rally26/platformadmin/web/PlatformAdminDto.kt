@@ -2,6 +2,7 @@ package com.rally26.platformadmin.web
 
 import com.rally26.platformadmin.domain.PlatformOrganizationDetail
 import com.rally26.platformadmin.domain.PlatformOrganizationListItem
+import com.rally26.platformadmin.domain.PlatformPaymentListItem
 import com.rally26.platformadmin.domain.PlatformSupportAccess
 import com.rally26.platformadmin.domain.PlatformSupportAccessListItem
 import com.rally26.platformadmin.domain.PlatformSwagShopProductListItem
@@ -109,6 +110,45 @@ data class PlatformSwagShopProductListItemResponse(
     val createdAt: Instant,
     val updatedAt: Instant,
 )
+
+data class PlatformPaymentListItemResponse(
+    val type: String,
+    val id: UUID,
+    val organizationId: UUID,
+    val organizationName: String,
+    val teamId: UUID?,
+    val teamName: String?,
+    val parentId: UUID?,
+    val payerName: String?,
+    val payerEmail: String?,
+    val amountMinor: Long,
+    val currency: String,
+    val status: String,
+    val createdAt: Instant,
+    val confirmedAt: Instant?,
+    val closedAt: Instant?,
+    val canRefundOrVoid: Boolean,
+)
+
+fun PlatformPaymentListItem.toResponse() =
+    PlatformPaymentListItemResponse(
+        type.name,
+        id,
+        organizationId,
+        organizationName,
+        teamId,
+        teamName,
+        parentId,
+        payerName,
+        payerEmail,
+        amountMinor,
+        currency,
+        status,
+        createdAt,
+        confirmedAt,
+        closedAt,
+        canRefundOrVoid,
+    )
 
 data class StartPlatformSupportAccessRequest(
     @field:Size(min = 10, max = 500)

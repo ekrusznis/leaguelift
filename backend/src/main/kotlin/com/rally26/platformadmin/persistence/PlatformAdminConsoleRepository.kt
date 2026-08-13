@@ -3,6 +3,8 @@ package com.rally26.platformadmin.persistence
 import com.rally26.common.web.PageRequest
 import com.rally26.platformadmin.domain.PlatformOrganizationDetail
 import com.rally26.platformadmin.domain.PlatformOrganizationListItem
+import com.rally26.platformadmin.domain.PlatformPaymentListItem
+import com.rally26.platformadmin.domain.PlatformPaymentType
 import com.rally26.platformadmin.domain.PlatformSupportAccessListItem
 import com.rally26.platformadmin.domain.PlatformSupportAccessStatus
 import com.rally26.platformadmin.domain.PlatformSwagShopProductListItem
@@ -10,6 +12,8 @@ import com.rally26.platformadmin.domain.PlatformUserListItem
 import com.rally26.platformadmin.domain.PlatformUserOrganizationMembership
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
+import java.sql.Timestamp
+import java.time.Instant
 import java.util.UUID
 
 @Repository
@@ -357,6 +361,168 @@ class PlatformAdminConsoleRepository(
         if (!query.isNullOrBlank()) spec = spec.param("query", "%${query.trim().lowercase()}%")
         if (!status.isNullOrBlank()) spec = spec.param("status", status)
         if (organizationId != null) spec = spec.param("organizationId", organizationId)
+        return spec.query(Long::class.java).single()
+    }
+
+    /**
+     * Platform Admin "every attempted payment" list — a `union all` normalizing
+     * order/contribution/sponsorship/fee_payment into one row shape (see
+     * PlatformPaymentListItem), so a support-facing search can span all four
+     * payment-taking domains in one paginated query instead of four separate lookups.
+     */
+    private val paymentsCte =
+        """
+        with payments as (
+            select 'ORDER' as type, o.id, o.organization_id, org.name as organization_name, s.team_id, t.name as team_name,
+                   cast(null as uuid) as parent_id, o.supporter_name as payer_name, o.supporter_email as payer_email,
+                   coalesce((select sum(oi.unit_price_minor * oi.quantity) from order_item oi where oi.order_id = o.id), 0) as amount_minor,
+                   o.currency, o.status, o.created_at, o.confirmed_at,
+                   coalesce(o.refunded_at, case when o.status = 'CANCELED' then o.created_at end) as closed_at,
+                   (o.stripe_payment_intent_id is not null and o.status = 'CONFIRMED') as can_refund_or_void
+            from "order" o
+            join organization org on org.id = o.organization_id
+            join store s on s.id = o.store_id
+            left join team t on t.id = s.team_id
+
+            union all
+
+            select 'CONTRIBUTION', c.id, c.organization_id, org.name, cast(null as uuid), cast(null as varchar),
+                   c.campaign_id, c.supporter_name, c.supporter_email, c.amount_minor, c.currency, c.status, c.created_at, c.confirmed_at,
+                   c.refunded_at, (c.stripe_payment_intent_id is not null and c.status = 'CONFIRMED')
+            from contribution c
+            join organization org on org.id = c.organization_id
+
+            union all
+
+            select 'SPONSORSHIP', sp.id, sp.organization_id, org.name, cast(null as uuid), cast(null as varchar),
+                   sp.package_id, spn.name, spn.contact_email, sp.amount_minor, sp.currency, sp.status, sp.created_at, sp.confirmed_at,
+                   sp.refunded_at, (sp.stripe_payment_intent_id is not null and sp.status = 'CONFIRMED')
+            from sponsorship sp
+            join organization org on org.id = sp.organization_id
+            join sponsor spn on spn.id = sp.sponsor_id
+
+            union all
+
+            select 'FEE', fp.id, fp.organization_id, org.name, cast(null as uuid), cast(null as varchar),
+                   fp.fee_assignment_id, fp.payer_name, fp.payer_email, fp.amount_minor, fp.currency, fp.status, fp.created_at,
+                   cast(null as timestamptz),
+                   fp.voided_at, (fp.status = 'CONFIRMED' and fp.voided_at is null)
+            from fee_payment fp
+            join organization org on org.id = fp.organization_id
+        )
+        """.trimIndent()
+
+    private fun paymentsWhere(
+        type: String?,
+        status: String?,
+        organizationId: UUID?,
+        teamId: UUID?,
+        query: String?,
+        dateFrom: Instant?,
+        dateTo: Instant?,
+    ): Pair<String, List<Pair<String, Any>>> {
+        val where = mutableListOf<String>()
+        val params = mutableListOf<Pair<String, Any>>()
+        if (!type.isNullOrBlank()) {
+            where += "type = :type"
+            params += "type" to type
+        }
+        if (!status.isNullOrBlank()) {
+            where += "status = :status"
+            params += "status" to status
+        }
+        if (organizationId != null) {
+            where += "organization_id = :organizationId"
+            params += "organizationId" to organizationId
+        }
+        if (teamId != null) {
+            where += "team_id = :teamId"
+            params += "teamId" to teamId
+        }
+        if (!query.isNullOrBlank()) {
+            where +=
+                "(lower(coalesce(payer_name, '')) like :query or lower(coalesce(payer_email, '')) like :query " +
+                    "or lower(organization_name) like :query or lower(coalesce(team_name, '')) like :query)"
+            params += "query" to "%${query.trim().lowercase()}%"
+        }
+        if (dateFrom != null) {
+            where += "created_at >= :dateFrom"
+            params += "dateFrom" to Timestamp.from(dateFrom)
+        }
+        if (dateTo != null) {
+            where += "created_at <= :dateTo"
+            params += "dateTo" to Timestamp.from(dateTo)
+        }
+        val whereSql = if (where.isEmpty()) "" else "where ${where.joinToString(" and ")}"
+        return whereSql to params
+    }
+
+    fun listPayments(
+        type: String?,
+        status: String?,
+        organizationId: UUID?,
+        teamId: UUID?,
+        query: String?,
+        dateFrom: Instant?,
+        dateTo: Instant?,
+        pageRequest: PageRequest,
+    ): List<PlatformPaymentListItem> {
+        val (whereSql, params) = paymentsWhere(type, status, organizationId, teamId, query, dateFrom, dateTo)
+        var spec =
+            jdbcClient.sql(
+                """
+                $paymentsCte
+                select * from payments
+                $whereSql
+                order by created_at desc
+                limit :limit offset :offset
+                """.trimIndent(),
+            )
+        params.forEach { (name, value) -> spec = spec.param(name, value) }
+        return spec
+            .param("limit", pageRequest.size)
+            .param("offset", pageRequest.offset)
+            .query { rs, _ ->
+                PlatformPaymentListItem(
+                    type = PlatformPaymentType.valueOf(rs.getString("type")),
+                    id = rs.getObject("id", UUID::class.java),
+                    organizationId = rs.getObject("organization_id", UUID::class.java),
+                    organizationName = rs.getString("organization_name"),
+                    teamId = rs.getObject("team_id", UUID::class.java),
+                    teamName = rs.getString("team_name"),
+                    parentId = rs.getObject("parent_id", UUID::class.java),
+                    payerName = rs.getString("payer_name"),
+                    payerEmail = rs.getString("payer_email"),
+                    amountMinor = rs.getLong("amount_minor"),
+                    currency = rs.getString("currency"),
+                    status = rs.getString("status"),
+                    createdAt = rs.getTimestamp("created_at").toInstant(),
+                    confirmedAt = rs.getTimestamp("confirmed_at")?.toInstant(),
+                    closedAt = rs.getTimestamp("closed_at")?.toInstant(),
+                    canRefundOrVoid = rs.getBoolean("can_refund_or_void"),
+                )
+            }.list()
+    }
+
+    fun countPayments(
+        type: String?,
+        status: String?,
+        organizationId: UUID?,
+        teamId: UUID?,
+        query: String?,
+        dateFrom: Instant?,
+        dateTo: Instant?,
+    ): Long {
+        val (whereSql, params) = paymentsWhere(type, status, organizationId, teamId, query, dateFrom, dateTo)
+        var spec =
+            jdbcClient.sql(
+                """
+                $paymentsCte
+                select count(*) from payments
+                $whereSql
+                """.trimIndent(),
+            )
+        params.forEach { (name, value) -> spec = spec.param(name, value) }
         return spec.query(Long::class.java).single()
     }
 

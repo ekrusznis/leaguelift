@@ -12,6 +12,7 @@ import com.rally26.common.web.PageRequest
 import com.rally26.common.web.PageResponse
 import com.rally26.platformadmin.domain.PlatformOrganizationDetail
 import com.rally26.platformadmin.domain.PlatformOrganizationListItem
+import com.rally26.platformadmin.domain.PlatformPaymentListItem
 import com.rally26.platformadmin.domain.PlatformSupportAccess
 import com.rally26.platformadmin.domain.PlatformSupportAccessListItem
 import com.rally26.platformadmin.domain.PlatformSupportAccessStatus
@@ -30,6 +31,8 @@ private val ORGANIZATION_STATUSES = setOf("ACTIVE", "SUSPENDED", "ARCHIVED")
 private val USER_STATUSES = setOf("ACTIVE", "SUSPENDED")
 private val SUPPORT_ACCESS_STATUSES = setOf("ACTIVE", "ENDED", "EXPIRED")
 private val SWAG_SHOP_PRODUCT_STATUSES = setOf("DRAFT", "ACTIVE", "ARCHIVED")
+private val PAYMENT_TYPES = setOf("ORDER", "FEE", "CONTRIBUTION", "SPONSORSHIP")
+private val PAYMENT_STATUSES = setOf("PENDING", "PENDING_CHECKOUT", "CONFIRMED", "CANCELED", "REFUNDED")
 private val SUPPORT_ACCESS_DURATION: Duration = Duration.ofHours(2)
 
 /**
@@ -117,6 +120,39 @@ class PlatformAdminConsoleService(
             page = pageRequest.page,
             size = pageRequest.size,
             totalElements = consoleRepository.countSwagShopProducts(query?.trim(), normalizedStatus, organizationId),
+        )
+    }
+
+    /**
+     * Platform Admin "every attempted payment" list, spanning Swag Shop orders,
+     * fee/dues payments, contributions, and sponsorships — read-only search/discovery
+     * to help support staff find where a payer is stuck, same capability-only gate as
+     * [listSwagShopProducts] (no support-access session required just to look). The
+     * per-row refund/void actions the frontend calls in response to this list hit the
+     * existing org-scoped endpoints directly (OrderController/CampaignController/
+     * SponsorshipPackageController/FeeAssignmentController) — those are unaffected by
+     * this method and already allow a platform admin via
+     * MembershipService.requireActiveMembership's synthetic-membership bypass.
+     */
+    fun listPayments(
+        currentUser: CurrentUser,
+        type: String?,
+        status: String?,
+        organizationId: UUID?,
+        teamId: UUID?,
+        query: String?,
+        dateFrom: Instant?,
+        dateTo: Instant?,
+        pageRequest: PageRequest,
+    ): PageResponse<PlatformPaymentListItem> {
+        authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_PAYMENTS_VIEW)
+        val normalizedType = normalizeStatus(type, PAYMENT_TYPES, "payment type")
+        val normalizedStatus = normalizeStatus(status, PAYMENT_STATUSES, "payment status")
+        return PageResponse(
+            items = consoleRepository.listPayments(normalizedType, normalizedStatus, organizationId, teamId, query?.trim(), dateFrom, dateTo, pageRequest),
+            page = pageRequest.page,
+            size = pageRequest.size,
+            totalElements = consoleRepository.countPayments(normalizedType, normalizedStatus, organizationId, teamId, query?.trim(), dateFrom, dateTo),
         )
     }
 

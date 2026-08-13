@@ -78,4 +78,5 @@ export const Capabilities = {
 	PLATFORM_SUPPORT_CASE_MANAGE: "platform.support_case.manage",
 	PLATFORM_SUPPORT_IMPERSONATE: "platform.support.impersonate",
 	PLATFORM_SWAG_SHOP_VIEW: "platform.swag_shop.view",
+	PLATFORM_PAYMENTS_VIEW: "platform.payments.view",
 } as const;

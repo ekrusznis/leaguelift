@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import java.time.Instant
 import java.util.UUID
 
 @RestController
@@ -63,6 +64,23 @@ class PlatformAdminController(
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<PlatformSwagShopProductListItemResponse> {
         val result = service.listSwagShopProducts(currentUser, query, status, organizationId, PageRequest(page, size))
+        return PageResponse(result.items.map { it.toResponse() }, result.page, result.size, result.totalElements)
+    }
+
+    @GetMapping("/payments")
+    fun listPayments(
+        @RequestParam(required = false) type: String?,
+        @RequestParam(required = false) status: String?,
+        @RequestParam(required = false) organizationId: UUID?,
+        @RequestParam(required = false) teamId: UUID?,
+        @RequestParam(required = false) query: String?,
+        @RequestParam(required = false) dateFrom: Instant?,
+        @RequestParam(required = false) dateTo: Instant?,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "25") size: Int,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PageResponse<PlatformPaymentListItemResponse> {
+        val result = service.listPayments(currentUser, type, status, organizationId, teamId, query, dateFrom, dateTo, PageRequest(page, size))
         return PageResponse(result.items.map { it.toResponse() }, result.page, result.size, result.totalElements)
     }
 

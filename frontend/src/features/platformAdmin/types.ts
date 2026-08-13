@@ -39,6 +39,27 @@ export interface PlatformSwagShopProductListItem {
 	updatedAt: string;
 }
 
+export type PlatformPaymentType = "ORDER" | "FEE" | "CONTRIBUTION" | "SPONSORSHIP";
+
+export interface PlatformPaymentListItem {
+	type: PlatformPaymentType;
+	id: string;
+	organizationId: string;
+	organizationName: string;
+	teamId: string | null;
+	teamName: string | null;
+	parentId: string | null;
+	payerName: string | null;
+	payerEmail: string | null;
+	amountMinor: number;
+	currency: string;
+	status: string;
+	createdAt: string;
+	confirmedAt: string | null;
+	closedAt: string | null;
+	canRefundOrVoid: boolean;
+}
+
 export interface PlatformOrganizationDetail extends PlatformOrganizationListItem {
 	contactPhone: string | null;
 	updatedAt: string;

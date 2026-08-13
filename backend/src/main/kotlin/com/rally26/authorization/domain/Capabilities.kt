@@ -115,6 +115,7 @@ object Capabilities {
     const val PLATFORM_SUPPORT_CASE_MANAGE = "platform.support_case.manage"
     const val PLATFORM_SUPPORT_IMPERSONATE = "platform.support.impersonate"
     const val PLATFORM_SWAG_SHOP_VIEW = "platform.swag_shop.view"
+    const val PLATFORM_PAYMENTS_VIEW = "platform.payments.view"
 }
 
 /** The tiered team/tournament/platform roles [com.rally26.authorization.domain.RoleAssignment] rows carry. */
@@ -281,6 +282,7 @@ object CapabilityRegistry {
                     Capabilities.PLATFORM_HELP_MANAGE,
                     Capabilities.PLATFORM_SUPPORT_CASE_MANAGE,
                     Capabilities.PLATFORM_SWAG_SHOP_VIEW,
+                    Capabilities.PLATFORM_PAYMENTS_VIEW,
                 )
             }
 

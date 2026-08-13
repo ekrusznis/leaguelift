@@ -9,6 +9,8 @@ import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageRequest
 import com.rally26.platformadmin.domain.PlatformOrganizationDetail
+import com.rally26.platformadmin.domain.PlatformPaymentListItem
+import com.rally26.platformadmin.domain.PlatformPaymentType
 import com.rally26.platformadmin.domain.PlatformSupportAccess
 import com.rally26.platformadmin.domain.PlatformSupportAccessStatus
 import com.rally26.platformadmin.domain.PlatformSwagShopProductListItem
@@ -147,6 +149,49 @@ class PlatformAdminConsoleServiceTest {
             hasSwagLogo = true,
             createdAt = now,
             updatedAt = now,
+        )
+
+    @Test
+    fun `listPayments requires the platform payments capability`() {
+        every { authorizationService.requirePlatformCapability(admin, Capabilities.PLATFORM_PAYMENTS_VIEW) } throws
+            ForbiddenException("PLATFORM_ACCESS_DENIED", "denied")
+
+        assertFailsWith<ForbiddenException> {
+            service.listPayments(admin, null, null, null, null, null, null, null, PageRequest(0, 25))
+        }
+    }
+
+    @Test
+    fun `listPayments maps repository rows through to the page response`() {
+        val item = paymentItem()
+        every { authorizationService.requirePlatformCapability(admin, Capabilities.PLATFORM_PAYMENTS_VIEW) } just runs
+        every { consoleRepository.listPayments("ORDER", "CONFIRMED", organizationId, null, "jane", null, null, PageRequest(0, 25)) } returns listOf(item)
+        every { consoleRepository.countPayments("ORDER", "CONFIRMED", organizationId, null, "jane", null, null) } returns 1L
+
+        val result = service.listPayments(admin, "order", "confirmed", organizationId, null, "jane", null, null, PageRequest(0, 25))
+
+        assertEquals(listOf(item), result.items)
+        assertEquals(1L, result.totalElements)
+    }
+
+    private fun paymentItem() =
+        PlatformPaymentListItem(
+            type = PlatformPaymentType.ORDER,
+            id = UUID.randomUUID(),
+            organizationId = organizationId,
+            organizationName = "North Jersey Volleyball Club",
+            teamId = UUID.randomUUID(),
+            teamName = "U12 Sharks",
+            parentId = null,
+            payerName = "Jane Doe",
+            payerEmail = "jane@example.com",
+            amountMinor = 2500,
+            currency = "USD",
+            status = "CONFIRMED",
+            createdAt = now,
+            confirmedAt = now,
+            closedAt = null,
+            canRefundOrVoid = true,
         )
 
     private fun access(
