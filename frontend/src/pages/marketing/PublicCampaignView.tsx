@@ -212,6 +212,7 @@ export function PublicCampaignView() {
 
 			<section className="bg-navy-950 py-20 sm:py-28">
 				<PageContainer className="max-w-2xl">
+					{campaign.logoUrl && <img src={campaign.logoUrl} alt="" className="mb-4 h-16 w-16 rounded-lg object-cover" />}
 					<p className="font-heading text-xs font-semibold uppercase tracking-wide text-green-400">
 						{CAMPAIGN_TYPE_LABELS[campaign.campaignType]}
 					</p>

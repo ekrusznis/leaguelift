@@ -13,6 +13,9 @@ export type CampaignType =
 
 export type CampaignStatus = "DRAFT" | "ACTIVE" | "COMPLETED" | "ARCHIVED";
 
+/** Which starter template, if any, produced this campaign (Phase 42). Null = blank/custom campaign. */
+export type FundraiserTemplateKey = "BOX_POOL" | "BAKE_SALE" | "CAR_WASH";
+
 export interface Campaign {
 	id: string;
 	organizationId: string;
@@ -27,6 +30,8 @@ export interface Campaign {
 	endDate: string | null;
 	status: CampaignStatus;
 	publishedAt: string | null;
+	createdByUserId: string | null;
+	templateKey: FundraiserTemplateKey | null;
 	createdAt: string;
 	updatedAt: string;
 	/** Sum of CONFIRMED contributions — real data, not a demo placeholder. */
@@ -56,6 +61,15 @@ export interface PublicCampaign {
 	status: CampaignStatus;
 	publishedAt: string | null;
 	raisedMinor: number;
+	logoUrl: string | null;
+	coverUrl: string | null;
+	primaryColor: string;
+	secondaryColor: string;
+}
+
+export interface CampaignShareLink {
+	url: string;
+	qrCodeDataUri: string;
 }
 
 export type ContributionStatus = "PENDING" | "CONFIRMED" | "CANCELED" | "REFUNDED";

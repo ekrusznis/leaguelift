@@ -54,6 +54,7 @@ import { VerifyEmailPage } from "../pages/auth/VerifyEmailPage";
 import { ContactRedirect } from "../pages/marketing/ContactRedirect";
 import { HomePage } from "../pages/marketing/HomePage";
 import { PublicAthleteStorefrontView } from "../pages/marketing/PublicAthleteStorefrontView";
+import { PublicBoxPoolView } from "../pages/marketing/PublicBoxPoolView";
 import { PublicCampaignView } from "../pages/marketing/PublicCampaignView";
 import { PublicSponsorshipView } from "../pages/marketing/PublicSponsorshipView";
 import { PublicStoreView } from "../pages/marketing/PublicStoreView";
@@ -87,6 +88,7 @@ export function AppRoutes() {
 				<Route path="terms" element={<TermsPage />} />
 				<Route path="accessibility" element={<AccessibilityPage />} />
 				<Route path="campaigns/:slug" element={<PublicCampaignView />} />
+				<Route path="pools/:slug" element={<PublicBoxPoolView />} />
 				<Route path="swag-shop/:slug" element={<PublicStoreView />} />
 				<Route path="swag-shop/athlete/:slug" element={<PublicAthleteStorefrontView />} />
 				<Route path="sponsors/:slug" element={<PublicSponsorshipView />} />

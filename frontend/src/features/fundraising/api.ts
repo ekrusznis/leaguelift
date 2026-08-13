@@ -4,11 +4,13 @@ import type { CreateCampaignFormValues, CreateContributionFormValues } from "./s
 import type {
 	Campaign,
 	CampaignPage,
+	CampaignShareLink,
 	CampaignStatus,
 	Contribution,
 	ContributionCheckout,
 	ContributionPage,
 	ContributionStatusResult,
+	FundraiserTemplateKey,
 	PublicCampaign,
 } from "./types";
 
@@ -25,7 +27,7 @@ export function useCampaigns(organizationId: string) {
 export function useCreateCampaign(organizationId: string) {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (values: CreateCampaignFormValues) =>
+		mutationFn: (values: CreateCampaignFormValues & { templateKey?: FundraiserTemplateKey | null }) =>
 			apiFetch<Campaign>(`/organizations/${organizationId}/campaigns`, {
 				method: "POST",
 				body: {
@@ -34,11 +36,20 @@ export function useCreateCampaign(organizationId: string) {
 					description: values.description || null,
 					startDate: values.startDate || null,
 					endDate: values.endDate || null,
+					templateKey: values.templateKey ?? null,
 				},
 			}),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: campaignsKey(organizationId) });
 		},
+	});
+}
+
+/** Reuses the same ZXing-generated QR seam Sponsorship/Swag Shop already have — no click-through tracking, nothing persisted. */
+export function useCampaignShareLink(organizationId: string) {
+	return useMutation({
+		mutationFn: (url: string) =>
+			apiFetch<CampaignShareLink>(`/organizations/${organizationId}/campaigns/qr-code?url=${encodeURIComponent(url)}`),
 	});
 }
 

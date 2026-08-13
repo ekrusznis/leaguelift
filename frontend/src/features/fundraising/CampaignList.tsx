@@ -7,12 +7,66 @@ import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { formatMoneyMinorUnits } from "../../lib/money";
+import { BoxPoolManagementPanel } from "../boxpool/BoxPoolManagementPanel";
 import { useTeams } from "../teams/api";
-import { useCampaigns, useCreateCampaign, usePublishCampaign } from "./api";
+import { useCampaignShareLink, useCampaigns, useCreateCampaign, usePublishCampaign } from "./api";
 import { ContributionList } from "./ContributionList";
 import { ReminderButton } from "../communications/ReminderButton";
 import { CAMPAIGN_TYPES, createCampaignSchema } from "./schema";
-import type { CampaignType } from "./types";
+import type { CampaignType, FundraiserTemplateKey } from "./types";
+
+const FUNDRAISER_TEMPLATES: {
+	key: FundraiserTemplateKey | "";
+	label: string;
+	description: string;
+	campaignType?: CampaignType;
+	name?: string;
+	description_?: string;
+}[] = [
+	{ key: "", label: "Blank campaign", description: "Start from a blank form." },
+	{ key: "BOX_POOL", label: "Sports box pool", description: "A grid of claimable boxes tied to a game — set up the pool after creating the campaign." },
+	{
+		key: "BAKE_SALE",
+		label: "Bake sale",
+		description: "Pre-fills a starter name/description you can edit.",
+		campaignType: "SPECIAL_EVENTS",
+		name: "Bake Sale",
+		description_: "Homemade treats — proceeds support the team. Let us know if you'd like to bake or volunteer!",
+	},
+	{
+		key: "CAR_WASH",
+		label: "Car wash",
+		description: "Pre-fills a starter name/description you can edit.",
+		campaignType: "SPECIAL_EVENTS",
+		name: "Car Wash",
+		description_: "Bring your car by for a wash — all proceeds support the team. Volunteers welcome!",
+	},
+];
+
+function QrCodeButton({ organizationId, url }: { organizationId: string; url: string }) {
+	const shareLink = useCampaignShareLink(organizationId);
+	const [show, setShow] = useState(false);
+	return (
+		<div className="flex flex-col items-end gap-2">
+			<Button
+				type="button"
+				variant="secondary"
+				onClick={() => {
+					setShow((v) => !v);
+					if (!shareLink.data) shareLink.mutate(url);
+				}}
+			>
+				{show ? "Hide QR code" : "QR code"}
+			</Button>
+			{show && shareLink.data && (
+				<div className="flex flex-col items-end gap-1">
+					<img src={shareLink.data.qrCodeDataUri} alt="QR code linking to this campaign" className="size-32" />
+					<input readOnly value={shareLink.data.url} className="w-56 rounded-md border border-slate-gray/30 px-2 py-1 text-xs" onFocus={(e) => e.currentTarget.select()} />
+				</div>
+			)}
+		</div>
+	);
+}
 
 const CAMPAIGN_TYPE_LABELS: Record<CampaignType, string> = {
 	ORGANIZATION_GENERAL: "Organization general fund",
@@ -35,11 +89,13 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 	const publishCampaign = usePublishCampaign(organizationId);
 	const [showForm, setShowForm] = useState(false);
 	const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null);
+	const [templateKey, setTemplateKey] = useState<FundraiserTemplateKey | "">("");
 
 	const {
 		register,
 		handleSubmit,
 		reset,
+		setValue,
 		formState: { errors, isSubmitting },
 	} = useForm<
 		z.input<typeof createCampaignSchema>,
@@ -60,9 +116,18 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 		},
 	});
 
+	function applyTemplate(key: FundraiserTemplateKey | "") {
+		setTemplateKey(key);
+		const template = FUNDRAISER_TEMPLATES.find((t) => t.key === key);
+		if (template?.name) setValue("name", template.name);
+		if (template?.description_) setValue("description", template.description_);
+		if (template?.campaignType) setValue("campaignType", template.campaignType);
+	}
+
 	const onSubmit = handleSubmit(async (values) => {
-		await createCampaign.mutateAsync(values);
+		await createCampaign.mutateAsync({ ...values, templateKey: templateKey || null });
 		reset();
+		setTemplateKey("");
 		setShowForm(false);
 	});
 
@@ -84,6 +149,23 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 					noValidate
 					aria-label="Create a fundraising campaign"
 				>
+					<fieldset className="flex flex-col gap-2">
+						<legend className="text-sm font-medium text-navy dark:text-[#f8fafc]">Start from a template</legend>
+						<div className="flex flex-wrap gap-2">
+							{FUNDRAISER_TEMPLATES.map((template) => (
+								<button
+									key={template.label}
+									type="button"
+									onClick={() => applyTemplate(template.key)}
+									aria-pressed={templateKey === template.key}
+									className={`rounded-lg border px-3 py-2 text-left text-sm ${templateKey === template.key ? "border-victory-green bg-victory-green/10" : "border-slate-gray/30"}`}
+								>
+									<span className="block font-medium text-navy dark:text-[#f8fafc]">{template.label}</span>
+									<span className="block text-xs text-slate-gray dark:text-[#cbd5e1]">{template.description}</span>
+								</button>
+							))}
+						</div>
+					</fieldset>
 					<div className="flex flex-wrap gap-3">
 						<div className="flex flex-col gap-1">
 							<label htmlFor="campaign-name" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
@@ -236,6 +318,7 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 									</p>
 								</div>
 								<div className="flex shrink-0 items-center gap-2">
+									<QrCodeButton organizationId={organizationId} url={`${window.location.origin}/campaigns/${campaign.slug}`} />
 									<Button
 										type="button"
 										variant="secondary"
@@ -258,6 +341,11 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 									)}
 								</div>
 							</div>
+							{campaign.templateKey === "BOX_POOL" && (
+								<div className="mt-3 border-t border-slate-gray/20 pt-3">
+									<BoxPoolManagementPanel organizationId={organizationId} campaignId={campaign.id} />
+								</div>
+							)}
 							{expandedCampaignId === campaign.id && (
 								<div className="mt-3 border-t border-slate-gray/20 pt-3">
 									<ContributionList organizationId={organizationId} campaignId={campaign.id} />
