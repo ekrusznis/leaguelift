@@ -1,6 +1,6 @@
 # Rally26 full-site UX/sales review
 
-**Status:** Not started (inventory built 2026-08-13; expanded with real per-feature filter/list/action detail 2026-08-13)
+**Status:** Not started (inventory built 2026-08-13; expanded with real per-feature filter/list/action detail 2026-08-13; mobile app coverage added 2026-08-13 — full web parity required, QuickBooks the sole exception)
 **Requested by:** Founder, after the Stripe-fee/reorder/sync-redesign/household-media/Help-Center batch
 **Deliverable shape:** This document. A page/flow inventory walked in-browser, top to bottom, by a reviewer acting as a sales-and-UX engineer — not a code reviewer. Every page row below now carries the *real, currently-built* filters/sort/bulk-actions/columns/empty-state for that page (gathered by reading the actual components, not guessed), so a reviewer checks the page against its own real behavior, not a blind wishlist. Findings get logged inline in the **Notes** column as they're found; this doc is not necessarily fixed inline during the pass itself (fixes get scoped and prioritized afterward).
 
@@ -193,6 +193,97 @@ Route shape: `/app/platform/:section`. This is the one persona where filtering i
 | Payments (cross-org) | `payments` | Not reviewed | Refund/void actions. Text search (payer/org/team) + Type select + Status select + From/To date. No sort/bulk. Columns: Organization/Team/Type/Payer/Amount/Status/Date. Per-row: Refund/Void (label depends on type, `window.confirm` guard, requires active support session for that org) + "Open organization." Empty: "No payments match these filters." |
 | Athletes & Coaches (roster) | `roster` | Not reviewed | Table/card toggle. Person-type tabs (Athletes/Coaches) + text search + Eligibility status select (athletes only). No sort/bulk. Athlete columns: name+DOB/Organization/Household/Teams/Eligibility. Coach columns: name+email/Organization/Team/Role. Per-row: "Open organization" only, explicitly read-only. Empty: "No {athletes|coaches} match these filters." |
 
+## Mobile app (native, `mobile/` — Expo/React Native, 4 personas: Coach, Parent, Athlete, Owner)
+
+**Parity requirement (founder decision, 2026-08-13): mobile must have all the same functionality as the website. QuickBooks connection is the only confirmed, permanent exception** — its own web-side OAuth core is inactive too, so there's nothing live to reach either way. Every other web feature is in scope for mobile, whether or not it's built yet. See [[rally26-mobile-full-parity-decision]] for the full resolution of prior gap analysis into required work.
+
+This section is built from existing, detailed mobile-build records ([[rally26-mobile-scaffold]], [[rally26-mobile-web-parity-gap-analysis]], [[rally26-mobile-qa-followups]]) plus `mobile/README.md`'s own Screens tables, not a fresh code read — flag anything below that looks stale when the live pass actually happens, since mobile has moved fast across many same-day ADRs.
+
+### Shared screens (all 4 personas)
+
+| Screen | Route | Status | Notes |
+|---|---|---|---|
+| Sign in | `/login` | Not reviewed | Real `POST /auth/login`, `expo-secure-store` token storage |
+| First-launch onboarding | `/onboarding` | Not reviewed | 3-slide carousel, real splash/onboarding art (ADR-107) |
+| Non-built-role fallback | `/role-not-available` | Not reviewed | Real `GET /me/dashboard-context`; working sign-out |
+| Thread detail | `/messages/[threadId]` | Not reviewed | Real messages, working send (respects `canReply`), mark-read — no filter/sort, matches web's own Messages having none either |
+| My Guardians (Athlete only) | `/guardians` | Not reviewed | Real data |
+| Event Details | `/event-details?id=` | Not reviewed | Real event + RSVP summary/picker (guardian-per-athlete or self); **Edit is an honest "not available yet" toast** — a real, known gap against web's real event edit form; Share uses RN's native share sheet |
+| Announcements | `/announcements` | Not reviewed | Real data, **All/Unread filter** (one of the only filters that exists anywhere in the mobile app), mark-read on open |
+| Announcement detail | `/announcement-details?id=` | Not reviewed | Full body |
+| Settings | `/settings` | Not reviewed | Real appearance/notification/SMS-consent, real Log Out. **Known gap**: appearance saves but many screens still hardcode dark-only hex colors in their own StyleSheets (ADR-107) — same class of issue as [[feedback-dark-mode-full-inversion]] on web, not yet audited on mobile. Worth a dedicated pass. |
+
+### Coach persona (`/`, 5 tabs: Home/Calendar/Teams/Messages/More)
+
+| Screen | Status | Notes |
+|---|---|---|
+| Dashboard | Not reviewed | Real teams + team schedule + announcements preview; team switcher modal if >1 team |
+| Calendar | Not reviewed | Real month-grid math + real team events grouped by IANA timezone — no filter/sort beyond the grid itself |
+| Team Roster | Not reviewed | Real participants — no "position" field (doesn't exist on the backend either, correctly not fabricated) |
+
+### Parent/Guardian persona (`/parent`, 5 tabs: Home/Calendar/Payments/Messages/More)
+
+| Screen | Status | Notes |
+|---|---|---|
+| Dashboard | Not reviewed | Real linked athletes + family schedule + outstanding balance + announcements preview |
+| Family Calendar | Not reviewed | Real server-side union across every linked athlete's teams |
+| Payments | Not reviewed | Real balance + itemized fees + credit balance — **read-only, no in-app payment collection** (note: web itself has no Stripe fee-checkout either, so this specifically is not a parity gap — confirmed in the original gap analysis) |
+| Fee Details | Not reviewed | Per-fee payment history |
+| Documents | Not reviewed | Real household document list + acknowledge — plain upload/ack, no Phase 31 eligibility/waivers concept (doesn't exist on mobile's backend contract usage yet) |
+| **Household media (Photos & Videos)** | **Missing entirely** | Web shipped this today (Track 5) — guardian upload, multi-select, "Release publicly." Zero mobile equivalent. New gap per [[rally26-mobile-full-parity-decision]]. |
+| **SafeSport restriction management** | **Missing entirely** | Deferred at ADR-107 QA round, now required for full parity |
+| **Family credit application / P2P transfer** | **Missing entirely** | Payments screen is read-only; the real backend endpoints exist and are confirmed, just not wired to mobile |
+
+### Athlete persona (`/athlete`, 4 tabs: Home/Calendar/Messages/More — deliberately no Teams/Payments tab, matches real backend access)
+
+| Screen | Status | Notes |
+|---|---|---|
+| Dashboard | Not reviewed | Real overview + teams + own upcoming schedule |
+| Calendar | Not reviewed | Real own-schedule month-grid |
+| Messages | Not reviewed | Shared thread list + a real "New Conversation" flow unique to Athlete (SafeSport-gated, disabled per-team until org-approved rather than surfacing a raw 409) |
+
+### Owner persona (`/owner`, 4 tabs: Home/Teams/Members/More)
+
+| Screen | Status | Notes |
+|---|---|---|
+| Dashboard | Not reviewed | Real summary/financial-overview/team-performance/upcoming-events/recent-activity/reports-snapshot — correctly omits the two dashboard cards that are unconditionally fabricated server-side even on web |
+| Teams | Not reviewed | Real org-wide team list — **read-only this slice**; no create/edit/archive |
+| Team Detail | Not reviewed | Read-only fields |
+| Members | Not reviewed | Real list + role update/revoke; relies on the backend's own manager-tier 403 rather than a client-side permission hide |
+| Reports | Not reviewed | Real revenue/fee-collections/refunds, trailing 30 days — **no CSV export** (web has one) |
+| Payout Account | Not reviewed | Real Stripe Connect status/balance — **read-only, no onboarding-link/transfer actions** (real money-movement, deliberately deferred) |
+| Announcements (manage) | Not reviewed | Real list + publish |
+| New Announcement | Not reviewed | Draft-then-publish, **org-scoped only** — no team/tournament-scoped compose yet |
+| Broadcasts (manage) / New Broadcast / Broadcast Detail | Not reviewed | Real thread list/create/send, **org-scoped only** — no messaging to specific teams/coaches/parents yet (deferred at ADR-107 QA round) |
+| **Event create/edit** | **Toast only, not a real form** | A known, explicit gap — Event Details' Edit button shows "not available yet" |
+| **Documents (owner-side)** | **Missing entirely** | Parent has document upload/acknowledge; Owner's org-wide upload + "send to every household" broadcast + remove doesn't exist on mobile at all |
+| **Org profile / credit-settings edit** | **Missing entirely** | |
+| **Team/tournament create/edit/archive** | **Missing entirely** | |
+
+### WebView-embedded features (Swag Shop, Fundraising, Sponsorships — ADR-106)
+
+Rather than native rebuilds, `/web-embed` loads the **real `frontend/` pages** for these three inside an in-app WebView, authenticated by injecting the same session JSON `frontend/src/auth/AuthContext.tsx` already reads from `sessionStorage` — no new backend endpoint needed. Stripe checkout rides along for free since web itself only redirects to Stripe's hosted Checkout.
+
+**Because these are literally the web pages, their filter/sort/list/action behavior is identical to what's already documented in this doc's web sections above** (Swag Shop under Owner/Coach/Parent's Swag Shop rows, Fundraising and Sponsorships under the Owner organization-sections table) — no separate mobile-specific inventory needed for these three; the review question here is narrower: does the WebView wrapper itself behave well (loading state, back-navigation, the injected-session auth actually working, `status=success`/`status=canceled` toast on Stripe return, and general fit-and-finish of a web page inside a native shell — safe-area insets, keyboard behavior on the checkout form, etc.)
+
+| Entry point | Status | Notes |
+|---|---|---|
+| Owner More → Swag Shop / Fundraising / Sponsorships | Not reviewed | Points at the owner-management frontend sections |
+| Coach More → Swag Shop | Not reviewed | Points at the buyer/personalization/checkout order-flow route, not owner management |
+| Parent More → Swag Shop | Not reviewed | Same buyer-flow route as Coach |
+| **Help Center + Support ticketing** | **Missing entirely, not even WebView-embedded** | Real and product-complete on web (including this session's new attachment/embed richness, Track 4) — required for full parity, currently zero mobile presence of any kind |
+| **Action Center** | **Missing entirely** | Cross-cutting task aggregation, exists for every persona on web |
+
+### Imagery / assets
+
+| Item | Status | Notes |
+|---|---|---|
+| Splash screen + onboarding illustrations | Not reviewed | Real founder-supplied art (ADR-107), replacing earlier icon/color-block placeholder |
+| App icon (Android) | Not reviewed | Generated from `frontend/public/favicon.svg`, verified by compositing onto a visible backdrop |
+| App icon (iOS, Icon Composer bundle) | **Could not be visually verified during the build** | No available tool renders the newer Xcode icon format — flagged as needing a real Xcode/iOS check before trusting it |
+| Team/org logos, profile photos (native screens) | Not reviewed | Confirm these render via the same signed-URL pattern web uses, and that a missing/broken image degrades gracefully rather than showing a broken-image icon |
+| Household media thumbnails | N/A | Not a mobile gap specifically — web itself has no thumbnail/frame-extraction pipeline either (founder decision, Track 5); once household media reaches mobile it should match web's "full-size image, generic video badge" approach, not invent thumbnails mobile-only |
+
 ## Cross-persona / multi-step flows worth walking end-to-end
 
 These span several of the pages above — worth a dedicated pass rather than only checking each page in isolation.
@@ -210,7 +301,8 @@ These span several of the pages above — worth a dedicated pass rather than onl
 | Help article creation → **attach image/video/PDF → insert embed → publish → public view renders it** | Not reviewed | New this batch (Track 4) — walk the full author-to-reader loop, not just the editor |
 | Support case submission → Platform Admin triage → resolution email | Not reviewed | §15 journey #17 |
 | Guardian e-sign waiver (Phase 31 eligibility) | Not reviewed | |
-| Mobile app parity spot-check | Not reviewed | Not a route in this table (native app, not a web route) — worth at least a light pass per [[rally26-mobile-web-parity-gap-analysis]] to catch anything that drifted since that analysis |
+| Mobile: sign in → each persona's real screens → WebView-embedded Swag Shop/Fundraising/Sponsorships checkout | Not reviewed | Walk the injected-session WebView auth end to end on a real device/emulator, not just confirm the screens render |
+| Mobile parity punch list: household media, Help Center, Action Center, owner Documents/event-edit/team-messaging, Parent SafeSport controls | **Not started** | See the Mobile section above and [[rally26-mobile-full-parity-decision]] — these are now required work, not optional, per the founder's 2026-08-13 decision |
 
 ---
 
