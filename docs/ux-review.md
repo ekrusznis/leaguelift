@@ -1,16 +1,29 @@
 # Rally26 full-site UX/sales review
 
-**Status:** Not started (inventory built 2026-08-13)
+**Status:** Not started (inventory built 2026-08-13; expanded with real per-feature filter/list/action detail 2026-08-13)
 **Requested by:** Founder, after the Stripe-fee/reorder/sync-redesign/household-media/Help-Center batch
-**Deliverable shape:** This document. A page/flow inventory (below) walked in-browser, top to bottom, by a reviewer acting as a sales-and-UX engineer — not a code reviewer. Findings get logged inline in the **Notes** column as they're found; this doc is not necessarily fixed inline during the pass itself (fixes get scoped and prioritized afterward).
+**Deliverable shape:** This document. A page/flow inventory walked in-browser, top to bottom, by a reviewer acting as a sales-and-UX engineer — not a code reviewer. Every page row below now carries the *real, currently-built* filters/sort/bulk-actions/columns/empty-state for that page (gathered by reading the actual components, not guessed), so a reviewer checks the page against its own real behavior, not a blind wishlist. Findings get logged inline in the **Notes** column as they're found; this doc is not necessarily fixed inline during the pass itself (fixes get scoped and prioritized afterward).
 
 ## Why
 
 The product has real depth now — payments, fundraising, Swag Shop, sponsorships, eligibility/waivers, a platform admin console, a mobile app — built incrementally across many phases, each correct in isolation. This pass checks whether it *feels* like one cohesive product: consistent placement, clear actions, plain language, working links, and a UI that doesn't feel like it was assembled feature-by-feature.
 
+## Cross-cutting findings from the inventory pass (2026-08-13, before any live browsing)
+
+These emerged independently, by the same pattern, across every feature domain researched — not isolated to one page. Worth the founder's attention as product-level decisions, not per-page nitpicks.
+
+1. **No free-text search box exists almost anywhere in the app.** Confirmed absent on: fee templates, collections, orders, campaigns/contributions, sponsorship packages, disputes, households, teams, tournaments, eligibility requirements, organization documents, correction reviews, offline financial records, financial corrections, reconciliation. The only pages with real text search are the **Platform Admin console** (organizations/users/duplicates/swag-shop/payments/roster/help-articles/support-cases all have one) and **Audit History** (personal + platform). Every organization/household-facing list is filter-dropdown-at-best or entirely unfiltered. Worth an explicit product decision: is this acceptable at pilot scale (few dozen rows per org) with search added later, or is it a real gap today?
+2. **No bulk-select/bulk-action UI exists anywhere except two places**: the household media "Release publicly" multi-select (Track 5, this session), and the multi-recipient picker when starting a family conversation in Messages. Every other action (waive, cancel, verify, approve, reject, archive, publish, refund) is single-row only, everywhere in the app.
+3. **No sort control exists anywhere except Audit History** (Date/Action/Result × Ascending/Descending) — every other list renders in whatever order the API returns, with no user control.
+4. **Pagination is inconsistent and often invisible.** Several lists hardcode a large page size (e.g. Collections at 100, Help Articles/Support Cases at 100) with no visible pager despite the underlying API being paginated (`totalElements` exists in the response shape); most other lists just render `data.items` directly with no pagination concept surfaced in the UI at all. Worth checking whether any real organization's data volume would actually exceed these hardcoded sizes.
+5. **Money formatting is inconsistent under the hood** — ad hoc per-file `formatAmount`/`formatMoney`/`humanize` helpers alongside a shared `formatMoneyMinorUnits`, rather than one component everywhere. Not user-visible as a bug unless two pages actually render the same amount differently; worth a quick cross-check.
+6. **Dead code found**: `frontend/src/features/reporting/PlatformOrganizationsPage.tsx` is a second, simpler "Organizations" table that is **not wired into `AppRoutes.tsx`** — superseded by `frontend/src/features/platformAdmin/PlatformOrganizationsPage.tsx`. Not a UX issue (nothing renders it), but worth deleting rather than leaving as confusing dead code.
+7. **Missing empty-state messaging found on two platform-admin pages**: `PlatformHelpArticlesPage` and `PlatformSupportCasesPage` render nothing (not even a "no results" message) when a search/filter returns zero rows — every other list in the app has real empty-state copy.
+8. **A real gap, not just unreviewed**: there is no page listing an organization's *already-active* staff members with their roles and a remove action — "Members & Invitations" (`InvitationsPanel`) only manages pending invitations; existing member/role changes only happen through the separate, per-team/tournament `RoleAssignmentsPanel`, with no single roster view.
+
 ## What "good" looks like — review criteria
 
-For every page/flow in the inventory below, check:
+For every page/flow in the inventory below, check the criteria below **and** the concrete filter/list/action detail now recorded in that row's Notes:
 
 1. **Placement & hierarchy** — is the primary action the most visually prominent thing on the page? Is related content grouped sensibly? Does the page match the layout conventions of sibling pages in the same persona?
 2. **Actions** — do all buttons/links do what their label promises? Are destructive actions (cancel, archive, remove, refund) appropriately distinguished from routine ones? Are disabled states explained (not just greyed out with no reason)?
@@ -67,10 +80,10 @@ Use a **Status** value per row: `Not reviewed` (default) / `Clean` (checked, not
 |---|---|---|---|
 | Dashboard (persona-specific) | `/app` | Not reviewed | See per-persona dashboard sections below — same route, different content per context |
 | Owner onboarding wizard | `/app/onboarding/:step?` | Not reviewed | Multi-step; check step-back/resume behavior |
-| Action Center | `/app/action-center` | Not reviewed | |
-| Announcements | `/app/announcements` | Not reviewed | |
-| Messages | `/app/messages` | Not reviewed | |
-| Audit History | `/app/history` | Not reviewed | |
+| Action Center | `/app/action-center` | Not reviewed | No filters/sort/bulk. Two summary tiles (Open items, High or urgent). Rows: priority badge (Urgent/High/Action needed/Review), title, description, relevant date. Per-row: single "Open" link to the source record. Empty: "You are caught up." |
+| Announcements | `/app/announcements` | Not reviewed | **Inbox** (no filter/sort/bulk): New badge, scope, published date, title, body; per-row "Mark read." Empty: "No announcements." **Manage (staff only)**: filters = Communication scope select, Status select (All/Draft/Published/Archived); per-row Edit (draft)/Publish (draft)/Archive. Composer: title/body/audience select/email+SMS checkboxes. |
+| Messages | `/app/messages` | Not reviewed | **Inbox** (split-pane, no filter/sort/bulk): thread title, unread badge, thread type, scope, last-message time, 2-line preview; per-message Mark read/Report, reply form. **Start conversation**: recipient picker has Select all/Clear all + checkboxes (the only other real bulk-select in the app besides household media). **Manage (staff)**: filters = Scope select, Status select (All/Open/Archived); per-row Archive/Send update (broadcasts). |
+| Audit History | `/app/history` | Not reviewed | The richest filter set in the app: From/Through date, Action (free text), Result select, Keyword, plus permission-gated User/Team ID/Organization ID fields — staged as a draft, applied only on "Apply." Sort: Date/Action/Result × Ascending/Descending (the **only** page in the app with a real sort control). Cursor-based Previous/Next, 50/page. Read-only rows, no per-row actions. Empty: "No history matches these filters." |
 | Personal Integrations | `/app/integrations` | Not reviewed | |
 | Settings | `/app/settings` | Not reviewed | Appearance, notification preferences |
 | Help Center (authenticated) | `/app/help`, `/app/help/support`, `/app/help/:slug` | Not reviewed | |
@@ -78,13 +91,13 @@ Use a **Status** value per row: `Not reviewed` (default) / `Clean` (checked, not
 | Organization detail (context switch) | `/app/organizations/:organizationId` | Not reviewed | |
 | Event detail | `/app/organizations/:organizationId/events/:eventId` | Not reviewed | Include the new "update available from source" banner/dialog (Track 3) on a source-linked event |
 | Team events | `/app/organizations/:organizationId/teams/:teamId/events` | Not reviewed | |
-| Team roster | `/app/organizations/:organizationId/teams/:teamId/roster` | Not reviewed | |
+| Team roster | `/app/organizations/:organizationId/teams/:teamId/roster` | Not reviewed | See Coach section below — same `TeamRosterPage` component |
 | Tournament events | `/app/organizations/:organizationId/tournaments/:tournamentId/events` | Not reviewed | |
 | Participant events (athlete schedule) | `/app/organizations/:organizationId/participants/:participantId/events` | Not reviewed | |
 | Organization billing | `/app/organizations/:organizationId/billing` | Not reviewed | |
-| Collections | `/app/organizations/:organizationId/collections` | Not reviewed | |
-| Disputes | `/app/organizations/:organizationId/disputes` | Not reviewed | |
-| Swag Shop order flow | `/app/organizations/:organizationId/swag-shop/order` | Not reviewed | Include Reorder and the vendor-unavailable dialog (Track 2) |
+| Collections | `/app/organizations/:organizationId/collections` | Not reviewed | Filters: Status select, "Overdue only" checkbox — no text search. No sort, no bulk. Real `<table>`: Household (link)/Participant/Description/Original/Paid/Adjusted/Balance/Due/Status. Only action: **Export CSV** (respects filters). Empty: "Nothing to collect." Flag: hardcoded `size: 100`, no visible pager. |
+| Disputes | `/app/organizations/:organizationId/disputes` | Not reviewed | No filters/sort/bulk. Real `<table>`: Source (contribution/order/sponsorship/fee)/Amount/Reason/Opened/Evidence due/Status. Explicitly read-only — evidence handled in the Stripe Dashboard, not here. Empty: "No disputes." Flag: unlike every other financial list, no link back to the underlying source record from a dispute row. |
+| Swag Shop order flow | `/app/organizations/:organizationId/swag-shop/order` | Not reviewed | Buyer-facing checkout/reorder flow (distinct from the org-facing Orders management under the Swag Shop organization section, below). Include Reorder and the vendor-unavailable dialog (Track 2). |
 
 ## Owner / Director (ORGANIZATION context) — organization sections
 
@@ -94,23 +107,23 @@ Route shape: `/app/organizations/:organizationId/:section`
 |---|---|---|
 | Overview | Not reviewed | |
 | Onboarding (checklist) | Not reviewed | |
-| Corrections | Not reviewed | Profile correction request review |
-| Teams | Not reviewed | |
-| Tournaments | Not reviewed | |
-| Households & Athletes | Not reviewed | |
-| Fees & Payments | Not reviewed | |
-| Fundraising | Not reviewed | |
-| Swag Shop | Not reviewed | |
-| Financial operations | Not reviewed | |
-| Sponsorships | Not reviewed | |
-| Events | Not reviewed | |
-| Reports | Not reviewed | Includes the new Stripe-fee-visibility metrics (Track 1) |
-| Documents | Not reviewed | |
-| Eligibility | Not reviewed | Waivers/eligibility evidence (Phase 31) |
-| Members | Not reviewed | |
+| Corrections | Not reviewed | `OrganizationCorrectionReviewPanel`. Filter: Status select (Pending default/Approved/Rejected/Withdrawn/All) — no text search, no sort, no bulk. Rows: target+field, current→requested value, reason, requester, timestamp, status. Per-row: Reject (disabled until note ≥3 chars), Approve (note optional) — both PENDING-only. Empty: "No matching correction requests." |
+| Teams | Not reviewed | `TeamList`. No filter/search/sort/bulk. Rows: name/sport/season/age group/gender/level. Per-row: Schedule, Roster, Branding (inline panel), Manage access, Timezone (inline editor), Colors (inline panel), Archive. Empty: "No teams yet." |
+| Tournaments | Not reviewed | `TournamentList`. No filter/search/sort/bulk. Rows: name/sport/date range/location. Per-row: Schedule, Branding, Manage access, Timezone, Archive — **no Roster action** (unlike Teams). Empty: "No tournaments yet." |
+| Households & Athletes | Not reviewed | `HouseholdList`. No filter/search/sort/bulk. Rows: display name + contact email (phone captured but not shown). Per-row: "View" link only. Empty: "No households yet." |
+| Fees & Payments | Not reviewed | `FeeTemplateList` (managers) or read-only `OrganizationReportsPanel` (report-only viewers). No filter/search/sort/bulk. Rows: template name, amount, description. Per-row: Archive (no confirm dialog). Empty: "No fee templates yet." Links out to Disputes and Collections. |
+| Fundraising | Not reviewed | `CampaignList` + nested `ContributionList`. No filter/search/sort/bulk on either. Campaign rows: name/status/raised-of-goal/slug; per-row View/Hide contributions, Send launch notice (ACTIVE), Publish (DRAFT). Contribution rows: supporter name (or Anonymous), offline/refunded badges, amount; per-row Preview refund (CONFIRMED + Stripe only). Empty: "No campaigns yet" / "No contributions yet." |
+| Swag Shop | Not reviewed | `StoreList` (no filter/sort/bulk; rows: name/status/slug; actions: View/Activate/Manage products) → `OrderList` nested per store (no filter/sort/bulk; rows: supporter, payment-source badge, refunded badge, fulfillment status; actions: Manage fulfillment, Preview refund). Empty: "No confirmed orders yet." |
+| Financial operations | Not reviewed | Three stacked panels, none with text search: **Offline records** (filters: Verification status, Record type; per-row Verify; empty "No offline financial records"), **Corrections** (no filter; form-driven Preview→Confirm refund/reversal flow; empty "No financial corrections"), **Reconciliation** (no filter; "Run reconciliation" button; per-issue "Review record" link; empty "No reconciliation run yet" / "No exceptions found"). |
+| Sponsorships | Not reviewed | `SponsorshipPackageList`. No filter/search/sort/bulk on the package list. Rows: name/status/Exclusive/Sold out/price/confirmed-of-max. Per-row: Publish, Archive, Share (QR + link), Manage sponsors (nested panel: sponsor rows with review-status badge, per-row Edit contact/Preview refund) + org-wide "Review pending sponsorships" queue (Approve / Reject & refund via `window.confirm`). Empty: "No sponsorship packages yet." |
+| Events | Not reviewed | Same `EventListPanel` component as Family Schedule (below), org-wide scope — mutable here (Create/manage templates available), unlike the household read-only view. |
+| Reports | Not reviewed | `OrganizationReportsPanel`. Filter: From/To date range only. No sort/bulk. 4 metric tiles + 4 breakdown tables (revenue by source/team, campaign performance, product performance). Only action: **Export revenue CSV**. Includes the new Stripe-fee-visibility metrics (Track 1) on the Platform side — confirm whether the org-facing report should surface any of this too. |
+| Documents | Not reviewed | `OrganizationDocumentsPanel`. No filter/search/sort/bulk (though "Send to every household" acts like a broadcast on upload). Rows: title (link) + file size. Per-row: Remove. Empty: "No documents yet." |
+| Eligibility | Not reviewed | `EligibilityRequirementList`. No filter/search/sort/bulk — list is implicitly ACTIVE-only (no way to view archived/expired requirements). Rows: title/version/mode/sport/season/team/effective date. Per-row: New version (inline form, publishes rather than overwrites), Archive. Empty: "No eligibility requirements yet." |
+| Members | Not reviewed | `InvitationsPanel` — **manages pending invitations only**, no filter/search/sort/bulk. Rows: invitee email + role. Per-row: Revoke (pending only). Empty: "No pending invitations." **Flag**: no page lists already-active members with a remove/role-change action (see cross-cutting finding #8) — existing-member role changes only happen per-team/tournament via `RoleAssignmentsPanel`. |
 | Organization Integrations | Not reviewed | |
 | Settings | Not reviewed | |
-| Organization dashboard (Owner nav item) | Not reviewed | `OwnerDashboard.tsx` — the `/app` landing content for this persona |
+| Organization dashboard (Owner nav item) | Not reviewed | `OwnerDashboard.tsx`. Cards, none with their own filter/sort/bulk (all deep-link to the real filterable page): Organization Summary, Financial Overview (some fields flagged demo data), **Team Performance table** (Team/Sport, Participants, Fundraising progress, Status — no sort/filter), Upcoming Events, Recent Activity, Reports Snapshot, Quick Actions tiles. Header: Collections & Export / Invite Member / Create Team. |
 
 ## Parent / Guardian (HOUSEHOLD context)
 
@@ -118,20 +131,20 @@ Route shape: `/app/organizations/:organizationId/households/:householdId/:sectio
 
 | Section | Status | Notes |
 |---|---|---|
-| Household Profile | Not reviewed | |
-| My Athletes (participants) | Not reviewed | |
-| Fees & Payments | Not reviewed | |
-| Family Schedule (events) | Not reviewed | |
-| Documents | Not reviewed | |
-| Photos & Videos (media) | Not reviewed | **New this batch (Track 5)** — upload flow, multi-select, "Release publicly" dialog copy and repeat-every-time behavior |
-| Correction Requests | Not reviewed | |
-| Parent dashboard | Not reviewed | `ParentDashboard.tsx` — the `/app` landing content, including the `#parent-fundraising` section |
+| Household Profile | Not reviewed | `AdultsPanel` (default section). No filter/search/sort/bulk. Per-row: Request correction, Remove. Page action: Add adult. Empty: "No adults on record." |
+| My Athletes (participants) | Not reviewed | `ParticipantsPanel`. No filter/search/sort/bulk. Rows: photo, name, worst eligibility-clearance pill, DOB. Per-row: Request correction, Teams (assign/remove via select + chips), Eligibility (expand panel). Page action: Add participant. Empty: "No participants yet." |
+| Fees & Payments | Not reviewed | `FeeAssignmentsPanel` (household-scoped). No filter/search/sort/bulk. Rows: description, balance/original, due date, participant, status badge. Per-row: Pay online (balance > 0), Send reminder (manager), Update status select → Waive/Cancel (manager), Details (expands payment/adjustment history each with a per-item Void + reason prompt). Page: Add fee (manager, template-driven), running balance, "Other ways to pay." Empty: "No fees assigned." |
+| Family Schedule (events) | Not reviewed | `EventListPanel`, household scope — **read-only for everyone** here (no Create/manage-templates actions at this scope, unlike the org-wide Events section). Sort: client-side by start time only, not user-controllable. Rows: title, status pill, "Imported" badge, date/time, arrival, venue. Per-row: Add to calendar (.ics), View details. Empty: "No events yet." |
+| Documents | Not reviewed | `HouseholdDocumentsPanel`. No filter/search/sort/bulk. Rows: title (link) + size. Per-row: Acknowledge (guardian), Remind household (staff), Remove (manager). Page: Add document (manager). Empty: "No documents." |
+| Photos & Videos (media) | Not reviewed | `HouseholdMediaPanel`. **New this batch (Track 5)**. Bulk: Select all/Clear all + "Release publicly (N)" — the only other real bulk-action in the app besides the Messages recipient picker — opens a confirmation `Modal` before publicizing. Grid cards: checkbox, visibility label, image thumbnail or generic "🎥 Video" placeholder (no real thumbnail/frame extraction), file size. Per-card: Remove. Empty: "No photos or videos yet." Check the "Release publicly" dialog copy and that it really re-shows every time, not just once. |
+| Correction Requests | Not reviewed | `HouseholdCorrectionRequestsPanel`. No filter/search/sort/bulk. Rows: target+field, current→requested diff, reason, status. Per-row: Withdraw (own PENDING requests only, matched by email). Empty: "No correction requests." |
+| Parent dashboard | Not reviewed | `ParentDashboard.tsx`. Cards: My/linked Athletes, Family Schedule, Outstanding Balance, Family Credits, Active Fundraisers (each with a "Get my sharing link" toggle → `AttributionLinkPanel`), Recent Orders, **Documents (embeds the full `HouseholdDocumentsPanel` with Acknowledge — a real list, not just a summary card)**. Header: View Fees / View Fundraisers. Includes the `#parent-fundraising` section. |
 
 ## Athlete (ATHLETE context)
 
 | Page/section | Status | Notes |
 |---|---|---|
-| Athlete dashboard | Not reviewed | `AthleteDashboard.tsx` — `/app` landing content |
+| Athlete dashboard | Not reviewed | `AthleteDashboard.tsx` — **entirely demo/placeholder data per the file's own comment** (no real participant-login concept exists yet). Cards: Next Event, My Teams, This Week, Recent History (win/loss pill), Guardians. Worth confirming with the founder whether this is expected to stay placeholder for the review pass or whether real wiring is now expected. |
 | Schedule | Not reviewed | `/app/organizations/:organizationId/participants/:participantId/events` |
 | My Teams (`#athlete-teams`) | Not reviewed | Dashboard section, not a separate route |
 | Profile & Guardians (`#athlete-profile`) | Not reviewed | Dashboard section |
@@ -140,11 +153,11 @@ Route shape: `/app/organizations/:organizationId/households/:householdId/:sectio
 
 | Page/section | Status | Notes |
 |---|---|---|
-| Coach dashboard | Not reviewed | `CoachDashboard.tsx` — `/app` landing content |
+| Coach dashboard | Not reviewed | `CoachDashboard.tsx`. Team-selector `<select>` in the header (only if >1 team) drives every card. Cards: My Teams, Team Schedule, Roster Summary (attendance% flagged demo data), Team Page Status, Fundraising Progress (raised amount flagged demo data). |
 | My Teams (`#coach-teams`) | Not reviewed | Dashboard section |
 | Schedule | Not reviewed | `/app/organizations/:organizationId/teams/:teamId/events` |
 | Roster Summary (`#coach-roster`) | Not reviewed | Dashboard section |
-| Team Roster (full page) | Not reviewed | `/app/organizations/:organizationId/teams/:teamId/roster` |
+| Team Roster (full page) | Not reviewed | `TeamRosterPage`. Filter: single "Show ineligible only" pill toggle (only if `TEAM_ELIGIBILITY_VIEW`) — no text search, no sort, no bulk. Rows: name, eligibility pill. **No per-row action or link at all** — fully read-only, no link even to the participant's own profile. Two empty-state variants depending on the toggle. |
 | Team Page editor (`#coach-team-page`) | Not reviewed | Dashboard section — branding/publish |
 | Fundraising (`#coach-fundraising`) | Not reviewed | Dashboard section |
 | Swag Shop order flow | Not reviewed | Same route as Owner/Parent's, team-scoped |
@@ -153,32 +166,32 @@ Route shape: `/app/organizations/:organizationId/households/:householdId/:sectio
 
 | Page/section | Status | Notes |
 |---|---|---|
-| Tournament dashboard | Not reviewed | `TournamentDashboard.tsx` — `/app` landing content. Note: no Messages nav item for this persona by design — confirm that doesn't read as a bug |
+| Tournament dashboard | Not reviewed | `TournamentDashboard.tsx` — deliberately minimal (2 cards only: Tournament detail, Tournament Page Status), per the file's own comment that no `tournament_team` join exists yet. Note: no Messages nav item for this persona by design — confirm that doesn't read as a bug |
 | Schedule & Events | Not reviewed | `/app/organizations/:organizationId/tournaments/:tournamentId/events` |
 | Tournament Page (`#tournament-page`) | Not reviewed | Dashboard section |
 | Settings (`#tournament-summary`) | Not reviewed | Dashboard section |
 
 ## Platform Admin (PLATFORM_ADMIN context)
 
-Route shape: `/app/platform/:section`
+Route shape: `/app/platform/:section`. This is the one persona where filtering is consistently real — every page below except the console drill-down and Reports has at least a status filter, and most also have text search.
 
 | Section | Route | Status | Notes |
 |---|---|---|---|
-| Platform dashboard | `/app` | Not reviewed | `PlatformAdminDashboard.tsx` |
-| Organizations | `organizations` | Not reviewed | |
-| Organization console (single org) | `organizations/:organizationId` | Not reviewed | Support-session entry point |
-| Subscriptions | `subscriptions` | Not reviewed | |
-| Users | `users` | Not reviewed | |
-| Data Integrity (duplicates) | `data-integrity/duplicates` | Not reviewed | |
-| Integration Operations | `operations` | Not reviewed | |
-| Reports | `reports` | Not reviewed | Cross-org financial reports, Stripe-fee margin (Track 1) |
-| Audit | `audit` | Not reviewed | |
-| Support Sessions | `support-sessions` | Not reviewed | Reasoned-access entry/exit flow |
-| Help Articles (authoring) | `help-articles` | Not reviewed | **New this batch (Track 4)** — attachment picker (image/GIF/video/PDF), insert-embed flow, Markdown body editor |
-| Support Cases | `support-cases` | Not reviewed | |
-| Swag Shop (cross-org) | `swag-shop` | Not reviewed | |
-| Payments (cross-org) | `payments` | Not reviewed | Refund/void actions |
-| Athletes & Coaches (roster) | `roster` | Not reviewed | Table/card toggle |
+| Platform dashboard | `/app` | Not reviewed | `PlatformAdminDashboard.tsx`. 7 KPI tiles; **Organizations table** (Organization/Owner/Status/Members/Teams/Gross volume, fixed to first 5, no filter/sort in the widget); Organization Snapshot (for the org under active support access); Recent Audit Activity (top 5); Support Access card; Operational Queue Overview; Platform Health (4 tiles). |
+| Organizations | `organizations` | Not reviewed | Text search (name/slug/contact email) + Status select. No sort, no bulk. Columns: Organization/Status/Members/Teams/Households/Athletes. Per-row: "Open console." Empty: "No organizations match these filters." |
+| Organization console (single org) | `organizations/:organizationId` | Not reviewed | Not a list — 8 metric tiles, contact detail, "Start support access" form (reason, min 10 chars), then 13 module tiles that stay disabled until support access is active. Support-session entry point. |
+| Subscriptions | `subscriptions` | Not reviewed | Text search (org name/slug) + Subscription status select. No sort/bulk. Columns: Organization/Plan/Status (+cancel-at-period-end flag)/Recovery/Stripe customer+subscription links/last failure-success. Per-row: "Open org" only — explicitly read-only billing visibility. Empty: "No organizations match these filters." |
+| Users | `users` | Not reviewed | Text search (name/email) + Status select. No sort/bulk. Columns: User/Status/Platform role/Organizations & roles/Created. No direct per-user action button (only inline org links). Empty: "No users match these filters." |
+| Data Integrity (duplicates) | `data-integrity/duplicates` | Not reviewed | Master/detail, not a plain table. Text search (email/phone) on candidate groups. Detail: identity cards with Source/Surviving-target toggle, "Build resolution preview," then "Resolve duplicate identity" gated on active support session + reason (10-500 chars) + typed confirmation of the target's email. Empty: "No duplicate keys match this search" / "Select a candidate group to review it." |
+| Integration Operations | `operations` | Not reviewed | Dashboard + one real table (no filter/sort/bulk on the table itself): 4 metric tiles, provider readiness/contract-hardening cards, "Recent provider runs" list (first 10, non-interactive), then an "Outbox exception queue" table (Event/Status/Organization/Attempts/Last error) with a per-row **Reprocess** button. Empty: "No failed or dead-letter events" / "No integration sync runs recorded." |
+| Reports | `reports` | Not reviewed | Filter: From/To date range only. No sort/bulk. 10 metric tiles only, no tables/rows — includes the new Stripe-fee margin figures (Track 1). **Flag**: unlike the org-facing report, there is no CSV export here. No "no data" empty-state treatment for an all-zero period (falls back to a generic error/retry state on failure only). |
+| Audit | `audit` | Not reviewed | Thin wrapper around the same `AuditHistoryPage` as the personal Audit History above — same rich filter/sort set, plus platform-wide scope. |
+| Support Sessions | `support-sessions` | Not reviewed | Filter: Status select only (All/Active/Ended/Expired) — no text search. No sort/bulk. Columns: Employee/Organization (link)/Reason/Status/Started/Expires-ended. Empty: "No support sessions match this status." |
+| Help Articles (authoring) | `help-articles` | Not reviewed | **New this batch (Track 4)** — attachment picker (image/GIF/video/PDF), insert-embed flow, Markdown body editor. List: single free-text search (title/content), fixed page size 100, no visible category/audience filter. **Flag**: no empty-state message for zero search results (see cross-cutting finding #7). Actions: New article, Save draft, Publish, Archive. |
+| Support Cases | `support-cases` | Not reviewed | Text search + Status select, fixed page size 100. No sort/bulk. Card layout (not a table): category/subject/requester/org/description, then per-case editable Status/Priority/Assigned-to/Resolution note. Actions: Save case, Send email (one-way composer, no reply thread). **Flag**: no empty-state message for zero results (see cross-cutting finding #7). |
+| Swag Shop (cross-org) | `swag-shop` | Not reviewed | Text search (product/store/org) + Status select. No sort/bulk. Columns: Organization/Team-Store/Product/Status/Variants/Logo ready. Per-row: "Open organization" only — explicitly read-only, status/delete changes must happen inside the org's own Swag Shop section. Empty: "No Swag Shop products match these filters." |
+| Payments (cross-org) | `payments` | Not reviewed | Refund/void actions. Text search (payer/org/team) + Type select + Status select + From/To date. No sort/bulk. Columns: Organization/Team/Type/Payer/Amount/Status/Date. Per-row: Refund/Void (label depends on type, `window.confirm` guard, requires active support session for that org) + "Open organization." Empty: "No payments match these filters." |
+| Athletes & Coaches (roster) | `roster` | Not reviewed | Table/card toggle. Person-type tabs (Athletes/Coaches) + text search + Eligibility status select (athletes only). No sort/bulk. Athlete columns: name+DOB/Organization/Household/Teams/Eligibility. Coach columns: name+email/Organization/Team/Role. Per-row: "Open organization" only, explicitly read-only. Empty: "No {athletes|coaches} match these filters." |
 
 ## Cross-persona / multi-step flows worth walking end-to-end
 
@@ -203,4 +216,4 @@ These span several of the pages above — worth a dedicated pass rather than onl
 
 ## After the pass
 
-Roll findings up into a short punch list (blocking vs. cosmetic) rather than leaving them scattered across this table — that's the actual deliverable for prioritization. Do not fix in-line during the browsing pass itself unless a finding is trivial and directly in the way of continuing the review; log everything else here first (see [[feedback-qa-pass-workflow]] for the established convention: fix only blockers live, log the rest).
+Roll findings up into a short punch list (blocking vs. cosmetic) rather than leaving them scattered across this table — that's the actual deliverable for prioritization. Do not fix in-line during the browsing pass itself unless a finding is trivial and directly in the way of continuing the review; log everything else here first (see [[feedback-qa-pass-workflow]] for the established convention: fix only blockers live, log the rest). The 8 cross-cutting findings above should feed directly into that punch list as product-level decisions, independent of anything the live browsing pass finds page-by-page.
