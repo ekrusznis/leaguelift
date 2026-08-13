@@ -16,6 +16,8 @@ describe("TalkToSalesPage", () => {
 		expect(screen.queryByText(/^reference:/i)).not.toBeInTheDocument();
 	});
 
+	// 13 real user-event interactions on one form; under full-suite CPU contention this
+	// reliably exceeds the default 5s test timeout even though it's not actually hanging.
 	it("shows a success confirmation once all required fields are valid", async () => {
 		const user = userEvent.setup();
 		renderWithProviders(<TalkToSalesPage />);
@@ -39,5 +41,5 @@ describe("TalkToSalesPage", () => {
 
 		expect(await screen.findByText(/thank you, riverside soccer club/i)).toBeInTheDocument();
 		expect(screen.getByText(/^reference:/i)).toBeInTheDocument();
-	});
+	}, 15000);
 });

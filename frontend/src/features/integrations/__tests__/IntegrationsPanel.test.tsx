@@ -7,6 +7,28 @@ function response(body: unknown) {
 	return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } }));
 }
 
+// IntegrationsPanel always renders QuickBooksScaffoldPanel + SportsDataScaffoldPanel alongside
+// whatever the test itself cares about, so every stubbed fetch needs well-formed fallbacks for
+// their overview endpoints or those components throw during render before any assertion runs.
+function defaultFetchStub(url: string) {
+	if (url.includes("/integrations/quickbooks/mapping-rules")) return response([]);
+	if (url.includes("/integrations/quickbooks")) {
+		return response({
+			catalog: { provider: "QUICKBOOKS_ONLINE", displayName: "QuickBooks Online", category: "ACCOUNTING", ownerType: "ORGANIZATION", authMode: "OAUTH2", supportedAuthModes: ["OAUTH2"], readiness: "NOT_CONFIGURED", adapterMode: "OAUTH_SCAFFOLD", description: "", activationRequirement: "", defaultScopes: [], stub: false, connection: null },
+			setting: null,
+			mappings: [],
+			recentBatches: [],
+			activationReadiness: { stage: "NOT_CONFIGURED", activationAllowed: false, credentialedProviderVerified: false, providerWritesEnabled: false, gates: [] },
+			providerWritesEnabled: false,
+			accountingReviewRequired: false,
+		});
+	}
+	if (url.includes("/integrations/sports-data")) {
+		return response({ providers: [], recentRuns: [], directProviderImportEnabled: false });
+	}
+	return response([]);
+}
+
 describe("IntegrationsPanel", () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
@@ -21,7 +43,7 @@ describe("IntegrationsPanel", () => {
 					{ provider: "TEAMSNAP", displayName: "TeamSnap", category: "SPORTS_DATA", ownerType: "ORGANIZATION", authMode: "FILE_IMPORT", supportedAuthModes: ["FILE_IMPORT"], readiness: "PARTNER_PENDING", adapterMode: "PARTNER_PENDING", description: "Partner pending", activationRequirement: "Requires official access.", defaultScopes: [], stub: false, connection: null },
 				]);
 			}
-			return response([]);
+			return defaultFetchStub(url);
 		}));
 
 		renderWithProviders(<IntegrationsPanel organizationId="org-1" />);
@@ -39,7 +61,7 @@ describe("IntegrationsPanel", () => {
 			if (url.includes("/event-source-connections")) {
 				return response([{ id: "conn-1", provider: "ICS_FEED", label: "Varsity Soccer Schedule", feedUrl: "https://example.com/feed.ics", timezone: "America/New_York", teamId: null, status: "ACTIVE", lastSyncedAt: null, lastSyncStatus: null, lastSyncError: null, createdAt: new Date().toISOString() }]);
 			}
-			return response([]);
+			return defaultFetchStub(url);
 		}));
 
 		renderWithProviders(<IntegrationsPanel organizationId="org-1" />);

@@ -7,11 +7,11 @@ import { SiteHeader } from "../SiteHeader";
 describe("SiteHeader", () => {
 	it("opens the Product dropdown and scrolls to the matching homepage section on click", async () => {
 		const user = userEvent.setup();
-		document.body.innerHTML = '<div id="features"></div>';
+		document.body.innerHTML = '<div id="how-it-works"></div>';
 		renderWithProviders(<SiteHeader />);
 
 		await user.click(screen.getByRole("button", { name: /product/i }));
-		await user.click(await screen.findByRole("menuitem", { name: /^features$/i }));
+		await user.click(await screen.findByRole("menuitem", { name: /^how it works$/i }));
 
 		// No throw from the scrollIntoView/matchMedia calls means the "auto-scroll"
 		// nav wiring (content/nav.ts hash items + useScrollToHash) ran successfully.

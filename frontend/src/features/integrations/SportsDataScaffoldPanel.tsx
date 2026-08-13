@@ -21,7 +21,7 @@ export function SportsDataScaffoldPanel({ organizationId }: { organizationId: st
 			<h3 id="sports-data-heading" className="font-heading text-lg font-semibold text-navy-900 dark:text-[#f8fafc]">Sports-data provider readiness</h3>
 			<p className="mt-1 text-sm text-slate-500 dark:text-[#cbd5e1]">Provider previews retain external identity and never commit records until an official contract and reviewed import are enabled.</p>
 			<div className="mt-4 grid gap-3 md:grid-cols-2">
-				{query.data.providers.map((item) => {
+				{(query.data.providers ?? []).map((item) => {
 					const connected =
 						(item.provider === "SPORTSENGINE" || item.provider === "TEAMSNAP") &&
 						["CONNECTED", "DEGRADED"].includes(item.connection?.status ?? "");

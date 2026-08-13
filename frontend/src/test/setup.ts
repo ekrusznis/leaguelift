@@ -26,3 +26,19 @@ if (!window.matchMedia) {
 			dispatchEvent: () => false,
 		}) as MediaQueryList;
 }
+
+// HomeHeader tracks the active section with a real IntersectionObserver; jsdom has none.
+if (!window.IntersectionObserver) {
+	class MockIntersectionObserver implements IntersectionObserver {
+		readonly root: Element | Document | null = null;
+		readonly rootMargin = "";
+		readonly thresholds: ReadonlyArray<number> = [];
+		observe() {}
+		unobserve() {}
+		disconnect() {}
+		takeRecords(): IntersectionObserverEntry[] {
+			return [];
+		}
+	}
+	window.IntersectionObserver = MockIntersectionObserver as unknown as typeof IntersectionObserver;
+}

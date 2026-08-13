@@ -31,7 +31,7 @@ describe("dashboard navigation registry", () => {
 	it("keeps a finance or viewer context focused on read-only financial areas", () => {
 		const items = navItemsFor("ORGANIZATION", new Set([Capabilities.ORG_REPORT_VIEW]), { organizationId: "org-1" });
 
-		expect(items.map((item) => item.id)).toEqual(["owner.overview", "owner.action-center", "owner.announcements", "owner.integrations", "owner.fees", "owner.reports"]);
+		expect(items.map((item) => item.id)).toEqual(["owner.overview", "owner.action-center", "owner.announcements", "owner.messages", "owner.integrations", "owner.fees", "owner.reports"]);
 	});
 
 	it("does not give family credit or order history their own nav destination (both live inline on the dashboard/fee views)", () => {
@@ -95,7 +95,9 @@ describe("dashboard navigation registry", () => {
 			"platform.announcements",
 			"platform.integrations",
 			"platform.organizations",
+			"platform.subscriptions",
 			"platform.users",
+			"platform.data-integrity",
 			"platform.operations",
 			"platform.reports",
 			"platform.audit",

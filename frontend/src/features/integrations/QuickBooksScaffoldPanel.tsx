@@ -34,8 +34,8 @@ function rankCompatibility(value: string): number {
 
 export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: string }) {
 	const query = useQuickBooksOverview(organizationId);
-	const connectionId = query.data?.catalog.connection?.id ?? null;
-	const providerReadAvailable = ["CONNECTED", "DEGRADED"].includes(query.data?.catalog.connection?.status ?? "");
+	const connectionId = query.data?.catalog?.connection?.id ?? null;
+	const providerReadAvailable = ["CONNECTED", "DEGRADED"].includes(query.data?.catalog?.connection?.status ?? "");
 	const accountsQuery = useOwnerQuickBooksAccounts(organizationId, connectionId, providerReadAvailable);
 	const rulesQuery = useQuickBooksMappingRules(organizationId);
 	const validationQuery = useQuickBooksMappingValidation(organizationId, connectionId, false);
