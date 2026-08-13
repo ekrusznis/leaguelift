@@ -548,6 +548,7 @@ class OrderService(
             auditService.record(null, order.organizationId, "order.confirmed", "order", order.id)
             val items = orderItemRepository.findByOrder(order.id)
             ledgerService.recordConfirmedOrder(order.copy(status = OrderStatus.CONFIRMED), items)
+            ledgerService.recordStripeProcessingFee(order.organizationId, LedgerSourceType.ORDER, order.id, order.currency, stripePaymentIntentId)
             createInitialFulfillment(order.id, order.organizationId, order.storeId)
             val totalMinor = items.sumOf { it.unitPriceMinor * it.quantity }
             if (order.supporterEmail != null) {

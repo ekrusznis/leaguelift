@@ -2,12 +2,14 @@ export const PRICING_FAQ: { question: string; answer: string }[] = [
 	{ question: "Is there a setup fee?", answer: "Ask during signup — setup-fee terms are disclosed before you subscribe." },
 	{
 		question: "What transaction fees apply?",
-		answer: "Applicable transaction, payment-processing, fulfillment, and optional service fees are disclosed before launch.",
+		answer:
+			"A flat 5% fee on dues & fees, fundraising contributions, sponsorships, and Swag Shop sales — the same rate every time, with no hidden per-transaction add-ons.",
 	},
 	{ question: "Who pays fulfillment costs?", answer: "Determined by your organization's chosen workflow; details are disclosed during setup." },
 	{
 		question: "Are payment-processing fees included?",
-		answer: "Payment-processing fees are disclosed separately and are not bundled into the base subscription price.",
+		answer:
+			"Yes. Rally26 absorbs card payment-processing costs itself rather than passing them on — your organization only ever sees the flat monthly price and the flat 5% transaction fee, nothing more.",
 	},
 	{ question: "Can we cancel?", answer: "Cancellation terms are disclosed in your subscription agreement." },
 	{

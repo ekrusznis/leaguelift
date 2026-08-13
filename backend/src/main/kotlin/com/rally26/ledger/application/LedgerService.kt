@@ -7,6 +7,7 @@ import com.rally26.ledger.domain.LedgerDirection
 import com.rally26.ledger.domain.LedgerEntry
 import com.rally26.ledger.domain.LedgerEntryType
 import com.rally26.ledger.domain.LedgerSourceType
+import com.rally26.ledger.infra.StripeBalanceTransactionClient
 import com.rally26.ledger.persistence.LedgerEntryRepository
 import com.rally26.order.domain.Order
 import com.rally26.order.domain.OrderItem
@@ -38,6 +39,7 @@ class LedgerService(
     private val ledgerEntryRepository: LedgerEntryRepository,
     private val platformFeeProperties: PlatformFeeProperties,
     private val payoutProperties: PayoutProperties,
+    private val stripeBalanceTransactionClient: StripeBalanceTransactionClient,
 ) {
     @Transactional
     fun recordConfirmedContribution(contribution: Contribution) {
@@ -363,6 +365,43 @@ class LedgerService(
             sourceId = sourceId,
             externalReference = paymentReference,
             description = "Funds received directly by the organization outside Rally26",
+        )
+    }
+
+    /**
+     * Fetches Stripe's own real per-charge processing fee (Balance Transaction API)
+     * and records it as an internal margin-visibility entry — the organization's own
+     * earning stays computed exactly as before (gross minus the flat platform fee
+     * only). Rally26 absorbs Stripe's real fee (founder decision, 2026-08-13, real
+     * numbers modeled against a $30k-season example): deliberately never paired with
+     * an ORGANIZATION_EARNING debit, so it can never reduce what an org is owed or
+     * appear in getPayoutSummary/getTransferableEntries — same proven pattern as
+     * recordDisputeOpened's CHARGEBACK_FEE. A missing payment intent id or a failed
+     * Stripe fetch (see StripeBalanceTransactionClient) is a silent no-op — this is
+     * observability, never allowed to block or retry a real payment confirmation.
+     */
+    @Transactional
+    fun recordStripeProcessingFee(
+        organizationId: UUID,
+        sourceType: LedgerSourceType,
+        sourceId: UUID,
+        currency: String,
+        stripePaymentIntentId: String?,
+    ) {
+        if (stripePaymentIntentId == null) return
+        val feeMinor = stripeBalanceTransactionClient.fetchFeeMinor(stripePaymentIntentId) ?: return
+        if (feeMinor <= 0) return
+        ledgerEntryRepository.insert(
+            organizationId = organizationId,
+            accountCode = LedgerEntryType.STRIPE_PROCESSING_FEE.name,
+            entryType = LedgerEntryType.STRIPE_PROCESSING_FEE,
+            direction = LedgerDirection.DEBIT,
+            amountMinor = feeMinor,
+            currency = currency,
+            sourceType = sourceType,
+            sourceId = sourceId,
+            externalReference = stripePaymentIntentId,
+            description = "Stripe's real processing fee for this charge, absorbed by Rally26 — internal margin visibility only, never billed to the organization",
         )
     }
 

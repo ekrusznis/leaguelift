@@ -8,6 +8,7 @@ import com.rally26.ledger.domain.LedgerDirection
 import com.rally26.ledger.domain.LedgerEntry
 import com.rally26.ledger.domain.LedgerEntryType
 import com.rally26.ledger.domain.LedgerSourceType
+import com.rally26.ledger.infra.StripeBalanceTransactionClient
 import com.rally26.ledger.persistence.LedgerEntryRepository
 import com.rally26.order.domain.Order
 import com.rally26.order.domain.OrderItem
@@ -27,7 +28,8 @@ class LedgerServiceTest {
     private val ledgerEntryRepository = mockk<LedgerEntryRepository>()
     private val platformFeeProperties = PlatformFeeProperties(feeBasisPoints = 500) // 5%
     private val payoutProperties = PayoutProperties(holdingPeriodDays = 7)
-    private val service = LedgerService(ledgerEntryRepository, platformFeeProperties, payoutProperties)
+    private val stripeBalanceTransactionClient = mockk<StripeBalanceTransactionClient>()
+    private val service = LedgerService(ledgerEntryRepository, platformFeeProperties, payoutProperties, stripeBalanceTransactionClient)
 
     private val orgId = UUID.randomUUID()
 
@@ -283,6 +285,47 @@ class LedgerServiceTest {
 
         assertEquals(2, captured.size)
         assertTrue(captured.none { it.entryType == LedgerEntryType.CHARGEBACK_FEE })
+    }
+
+    @Test
+    fun `recordStripeProcessingFee writes a STRIPE_PROCESSING_FEE debit with no matching ORGANIZATION_EARNING entry`() {
+        val sourceId = UUID.randomUUID()
+        val captured = mutableListOf<InsertCall>()
+        stubInsert(captured)
+        every { stripeBalanceTransactionClient.fetchFeeMinor("pi_test_123") } returns 373L
+
+        service.recordStripeProcessingFee(orgId, LedgerSourceType.CONTRIBUTION, sourceId, "usd", "pi_test_123")
+
+        assertEquals(1, captured.size)
+        val fee = captured[0]
+        assertEquals(LedgerEntryType.STRIPE_PROCESSING_FEE, fee.entryType)
+        assertEquals(LedgerDirection.DEBIT, fee.direction)
+        assertEquals(373L, fee.amountMinor)
+        assertEquals("pi_test_123", fee.externalReference)
+        // Rally26 absorbs Stripe's real fee (founder decision, 2026-08-13) — never
+        // paired with an ORGANIZATION_EARNING debit, so it can't reduce what the org is owed.
+        assertTrue(captured.none { it.entryType == LedgerEntryType.ORGANIZATION_EARNING })
+    }
+
+    @Test
+    fun `recordStripeProcessingFee is a no-op when the payment intent id is null`() {
+        val captured = mutableListOf<InsertCall>()
+        stubInsert(captured)
+
+        service.recordStripeProcessingFee(orgId, LedgerSourceType.CONTRIBUTION, UUID.randomUUID(), "usd", null)
+
+        assertEquals(0, captured.size)
+    }
+
+    @Test
+    fun `recordStripeProcessingFee is a no-op when Stripe's fee fetch fails`() {
+        val captured = mutableListOf<InsertCall>()
+        stubInsert(captured)
+        every { stripeBalanceTransactionClient.fetchFeeMinor("pi_failed") } returns null
+
+        service.recordStripeProcessingFee(orgId, LedgerSourceType.CONTRIBUTION, UUID.randomUUID(), "usd", "pi_failed")
+
+        assertEquals(0, captured.size)
     }
 
     @Test

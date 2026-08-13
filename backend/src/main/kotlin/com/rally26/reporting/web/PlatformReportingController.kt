@@ -36,6 +36,9 @@ class PlatformReportingController(
             report.webhookFailed,
             report.outboxPending,
             report.outboxDeadLetter,
+            report.platformFeeRevenueMinor,
+            report.stripeProcessingFeesMinor,
+            report.netMarginAfterStripeFeesMinor,
         )
     }
 }

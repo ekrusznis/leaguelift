@@ -267,6 +267,40 @@ class ReportingRepository(
             .query(Long::class.java)
             .single()
 
+    /** Gross RALLY26_PLATFORM_FEE revenue before Stripe's own real processing fee is netted out — see [platformStripeProcessingFees]. */
+    fun platformFeeRevenue(
+        from: Instant,
+        to: Instant,
+    ): Long =
+        jdbcClient
+            .sql(
+                """
+                select coalesce(sum(amount_minor), 0) from ledger_entry
+                where entry_type = 'RALLY26_PLATFORM_FEE' and direction = 'DEBIT'
+                  and effective_at >= :from and effective_at < :to
+                """.trimIndent(),
+            ).param("from", Timestamp.from(from))
+            .param("to", Timestamp.from(to))
+            .query(Long::class.java)
+            .single()
+
+    /** Stripe's real per-charge processing fee, absorbed by Rally26 (LedgerService.recordStripeProcessingFee) — never billed to an organization, so this is purely internal margin visibility. */
+    fun platformStripeProcessingFees(
+        from: Instant,
+        to: Instant,
+    ): Long =
+        jdbcClient
+            .sql(
+                """
+                select coalesce(sum(amount_minor), 0) from ledger_entry
+                where entry_type = 'STRIPE_PROCESSING_FEE' and direction = 'DEBIT'
+                  and effective_at >= :from and effective_at < :to
+                """.trimIndent(),
+            ).param("from", Timestamp.from(from))
+            .param("to", Timestamp.from(to))
+            .query(Long::class.java)
+            .single()
+
     /**
      * Fee payments actually recorded (`paid_at`) in range — distinct from
      * `FeeRepository.getFinancialSummary`'s point-in-time outstanding/collected-to-date

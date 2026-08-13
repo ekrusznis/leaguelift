@@ -23,6 +23,8 @@ enum class LedgerEntryType {
     CHARGEBACK,
     /** Stripe's own non-refundable per-dispute fee. Rally26 absorbs this (founder decision, 2026-08-12) — see LedgerService.recordDisputeOpened, which deliberately never pairs this with an ORGANIZATION_EARNING debit. */
     CHARGEBACK_FEE,
+    /** Stripe's real per-charge processing fee (~2.9%+30¢), fetched from Stripe's own Balance Transaction API. Rally26 absorbs this (founder decision, 2026-08-13, same reasoning as CHARGEBACK_FEE) — internal margin-visibility only, see LedgerService.recordStripeProcessingFee, which deliberately never pairs this with an ORGANIZATION_EARNING debit. */
+    STRIPE_PROCESSING_FEE,
 }
 
 enum class LedgerDirection { CREDIT, DEBIT }

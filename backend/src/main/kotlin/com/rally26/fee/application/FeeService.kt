@@ -28,6 +28,7 @@ import com.rally26.fee.persistence.FeePaymentRepository
 import com.rally26.fee.persistence.FeeRepository
 import com.rally26.household.persistence.HouseholdRepository
 import com.rally26.ledger.application.LedgerService
+import com.rally26.ledger.domain.LedgerSourceType
 import com.rally26.membership.application.MembershipService
 import com.rally26.outbox.application.OutboxWriter
 import com.stripe.exception.StripeException
@@ -371,6 +372,7 @@ class FeeService(
                 assignment.id,
             )
             ledgerService.recordConfirmedFeePayment(payment.organizationId, payment.id, payment.amountMinor, payment.currency)
+            ledgerService.recordStripeProcessingFee(payment.organizationId, LedgerSourceType.FEE_PAYMENT, payment.id, payment.currency, stripePaymentIntentId)
             if (payment.payerEmail != null) {
                 outboxWriter.write(
                     aggregateType = "fee_payment",

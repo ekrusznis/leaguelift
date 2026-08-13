@@ -233,6 +233,8 @@ class ReportingServiceTest {
         every { reportingRepository.countNewCustomers(any(), any()) } returns 0L
         every { reportingRepository.platformGrossTransactionVolume(any(), any()) } returns 0L
         every { reportingRepository.platformRefundedAmount(any(), any()) } returns 0L
+        every { reportingRepository.platformFeeRevenue(any(), any()) } returns 0L
+        every { reportingRepository.platformStripeProcessingFees(any(), any()) } returns 0L
         every { organizationRepository.countAllForPlatformAdmin() } returns 12L
         every { webhookEventRepository.countByProcessingStatus(WebhookProcessingStatus.PROCESSED) } returns 100L
         every { webhookEventRepository.countByProcessingStatus(WebhookProcessingStatus.FAILED) } returns 0L
@@ -252,6 +254,8 @@ class ReportingServiceTest {
         every { reportingRepository.countNewCustomers(any(), any()) } returns 5L
         every { reportingRepository.platformGrossTransactionVolume(any(), any()) } returns 100_000L
         every { reportingRepository.platformRefundedAmount(any(), any()) } returns 5_000L
+        every { reportingRepository.platformFeeRevenue(any(), any()) } returns 0L
+        every { reportingRepository.platformStripeProcessingFees(any(), any()) } returns 0L
         every { organizationRepository.countAllForPlatformAdmin() } returns 12L
         every { webhookEventRepository.countByProcessingStatus(WebhookProcessingStatus.PROCESSED) } returns 100L
         every { webhookEventRepository.countByProcessingStatus(WebhookProcessingStatus.FAILED) } returns 0L
@@ -261,5 +265,27 @@ class ReportingServiceTest {
         val report = service.getPlatformReport(null, null, manager)
 
         assertEquals(5.0, report.refundRatePercent)
+    }
+
+    @Test
+    fun `getPlatformReport computes net margin as platform fee revenue minus Stripe's real processing fees`() {
+        every { authorizationService.requirePlatformCapability(manager, Capabilities.PLATFORM_AUDIT_VIEW) } returns Unit
+        every { reportingRepository.countNewOrganizations(any(), any()) } returns 0L
+        every { reportingRepository.countNewCustomers(any(), any()) } returns 0L
+        every { reportingRepository.platformGrossTransactionVolume(any(), any()) } returns 0L
+        every { reportingRepository.platformRefundedAmount(any(), any()) } returns 0L
+        every { reportingRepository.platformFeeRevenue(any(), any()) } returns 150_000L
+        every { reportingRepository.platformStripeProcessingFees(any(), any()) } returns 87_360L
+        every { organizationRepository.countAllForPlatformAdmin() } returns 12L
+        every { webhookEventRepository.countByProcessingStatus(WebhookProcessingStatus.PROCESSED) } returns 100L
+        every { webhookEventRepository.countByProcessingStatus(WebhookProcessingStatus.FAILED) } returns 0L
+        every { outboxEventRepository.countByStatus("PENDING") } returns 0L
+        every { outboxEventRepository.countByStatus("DEAD_LETTER") } returns 0L
+
+        val report = service.getPlatformReport(null, null, manager)
+
+        assertEquals(150_000L, report.platformFeeRevenueMinor)
+        assertEquals(87_360L, report.stripeProcessingFeesMinor)
+        assertEquals(62_640L, report.netMarginAfterStripeFeesMinor)
     }
 }

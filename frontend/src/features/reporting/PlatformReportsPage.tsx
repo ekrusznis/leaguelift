@@ -38,6 +38,9 @@ export function PlatformReportsPage() {
 				<Metric label="Gross transaction volume" value={formatMoneyMinorUnits(report.data.grossTransactionVolumeMinor, "USD")} />
 				<Metric label="Refunded" value={formatMoneyMinorUnits(report.data.refundedMinor, "USD")} />
 				<Metric label="Refund rate" value={report.data.refundRatePercent === null ? "N/A" : `${report.data.refundRatePercent.toFixed(2)}%`} />
+				<Metric label="Platform fee revenue" value={formatMoneyMinorUnits(report.data.platformFeeRevenueMinor, "USD")} detail="Before Stripe's own processing fee" />
+				<Metric label="Stripe processing fees" value={formatMoneyMinorUnits(report.data.stripeProcessingFeesMinor, "USD")} detail="Absorbed by Rally26, not billed to organizations" />
+				<Metric label="Net margin after Stripe fees" value={formatMoneyMinorUnits(report.data.netMarginAfterStripeFeesMinor, "USD")} detail="Rally26's real take-home" />
 				<Metric label="Webhook failures" value={String(report.data.webhookFailed)} detail={`${report.data.webhookProcessed} processed`} />
 				<Metric label="Dead-letter events" value={String(report.data.outboxDeadLetter)} detail={`${report.data.outboxPending} pending`} />
 			</div>

@@ -181,6 +181,7 @@ class SponsorshipServiceTest {
         every { sponsorshipRepository.findById(sponsorship.id) } returns confirmed
         every { auditService.record(null, pkg.organizationId, "sponsorship.confirmed", "sponsorship", sponsorship.id) } just runs
         every { ledgerService.recordConfirmedSponsorship(any()) } just runs
+        every { ledgerService.recordStripeProcessingFee(any(), any(), any(), any(), any()) } just runs
 
         val result = service.confirmFromWebhook("cs_test_123", "paid", "pi_test_123")
 

@@ -303,6 +303,7 @@ class OrderServiceTest {
                 ),
             )
         every { ledgerService.recordConfirmedOrder(any(), any()) } just runs
+        every { ledgerService.recordStripeProcessingFee(any(), any(), any(), any(), any()) } just runs
         every { productVariantRepository.findById(variant.id, orgId) } returns variant
         every { productRepository.findById(product.id, orgId) } returns product
         every { orderRepository.findById(order.id, orgId) } returns confirmed
@@ -534,6 +535,7 @@ class OrderServiceTest {
         every { orderItemRepository.findByOrder(order.id) } returns
             listOf(OrderItem(UUID.randomUUID(), order.id, variant.id, 1, variant.priceMinor, variant.costMinor))
         every { ledgerService.recordConfirmedOrder(any(), any()) } just runs
+        every { ledgerService.recordStripeProcessingFee(any(), any(), any(), any(), any()) } just runs
         every { productVariantRepository.findById(variant.id, orgId) } returns variant
         every { productRepository.findById(product.id, orgId) } returns product
         every { orderRepository.findById(order.id, orgId) } returns confirmed

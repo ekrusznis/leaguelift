@@ -21,6 +21,7 @@ import com.rally26.fee.persistence.FeePaymentRepository
 import com.rally26.fee.persistence.FeeRepository
 import com.rally26.household.persistence.HouseholdRepository
 import com.rally26.ledger.application.LedgerService
+import com.rally26.ledger.domain.LedgerSourceType
 import com.rally26.membership.application.MembershipService
 import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
@@ -431,6 +432,29 @@ class FeeServiceTest {
         service.listForOrganization(orgId, null, false, currentUser, 0, 20)
 
         verify(exactly = 1) { membershipService.requireManagerRole(orgId, currentUser) }
+    }
+
+    // --- Online checkout webhook confirmation ---
+
+    @Test
+    fun `confirmOnlineCheckoutFromWebhook records Stripe's real processing fee alongside the confirmed fee payment`() {
+        val assignment = sampleAssignment()
+        val payment = samplePayment(assignment.id).copy(method = PaymentMethod.STRIPE_ONLINE)
+        every { feePaymentRepository.findByStripeCheckoutSessionId("cs_test_123") } returns payment
+        every { feePaymentRepository.markConfirmed(payment.id, "pi_test_123") } returns 1
+        every { feeRepository.findAssignmentById(assignment.id, orgId) } returns assignment
+        every { feeRepository.updateAssignmentStatus(any(), any(), any()) } returns 1
+        stubZeroBalance(assignment.id)
+        every { auditService.record(any(), any(), any(), any(), any()) } just runs
+        every { ledgerService.recordConfirmedFeePayment(any(), any(), any(), any()) } just runs
+        every { ledgerService.recordStripeProcessingFee(any(), any(), any(), any(), any()) } just runs
+        every { feePaymentRepository.findById(payment.id, orgId) } returns payment
+
+        service.confirmOnlineCheckoutFromWebhook("cs_test_123", "paid", "pi_test_123")
+
+        verify(exactly = 1) {
+            ledgerService.recordStripeProcessingFee(orgId, LedgerSourceType.FEE_PAYMENT, payment.id, payment.currency, "pi_test_123")
+        }
     }
 
     private fun stubZeroBalance(assignmentId: UUID) {

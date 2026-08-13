@@ -74,4 +74,7 @@ export interface PlatformReport {
 	webhookFailed: number;
 	outboxPending: number;
 	outboxDeadLetter: number;
+	platformFeeRevenueMinor: number;
+	stripeProcessingFeesMinor: number;
+	netMarginAfterStripeFeesMinor: number;
 }

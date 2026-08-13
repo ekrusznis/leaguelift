@@ -631,8 +631,11 @@ export function HomePage() {
 							))}
 						</div>
 
+						<p className="mx-auto max-w-2xl text-center text-sm font-medium text-slate-700 dark:text-[#f8fafc]">
+							Flat monthly price + a flat 5% fee on dues &amp; fees, fundraising, sponsorships, and Swag Shop sales — nothing else nickel-and-dimed. Rally26 absorbs card payment-processing costs itself.
+						</p>
 						<p className="mx-auto max-w-2xl text-center text-sm text-slate-500 dark:text-[#cbd5e1]">
-							Applicable transaction, payment-processing, fulfillment, and optional service fees are disclosed before launch and are never bundled into the base subscription price.
+							Fulfillment and optional service fees are disclosed before launch and are never bundled into the base subscription price.
 						</p>
 
 						<div className="mx-auto w-full max-w-3xl">

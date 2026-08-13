@@ -180,6 +180,7 @@ class ContributionServiceTest {
         every { contributionRepository.findById(contribution.id) } returns confirmed
         every { auditService.record(null, campaign.organizationId, "contribution.confirmed", "contribution", contribution.id) } just runs
         every { ledgerService.recordConfirmedContribution(any()) } just runs
+        every { ledgerService.recordStripeProcessingFee(any(), any(), any(), any(), any()) } just runs
         every {
             familyCreditService.grantForContribution(campaign.organizationId, attributedHouseholdId, contribution.id, 5000L, "USD")
         } returns mockk()
@@ -213,6 +214,7 @@ class ContributionServiceTest {
         every { contributionRepository.findById(contribution.id) } returns confirmed
         every { auditService.record(null, campaign.organizationId, "contribution.confirmed", "contribution", contribution.id) } just runs
         every { ledgerService.recordConfirmedContribution(any()) } just runs
+        every { ledgerService.recordStripeProcessingFee(any(), any(), any(), any(), any()) } just runs
 
         val result = service.confirmFromWebhook("cs_test_123", "paid", "pi_test_123")
 
@@ -234,6 +236,7 @@ class ContributionServiceTest {
         every { contributionRepository.findById(contribution.id) } returns confirmed
         every { auditService.record(null, campaign.organizationId, "contribution.confirmed", "contribution", contribution.id) } just runs
         every { ledgerService.recordConfirmedContribution(any()) } just runs
+        every { ledgerService.recordStripeProcessingFee(any(), any(), any(), any(), any()) } just runs
         every { campaignRepository.findById(campaign.id, campaign.organizationId) } returns campaign
         val payloadSlot = slot<String>()
         every {

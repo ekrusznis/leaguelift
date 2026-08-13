@@ -79,10 +79,18 @@ data class PlatformReport(
     val webhookFailed: Long,
     val outboxPending: Long,
     val outboxDeadLetter: Long,
+    /** Gross RALLY26_PLATFORM_FEE revenue before Stripe's own real processing fee is netted out. */
+    val platformFeeRevenueMinor: Long,
+    /** Stripe's real per-charge processing fee, absorbed by Rally26 (founder decision, 2026-08-13) — never billed to an organization. */
+    val stripeProcessingFeesMinor: Long,
 ) {
     /** Null (not zero) when there's nothing to divide by — an empty period isn't a 0% refund rate, it's undefined. */
     val refundRatePercent: Double?
         get() = if (grossTransactionVolumeMinor == 0L) null else (refundedMinor.toDouble() / grossTransactionVolumeMinor.toDouble()) * 100.0
+
+    /** Rally26's actual take-home from the flat platform fee once Stripe's real, previously-invisible processing fee is subtracted. */
+    val netMarginAfterStripeFeesMinor: Long
+        get() = platformFeeRevenueMinor - stripeProcessingFeesMinor
 }
 
 /**
@@ -240,6 +248,8 @@ class ReportingService(
             webhookFailed = webhookEventRepository.countByProcessingStatus(WebhookProcessingStatus.FAILED),
             outboxPending = outboxEventRepository.countByStatus("PENDING"),
             outboxDeadLetter = outboxEventRepository.countByStatus("DEAD_LETTER"),
+            platformFeeRevenueMinor = reportingRepository.platformFeeRevenue(fromInstant, toInstant),
+            stripeProcessingFeesMinor = reportingRepository.platformStripeProcessingFees(fromInstant, toInstant),
         )
     }
 

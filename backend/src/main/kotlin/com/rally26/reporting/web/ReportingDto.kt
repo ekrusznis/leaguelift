@@ -98,4 +98,7 @@ data class PlatformReportResponse(
     val webhookFailed: Long,
     val outboxPending: Long,
     val outboxDeadLetter: Long,
+    val platformFeeRevenueMinor: Long,
+    val stripeProcessingFeesMinor: Long,
+    val netMarginAfterStripeFeesMinor: Long,
 )
