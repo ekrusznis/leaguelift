@@ -21,6 +21,11 @@ export default function MoreScreen() {
       label: 'Swag Shop',
       onPress: () => router.push(webEmbedRoute(`/app/organizations/${organizationId}/swag-shop/order`, 'Swag Shop')),
     },
+    {
+      icon: 'heart-outline',
+      label: 'Fundraising',
+      onPress: () => router.push(webEmbedRoute(`/app/organizations/${organizationId}/fundraising`, 'Fundraising')),
+    },
     { icon: 'megaphone-outline', label: 'Announcements', onPress: () => router.push('/announcements') },
     { icon: 'checkbox-outline', label: 'Action Center', onPress: () => router.push('/action-center') },
     { icon: 'help-circle-outline', label: 'Help Center', onPress: () => router.push('/help') },
@@ -35,7 +40,7 @@ export default function MoreScreen() {
       </View>
       <View style={styles.list}>
         {items.map((item) => (
-          <Pressable key={item.label} onPress={item.onPress} disabled={item.label === 'Swag Shop' && !organizationId}>
+          <Pressable key={item.label} onPress={item.onPress} disabled={(item.label === 'Swag Shop' || item.label === 'Fundraising') && !organizationId}>
             <ThemedView type="backgroundElement" style={styles.row}>
               <Ionicons name={item.icon} size={20} color={theme.text} />
               <ThemedText style={styles.label}>{item.label}</ThemedText>

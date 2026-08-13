@@ -82,7 +82,15 @@ const CAMPAIGN_TYPE_LABELS: Record<CampaignType, string> = {
 	SPONSOR_SUPPORTED: "Sponsor-supported",
 };
 
-export function CampaignList({ organizationId }: { organizationId: string }) {
+/**
+ * Reused as-is (not a separate route) by Coach/Parent's mobile WebView "Fundraising"
+ * entry — `canManage` mirrors the same prop convention every other org section panel
+ * already uses (households, teams, documents). A coach/parent has real read access to
+ * the campaign list/contributions/share-link (backend only requires active
+ * membership, not manager role — `CampaignService.list`/`buildShareLink`,
+ * `ContributionService.listConfirmed`), just not create/publish/box-pool-setup.
+ */
+export function CampaignList({ organizationId, canManage = true }: { organizationId: string; canManage?: boolean }) {
 	const { data, isLoading, isError, refetch } = useCampaigns(organizationId);
 	const { data: teams } = useTeams(organizationId);
 	const createCampaign = useCreateCampaign(organizationId);
@@ -137,12 +145,14 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 				<span className="text-sm text-slate-gray dark:text-[#cbd5e1]">
 					{data ? `${data.totalElements} campaign${data.totalElements !== 1 ? "s" : ""}` : ""}
 				</span>
-				<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
-					{showForm ? "Cancel" : "Add campaign"}
-				</Button>
+				{canManage && (
+					<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
+						{showForm ? "Cancel" : "Add campaign"}
+					</Button>
+				)}
 			</div>
 
-			{showForm && (
+			{canManage && showForm && (
 				<form
 					onSubmit={onSubmit}
 					className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4"
@@ -298,7 +308,10 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 			{isLoading && <LoadingState label="Loading campaigns…" />}
 			{isError && <ErrorState message="Could not load campaigns." onRetry={() => refetch()} />}
 			{data && data.items.length === 0 && !showForm && (
-				<EmptyState title="No campaigns yet" description="Create a fundraising campaign for your organization or a team." />
+				<EmptyState
+					title="No campaigns yet"
+					description={canManage ? "Create a fundraising campaign for your organization or a team." : "Your organization hasn't started a fundraiser yet."}
+				/>
 			)}
 			{data && data.items.length > 0 && (
 				<ul className="flex flex-col gap-2" aria-label="Fundraising campaigns">
@@ -326,10 +339,10 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 									>
 										{expandedCampaignId === campaign.id ? "Hide contributions" : "View contributions"}
 									</Button>
-									{campaign.status === "ACTIVE" && (
+									{canManage && campaign.status === "ACTIVE" && (
 										<ReminderButton organizationId={organizationId} resourceType="CAMPAIGN" resourceId={campaign.id} label="Send launch notice" />
 									)}
-									{campaign.status === "DRAFT" && (
+									{canManage && campaign.status === "DRAFT" && (
 										<Button
 											type="button"
 											variant="secondary"
@@ -341,7 +354,7 @@ export function CampaignList({ organizationId }: { organizationId: string }) {
 									)}
 								</div>
 							</div>
-							{campaign.templateKey === "BOX_POOL" && (
+							{canManage && campaign.templateKey === "BOX_POOL" && (
 								<div className="mt-3 border-t border-slate-gray/20 pt-3">
 									<BoxPoolManagementPanel organizationId={organizationId} campaignId={campaign.id} />
 								</div>
