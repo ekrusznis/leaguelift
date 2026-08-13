@@ -8,26 +8,8 @@ import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { appPaths } from "../../routes/appPaths";
 import { useTeamEligibilityClearance } from "../eligibility/api";
-import type { ClearanceStatus } from "../eligibility/types";
+import { ClearanceStatusPill } from "../eligibility/ClearanceStatusPill";
 import { useTeamRoster } from "./api";
-
-const CLEARANCE_LABELS: Record<ClearanceStatus, string> = {
-	ROSTER_PENDING: "Not yet reviewed",
-	DOCUMENTS_REQUIRED: "Documents required",
-	UNDER_REVIEW: "Under review",
-	CLEARED: "Cleared",
-	EXPIRED: "Expired",
-	INELIGIBLE: "Ineligible",
-};
-
-const CLEARANCE_CLASSES: Record<ClearanceStatus, string> = {
-	ROSTER_PENDING: "bg-slate-gray/10 text-slate-gray dark:text-[#cbd5e1]",
-	DOCUMENTS_REQUIRED: "bg-championship-gold/10 text-championship-gold",
-	UNDER_REVIEW: "bg-info-blue/10 text-info-blue",
-	CLEARED: "bg-victory-green/10 text-victory-green",
-	EXPIRED: "bg-error-red/10 text-error-red",
-	INELIGIBLE: "bg-error-red/10 text-error-red",
-};
 
 /**
  * Team Roster — coach-facing eligibility clearance view (Phase 37 slice 37.1, mobile
@@ -92,11 +74,7 @@ export function TeamRosterPage() {
 								<p className="font-medium text-navy dark:text-[#f8fafc]">
 									{participant.firstName} {participant.lastName}
 								</p>
-								{canViewEligibility && (
-									<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${CLEARANCE_CLASSES[status]}`}>
-										{CLEARANCE_LABELS[status]}
-									</span>
-								)}
+								{canViewEligibility && <ClearanceStatusPill status={status} />}
 							</li>
 						);
 					})}

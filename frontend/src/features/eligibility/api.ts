@@ -90,3 +90,12 @@ export function useTeamEligibilityClearance(organizationId: string, teamId: stri
 		enabled: !!organizationId && !!teamId,
 	});
 }
+
+/** GET .../households/{householdId}/eligibility/clearance — guardian-facing "eligibility at a glance" across every team a household's participants are actually rostered on, since a household (unlike a team roster) isn't scoped to one team. */
+export function useHouseholdEligibilityClearance(organizationId: string, householdId: string) {
+	return useQuery({
+		queryKey: ["organizations", organizationId, "households", householdId, "eligibility", "clearance"],
+		queryFn: () => apiFetch<EligibilityClearance[]>(`/organizations/${organizationId}/households/${householdId}/eligibility/clearance`),
+		enabled: !!organizationId && !!householdId,
+	});
+}

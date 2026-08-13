@@ -132,6 +132,20 @@ class TeamEligibilityController(
     }
 }
 
+/** Guardian- (or staff-) facing "eligibility at a glance" for every participant in a household, fanned out across whichever teams each is actually rostered on — see EligibilityService.listClearanceForHousehold. */
+@RestController
+@RequestMapping("/api/v1/organizations/{organizationId}/households/{householdId}/eligibility")
+class HouseholdEligibilityController(
+    private val service: EligibilityService,
+) {
+    @GetMapping("/clearance")
+    fun listForHousehold(
+        @PathVariable organizationId: UUID,
+        @PathVariable householdId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ) = service.listClearanceForHousehold(organizationId, householdId, currentUser).map { it.toResponse() }
+}
+
 /**
  * Guardian/athlete-self facing (Phase 31 slice 31.2, DESIGN-DOC.md section 14.1L
  * §30.3). File-upload evidence is a two-step flow: the caller first uploads through

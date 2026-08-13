@@ -55,6 +55,28 @@ class EligibilityClearanceRepository(
             .list()
 
     /**
+     * A household's participants can each be on zero, one, or several teams, so there's
+     * no single [teamId] to scope by the way [listForTeam] does — this returns every
+     * (participant, team) clearance row for a caller-resolved set of participant ids
+     * (see EligibilityService.listClearanceForHousehold), one row per team a
+     * participant is actually rostered on. Returns an empty list without querying when
+     * [participantIds] is empty (an empty SQL `in (...)` is invalid).
+     */
+    fun listForParticipants(
+        participantIds: List<UUID>,
+        organizationId: UUID,
+    ): List<EligibilityClearance> {
+        if (participantIds.isEmpty()) return emptyList()
+        return jdbcClient
+            .sql(
+                "select $CLEARANCE_COLUMNS from eligibility_clearance where organization_id = :organizationId and participant_id in (:participantIds)",
+            ).param("organizationId", organizationId)
+            .param("participantIds", participantIds)
+            .query(::mapRow)
+            .list()
+    }
+
+    /**
      * The recomputation service's only write path — always a full replace of the
      * (participant, team) snapshot, never a partial field update, so this table can
      * never drift out of sync with what the evidence/requirement tables actually say

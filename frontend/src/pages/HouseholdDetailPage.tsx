@@ -52,6 +52,9 @@ import { useFeeTemplates } from "../features/fees/api";
 import { useTeams } from "../features/teams/api";
 import { HouseholdDocumentsPanel } from "../features/documents/HouseholdDocumentsPanel";
 import { ParticipantEligibilityPanel } from "../features/eligibility/ParticipantEligibilityPanel";
+import { useHouseholdEligibilityClearance } from "../features/eligibility/api";
+import { ClearanceStatusPill } from "../features/eligibility/ClearanceStatusPill";
+import type { ClearanceStatus, EligibilityClearance } from "../features/eligibility/types";
 import { EventListPanel } from "../features/events/EventListPanel";
 import { ProfilePhotoEditor } from "../features/media/ProfilePhotoEditor";
 import { ProfileCorrectionForm } from "../features/profileCorrections/ProfileCorrectionForm";
@@ -307,8 +310,24 @@ function AddParticipantForm({ organizationId, householdId, onDone }: { organizat
 	);
 }
 
+/** Most-concerning-first, so a participant on multiple teams with mixed statuses shows the status that most needs attention. */
+const CLEARANCE_SEVERITY: ClearanceStatus[] = ["INELIGIBLE", "EXPIRED", "UNDER_REVIEW", "DOCUMENTS_REQUIRED", "ROSTER_PENDING", "CLEARED"];
+
+export function worstClearanceByParticipant(clearances: EligibilityClearance[]): Map<string, ClearanceStatus> {
+	const byParticipant = new Map<string, ClearanceStatus>();
+	for (const clearance of clearances) {
+		const current = byParticipant.get(clearance.participantId);
+		if (!current || CLEARANCE_SEVERITY.indexOf(clearance.status) < CLEARANCE_SEVERITY.indexOf(current)) {
+			byParticipant.set(clearance.participantId, clearance.status);
+		}
+	}
+	return byParticipant;
+}
+
 function ParticipantsPanel({ organizationId, householdId, canManage, canManagePhotos }: { organizationId: string; householdId: string; canManage: boolean; canManagePhotos: boolean }) {
 	const { data, isLoading, isError, refetch } = useParticipants(organizationId, householdId);
+	const clearances = useHouseholdEligibilityClearance(organizationId, householdId);
+	const clearanceByParticipant = worstClearanceByParticipant(clearances.data ?? []);
 	const [showForm, setShowForm] = useState(false);
 	const [expandedId, setExpandedId] = useState<string | null>(null);
 	const [eligibilityExpandedId, setEligibilityExpandedId] = useState<string | null>(null);
@@ -343,9 +362,14 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 									canEdit={canManagePhotos}
 								/>
 								<div className="min-w-0 flex-1">
-									<p className="break-words font-medium text-navy dark:text-[#f8fafc]">
-										{participant.firstName} {participant.lastName}
-									</p>
+									<div className="flex flex-wrap items-center gap-2">
+										<p className="break-words font-medium text-navy dark:text-[#f8fafc]">
+											{participant.firstName} {participant.lastName}
+										</p>
+										{clearanceByParticipant.has(participant.id) && (
+											<ClearanceStatusPill status={clearanceByParticipant.get(participant.id)!} />
+										)}
+									</div>
 									{participant.dateOfBirth && (
 										<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Born {participant.dateOfBirth}</p>
 									)}

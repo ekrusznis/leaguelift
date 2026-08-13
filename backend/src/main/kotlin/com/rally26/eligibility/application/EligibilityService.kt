@@ -348,6 +348,27 @@ class EligibilityService(
         return clearanceRepository.listForTeam(teamId, organizationId, statusFilter)
     }
 
+    /**
+     * Guardian- (or staff-) facing "eligibility at a glance" for a whole household —
+     * unlike [listClearanceForTeam], a household's participants aren't scoped to one
+     * team, so this fans out to every team each participant is actually rostered on.
+     * Same operational-status-only posture as the coach roster view, just reached from
+     * the household side instead.
+     */
+    fun listClearanceForHousehold(
+        organizationId: UUID,
+        householdId: UUID,
+        currentUser: CurrentUser,
+    ): List<EligibilityClearance> {
+        val staffAccess = membershipService.hasManagerRole(organizationId, currentUser)
+        val guardianAccess = authorizationService.hasGuardianRelationship(organizationId, householdId, currentUser)
+        if (!staffAccess && !guardianAccess) {
+            throw ForbiddenException("ELIGIBILITY_ACCESS_DENIED", "You do not have access to this household's eligibility records.")
+        }
+        val participantIds = participantRepository.findByHousehold(householdId, organizationId).map { it.id }
+        return clearanceRepository.listForParticipants(participantIds, organizationId)
+    }
+
     // --- Guardian/athlete-self facing (slice 31.2) -----------------------------------
 
     private fun requireParticipantAccess(

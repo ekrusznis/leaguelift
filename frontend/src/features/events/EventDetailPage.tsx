@@ -8,6 +8,8 @@ import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { useParticipants, useParticipantTeams } from "../households/api";
 import type { Participant } from "../households/types";
+import { useTeamEligibilityClearance } from "../eligibility/api";
+import { ClearanceStatusPill } from "../eligibility/ClearanceStatusPill";
 import { ApiError } from "../../lib/apiError";
 import {
 	downloadEventCalendar,
@@ -194,13 +196,18 @@ function RsvpParticipantControls({
 	const teams = useParticipantTeams(organizationId, participant.id);
 	const relevantTeamIds = new Set([event.teamId, event.opponentTeamId].filter((id): id is string => id !== null));
 	const isOnEventTeam = isSelf || (teams.data?.some((assignment) => assignment.status === "ACTIVE" && relevantTeamIds.has(assignment.teamId)) ?? false);
+	const clearances = useTeamEligibilityClearance(organizationId, event.teamId ?? "");
+	const clearance = clearances.data?.find((c) => c.participantId === participant.id);
 
 	if (!isSelf && teams.isLoading) return <LoadingState label={`Checking ${participant.firstName}'s team assignment…`} />;
 	if (!isOnEventTeam) return null;
 
 	return (
 		<div className="rounded-lg border border-slate-gray/20 p-3">
-			<p className="font-medium text-navy dark:text-[#f8fafc]">{participant.firstName} {participant.lastName}</p>
+			<div className="flex flex-wrap items-center gap-2">
+				<p className="font-medium text-navy dark:text-[#f8fafc]">{participant.firstName} {participant.lastName}</p>
+				{clearance && <ClearanceStatusPill status={clearance.status} />}
+			</div>
 			<div className="mt-3 flex flex-wrap gap-2">
 				{(["ATTENDING", "NOT_ATTENDING", "MAYBE"] as RsvpResponse[]).map((response) => (
 					<Button

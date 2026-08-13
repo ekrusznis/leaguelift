@@ -593,6 +593,48 @@ class EligibilityServiceTest {
         verify { clearanceRepository.upsert(organizationId, participantId, teamId, any(), any()) }
     }
 
+    @Test
+    fun `listClearanceForHousehold denies a caller with no guardian or staff access`() {
+        val householdId = UUID.randomUUID()
+        every { membershipService.hasManagerRole(organizationId, user) } returns false
+        every { authorizationService.hasGuardianRelationship(organizationId, householdId, user) } returns false
+
+        assertFailsWith<ForbiddenException> {
+            service.listClearanceForHousehold(organizationId, householdId, user)
+        }
+    }
+
+    @Test
+    fun `listClearanceForHousehold returns clearance across every team a household's participants are rostered on`() {
+        val householdId = UUID.randomUUID()
+        val otherParticipantId = UUID.randomUUID()
+        every { membershipService.hasManagerRole(organizationId, user) } returns false
+        every { authorizationService.hasGuardianRelationship(organizationId, householdId, user) } returns true
+        every { participantRepository.findByHousehold(householdId, organizationId) } returns
+            listOf(participant(), participant().copy(id = otherParticipantId))
+        every {
+            clearanceRepository.listForParticipants(listOf(participantId, otherParticipantId), organizationId)
+        } returns listOf(clearance(ClearanceStatus.INELIGIBLE, 1))
+
+        val result = service.listClearanceForHousehold(organizationId, householdId, user)
+
+        assertEquals(1, result.size)
+        assertEquals(ClearanceStatus.INELIGIBLE, result.single().status)
+    }
+
+    @Test
+    fun `listClearanceForHousehold allows staff without a guardian relationship`() {
+        val householdId = UUID.randomUUID()
+        every { membershipService.hasManagerRole(organizationId, user) } returns true
+        every { authorizationService.hasGuardianRelationship(organizationId, householdId, user) } returns false
+        every { participantRepository.findByHousehold(householdId, organizationId) } returns listOf(participant())
+        every { clearanceRepository.listForParticipants(listOf(participantId), organizationId) } returns emptyList()
+
+        val result = service.listClearanceForHousehold(organizationId, householdId, user)
+
+        assertEquals(emptyList(), result)
+    }
+
     private fun teamAssignment() =
         ParticipantTeamAssignment(
             id = UUID.randomUUID(),
