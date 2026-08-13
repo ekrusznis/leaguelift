@@ -306,6 +306,10 @@ These span several of the pages above — worth a dedicated pass rather than onl
 
 ---
 
+## Infrastructure/scaling note (not a UX finding, recorded here per founder request 2026-08-13)
+
+**One-liner: no — a cache (Redis) or message queue (Kafka) would be premature complexity right now, not a real gain.** Current architecture is a single droplet, single self-hosted Postgres instance (ADR-008/061), no paying clients yet (same funding-gate logic as the AI Media Lab deferral — see [[rally26-ai-media-lab-rename-and-phase-order]]), and the DB-backed outbox pattern already does the one job a message queue would do here (reliable async processing) without a second piece of infrastructure to run/monitor/secure. Redis would help with hot-read caching or rate-limiting once real concurrent load shows up, but nothing in this codebase is measured as a bottleneck today. Same logic applies to Kubernetes/Docker Swarm/multi-server-with-per-region-DB: vertical scaling (a bigger droplet) is the correct next lever, long before horizontal scaling — add any of this only when real usage data shows a specific, measured bottleneck a bigger single server can't fix, not ahead of need.
+
 ## After the pass
 
 Roll findings up into a short punch list (blocking vs. cosmetic) rather than leaving them scattered across this table — that's the actual deliverable for prioritization. Do not fix in-line during the browsing pass itself unless a finding is trivial and directly in the way of continuing the review; log everything else here first (see [[feedback-qa-pass-workflow]] for the established convention: fix only blockers live, log the rest). The 8 cross-cutting findings above should feed directly into that punch list as product-level decisions, independent of anything the live browsing pass finds page-by-page.
