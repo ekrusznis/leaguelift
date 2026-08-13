@@ -2,6 +2,7 @@ package com.rally26.fundraising.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
+import com.rally26.boxpool.persistence.BoxPoolBoxRepository
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.common.error.ValidationException
@@ -48,6 +49,7 @@ class ContributionServiceTest {
     private val outboxWriter = mockk<OutboxWriter>()
     private val householdAttributionService = mockk<HouseholdAttributionService>()
     private val familyCreditService = mockk<FamilyCreditService>()
+    private val boxPoolBoxRepository = mockk<BoxPoolBoxRepository>(relaxed = true)
     private val service =
         ContributionService(
             contributionRepository,
@@ -60,6 +62,7 @@ class ContributionServiceTest {
             ObjectMapper(),
             householdAttributionService,
             familyCreditService,
+            boxPoolBoxRepository,
         )
 
     private val orgId = UUID.randomUUID()
