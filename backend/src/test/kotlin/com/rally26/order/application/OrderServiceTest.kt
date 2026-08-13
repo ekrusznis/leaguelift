@@ -6,6 +6,7 @@ import com.rally26.authorization.application.AuthorizationService
 import com.rally26.authorization.domain.AuthorizationContext
 import com.rally26.authorization.domain.Capabilities
 import com.rally26.authorization.domain.ContextType
+import com.rally26.common.error.ConflictException
 import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
@@ -14,6 +15,8 @@ import com.rally26.config.FrontendProperties
 import com.rally26.config.PrintifyProperties
 import com.rally26.credit.application.FamilyCreditService
 import com.rally26.integration.printify.application.PrintifyOwnershipPrefixService
+import com.rally26.integration.printify.infra.PrintifyCatalogClient
+import com.rally26.integration.printify.infra.PrintifyCatalogVariant
 import com.rally26.integration.printify.infra.PrintifyDraftOrder
 import com.rally26.integration.printify.infra.PrintifyOrderClient
 import com.rally26.integration.printify.infra.PrintifyOrderLineItem
@@ -97,6 +100,7 @@ class OrderServiceTest {
     private val familyCreditService = mockk<FamilyCreditService>()
     private val printifyOwnershipPrefixService = mockk<PrintifyOwnershipPrefixService>()
     private val printifyProperties = PrintifyProperties(apiToken = "test-token", shopId = "shop_123")
+    private val printifyCatalogClient = mockk<PrintifyCatalogClient>()
     private val service =
         OrderService(
             orderRepository,
@@ -123,8 +127,14 @@ class OrderServiceTest {
             familyCreditService,
             printifyOwnershipPrefixService,
             printifyProperties,
+            printifyCatalogClient,
         )
     private val orgId = UUID.randomUUID()
+
+    /** The default `product()`/`productVariant()` fixtures are always PRINTIFY-sourced with real blueprint/print-provider/variant ids — stub the catalog as still offering that exact combination unless a test needs otherwise. */
+    private fun stubVariantStillAvailable() {
+        every { printifyCatalogClient.listVariants(12L, 5L) } returns listOf(PrintifyCatalogVariant(id = 100L, title = "M / Navy", options = null, placeholders = null))
+    }
 
     @Test
     fun `createCheckoutSession rejects an empty item list`() {
@@ -689,6 +699,7 @@ class OrderServiceTest {
         every { productVariantRepository.findById(variant.id, orgId) } returns variant
         every { productRepository.findById(product.id, orgId) } returns product.copy(swagLogoMediaAssetId = UUID.randomUUID())
         every { storeRepository.findById(product.storeId, orgId) } returns storeEntity
+        stubVariantStillAvailable()
         every { orderRepository.insertPending(orgId, storeEntity.id, "USD", currentUser.displayName, currentUser.email) } returns
             pendingOrder(storeEntity)
         every {
@@ -737,6 +748,7 @@ class OrderServiceTest {
         every { productVariantRepository.findById(variant.id, orgId) } returns variant
         every { productRepository.findById(product.id, orgId) } returns product.copy(swagLogoMediaAssetId = UUID.randomUUID())
         every { storeRepository.findById(product.storeId, orgId) } returns storeEntity
+        stubVariantStillAvailable()
         every { orderRepository.insertPending(orgId, storeEntity.id, "USD", currentUser.displayName, currentUser.email) } returns
             pendingOrder(storeEntity)
         every {
@@ -785,6 +797,7 @@ class OrderServiceTest {
         every { productVariantRepository.findById(variant.id, orgId) } returns variant
         every { productRepository.findById(product.id, orgId) } returns product.copy(swagLogoMediaAssetId = UUID.randomUUID())
         every { storeRepository.findById(product.storeId, orgId) } returns storeEntity
+        stubVariantStillAvailable()
 
         assertFailsWith<ValidationException> {
             service.createSwagShopCheckoutSession(
@@ -798,6 +811,60 @@ class OrderServiceTest {
                 currentUser,
             )
         }
+    }
+
+    @Test
+    fun `createSwagShopCheckoutSession proceeds when Printify's catalog still offers the exact blueprint, print provider, and variant`() {
+        val currentUser = CurrentUser(UUID.randomUUID(), "guardian@example.com", "Sarah Johnson")
+        val householdId = UUID.randomUUID()
+        val participant = participant(householdId)
+        val storeEntity = store()
+        val product = product(storeEntity.id)
+        val variant = productVariant(product.id)
+        every { participantRepository.findById(participant.id, orgId) } returns participant
+        every { authorizationService.hasGuardianRelationship(orgId, householdId, currentUser) } returns true
+        every { productVariantRepository.findById(variant.id, orgId) } returns variant
+        every { productRepository.findById(product.id, orgId) } returns product
+        every { storeRepository.findById(product.storeId, orgId) } returns storeEntity
+        stubVariantStillAvailable()
+        every { orderRepository.insertPending(orgId, storeEntity.id, "USD", currentUser.displayName, currentUser.email) } returns
+            pendingOrder(storeEntity)
+        every { orderItemRepository.insert(any(), variant.id, 1, variant.priceMinor, variant.costMinor, participant.id, null, null, null, null) } returns
+            mockk(relaxed = true)
+        every { stripeOrderCheckoutClient.createOrderCheckoutSession(any(), any(), any(), any()) } returns
+            OrderCheckoutSession("cs_test_reorder", "https://checkout.stripe.com/test")
+        every { orderRepository.attachStripeSession(any(), "cs_test_reorder") } returns 1
+
+        val result = service.createSwagShopCheckoutSession(orgId, variant.id, participant.id, null, null, null, null, currentUser)
+
+        assertEquals("https://checkout.stripe.com/test", result.checkoutUrl)
+        verify(exactly = 1) { printifyCatalogClient.listVariants(12L, 5L) }
+    }
+
+    @Test
+    fun `createSwagShopCheckoutSession rejects checkout when the vendor no longer carries this exact blueprint, print provider, and variant combination`() {
+        val currentUser = CurrentUser(UUID.randomUUID(), "guardian@example.com", "Sarah Johnson")
+        val householdId = UUID.randomUUID()
+        val participant = participant(householdId)
+        val storeEntity = store()
+        val product = product(storeEntity.id)
+        val variant = productVariant(product.id)
+        every { participantRepository.findById(participant.id, orgId) } returns participant
+        every { authorizationService.hasGuardianRelationship(orgId, householdId, currentUser) } returns true
+        every { productVariantRepository.findById(variant.id, orgId) } returns variant
+        every { productRepository.findById(product.id, orgId) } returns product
+        every { storeRepository.findById(product.storeId, orgId) } returns storeEntity
+        // The vendor's catalog no longer lists variant id 100 for this blueprint/print-provider combination.
+        every { printifyCatalogClient.listVariants(12L, 5L) } returns
+            listOf(PrintifyCatalogVariant(id = 999L, title = "L / Navy", options = null, placeholders = null))
+
+        val error =
+            assertFailsWith<ConflictException> {
+                service.createSwagShopCheckoutSession(orgId, variant.id, participant.id, null, null, null, null, currentUser)
+            }
+
+        assertEquals("PRINTIFY_VARIANT_UNAVAILABLE", error.code)
+        verify(exactly = 0) { orderRepository.insertPending(any(), any(), any(), any(), any()) }
     }
 
     @Test

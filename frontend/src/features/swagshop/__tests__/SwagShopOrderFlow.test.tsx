@@ -204,4 +204,36 @@ describe("SwagShopOrderFlow", () => {
 		const button = await screen.findByRole("button", { name: /no longer available/i });
 		expect(button).toBeDisabled();
 	});
+
+	it("shows the vendor-unavailable dialog when Printify no longer carries the exact item at checkout time", async () => {
+		const fetchMock = vi.fn().mockImplementation((url: string) => {
+			if (url.includes("/me/contexts")) return Promise.resolve(jsonResponse([householdContext]));
+			if (url.includes("/swag-shop/my-orders")) return Promise.resolve(jsonResponse([]));
+			if (url.includes("/swag-shop/apparel-types")) return Promise.resolve(jsonResponse([apparelType]));
+			if (url.includes("/participants")) return Promise.resolve(jsonResponse([participant]));
+			if (url.includes("/swag-shop/orders")) {
+				return Promise.resolve(
+					jsonResponse(
+						{ code: "PRINTIFY_VARIANT_UNAVAILABLE", message: "The vendor no longer carries this exact item.", requestId: "req_1", fieldErrors: [] },
+						409,
+					),
+				);
+			}
+			return Promise.resolve(jsonResponse(null));
+		});
+		vi.stubGlobal("fetch", fetchMock);
+		const user = userEvent.setup();
+		renderFlow();
+
+		await user.selectOptions(await screen.findByLabelText(/apparel type/i), productId);
+		await user.selectOptions(await screen.findByLabelText(/size \/ color/i), variantId);
+		await user.selectOptions(await screen.findByLabelText(/athlete/i), participantId);
+		await user.click(screen.getByRole("button", { name: /^order$/i }));
+
+		expect(await screen.findByRole("dialog", { name: /this item is no longer available/i })).toBeInTheDocument();
+		expect(screen.getByText(/vendor no longer carries this exact apparel type/i)).toBeInTheDocument();
+
+		await user.click(screen.getByRole("button", { name: /choose a different option/i }));
+		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+	});
 });

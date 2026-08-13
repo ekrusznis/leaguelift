@@ -5,6 +5,7 @@ import com.rally26.audit.application.AuditService
 import com.rally26.authorization.application.AuthorizationService
 import com.rally26.authorization.domain.Capabilities
 import com.rally26.authorization.domain.ContextType
+import com.rally26.common.error.ConflictException
 import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ServiceUnavailableException
@@ -14,6 +15,7 @@ import com.rally26.config.FrontendProperties
 import com.rally26.config.PrintifyProperties
 import com.rally26.credit.application.FamilyCreditService
 import com.rally26.integration.printify.application.PrintifyOwnershipPrefixService
+import com.rally26.integration.printify.infra.PrintifyCatalogClient
 import com.rally26.integration.printify.infra.PrintifyOrderClient
 import com.rally26.integration.printify.infra.PrintifyOrderLineItem
 import com.rally26.ledger.application.LedgerService
@@ -42,7 +44,9 @@ import com.rally26.participant.persistence.ParticipantRepository
 import com.rally26.store.application.AthleteStorefrontService
 import com.rally26.store.application.SwagDesignCompositor
 import com.rally26.store.domain.CatalogSource
+import com.rally26.store.domain.Product
 import com.rally26.store.domain.ProductStatus
+import com.rally26.store.domain.ProductVariant
 import com.rally26.store.domain.StoreStatus
 import com.rally26.store.persistence.ProductRepository
 import com.rally26.store.persistence.ProductVariantRepository
@@ -142,6 +146,7 @@ class OrderService(
     private val familyCreditService: FamilyCreditService,
     private val printifyOwnershipPrefixService: PrintifyOwnershipPrefixService,
     private val printifyProperties: PrintifyProperties,
+    private val printifyCatalogClient: PrintifyCatalogClient,
 ) {
     @Transactional
     fun createCheckoutSession(
@@ -263,6 +268,7 @@ class OrderService(
         if (store.status != StoreStatus.ACTIVE) {
             throw ValidationException("This Swag Shop isn't currently open for orders.")
         }
+        requireVariantStillAvailable(product, variant)
 
         val isPersonalized = personalizationName != null || personalizationNumber != null || personalizationPlacement != null
         if (isPersonalized) {
@@ -531,6 +537,31 @@ class OrderService(
             }
         if (asCoach) return
         throw ForbiddenException("SWAG_SHOP_ORDER_ACCESS_DENIED", "You do not have access to order for this athlete.")
+    }
+
+    /**
+     * A vendor's catalog can change after a product was first set up — most concretely,
+     * when a family reorders an item weeks or months later and Printify's print
+     * provider no longer carries the exact blueprint+variant combination. Reuses the
+     * same read-only catalog lookup `VendorSelectionService` already calls at
+     * product-setup time; runs on every checkout (not reorder-only), since it's one
+     * cheap read call and protects a first-time order just as well as a reorder.
+     */
+    private fun requireVariantStillAvailable(
+        product: Product,
+        variant: ProductVariant,
+    ) {
+        val blueprintId = product.printifyBlueprintId
+        val printProviderId = variant.printifyPrintProviderId
+        val printifyVariantId = variant.printifyVariantId
+        if (blueprintId == null || printProviderId == null || printifyVariantId == null) return
+        val stillOffered = printifyCatalogClient.listVariants(blueprintId, printProviderId).any { it.id == printifyVariantId }
+        if (!stillOffered) {
+            throw ConflictException(
+                "PRINTIFY_VARIANT_UNAVAILABLE",
+                "The vendor no longer carries this exact item. It may need to be re-made through a different vendor.",
+            )
+        }
     }
 
     /** Idempotent: a duplicate webhook delivery or an already-confirmed order is a safe no-op. */

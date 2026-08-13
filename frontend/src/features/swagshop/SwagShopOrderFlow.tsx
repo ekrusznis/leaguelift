@@ -3,9 +3,11 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useContexts } from "../../authorization/api";
 import { Capabilities } from "../../authorization/capabilityConstants";
 import { Button } from "../../components/Button";
+import { Modal } from "../../components/Modal";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
+import { ApiError } from "../../lib/apiError";
 import { formatMoneyMinorUnits } from "../../lib/money";
 import { useParticipants } from "../households/api";
 import { useCreateSwagShopOrder, useMySwagShopOrders, useSwagShopApparelTypes, useTeamRoster } from "../store/api";
@@ -53,6 +55,7 @@ export function SwagShopOrderFlow() {
 	const [placement, setPlacement] = useState<PersonalizationPlacement>("BACK");
 	const [logoSize, setLogoSize] = useState<SwagLogoSize>("STANDARD");
 	const [submitError, setSubmitError] = useState<string | null>(null);
+	const [variantUnavailable, setVariantUnavailable] = useState(false);
 
 	if (!organizationId) return <ErrorState message="No organization selected." />;
 	if (contexts.isLoading || apparelTypes.isLoading) return <LoadingState label="Loading Swag Shop…" />;
@@ -73,6 +76,7 @@ export function SwagShopOrderFlow() {
 
 	async function onSubmit() {
 		setSubmitError(null);
+		setVariantUnavailable(false);
 		if (!variantId || !participantId) {
 			setSubmitError("Choose an apparel type, size, and athlete before ordering.");
 			return;
@@ -87,7 +91,11 @@ export function SwagShopOrderFlow() {
 				personalizationLogoSize: wantsPersonalization ? logoSize : null,
 			});
 			window.location.href = result.checkoutUrl;
-		} catch {
+		} catch (error) {
+			if (error instanceof ApiError && error.code === "PRINTIFY_VARIANT_UNAVAILABLE") {
+				setVariantUnavailable(true);
+				return;
+			}
 			setSubmitError("We couldn't start checkout. Please try again.");
 		}
 	}
@@ -299,6 +307,16 @@ export function SwagShopOrderFlow() {
 					</Button>
 				</div>
 			)}
+
+			<Modal
+				open={variantUnavailable}
+				onClose={() => setVariantUnavailable(false)}
+				title="This item is no longer available"
+				actions={<Button type="button" variant="secondary" onClick={() => setVariantUnavailable(false)}>Choose a different option</Button>}
+			>
+				<p>The vendor no longer carries this exact apparel type, size, and color combination — it may have been discontinued since the original order.</p>
+				<p className="mt-2">Choose a different size or color above, or contact your organization about having it remade through a different vendor.</p>
+			</Modal>
 		</div>
 	);
 }
