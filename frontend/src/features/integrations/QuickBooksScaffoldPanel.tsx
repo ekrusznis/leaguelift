@@ -32,7 +32,7 @@ function rankCompatibility(value: string): number {
 	return 2;
 }
 
-export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: string }) {
+export function QuickBooksScaffoldPanel({ organizationId, readOnly = false }: { organizationId: string; readOnly?: boolean }) {
 	const query = useQuickBooksOverview(organizationId);
 	const connectionId = query.data?.catalog?.connection?.id ?? null;
 	const providerReadAvailable = ["CONNECTED", "DEGRADED"].includes(query.data?.catalog?.connection?.status ?? "");
@@ -128,7 +128,7 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 							? "Credentialed Intuit verification is recorded."
 							: "No credentialed Intuit verification is claimed yet; realm/company metadata alone is only setup context."}
 					</p>
-					{providerReadAvailable && (
+					{!readOnly && providerReadAvailable && (
 						<div className="mt-3 flex flex-wrap gap-2">
 							<Button
 								type="button"
@@ -311,20 +311,22 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 											? `Mapped to ${existing.externalAccountFullyQualifiedName ?? existing.externalAccountName}`
 											: "Owner/accountant selection required before later export activation"}
 									</span>
-									<Button
-										type="button"
-										variant="secondary"
-										onClick={() => void save(type)}
-										disabled={
-											!providerReadAvailable ||
-											!selected ||
-											saveMapping.isPending ||
-											compatibility === "BLOCKED" ||
-											(warningRequired && warningAcknowledgements[type] !== true)
-										}
-									>
-										Save
-									</Button>
+									{!readOnly && (
+										<Button
+											type="button"
+											variant="secondary"
+											onClick={() => void save(type)}
+											disabled={
+												!providerReadAvailable ||
+												!selected ||
+												saveMapping.isPending ||
+												compatibility === "BLOCKED" ||
+												(warningRequired && warningAcknowledgements[type] !== true)
+											}
+										>
+											Save
+										</Button>
+									)}
 								</div>
 							</div>
 						);
@@ -358,13 +360,15 @@ export function QuickBooksScaffoldPanel({ organizationId }: { organizationId: st
 							className="mt-1 min-h-11 rounded-md border border-slate-300 dark:border-[#334155] px-3 py-2"
 						/>
 					</div>
-					<Button
-						type="button"
-						onClick={() => void runPreview()}
-						disabled={!providerReadAvailable || previewExport.isPending || !periodStart || !periodEnd}
-					>
-						{previewExport.isPending ? "Previewing…" : "Preview export"}
-					</Button>
+					{!readOnly && (
+						<Button
+							type="button"
+							onClick={() => void runPreview()}
+							disabled={!providerReadAvailable || previewExport.isPending || !periodStart || !periodEnd}
+						>
+							{previewExport.isPending ? "Previewing…" : "Preview export"}
+						</Button>
+					)}
 				</div>
 				{previewExport.isError && (
 					<p role="alert" className="mt-3 text-sm text-error-red">Could not create the export preview.</p>

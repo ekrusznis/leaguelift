@@ -1,5 +1,7 @@
 package com.rally26.platformadmin.web
 
+import com.rally26.platformadmin.domain.PlatformAthleteListItem
+import com.rally26.platformadmin.domain.PlatformCoachListItem
 import com.rally26.platformadmin.domain.PlatformOrganizationDetail
 import com.rally26.platformadmin.domain.PlatformOrganizationListItem
 import com.rally26.platformadmin.domain.PlatformPaymentListItem
@@ -10,6 +12,7 @@ import com.rally26.platformadmin.domain.PlatformUserListItem
 import com.rally26.platformadmin.domain.PlatformUserOrganizationMembership
 import jakarta.validation.constraints.Size
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 data class PlatformOrganizationListItemResponse(
@@ -148,6 +151,58 @@ fun PlatformPaymentListItem.toResponse() =
         confirmedAt,
         closedAt,
         canRefundOrVoid,
+    )
+
+data class PlatformAthleteListItemResponse(
+    val participantId: UUID,
+    val firstName: String,
+    val lastName: String,
+    val dateOfBirth: LocalDate?,
+    val householdId: UUID,
+    val householdName: String,
+    val organizationId: UUID,
+    val organizationName: String,
+    val teamNames: List<String>,
+    val eligibilityStatus: String?,
+)
+
+fun PlatformAthleteListItem.toResponse() =
+    PlatformAthleteListItemResponse(
+        participantId,
+        firstName,
+        lastName,
+        dateOfBirth,
+        householdId,
+        householdName,
+        organizationId,
+        organizationName,
+        teamNames,
+        eligibilityStatus?.name,
+    )
+
+data class PlatformCoachListItemResponse(
+    val roleAssignmentId: UUID,
+    val userId: UUID,
+    val displayName: String,
+    val email: String,
+    val role: String,
+    val teamId: UUID,
+    val teamName: String,
+    val organizationId: UUID,
+    val organizationName: String,
+)
+
+fun PlatformCoachListItem.toResponse() =
+    PlatformCoachListItemResponse(
+        roleAssignmentId,
+        userId,
+        displayName,
+        email,
+        role,
+        teamId,
+        teamName,
+        organizationId,
+        organizationName,
     )
 
 data class StartPlatformSupportAccessRequest(

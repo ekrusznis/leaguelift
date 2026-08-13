@@ -11,7 +11,7 @@ import type { CsvImportResult } from "./types";
  * this codebase's existing "no multipart anywhere" convention rather than
  * introducing a new upload pattern for one feature.
  */
-export function CsvImportSection({ organizationId }: { organizationId: string }) {
+export function CsvImportSection({ organizationId, readOnly = false }: { organizationId: string; readOnly?: boolean }) {
 	const { data: teams } = useTeams(organizationId);
 	const importCsv = useImportEventsCsv(organizationId);
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,12 +61,14 @@ export function CsvImportSection({ organizationId }: { organizationId: string })
 		<div className="flex flex-col gap-3">
 			<div className="flex items-center justify-between">
 				<h3 className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">CSV Import</h3>
-				<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
-					{showForm ? "Cancel" : "Import a schedule"}
-				</Button>
+				{!readOnly && (
+					<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
+						{showForm ? "Cancel" : "Import a schedule"}
+					</Button>
+				)}
 			</div>
 
-			{showForm && (
+			{!readOnly && showForm && (
 				<form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4" noValidate aria-label="Import events from CSV">
 					<div className="flex flex-wrap gap-3">
 						<div className="flex flex-col gap-1">

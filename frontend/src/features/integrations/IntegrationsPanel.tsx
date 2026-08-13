@@ -67,7 +67,7 @@ function statusClasses(value: string) {
 	return "bg-slate-gray/10 text-slate-gray dark:text-[#cbd5e1]";
 }
 
-function ProviderReadinessCard({ organizationId, item }: { organizationId: string; item: IntegrationCatalogItem }) {
+function ProviderReadinessCard({ organizationId, item, readOnly }: { organizationId: string; item: IntegrationCatalogItem; readOnly: boolean }) {
 	const startAuthorization = useStartOrganizationIntegrationAuthorization(organizationId);
 	const refresh = useRefreshOrganizationIntegration(organizationId);
 	const health = useCheckOrganizationIntegrationHealth(organizationId);
@@ -98,7 +98,7 @@ function ProviderReadinessCard({ organizationId, item }: { organizationId: strin
 				</div>
 				<span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusClasses(statusValue)}`}>{label}</span>
 			</div>
-			{(canConnect || connected) && (
+			{!readOnly && (canConnect || connected) && (
 				<div className="mt-3 flex flex-wrap gap-2">
 					{canConnect && <Button type="button" onClick={() => void connect()} disabled={busy}>{item.connection?.status === "DEGRADED" ? "Reauthorize" : "Connect"}</Button>}
 					{connected && item.connection && <>
@@ -112,7 +112,7 @@ function ProviderReadinessCard({ organizationId, item }: { organizationId: strin
 	);
 }
 
-function ProviderReadinessSection({ organizationId }: { organizationId: string }) {
+function ProviderReadinessSection({ organizationId, readOnly }: { organizationId: string; readOnly: boolean }) {
 	const { data, isLoading, isError, refetch } = useOrganizationIntegrationCatalog(organizationId);
 	if (isLoading) return <LoadingState label="Loading integration readiness…" />;
 	if (isError) return <ErrorState message="Could not load integration readiness." onRetry={() => refetch()} />;
@@ -124,7 +124,7 @@ function ProviderReadinessSection({ organizationId }: { organizationId: string }
 				These providers are scaffolded but remain disabled until Rally26 verifies official access, credentials, scopes, and contracts.
 			</p>
 			<ul className="mt-3 flex flex-col gap-2" aria-label="Organization integration readiness">
-				{items.map((item) => <ProviderReadinessCard key={item.provider} organizationId={organizationId} item={item} />)}
+				{items.map((item) => <ProviderReadinessCard key={item.provider} organizationId={organizationId} item={item} readOnly={readOnly} />)}
 			</ul>
 		</div>
 	);
@@ -184,7 +184,7 @@ function ConnectIcsFeedForm({ organizationId, onDone }: { organizationId: string
 	);
 }
 
-function IcsFeedSection({ organizationId }: { organizationId: string }) {
+function IcsFeedSection({ organizationId, readOnly }: { organizationId: string; readOnly: boolean }) {
 	const { data, isLoading, isError, refetch } = useEventSourceConnections(organizationId);
 	const disconnect = useDisconnectEventSource(organizationId);
 	const [showForm, setShowForm] = useState(false);
@@ -195,7 +195,7 @@ function IcsFeedSection({ organizationId }: { organizationId: string }) {
 		<div className="flex flex-col gap-3">
 			<div className="flex items-center justify-between">
 				<h3 className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">ICS Feed</h3>
-				<Button type="button" variant="secondary" onClick={() => setShowForm((value) => !value)}>{showForm ? "Cancel" : "Connect a feed"}</Button>
+				{!readOnly && <Button type="button" variant="secondary" onClick={() => setShowForm((value) => !value)}>{showForm ? "Cancel" : "Connect a feed"}</Button>}
 			</div>
 			{showForm && <ConnectIcsFeedForm organizationId={organizationId} onDone={() => setShowForm(false)} />}
 			{connections.length > 0 && (
@@ -207,7 +207,7 @@ function IcsFeedSection({ organizationId }: { organizationId: string }) {
 								<p className="break-words text-sm text-slate-gray dark:text-[#cbd5e1]">{connection.feedUrl}</p>
 								<p className="text-xs text-slate-gray dark:text-[#cbd5e1]">{connection.status === "ACTIVE" ? connection.lastSyncedAt ? `Last synced ${new Date(connection.lastSyncedAt).toLocaleString()}` : "Not yet synced" : "Disconnected"}</p>
 							</div>
-							{connection.status === "ACTIVE" && <Button type="button" variant="secondary" className="shrink-0" onClick={() => disconnect.mutate(connection.id)} disabled={disconnect.isPending}>Disconnect</Button>}
+							{!readOnly && connection.status === "ACTIVE" && <Button type="button" variant="secondary" className="shrink-0" onClick={() => disconnect.mutate(connection.id)} disabled={disconnect.isPending}>Disconnect</Button>}
 						</li>
 					))}
 				</ul>
@@ -216,7 +216,7 @@ function IcsFeedSection({ organizationId }: { organizationId: string }) {
 	);
 }
 
-export function IntegrationsPanel({ organizationId }: { organizationId: string }) {
+export function IntegrationsPanel({ organizationId, readOnly = false }: { organizationId: string; readOnly?: boolean }) {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const callbackStatus = searchParams.get("integration");
 	return (
@@ -227,18 +227,23 @@ export function IntegrationsPanel({ organizationId }: { organizationId: string }
 					<button type="button" className="font-medium text-azure-blue hover:underline" onClick={() => { searchParams.delete("integration"); searchParams.delete("provider"); setSearchParams(searchParams, { replace: true }); }}>Dismiss</button>
 				</div>
 			)}
+			{readOnly && (
+				<div role="status" className="rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4 text-sm text-slate-gray dark:text-[#cbd5e1]">
+					Support access is view-only here — integrations are configured by organization staff.
+				</div>
+			)}
 			<div className="rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4">
 				<h3 className="font-heading text-base font-semibold text-navy dark:text-[#f8fafc]">Rally26-managed providers</h3>
 				<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">
 					Payments, fulfillment, email, SMS, and file storage are configured by Rally26. Your organization will never be asked for Rally26&apos;s Stripe, Printify, Resend, Twilio, or storage credentials.
 				</p>
 			</div>
-			<ProviderReadinessSection organizationId={organizationId} />
-			<QuickBooksScaffoldPanel organizationId={organizationId} />
-			<SportsDataScaffoldPanel organizationId={organizationId} />
+			<ProviderReadinessSection organizationId={organizationId} readOnly={readOnly} />
+			<QuickBooksScaffoldPanel organizationId={organizationId} readOnly={readOnly} />
+			<SportsDataScaffoldPanel organizationId={organizationId} readOnly={readOnly} />
 			<IntegrationSyncHistory organizationId={organizationId} />
-			<IcsFeedSection organizationId={organizationId} />
-			<CsvImportSection organizationId={organizationId} />
+			<IcsFeedSection organizationId={organizationId} readOnly={readOnly} />
+			<CsvImportSection organizationId={organizationId} readOnly={readOnly} />
 		</div>
 	);
 }

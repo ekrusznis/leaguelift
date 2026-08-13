@@ -10,6 +10,9 @@ import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageRequest
 import com.rally26.common.web.PageResponse
+import com.rally26.eligibility.domain.ClearanceStatus
+import com.rally26.platformadmin.domain.PlatformAthleteListItem
+import com.rally26.platformadmin.domain.PlatformCoachListItem
 import com.rally26.platformadmin.domain.PlatformOrganizationDetail
 import com.rally26.platformadmin.domain.PlatformOrganizationListItem
 import com.rally26.platformadmin.domain.PlatformPaymentListItem
@@ -153,6 +156,47 @@ class PlatformAdminConsoleService(
             page = pageRequest.page,
             size = pageRequest.size,
             totalElements = consoleRepository.countPayments(normalizedType, normalizedStatus, organizationId, teamId, query?.trim(), dateFrom, dateTo),
+        )
+    }
+
+    /**
+     * Platform Admin cross-org athlete roster (org > team > household > athlete
+     * drill-down). Read-only — no support-access session required to browse, matching
+     * [listPayments]/[listSwagShopProducts]; any real change happens on the org's own
+     * household page, which the frontend deep-links each row to.
+     */
+    fun listAthletes(
+        currentUser: CurrentUser,
+        organizationId: UUID?,
+        teamId: UUID?,
+        householdId: UUID?,
+        eligibilityStatus: ClearanceStatus?,
+        query: String?,
+        pageRequest: PageRequest,
+    ): PageResponse<PlatformAthleteListItem> {
+        authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_ORG_VIEW)
+        return PageResponse(
+            items = consoleRepository.listAthletes(organizationId, teamId, householdId, eligibilityStatus, query?.trim(), pageRequest),
+            page = pageRequest.page,
+            size = pageRequest.size,
+            totalElements = consoleRepository.countAthletes(organizationId, teamId, householdId, eligibilityStatus, query?.trim()),
+        )
+    }
+
+    /** Platform Admin cross-org coach/staff roster, same read-only posture as [listAthletes]. */
+    fun listCoaches(
+        currentUser: CurrentUser,
+        organizationId: UUID?,
+        teamId: UUID?,
+        query: String?,
+        pageRequest: PageRequest,
+    ): PageResponse<PlatformCoachListItem> {
+        authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_ORG_VIEW)
+        return PageResponse(
+            items = consoleRepository.listCoaches(organizationId, teamId, query?.trim(), pageRequest),
+            page = pageRequest.page,
+            size = pageRequest.size,
+            totalElements = consoleRepository.countCoaches(organizationId, teamId, query?.trim()),
         )
     }
 

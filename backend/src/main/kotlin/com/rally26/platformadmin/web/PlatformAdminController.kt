@@ -3,6 +3,7 @@ package com.rally26.platformadmin.web
 import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageRequest
 import com.rally26.common.web.PageResponse
+import com.rally26.eligibility.domain.ClearanceStatus
 import com.rally26.platformadmin.application.PlatformAdminConsoleService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -81,6 +82,34 @@ class PlatformAdminController(
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<PlatformPaymentListItemResponse> {
         val result = service.listPayments(currentUser, type, status, organizationId, teamId, query, dateFrom, dateTo, PageRequest(page, size))
+        return PageResponse(result.items.map { it.toResponse() }, result.page, result.size, result.totalElements)
+    }
+
+    @GetMapping("/athletes")
+    fun listAthletes(
+        @RequestParam(required = false) organizationId: UUID?,
+        @RequestParam(required = false) teamId: UUID?,
+        @RequestParam(required = false) householdId: UUID?,
+        @RequestParam(required = false) eligibilityStatus: ClearanceStatus?,
+        @RequestParam(required = false) query: String?,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "25") size: Int,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PageResponse<PlatformAthleteListItemResponse> {
+        val result = service.listAthletes(currentUser, organizationId, teamId, householdId, eligibilityStatus, query, PageRequest(page, size))
+        return PageResponse(result.items.map { it.toResponse() }, result.page, result.size, result.totalElements)
+    }
+
+    @GetMapping("/coaches")
+    fun listCoaches(
+        @RequestParam(required = false) organizationId: UUID?,
+        @RequestParam(required = false) teamId: UUID?,
+        @RequestParam(required = false) query: String?,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "25") size: Int,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PageResponse<PlatformCoachListItemResponse> {
+        val result = service.listCoaches(currentUser, organizationId, teamId, query, PageRequest(page, size))
         return PageResponse(result.items.map { it.toResponse() }, result.page, result.size, result.totalElements)
     }
 

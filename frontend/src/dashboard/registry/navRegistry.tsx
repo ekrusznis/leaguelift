@@ -43,6 +43,7 @@ export type NavDestination =
 	| { type: "platform-swag-shop" }
 	| { type: "platform-payments" }
 	| { type: "platform-subscriptions" }
+	| { type: "platform-roster" }
 	| { type: "organization-billing" }
 	| { type: "organization"; section: OrganizationSection }
 	| { type: "household"; section: HouseholdSection }
@@ -161,6 +162,7 @@ export const NAV_REGISTRY: NavRegistryItem[] = [
 	{ id: "platform.support-cases", label: "Support Cases", icon: <MessageSquareIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_SUPPORT_CASE_MANAGE], destination: { type: "platform-support-cases" } },
 	{ id: "platform.swag-shop", label: "Swag Shop", icon: <ShirtIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_SWAG_SHOP_VIEW], destination: { type: "platform-swag-shop" } },
 	{ id: "platform.payments", label: "Payments", icon: <DollarIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_PAYMENTS_VIEW], destination: { type: "platform-payments" } },
+	{ id: "platform.roster", label: "Athletes & Coaches", icon: <UsersIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_ORG_VIEW], destination: { type: "platform-roster" } },
 ];
 
 function resolveDestination(destination: NavDestination, context: NavRouteContext): string | null {
@@ -182,6 +184,7 @@ function resolveDestination(destination: NavDestination, context: NavRouteContex
 		case "platform-swag-shop": return appPaths.platformSwagShop();
 		case "platform-payments": return appPaths.platformPayments();
 		case "platform-subscriptions": return appPaths.platformSubscriptions();
+		case "platform-roster": return appPaths.platformRoster();
 		case "organization-billing": return context.organizationId ? appPaths.organizationBilling(context.organizationId) : null;
 		case "organization": return context.organizationId ? appPaths.organization(context.organizationId, destination.section) : null;
 		case "household": return context.organizationId && context.householdId ? appPaths.household(context.organizationId, context.householdId, destination.section) : null;

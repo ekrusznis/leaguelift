@@ -8,6 +8,9 @@ import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageRequest
+import com.rally26.eligibility.domain.ClearanceStatus
+import com.rally26.platformadmin.domain.PlatformAthleteListItem
+import com.rally26.platformadmin.domain.PlatformCoachListItem
 import com.rally26.platformadmin.domain.PlatformOrganizationDetail
 import com.rally26.platformadmin.domain.PlatformPaymentListItem
 import com.rally26.platformadmin.domain.PlatformPaymentType
@@ -173,6 +176,80 @@ class PlatformAdminConsoleServiceTest {
         assertEquals(listOf(item), result.items)
         assertEquals(1L, result.totalElements)
     }
+
+    @Test
+    fun `listAthletes requires the platform org view capability`() {
+        every { authorizationService.requirePlatformCapability(admin, Capabilities.PLATFORM_ORG_VIEW) } throws
+            ForbiddenException("PLATFORM_ACCESS_DENIED", "denied")
+
+        assertFailsWith<ForbiddenException> {
+            service.listAthletes(admin, null, null, null, null, null, PageRequest(0, 25))
+        }
+    }
+
+    @Test
+    fun `listAthletes maps repository rows through to the page response`() {
+        val item = athleteItem()
+        val householdId = UUID.randomUUID()
+        every { authorizationService.requirePlatformCapability(admin, Capabilities.PLATFORM_ORG_VIEW) } just runs
+        every { consoleRepository.listAthletes(organizationId, null, householdId, ClearanceStatus.INELIGIBLE, "jane", PageRequest(0, 25)) } returns listOf(item)
+        every { consoleRepository.countAthletes(organizationId, null, householdId, ClearanceStatus.INELIGIBLE, "jane") } returns 1L
+
+        val result = service.listAthletes(admin, organizationId, null, householdId, ClearanceStatus.INELIGIBLE, "jane", PageRequest(0, 25))
+
+        assertEquals(listOf(item), result.items)
+        assertEquals(1L, result.totalElements)
+    }
+
+    @Test
+    fun `listCoaches requires the platform org view capability`() {
+        every { authorizationService.requirePlatformCapability(admin, Capabilities.PLATFORM_ORG_VIEW) } throws
+            ForbiddenException("PLATFORM_ACCESS_DENIED", "denied")
+
+        assertFailsWith<ForbiddenException> {
+            service.listCoaches(admin, null, null, null, PageRequest(0, 25))
+        }
+    }
+
+    @Test
+    fun `listCoaches maps repository rows through to the page response`() {
+        val item = coachItem()
+        every { authorizationService.requirePlatformCapability(admin, Capabilities.PLATFORM_ORG_VIEW) } just runs
+        every { consoleRepository.listCoaches(organizationId, null, "smith", PageRequest(0, 25)) } returns listOf(item)
+        every { consoleRepository.countCoaches(organizationId, null, "smith") } returns 1L
+
+        val result = service.listCoaches(admin, organizationId, null, "smith", PageRequest(0, 25))
+
+        assertEquals(listOf(item), result.items)
+        assertEquals(1L, result.totalElements)
+    }
+
+    private fun athleteItem() =
+        PlatformAthleteListItem(
+            participantId = UUID.randomUUID(),
+            firstName = "Jane",
+            lastName = "Doe",
+            dateOfBirth = null,
+            householdId = UUID.randomUUID(),
+            householdName = "The Doe Household",
+            organizationId = organizationId,
+            organizationName = "North Jersey Volleyball Club",
+            teamNames = listOf("U12 Sharks"),
+            eligibilityStatus = ClearanceStatus.INELIGIBLE,
+        )
+
+    private fun coachItem() =
+        PlatformCoachListItem(
+            roleAssignmentId = UUID.randomUUID(),
+            userId = UUID.randomUUID(),
+            displayName = "Coach Smith",
+            email = "smith@example.com",
+            role = "TEAM_MANAGER",
+            teamId = UUID.randomUUID(),
+            teamName = "U12 Sharks",
+            organizationId = organizationId,
+            organizationName = "North Jersey Volleyball Club",
+        )
 
     private fun paymentItem() =
         PlatformPaymentListItem(

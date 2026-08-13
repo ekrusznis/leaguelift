@@ -102,6 +102,7 @@ describe("dashboard navigation registry", () => {
 			"platform.reports",
 			"platform.audit",
 			"platform.support-sessions",
+			"platform.roster",
 		]);
 		expect(items.find((item) => item.id === "platform.integrations")?.to).toBe("/app/integrations");
 		expect(items.find((item) => item.id === "platform.organizations")?.to).toBe("/app/platform/organizations");

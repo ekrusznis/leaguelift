@@ -272,7 +272,7 @@ function OrganizationSectionContent({
 		case "members":
 			return <Section title="Members & Invitations"><InvitationsPanel organizationId={organization.id} /></Section>;
 		case "integrations":
-			return <Section title="Integrations" description="Connect organization-owned accounting and sports-data providers, or use reviewed CSV and ICS workflows."><IntegrationsPanel organizationId={organization.id} /></Section>;
+			return <Section title="Integrations" description="Connect organization-owned accounting and sports-data providers, or use reviewed CSV and ICS workflows."><IntegrationsPanel organizationId={organization.id} readOnly={isPlatformSupportMode} /></Section>;
 		case "settings":
 			return (
 				<div className="flex flex-col gap-8">

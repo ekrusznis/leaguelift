@@ -70,4 +70,29 @@ describe("IntegrationsPanel", () => {
 		expect(screen.getByText("Not yet synced")).toBeInTheDocument();
 		expect(screen.getByRole("button", { name: /disconnect/i })).toBeInTheDocument();
 	});
+
+	it("hides every mutating action and shows a view-only notice when readOnly (platform support mode)", async () => {
+		vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url.includes("/integrations/catalog")) {
+				return response([
+					{ provider: "QUICKBOOKS_ONLINE", displayName: "QuickBooks Online", category: "ACCOUNTING", ownerType: "ORGANIZATION", authMode: "OAUTH2", supportedAuthModes: ["OAUTH2"], readiness: "AVAILABLE", adapterMode: "OAUTH_SCAFFOLD", description: "Accounting connection", activationRequirement: "", defaultScopes: [], stub: false, connection: null },
+				]);
+			}
+			if (url.includes("/event-source-connections")) {
+				return response([{ id: "conn-1", provider: "ICS_FEED", label: "Varsity Soccer Schedule", feedUrl: "https://example.com/feed.ics", timezone: "America/New_York", teamId: null, status: "ACTIVE", lastSyncedAt: null, lastSyncStatus: null, lastSyncError: null, createdAt: new Date().toISOString() }]);
+			}
+			return defaultFetchStub(url);
+		}));
+
+		renderWithProviders(<IntegrationsPanel organizationId="org-1" readOnly />);
+
+		expect(screen.getByText(/support access is view-only here/i)).toBeInTheDocument();
+		await waitFor(() => expect(screen.getByText("Varsity Soccer Schedule")).toBeInTheDocument());
+		expect(screen.getByText("QuickBooks Online")).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: /^connect$/i })).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: /disconnect/i })).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: /connect a feed/i })).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: /import a schedule/i })).not.toBeInTheDocument();
+	});
 });

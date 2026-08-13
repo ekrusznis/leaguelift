@@ -4,6 +4,8 @@ import { clearStoredSupportAccess, storeSupportAccess } from "./supportAccessSto
 import type {
 	OutboxEvent,
 	PageResponse,
+	PlatformAthleteListItem,
+	PlatformCoachListItem,
 	PlatformOrganizationDetail,
 	PlatformOrganizationListItem,
 	PlatformPaymentListItem,
@@ -39,6 +41,40 @@ export function usePlatformSwagShopProducts(filters: PlatformSwagShopListFilters
 	return useQuery({
 		queryKey: ["platform", "admin", "swag-shop", "products", filters],
 		queryFn: () => apiFetch<PageResponse<PlatformSwagShopProductListItem>>(`/platform/admin/swag-shop/products?${params.toString()}`),
+	});
+}
+
+export interface PlatformAthleteListFilters extends PlatformListFilters {
+	organizationId?: string;
+	teamId?: string;
+	householdId?: string;
+	eligibilityStatus?: string;
+}
+
+export function usePlatformAthletes(filters: PlatformAthleteListFilters) {
+	const params = new URLSearchParams(listQuery(filters));
+	if (filters.organizationId) params.set("organizationId", filters.organizationId);
+	if (filters.teamId) params.set("teamId", filters.teamId);
+	if (filters.householdId) params.set("householdId", filters.householdId);
+	if (filters.eligibilityStatus) params.set("eligibilityStatus", filters.eligibilityStatus);
+	return useQuery({
+		queryKey: ["platform", "admin", "athletes", filters],
+		queryFn: () => apiFetch<PageResponse<PlatformAthleteListItem>>(`/platform/admin/athletes?${params.toString()}`),
+	});
+}
+
+export interface PlatformCoachListFilters extends PlatformListFilters {
+	organizationId?: string;
+	teamId?: string;
+}
+
+export function usePlatformCoaches(filters: PlatformCoachListFilters) {
+	const params = new URLSearchParams(listQuery(filters));
+	if (filters.organizationId) params.set("organizationId", filters.organizationId);
+	if (filters.teamId) params.set("teamId", filters.teamId);
+	return useQuery({
+		queryKey: ["platform", "admin", "coaches", filters],
+		queryFn: () => apiFetch<PageResponse<PlatformCoachListItem>>(`/platform/admin/coaches?${params.toString()}`),
 	});
 }
 

@@ -60,6 +60,33 @@ export interface PlatformPaymentListItem {
 	canRefundOrVoid: boolean;
 }
 
+export type ClearanceStatus = "ROSTER_PENDING" | "DOCUMENTS_REQUIRED" | "UNDER_REVIEW" | "CLEARED" | "EXPIRED" | "INELIGIBLE";
+
+export interface PlatformAthleteListItem {
+	participantId: string;
+	firstName: string;
+	lastName: string;
+	dateOfBirth: string | null;
+	householdId: string;
+	householdName: string;
+	organizationId: string;
+	organizationName: string;
+	teamNames: string[];
+	eligibilityStatus: ClearanceStatus | null;
+}
+
+export interface PlatformCoachListItem {
+	roleAssignmentId: string;
+	userId: string;
+	displayName: string;
+	email: string;
+	role: string;
+	teamId: string;
+	teamName: string;
+	organizationId: string;
+	organizationName: string;
+}
+
 export interface PlatformOrganizationDetail extends PlatformOrganizationListItem {
 	contactPhone: string | null;
 	updatedAt: string;

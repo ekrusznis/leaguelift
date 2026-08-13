@@ -24,6 +24,7 @@ import { PlatformOrganizationsPage } from "../features/platformAdmin/PlatformOrg
 import { PlatformSupportSessionsPage } from "../features/platformAdmin/PlatformSupportSessionsPage";
 import { PlatformSwagShopPage } from "../features/platformAdmin/PlatformSwagShopPage";
 import { PlatformPaymentsPage } from "../features/platformAdmin/PlatformPaymentsPage";
+import { PlatformRosterPage } from "../features/platformAdmin/PlatformRosterPage";
 import { PlatformDuplicateIdentitiesPage } from "../features/platformAdmin/PlatformDuplicateIdentitiesPage";
 import { PlatformUsersPage } from "../features/platformAdmin/PlatformUsersPage";
 import { PlatformReportsPage } from "../features/reporting/PlatformReportsPage";
@@ -145,6 +146,7 @@ export function AppRoutes() {
 					<Route path="payments" element={platformGuard(Capabilities.PLATFORM_PAYMENTS_VIEW, <PlatformPaymentsPage />)} />
 					<Route path="subscriptions" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformSubscriptionsPage />)} />
 					<Route path="data-integrity/duplicates" element={platformGuard(Capabilities.PLATFORM_USER_VIEW, <PlatformDuplicateIdentitiesPage />)} />
+					<Route path="roster" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformRosterPage />)} />
 				</Route>
 			</Route>
 			<Route element={<MarketingLayout />}>

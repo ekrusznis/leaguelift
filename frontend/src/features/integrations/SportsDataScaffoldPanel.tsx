@@ -5,7 +5,7 @@ import { LoadingState } from "../../components/states/LoadingState";
 import { usePreviewConnectedSportsData, useSportsDataOverview } from "./api";
 import type { SportsDataPreview } from "./types";
 
-export function SportsDataScaffoldPanel({ organizationId }: { organizationId: string }) {
+export function SportsDataScaffoldPanel({ organizationId, readOnly = false }: { organizationId: string; readOnly?: boolean }) {
 	const query = useSportsDataOverview(organizationId);
 	const previewConnected = usePreviewConnectedSportsData(organizationId);
 	const [preview, setPreview] = useState<SportsDataPreview | null>(null);
@@ -30,7 +30,7 @@ export function SportsDataScaffoldPanel({ organizationId }: { organizationId: st
 							<div className="flex items-start justify-between gap-2"><h4 className="font-semibold text-navy-900 dark:text-[#f8fafc]">{item.displayName}</h4><span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:text-[#cbd5e1]">{(item.connection?.status ?? item.readiness).replaceAll("_", " ")}</span></div>
 							<p className="mt-2 text-sm text-slate-600 dark:text-[#cbd5e1]">{item.description}</p>
 							<p className="mt-2 text-xs text-slate-500 dark:text-[#cbd5e1]">{item.activationRequirement}</p>
-							{connected && item.connection && <Button type="button" variant="secondary" className="mt-3" onClick={() => void runPreview(item.connection!.id)} disabled={previewConnected.isPending}>{previewConnected.isPending ? "Reviewing…" : "Preview provider records"}</Button>}
+							{!readOnly && connected && item.connection && <Button type="button" variant="secondary" className="mt-3" onClick={() => void runPreview(item.connection!.id)} disabled={previewConnected.isPending}>{previewConnected.isPending ? "Reviewing…" : "Preview provider records"}</Button>}
 						</article>
 					);
 				})}

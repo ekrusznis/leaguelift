@@ -1,6 +1,8 @@
 package com.rally26.platformadmin.domain
 
+import com.rally26.eligibility.domain.ClearanceStatus
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 data class PlatformOrganizationListItem(
@@ -139,4 +141,38 @@ data class PlatformPaymentListItem(
     val confirmedAt: Instant?,
     val closedAt: Instant?,
     val canRefundOrVoid: Boolean,
+)
+
+/**
+ * Platform Admin cross-organization athlete roster (org > team > household > athlete
+ * drill-down, DESIGN-DOC.md section 14.1L). Read-only — every row links back to the
+ * real household page for any actual change, the same "browse here, act there"
+ * pattern as [PlatformSwagShopProductListItem] and duplicate-identity resolution.
+ * [eligibilityStatus] is the worst (most-concerning) clearance across every team this
+ * participant is rostered on, or null if they have no clearance rows yet at all.
+ */
+data class PlatformAthleteListItem(
+    val participantId: UUID,
+    val firstName: String,
+    val lastName: String,
+    val dateOfBirth: LocalDate?,
+    val householdId: UUID,
+    val householdName: String,
+    val organizationId: UUID,
+    val organizationName: String,
+    val teamNames: List<String>,
+    val eligibilityStatus: ClearanceStatus?,
+)
+
+/** Platform Admin cross-organization coach/staff roster — one row per active TEAM-context role_assignment. */
+data class PlatformCoachListItem(
+    val roleAssignmentId: UUID,
+    val userId: UUID,
+    val displayName: String,
+    val email: String,
+    val role: String,
+    val teamId: UUID,
+    val teamName: String,
+    val organizationId: UUID,
+    val organizationName: String,
 )

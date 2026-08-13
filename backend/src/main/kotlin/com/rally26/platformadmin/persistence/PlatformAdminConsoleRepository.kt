@@ -1,6 +1,9 @@
 package com.rally26.platformadmin.persistence
 
 import com.rally26.common.web.PageRequest
+import com.rally26.eligibility.domain.ClearanceStatus
+import com.rally26.platformadmin.domain.PlatformAthleteListItem
+import com.rally26.platformadmin.domain.PlatformCoachListItem
 import com.rally26.platformadmin.domain.PlatformOrganizationDetail
 import com.rally26.platformadmin.domain.PlatformOrganizationListItem
 import com.rally26.platformadmin.domain.PlatformPaymentListItem
@@ -524,6 +527,219 @@ class PlatformAdminConsoleRepository(
             )
         params.forEach { (name, value) -> spec = spec.param(name, value) }
         return spec.query(Long::class.java).single()
+    }
+
+    /**
+     * Platform Admin cross-org athlete roster (org > team > household > athlete
+     * drill-down). One row per non-archived participant, aggregating every team
+     * they're actively rostered on and their worst (most-concerning) eligibility
+     * clearance across those teams — same severity order as the frontend's
+     * worstClearanceByParticipant (HouseholdDetailPage.tsx), just computed in SQL so
+     * it can be paginated and filtered server-side instead of client-side.
+     */
+    private val athletesCte =
+        """
+        with athletes as (
+            select p.id, p.first_name, p.last_name, p.date_of_birth,
+                   h.id as household_id, h.display_name as household_name,
+                   o.id as organization_id, o.name as organization_name,
+                   coalesce(string_agg(distinct t.name, ', ' order by t.name), '') as team_names,
+                   (select ec.status from eligibility_clearance ec
+                    where ec.participant_id = p.id
+                    order by case ec.status
+                        when 'INELIGIBLE' then 0 when 'EXPIRED' then 1 when 'UNDER_REVIEW' then 2
+                        when 'DOCUMENTS_REQUIRED' then 3 when 'ROSTER_PENDING' then 4 else 5 end
+                    limit 1) as eligibility_status
+            from participant p
+            join household h on h.id = p.household_id
+            join organization o on o.id = p.organization_id
+            left join participant_team pt on pt.participant_id = p.id and pt.status = 'ACTIVE'
+            left join team t on t.id = pt.team_id
+            where p.status <> 'ARCHIVED'
+        """.trimIndent()
+
+    private fun athletesFilters(
+        organizationId: UUID?,
+        teamId: UUID?,
+        householdId: UUID?,
+        query: String?,
+    ): Pair<String, List<Pair<String, Any>>> {
+        val where = mutableListOf<String>()
+        val params = mutableListOf<Pair<String, Any>>()
+        if (organizationId != null) {
+            where += "o.id = :organizationId"
+            params += "organizationId" to organizationId
+        }
+        if (householdId != null) {
+            where += "h.id = :householdId"
+            params += "householdId" to householdId
+        }
+        if (teamId != null) {
+            where += "exists (select 1 from participant_team pt2 where pt2.participant_id = p.id and pt2.team_id = :teamId and pt2.status = 'ACTIVE')"
+            params += "teamId" to teamId
+        }
+        if (!query.isNullOrBlank()) {
+            where += "(lower(p.first_name) like :query or lower(p.last_name) like :query or lower(h.display_name) like :query)"
+            params += "query" to "%${query.trim().lowercase()}%"
+        }
+        val whereSql = if (where.isEmpty()) "" else "and ${where.joinToString(" and ")}"
+        return whereSql to params
+    }
+
+    fun listAthletes(
+        organizationId: UUID?,
+        teamId: UUID?,
+        householdId: UUID?,
+        eligibilityStatus: ClearanceStatus?,
+        query: String?,
+        pageRequest: PageRequest,
+    ): List<PlatformAthleteListItem> {
+        val (filterSql, filterParams) = athletesFilters(organizationId, teamId, householdId, query)
+        val eligibilitySql = if (eligibilityStatus != null) "where eligibility_status = :eligibilityStatus" else ""
+        var spec =
+            jdbcClient.sql(
+                """
+                $athletesCte
+                $filterSql
+                group by p.id, h.id, o.id
+                )
+                select * from athletes
+                $eligibilitySql
+                order by last_name, first_name
+                limit :limit offset :offset
+                """.trimIndent(),
+            )
+        filterParams.forEach { (name, value) -> spec = spec.param(name, value) }
+        if (eligibilityStatus != null) spec = spec.param("eligibilityStatus", eligibilityStatus.name)
+        return spec
+            .param("limit", pageRequest.size)
+            .param("offset", pageRequest.offset)
+            .query { rs, _ ->
+                PlatformAthleteListItem(
+                    participantId = rs.getObject("id", UUID::class.java),
+                    firstName = rs.getString("first_name"),
+                    lastName = rs.getString("last_name"),
+                    dateOfBirth = rs.getDate("date_of_birth")?.toLocalDate(),
+                    householdId = rs.getObject("household_id", UUID::class.java),
+                    householdName = rs.getString("household_name"),
+                    organizationId = rs.getObject("organization_id", UUID::class.java),
+                    organizationName = rs.getString("organization_name"),
+                    teamNames = rs.getString("team_names").let { if (it.isNullOrBlank()) emptyList() else it.split(", ") },
+                    eligibilityStatus = rs.getString("eligibility_status")?.let(ClearanceStatus::valueOf),
+                )
+            }.list()
+    }
+
+    fun countAthletes(
+        organizationId: UUID?,
+        teamId: UUID?,
+        householdId: UUID?,
+        eligibilityStatus: ClearanceStatus?,
+        query: String?,
+    ): Long {
+        val (filterSql, filterParams) = athletesFilters(organizationId, teamId, householdId, query)
+        val eligibilitySql = if (eligibilityStatus != null) "where eligibility_status = :eligibilityStatus" else ""
+        var spec =
+            jdbcClient.sql(
+                """
+                $athletesCte
+                $filterSql
+                group by p.id, h.id, o.id
+                )
+                select count(*) from athletes
+                $eligibilitySql
+                """.trimIndent(),
+            )
+        filterParams.forEach { (name, value) -> spec = spec.param(name, value) }
+        if (eligibilityStatus != null) spec = spec.param("eligibilityStatus", eligibilityStatus.name)
+        return spec.query(Long::class.java).single()
+    }
+
+    /** Platform Admin cross-org coach/staff roster — one row per active TEAM-context coach-tier role_assignment. */
+    fun listCoaches(
+        organizationId: UUID?,
+        teamId: UUID?,
+        query: String?,
+        pageRequest: PageRequest,
+    ): List<PlatformCoachListItem> {
+        val (whereSql, params) = coachesWhere(organizationId, teamId, query)
+        var spec =
+            jdbcClient.sql(
+                """
+                select ra.id, u.id as user_id, u.display_name, u.email, ra.role,
+                       t.id as team_id, t.name as team_name, o.id as organization_id, o.name as organization_name
+                from role_assignment ra
+                join app_user u on u.id = ra.user_id
+                join team t on t.id = ra.resource_id
+                join organization o on o.id = t.organization_id
+                where ra.context_type = 'TEAM' and ra.role in ('COACH_READ', 'TEAM_EDITOR', 'TEAM_MANAGER') and ra.status = 'ACTIVE'
+                $whereSql
+                order by o.name, t.name, u.display_name
+                limit :limit offset :offset
+                """.trimIndent(),
+            )
+        params.forEach { (name, value) -> spec = spec.param(name, value) }
+        return spec
+            .param("limit", pageRequest.size)
+            .param("offset", pageRequest.offset)
+            .query { rs, _ ->
+                PlatformCoachListItem(
+                    roleAssignmentId = rs.getObject("id", UUID::class.java),
+                    userId = rs.getObject("user_id", UUID::class.java),
+                    displayName = rs.getString("display_name"),
+                    email = rs.getString("email"),
+                    role = rs.getString("role"),
+                    teamId = rs.getObject("team_id", UUID::class.java),
+                    teamName = rs.getString("team_name"),
+                    organizationId = rs.getObject("organization_id", UUID::class.java),
+                    organizationName = rs.getString("organization_name"),
+                )
+            }.list()
+    }
+
+    fun countCoaches(
+        organizationId: UUID?,
+        teamId: UUID?,
+        query: String?,
+    ): Long {
+        val (whereSql, params) = coachesWhere(organizationId, teamId, query)
+        var spec =
+            jdbcClient.sql(
+                """
+                select count(*)
+                from role_assignment ra
+                join app_user u on u.id = ra.user_id
+                join team t on t.id = ra.resource_id
+                join organization o on o.id = t.organization_id
+                where ra.context_type = 'TEAM' and ra.role in ('COACH_READ', 'TEAM_EDITOR', 'TEAM_MANAGER') and ra.status = 'ACTIVE'
+                $whereSql
+                """.trimIndent(),
+            )
+        params.forEach { (name, value) -> spec = spec.param(name, value) }
+        return spec.query(Long::class.java).single()
+    }
+
+    private fun coachesWhere(
+        organizationId: UUID?,
+        teamId: UUID?,
+        query: String?,
+    ): Pair<String, List<Pair<String, Any>>> {
+        val where = mutableListOf<String>()
+        val params = mutableListOf<Pair<String, Any>>()
+        if (organizationId != null) {
+            where += "o.id = :organizationId"
+            params += "organizationId" to organizationId
+        }
+        if (teamId != null) {
+            where += "t.id = :teamId"
+            params += "teamId" to teamId
+        }
+        if (!query.isNullOrBlank()) {
+            where += "(lower(u.display_name) like :query or lower(u.email) like :query)"
+            params += "query" to "%${query.trim().lowercase()}%"
+        }
+        val whereSql = if (where.isEmpty()) "" else "and ${where.joinToString(" and ")}"
+        return whereSql to params
     }
 
     private fun membershipAggregates(

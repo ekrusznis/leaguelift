@@ -86,6 +86,63 @@ class PlatformSupportAccessInterceptorTest {
         }
     }
 
+    @Test
+    fun `platform admin cannot start a QuickBooks connection even with an active support session`() {
+        authenticateAdmin()
+        val request = MockHttpServletRequest("POST", "/api/v1/organizations/$organizationId/integrations/QUICKBOOKS_ONLINE/oauth/start")
+        request.addHeader(PLATFORM_SUPPORT_ACCESS_HEADER, accessId.toString())
+
+        assertFailsWith<ForbiddenException> {
+            interceptor.preHandle(request, MockHttpServletResponse(), Any())
+        }
+        verify(exactly = 0) { service.requireActiveSupportAccess(any(), any(), any()) }
+    }
+
+    @Test
+    fun `platform admin cannot disconnect an ICS feed even with an active support session`() {
+        authenticateAdmin()
+        val connectionId = UUID.randomUUID()
+        val request = MockHttpServletRequest("DELETE", "/api/v1/organizations/$organizationId/event-source-connections/$connectionId")
+        request.addHeader(PLATFORM_SUPPORT_ACCESS_HEADER, accessId.toString())
+
+        assertFailsWith<ForbiddenException> {
+            interceptor.preHandle(request, MockHttpServletResponse(), Any())
+        }
+    }
+
+    @Test
+    fun `platform admin cannot run a CSV schedule import even with an active support session`() {
+        authenticateAdmin()
+        val request = MockHttpServletRequest("POST", "/api/v1/organizations/$organizationId/events/csv-import")
+        request.addHeader(PLATFORM_SUPPORT_ACCESS_HEADER, accessId.toString())
+
+        assertFailsWith<ForbiddenException> {
+            interceptor.preHandle(request, MockHttpServletResponse(), Any())
+        }
+    }
+
+    @Test
+    fun `platform admin can still view integration status with a valid support session`() {
+        authenticateAdmin()
+        val request = MockHttpServletRequest("GET", "/api/v1/organizations/$organizationId/integrations/quickbooks")
+        request.addHeader(PLATFORM_SUPPORT_ACCESS_HEADER, accessId.toString())
+        every { service.requireActiveSupportAccess(admin, accessId, organizationId) } returns mockk<PlatformSupportAccess>()
+
+        assertTrue(interceptor.preHandle(request, MockHttpServletResponse(), Any()))
+        verify(exactly = 1) { service.requireActiveSupportAccess(admin, accessId, organizationId) }
+    }
+
+    @Test
+    fun `an org's own staff can still mutate their own integrations`() {
+        SecurityContextHolder.getContext().authentication =
+            CurrentUserAuthenticationToken(
+                CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner"),
+            )
+        val request = MockHttpServletRequest("POST", "/api/v1/organizations/$organizationId/integrations/QUICKBOOKS_ONLINE/oauth/start")
+
+        assertTrue(interceptor.preHandle(request, MockHttpServletResponse(), Any()))
+    }
+
     private fun authenticateAdmin() {
         SecurityContextHolder.getContext().authentication = CurrentUserAuthenticationToken(admin)
     }
