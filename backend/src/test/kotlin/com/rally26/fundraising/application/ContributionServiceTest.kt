@@ -414,6 +414,8 @@ class ContributionServiceTest {
             endDate = null,
             status = status,
             publishedAt = Instant.now(),
+            createdByUserId = null,
+            templateKey = null,
             createdAt = Instant.now(),
             updatedAt = Instant.now(),
         )

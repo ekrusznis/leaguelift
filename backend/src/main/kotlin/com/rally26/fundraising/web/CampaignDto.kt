@@ -3,6 +3,7 @@ package com.rally26.fundraising.web
 import com.rally26.fundraising.domain.Campaign
 import com.rally26.fundraising.domain.CampaignStatus
 import com.rally26.fundraising.domain.CampaignType
+import com.rally26.fundraising.domain.FundraiserTemplateKey
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
@@ -21,6 +22,7 @@ data class CreateCampaignRequest(
     @field:Size(min = 3, max = 3) val currency: String = "USD",
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,
+    val templateKey: FundraiserTemplateKey? = null,
 )
 
 data class UpdateCampaignRequest(
@@ -49,6 +51,8 @@ data class CampaignResponse(
     val endDate: LocalDate?,
     val status: String,
     val publishedAt: Instant?,
+    val createdByUserId: UUID?,
+    val templateKey: String?,
     val createdAt: Instant,
     val updatedAt: Instant,
     /** Sum of CONFIRMED contributions (fundraising/persistence/ContributionRepository.kt). Real, not demo data. */
@@ -88,6 +92,8 @@ fun Campaign.toResponse(raisedMinor: Long) =
         endDate,
         status.name,
         publishedAt,
+        createdByUserId,
+        templateKey?.name,
         createdAt,
         updatedAt,
         raisedMinor,

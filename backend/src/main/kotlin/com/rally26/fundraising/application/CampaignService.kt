@@ -9,6 +9,7 @@ import com.rally26.common.web.CurrentUser
 import com.rally26.fundraising.domain.Campaign
 import com.rally26.fundraising.domain.CampaignStatus
 import com.rally26.fundraising.domain.CampaignType
+import com.rally26.fundraising.domain.FundraiserTemplateKey
 import com.rally26.fundraising.domain.isValidCampaignSlug
 import com.rally26.fundraising.persistence.CampaignRepository
 import com.rally26.membership.application.MembershipService
@@ -79,6 +80,7 @@ class CampaignService(
         startDate: LocalDate?,
         endDate: LocalDate?,
         currentUser: CurrentUser,
+        templateKey: FundraiserTemplateKey? = null,
     ): Campaign {
         membershipService.requireManagerRole(organizationId, currentUser)
         validateSlug(slug)
@@ -100,6 +102,8 @@ class CampaignService(
                     currency,
                     startDate,
                     endDate,
+                    currentUser.userId,
+                    templateKey,
                 )
             auditService.record(currentUser.userId, organizationId, "campaign.created", "campaign", campaign.id)
             campaign

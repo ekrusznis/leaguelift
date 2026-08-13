@@ -3,6 +3,7 @@ package com.rally26.fundraising.persistence
 import com.rally26.fundraising.domain.Campaign
 import com.rally26.fundraising.domain.CampaignStatus
 import com.rally26.fundraising.domain.CampaignType
+import com.rally26.fundraising.domain.FundraiserTemplateKey
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import java.sql.Date
@@ -13,7 +14,7 @@ import java.util.UUID
 
 private const val COLUMNS =
     "id, organization_id, team_id, name, slug, description, campaign_type, goal_amount_minor, currency, start_date, end_date, status, " +
-        "published_at, created_at, updated_at"
+        "published_at, created_by_user_id, template_key, created_at, updated_at"
 
 @Repository
 class CampaignRepository(
@@ -95,14 +96,16 @@ class CampaignRepository(
         currency: String,
         startDate: LocalDate?,
         endDate: LocalDate?,
+        createdByUserId: UUID?,
+        templateKey: FundraiserTemplateKey?,
     ): Campaign {
         val now = Instant.now()
         val id = UUID.randomUUID()
         jdbcClient
             .sql(
                 """
-                insert into campaign (id, organization_id, team_id, name, slug, description, campaign_type, goal_amount_minor, currency, start_date, end_date, status, created_at, updated_at)
-                values (:id, :organizationId, :teamId, :name, :slug, :description, :campaignType, :goalAmountMinor, :currency, :startDate, :endDate, 'DRAFT', :now, :now)
+                insert into campaign (id, organization_id, team_id, name, slug, description, campaign_type, goal_amount_minor, currency, start_date, end_date, status, created_by_user_id, template_key, created_at, updated_at)
+                values (:id, :organizationId, :teamId, :name, :slug, :description, :campaignType, :goalAmountMinor, :currency, :startDate, :endDate, 'DRAFT', :createdByUserId, :templateKey, :now, :now)
                 """.trimIndent(),
             ).param("id", id)
             .param("organizationId", organizationId)
@@ -115,6 +118,8 @@ class CampaignRepository(
             .param("currency", currency)
             .param("startDate", startDate?.let { Date.valueOf(it) })
             .param("endDate", endDate?.let { Date.valueOf(it) })
+            .param("createdByUserId", createdByUserId)
+            .param("templateKey", templateKey?.name)
             .param("now", Timestamp.from(now))
             .update()
         return Campaign(
@@ -131,6 +136,8 @@ class CampaignRepository(
             endDate = endDate,
             status = CampaignStatus.DRAFT,
             publishedAt = null,
+            createdByUserId = createdByUserId,
+            templateKey = templateKey,
             createdAt = now,
             updatedAt = now,
         )
@@ -209,6 +216,8 @@ class CampaignRepository(
             endDate = rs.getDate("end_date")?.toLocalDate(),
             status = CampaignStatus.valueOf(rs.getString("status")),
             publishedAt = rs.getTimestamp("published_at")?.toInstant(),
+            createdByUserId = rs.getObject("created_by_user_id", UUID::class.java),
+            templateKey = rs.getString("template_key")?.let { FundraiserTemplateKey.valueOf(it) },
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
         )

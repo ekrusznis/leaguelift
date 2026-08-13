@@ -193,6 +193,8 @@ class OwnerDashboardServiceTest {
                 endDate = null,
                 status = CampaignStatus.ACTIVE,
                 publishedAt = Instant.now(),
+                createdByUserId = null,
+                templateKey = null,
                 createdAt = Instant.now(),
                 updatedAt = Instant.now(),
             )

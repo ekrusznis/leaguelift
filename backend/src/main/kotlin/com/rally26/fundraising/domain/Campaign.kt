@@ -20,6 +20,9 @@ enum class CampaignType {
 
 enum class CampaignStatus { DRAFT, ACTIVE, COMPLETED, ARCHIVED }
 
+/** Which starter template, if any, produced this campaign (Phase 42, DESIGN-DOC.md §14.1Q). Null means a blank/custom campaign, today's unchanged behavior. */
+enum class FundraiserTemplateKey { BOX_POOL, BAKE_SALE, CAR_WASH }
+
 data class Campaign(
     val id: UUID,
     val organizationId: UUID,
@@ -34,6 +37,8 @@ data class Campaign(
     val endDate: LocalDate?,
     val status: CampaignStatus,
     val publishedAt: Instant?,
+    val createdByUserId: UUID?,
+    val templateKey: FundraiserTemplateKey?,
     val createdAt: Instant,
     val updatedAt: Instant,
 )

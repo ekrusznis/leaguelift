@@ -95,6 +95,8 @@ class CampaignServiceTest {
                 campaign.currency,
                 campaign.startDate,
                 campaign.endDate,
+                currentUser.userId,
+                null,
             )
         } returns campaign
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
@@ -187,7 +189,7 @@ class CampaignServiceTest {
     fun `create throws ConflictException when the slug is already taken`() {
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
         every {
-            campaignRepository.insert(orgId, null, any(), "spring-trip", any(), any(), any(), any(), any(), any())
+            campaignRepository.insert(orgId, null, any(), "spring-trip", any(), any(), any(), any(), any(), any(), any(), any())
         } throws DuplicateKeyException("duplicate")
 
         assertFailsWith<ConflictException> {
@@ -287,6 +289,8 @@ class CampaignServiceTest {
         endDate = LocalDate.of(2026, 6, 1),
         status = status,
         publishedAt = if (status == CampaignStatus.ACTIVE || status == CampaignStatus.COMPLETED) Instant.now() else null,
+        createdByUserId = null,
+        templateKey = null,
         createdAt = Instant.now(),
         updatedAt = Instant.now(),
     )

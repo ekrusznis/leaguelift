@@ -59,6 +59,7 @@ class CampaignController(
                 request.startDate,
                 request.endDate,
                 currentUser,
+                request.templateKey,
             )
         return ResponseEntity.status(HttpStatus.CREATED).body(campaign.toResponse(raisedMinor = 0))
     }
