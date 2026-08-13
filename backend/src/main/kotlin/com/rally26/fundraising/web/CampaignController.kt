@@ -137,4 +137,11 @@ class CampaignController(
         @PathVariable contributionId: UUID,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): ContributionResponse = contributionService.refund(organizationId, contributionId, currentUser).toResponse()
+
+    @GetMapping("/qr-code")
+    fun getShareLinkQrCode(
+        @PathVariable organizationId: UUID,
+        @RequestParam url: String,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): CampaignShareLinkResponse = CampaignShareLinkResponse(url, campaignService.buildShareLink(organizationId, url, currentUser))
 }

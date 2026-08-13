@@ -13,6 +13,7 @@ import com.rally26.membership.application.MembershipService
 import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
+import com.rally26.sponsorship.infra.QrCodeGenerator
 import com.rally26.team.persistence.TeamRepository
 import io.mockk.every
 import io.mockk.just
@@ -32,7 +33,8 @@ class CampaignServiceTest {
     private val teamRepository = mockk<TeamRepository>()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
-    private val service = CampaignService(campaignRepository, teamRepository, membershipService, auditService)
+    private val qrCodeGenerator = mockk<QrCodeGenerator>()
+    private val service = CampaignService(campaignRepository, teamRepository, membershipService, auditService, qrCodeGenerator)
 
     private val orgId = UUID.randomUUID()
     private val teamId = UUID.randomUUID()

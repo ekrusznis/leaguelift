@@ -13,6 +13,7 @@ import com.rally26.fundraising.domain.FundraiserTemplateKey
 import com.rally26.fundraising.domain.isValidCampaignSlug
 import com.rally26.fundraising.persistence.CampaignRepository
 import com.rally26.membership.application.MembershipService
+import com.rally26.sponsorship.infra.QrCodeGenerator
 import com.rally26.team.persistence.TeamRepository
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.stereotype.Service
@@ -27,7 +28,25 @@ class CampaignService(
     private val teamRepository: TeamRepository,
     private val membershipService: MembershipService,
     private val auditService: AuditService,
+    private val qrCodeGenerator: QrCodeGenerator,
 ) {
+    // Reuses the exact seam Sponsorship/Athlete-Storefront already proved out
+    // (SponsorshipPackageService.buildShareLink) rather than a new QR concept —
+    // campaigns had none until now, a real standalone gap independent of the
+    // box-pool template work.
+    private val allowedShareLinkPrefixes = listOf("http://", "https://")
+
+    fun buildShareLink(
+        organizationId: UUID,
+        url: String,
+        currentUser: CurrentUser,
+    ): String {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        if (url.length > 2000 || allowedShareLinkPrefixes.none { url.startsWith(it) }) {
+            throw ValidationException("A valid http(s) URL is required to generate a QR code.")
+        }
+        return qrCodeGenerator.generatePngDataUri(url)
+    }
     fun list(
         organizationId: UUID,
         currentUser: CurrentUser,

@@ -37,6 +37,12 @@ data class UpdateCampaignStatusRequest(
     @field:NotNull val status: CampaignStatus,
 )
 
+/** `GET /organizations/{id}/campaigns/qr-code` response — mirrors sponsorship's `ShareLinkResponse` shape exactly (a plain URL plus a ready-to-render `data:image/png;base64,...` QR image of that same URL; no click-through tracking, nothing persisted). */
+data class CampaignShareLinkResponse(
+    val url: String,
+    val qrCodeDataUri: String,
+)
+
 data class CampaignResponse(
     val id: UUID,
     val organizationId: UUID,
@@ -75,6 +81,10 @@ data class PublicCampaignResponse(
     val status: String,
     val publishedAt: Instant?,
     val raisedMinor: Long,
+    val logoUrl: String?,
+    val coverUrl: String?,
+    val primaryColor: String,
+    val secondaryColor: String,
 )
 
 fun Campaign.toResponse(raisedMinor: Long) =
@@ -99,20 +109,29 @@ fun Campaign.toResponse(raisedMinor: Long) =
         raisedMinor,
     )
 
-fun Campaign.toPublicResponse(raisedMinor: Long) =
-    PublicCampaignResponse(
-        id,
-        organizationId,
-        teamId,
-        name,
-        slug,
-        description,
-        campaignType.name,
-        goalAmountMinor,
-        currency,
-        startDate,
-        endDate,
-        status.name,
-        publishedAt,
-        raisedMinor,
-    )
+fun Campaign.toPublicResponse(
+    raisedMinor: Long,
+    logoUrl: String? = null,
+    coverUrl: String? = null,
+    primaryColor: String = "#0B1F33",
+    secondaryColor: String = "#20B26B",
+) = PublicCampaignResponse(
+    id,
+    organizationId,
+    teamId,
+    name,
+    slug,
+    description,
+    campaignType.name,
+    goalAmountMinor,
+    currency,
+    startDate,
+    endDate,
+    status.name,
+    publishedAt,
+    raisedMinor,
+    logoUrl,
+    coverUrl,
+    primaryColor,
+    secondaryColor,
+)
