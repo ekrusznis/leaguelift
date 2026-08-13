@@ -6,7 +6,9 @@ import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.household.domain.AdultStatus
+import com.rally26.household.domain.Household
 import com.rally26.household.domain.HouseholdAdult
+import com.rally26.household.domain.HouseholdStatus
 import com.rally26.household.persistence.HouseholdRepository
 import com.rally26.media.domain.MediaEntityType
 import com.rally26.media.domain.MediaUsageSlot
@@ -123,6 +125,31 @@ class MediaEntityAccessServiceTest {
     }
 
     @Test
+    fun `a guardian may manage household media without organization manager access`() {
+        val household = household()
+        every { householdRepository.findById(household.id, organizationId) } returns household
+        every { membershipService.hasManagerRole(organizationId, currentUser) } returns false
+        every { authorizationService.hasGuardianRelationship(organizationId, household.id, currentUser) } returns true
+
+        val target = service.resolveForManage(organizationId, MediaEntityType.HOUSEHOLD, household.id, currentUser)
+
+        assertEquals(setOf(MediaUsageSlot.HOUSEHOLD_MEDIA), target.allowedSlots)
+        assertEquals(Visibility.HOUSEHOLD_PRIVATE, target.visibility)
+    }
+
+    @Test
+    fun `a stranger with no guardian relationship or manager role cannot manage household media`() {
+        val household = household()
+        every { householdRepository.findById(household.id, organizationId) } returns household
+        every { membershipService.hasManagerRole(organizationId, currentUser) } returns false
+        every { authorizationService.hasGuardianRelationship(organizationId, household.id, currentUser) } returns false
+
+        assertFailsWith<ForbiddenException> {
+            service.resolveForManage(organizationId, MediaEntityType.HOUSEHOLD, household.id, currentUser)
+        }
+    }
+
+    @Test
     fun `profile targets reject branding slots`() {
         val participant = participant()
         every { participantRepository.findById(participant.id, organizationId) } returns participant
@@ -146,6 +173,21 @@ class MediaEntityAccessServiceTest {
             season = "2026-27",
             status = TeamStatus.ACTIVE,
             contactEmail = null,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
+
+    private fun household() =
+        Household(
+            id = UUID.randomUUID(),
+            organizationId = organizationId,
+            displayName = "Smith Family",
+            contactEmail = null,
+            contactPhone = null,
+            notes = null,
+            emailRemindersOptOut = false,
+            smsRemindersOptIn = false,
+            status = HouseholdStatus.ACTIVE,
             createdAt = Instant.now(),
             updatedAt = Instant.now(),
         )

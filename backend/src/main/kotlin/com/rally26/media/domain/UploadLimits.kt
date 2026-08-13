@@ -16,6 +16,14 @@ object UploadLimits {
     private const val MAX_PRODUCT_DESIGN_SVG_BYTES = 2L * 1024 * 1024
     private const val MAX_DOCUMENT_BYTES = 15L * 1024 * 1024
 
+    // Household media (Track 5, 2026-08-13) — guardian-uploaded photos/videos, e.g. a
+    // phone-recorded game clip. Materially larger than every other slot's cap since
+    // video files are large by nature; synchronous full-byte-read confirmUpload is
+    // fine at this size and avoids building async/chunked upload infrastructure this
+    // codebase doesn't have anywhere yet — revisit only if real usage shows it doesn't scale.
+    private const val MAX_HOUSEHOLD_MEDIA_IMAGE_BYTES = 15L * 1024 * 1024
+    private const val MAX_HOUSEHOLD_MEDIA_VIDEO_BYTES = 250L * 1024 * 1024
+
     const val MAX_DIMENSION_PX = 10_000
 
     private val LOGO_CONTENT_TYPES = setOf("image/png", "image/jpeg", "image/webp", "image/svg+xml")
@@ -39,6 +47,14 @@ object UploadLimits {
     // check; not worth the extra surface until a real need for them shows up.
     private val DOCUMENT_CONTENT_TYPES = setOf("application/pdf", "image/png", "image/jpeg")
 
+    // Photos or short game clips a guardian uploads for their own household — no
+    // thumbnail/resize pipeline exists for any slot in this app yet (2026-08-13
+    // founder decision: ship without one, revisit if real usage demands it), so
+    // photos render full-size via the existing signed-URL pattern and video gets a
+    // generic icon in the UI rather than an extracted frame.
+    private val HOUSEHOLD_MEDIA_CONTENT_TYPES = setOf("image/png", "image/jpeg", "image/webp", "video/mp4", "video/quicktime")
+    private val HOUSEHOLD_MEDIA_VIDEO_CONTENT_TYPES = setOf("video/mp4", "video/quicktime")
+
     fun allowedContentTypes(slot: MediaUsageSlot): Set<String> =
         when (slot) {
             MediaUsageSlot.LOGO -> LOGO_CONTENT_TYPES
@@ -47,7 +63,10 @@ object UploadLimits {
             MediaUsageSlot.PRODUCT_DESIGN -> PRODUCT_DESIGN_CONTENT_TYPES
             MediaUsageSlot.SPONSOR_LOGO -> SPONSOR_LOGO_CONTENT_TYPES
             MediaUsageSlot.DOCUMENT -> DOCUMENT_CONTENT_TYPES
+            MediaUsageSlot.HOUSEHOLD_MEDIA -> HOUSEHOLD_MEDIA_CONTENT_TYPES
         }
+
+    fun isVideoContentType(contentType: String): Boolean = contentType in HOUSEHOLD_MEDIA_VIDEO_CONTENT_TYPES
 
     fun isContentTypeAllowed(
         slot: MediaUsageSlot,
@@ -72,10 +91,11 @@ object UploadLimits {
                 }
             MediaUsageSlot.SPONSOR_LOGO -> if (contentType == "image/svg+xml") MAX_LOGO_SVG_BYTES else MAX_LOGO_RASTER_BYTES
             MediaUsageSlot.DOCUMENT -> MAX_DOCUMENT_BYTES
+            MediaUsageSlot.HOUSEHOLD_MEDIA -> if (isVideoContentType(contentType)) MAX_HOUSEHOLD_MEDIA_VIDEO_BYTES else MAX_HOUSEHOLD_MEDIA_IMAGE_BYTES
         }
 
-    /** True for any content type this slot allows that isn't a decodable raster/vector image — e.g. a DOCUMENT slot's PDF. Callers use this to skip image-specific validation (dimension decode/cap) that doesn't apply. */
-    fun isNonImageContentType(contentType: String): Boolean = contentType == "application/pdf"
+    /** True for any content type this slot allows that isn't a decodable raster/vector image — e.g. a DOCUMENT slot's PDF, or a HOUSEHOLD_MEDIA video. Callers use this to skip image-specific validation (dimension decode/cap) that doesn't apply. */
+    fun isNonImageContentType(contentType: String): Boolean = contentType == "application/pdf" || isVideoContentType(contentType)
 
     /**
      * Sniffs magic bytes to determine the actual image format, independent of the
@@ -88,7 +108,23 @@ object UploadLimits {
         if (isWebp(bytes)) return "image/webp"
         if (isSvg(bytes)) return "image/svg+xml"
         if (isPdf(bytes)) return "application/pdf"
+        detectIsoBaseMediaVideoType(bytes)?.let { return it }
         return null
+    }
+
+    /**
+     * MP4/MOV are both ISO Base Media File Format containers — a "ftyp" box at byte
+     * offset 4 with a 4-byte major-brand code at offset 8. "qt  " (QuickTime's own
+     * brand, space-padded to 4 chars) means MOV; every other real-world brand
+     * (isom/mp42/mp41/avc1/M4V etc.) is treated as MP4 — phone-recorded game clips,
+     * this feature's actual target, are overwhelmingly one of these two.
+     */
+    private fun detectIsoBaseMediaVideoType(bytes: ByteArray): String? {
+        if (bytes.size < 12) return null
+        val boxType = String(bytes, 4, 4, Charsets.US_ASCII)
+        if (boxType != "ftyp") return null
+        val majorBrand = String(bytes, 8, 4, Charsets.US_ASCII)
+        return if (majorBrand == "qt  ") "video/quicktime" else "video/mp4"
     }
 
     private fun isPdf(bytes: ByteArray): Boolean {

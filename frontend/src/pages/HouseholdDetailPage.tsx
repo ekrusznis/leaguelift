@@ -51,6 +51,7 @@ import type { FeeAssignment, FeeAssignmentStatus } from "../features/fees/types"
 import { useFeeTemplates } from "../features/fees/api";
 import { useTeams } from "../features/teams/api";
 import { HouseholdDocumentsPanel } from "../features/documents/HouseholdDocumentsPanel";
+import { HouseholdMediaPanel } from "../features/householdMedia/HouseholdMediaPanel";
 import { ParticipantEligibilityPanel } from "../features/eligibility/ParticipantEligibilityPanel";
 import { useHouseholdEligibilityClearance } from "../features/eligibility/api";
 import { ClearanceStatusPill } from "../features/eligibility/ClearanceStatusPill";
@@ -971,6 +972,7 @@ const HOUSEHOLD_SECTIONS: Array<{ id: HouseholdSection; label: string }> = [
 	{ id: "events", label: "Family Schedule" },
 	{ id: "fees", label: "Fees & Payments" },
 	{ id: "documents", label: "Documents" },
+	{ id: "media", label: "Photos & Videos" },
 	{ id: "corrections", label: "Correction Requests" },
 ];
 
@@ -1030,6 +1032,13 @@ export function HouseholdDetailPage() {
 				<section aria-label="Documents" className="flex flex-col gap-3">
 					<h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Documents</h2>
 					<HouseholdDocumentsPanel organizationId={organizationId} householdId={householdId} canManage={canAdminister} />
+				</section>
+			)}
+			{activeSection === "media" && (
+				<section aria-label="Photos & Videos" className="flex flex-col gap-3">
+					<h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Photos & Videos</h2>
+					<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">Upload photos and short video clips for your household. You can release any item publicly to allow the organization to use it for social sharing or highlight content.</p>
+					<HouseholdMediaPanel organizationId={organizationId} householdId={householdId} />
 				</section>
 			)}
 		</div>

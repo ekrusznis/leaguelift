@@ -141,6 +141,24 @@ class MediaAssignmentRepository(
         )
     }
 
+    /** Transitions an existing assignment from private to public (household media "release publicly," Track 5, 2026-08-13) — distinct from [insert]'s already-public case, since that one never needs to flip an already-inserted row. */
+    fun publishPublicly(
+        id: UUID,
+        organizationId: UUID,
+    ): Int {
+        val now = Instant.now()
+        return jdbcClient
+            .sql(
+                """
+                update media_assignment set publication_status = 'PUBLISHED', visibility = 'PUBLIC', updated_at = :now
+                where id = :id and organization_id = :organizationId
+                """.trimIndent(),
+            ).param("now", Timestamp.from(now))
+            .param("id", id)
+            .param("organizationId", organizationId)
+            .update()
+    }
+
     fun retire(
         id: UUID,
         organizationId: UUID,

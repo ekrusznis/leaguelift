@@ -97,4 +97,51 @@ class UploadLimitsTest {
         val logoLimit = UploadLimits.maxBytes(MediaUsageSlot.LOGO, "image/png")
         assertTrue(coverLimit > logoLimit)
     }
+
+    private fun isoBaseMediaBytes(majorBrand: String): ByteArray {
+        val header = ByteArray(20)
+        // bytes 0-3: box size (irrelevant for detection), bytes 4-7: "ftyp", bytes 8-11: major brand.
+        "ftyp".toByteArray(Charsets.US_ASCII).copyInto(header, 4)
+        majorBrand.toByteArray(Charsets.US_ASCII).copyInto(header, 8)
+        return header
+    }
+
+    @Test
+    fun `detects MP4 by its ftyp box with a non-QuickTime major brand`() {
+        assertEquals("video/mp4", UploadLimits.detectContentType(isoBaseMediaBytes("isom")))
+        assertEquals("video/mp4", UploadLimits.detectContentType(isoBaseMediaBytes("mp42")))
+    }
+
+    @Test
+    fun `detects QuickTime MOV by its ftyp box with the qt major brand`() {
+        assertEquals("video/quicktime", UploadLimits.detectContentType(isoBaseMediaBytes("qt  ")))
+    }
+
+    @Test
+    fun `returns null for bytes too short to contain a ftyp box`() {
+        assertNull(UploadLimits.detectContentType(byteArrayOf(1, 2, 3)))
+    }
+
+    @Test
+    fun `household media allows images and video, other slots do not allow video`() {
+        assertTrue(UploadLimits.isContentTypeAllowed(MediaUsageSlot.HOUSEHOLD_MEDIA, "image/png"))
+        assertTrue(UploadLimits.isContentTypeAllowed(MediaUsageSlot.HOUSEHOLD_MEDIA, "video/mp4"))
+        assertTrue(UploadLimits.isContentTypeAllowed(MediaUsageSlot.HOUSEHOLD_MEDIA, "video/quicktime"))
+        assertFalse(UploadLimits.isContentTypeAllowed(MediaUsageSlot.DOCUMENT, "video/mp4"))
+        assertFalse(UploadLimits.isContentTypeAllowed(MediaUsageSlot.COVER, "video/mp4"))
+    }
+
+    @Test
+    fun `household media video size limit is larger than its own image limit`() {
+        val videoLimit = UploadLimits.maxBytes(MediaUsageSlot.HOUSEHOLD_MEDIA, "video/mp4")
+        val imageLimit = UploadLimits.maxBytes(MediaUsageSlot.HOUSEHOLD_MEDIA, "image/png")
+        assertTrue(videoLimit > imageLimit)
+    }
+
+    @Test
+    fun `household media video content types are treated as non-image (skip dimension decode)`() {
+        assertTrue(UploadLimits.isNonImageContentType("video/mp4"))
+        assertTrue(UploadLimits.isNonImageContentType("video/quicktime"))
+        assertFalse(UploadLimits.isNonImageContentType("image/png"))
+    }
 }

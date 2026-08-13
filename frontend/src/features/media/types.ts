@@ -1,4 +1,4 @@
-export type MediaUsageSlot = "LOGO" | "COVER" | "PROFILE_PHOTO" | "PRODUCT_DESIGN" | "SPONSOR_LOGO" | "DOCUMENT";
+export type MediaUsageSlot = "LOGO" | "COVER" | "PROFILE_PHOTO" | "PRODUCT_DESIGN" | "SPONSOR_LOGO" | "DOCUMENT" | "HOUSEHOLD_MEDIA";
 export type MediaEntityType = "ORGANIZATION" | "TEAM" | "TOURNAMENT" | "HOUSEHOLD_ADULT" | "PARTICIPANT" | "PRODUCT" | "SPONSOR" | "HOUSEHOLD";
 
 export interface MediaTarget {

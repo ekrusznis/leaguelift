@@ -201,6 +201,24 @@ class MediaEntityAccessService(
                 )
             }
 
+            // Household media (Track 5, 2026-08-13) — the first HOUSEHOLD case this
+            // service handles (documents bypass this service entirely, see
+            // DocumentService's own doc comment); same read/manage split as PARTICIPANT
+            // and HOUSEHOLD_ADULT above, since it's the same underlying question — can
+            // this person act on this household's private files.
+            MediaEntityType.HOUSEHOLD -> {
+                householdRepository.findById(entityId, organizationId)
+                    ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
+                requireHouseholdProfileAccess(organizationId, entityId, currentUser)
+                ResolvedMediaTarget(
+                    organizationId,
+                    entityType,
+                    entityId,
+                    setOf(MediaUsageSlot.HOUSEHOLD_MEDIA),
+                    Visibility.HOUSEHOLD_PRIVATE,
+                )
+            }
+
             else -> throw ValidationException("This media entity type is not available through the branding API.")
         }
 

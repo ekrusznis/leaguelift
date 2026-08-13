@@ -18,7 +18,7 @@ export type OrganizationSection =
 	| "integrations"
 	| "settings";
 
-export type HouseholdSection = "profile" | "participants" | "fees" | "events" | "documents" | "corrections";
+export type HouseholdSection = "profile" | "participants" | "fees" | "events" | "documents" | "media" | "corrections";
 export const appPaths = {
 	dashboard: (hash?: string) => `/app${hash ? `#${hash}` : ""}`,
 	organizations: () => "/app/organizations",

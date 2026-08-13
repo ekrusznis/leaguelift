@@ -41,6 +41,8 @@ private val EXTENSION_BY_CONTENT_TYPE =
         "image/webp" to "webp",
         "image/svg+xml" to "svg",
         "application/pdf" to "pdf",
+        "video/mp4" to "mp4",
+        "video/quicktime" to "mov",
     )
 
 /**
