@@ -93,7 +93,7 @@ export function useEventTimezoneDefault(organizationId: string, teamId?: string,
 	});
 }
 
-function useEventAction(organizationId: string, eventId: string, action: "publish" | "cancel" | "postpone" | "detach-from-source") {
+function useEventAction(organizationId: string, eventId: string, action: "publish" | "cancel" | "postpone" | "detach-from-source" | "apply-source-update") {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: () => apiFetch<Rally26Event>(`/organizations/${organizationId}/events/${eventId}/${action}`, { method: "POST" }),
@@ -115,6 +115,9 @@ export function usePostponeEvent(organizationId: string, eventId: string) {
 }
 export function useDetachEvent(organizationId: string, eventId: string) {
 	return useEventAction(organizationId, eventId, "detach-from-source");
+}
+export function useApplySourceUpdate(organizationId: string, eventId: string) {
+	return useEventAction(organizationId, eventId, "apply-source-update");
 }
 
 export function useEventRsvps(organizationId: string, eventId: string) {

@@ -1,6 +1,6 @@
 package com.rally26.event.application
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.rally26.audit.application.AuditService
 import com.rally26.authorization.application.AuthorizationService
 import com.rally26.authorization.domain.Capabilities
@@ -14,6 +14,7 @@ import com.rally26.event.domain.EventSourceType
 import com.rally26.event.domain.EventStatus
 import com.rally26.event.domain.EventType
 import com.rally26.event.domain.EventVisibility
+import com.rally26.event.domain.PendingSourceEventSnapshot
 import com.rally26.event.persistence.EventRepository
 import com.rally26.household.persistence.HouseholdRepository
 import com.rally26.membership.application.MembershipService
@@ -79,7 +80,7 @@ class EventServiceTest {
             calendarProvider,
             mapsProvider,
             outboxWriter,
-            ObjectMapper(),
+            jacksonObjectMapper(),
             timeZoneService,
         )
 
@@ -1042,19 +1043,25 @@ class EventServiceTest {
     }
 
     @Test
-    fun `update rejects a source-owned field change on an imported event`() {
+    fun `update now allows a source-owned field change directly on an imported event (2026-08-13 redesign — see applySourceUpdate)`() {
         val imported = sampleEvent(status = EventStatus.TENTATIVE).copy(provider = "CSV_IMPORT", sourceType = EventSourceType.CSV_IMPORT)
-        every { eventRepository.findById(imported.id, orgId) } returns imported
+        val newStart = Instant.parse("2026-09-10T18:00:00Z")
+        every { eventRepository.findById(imported.id, orgId) } returns imported andThen imported.copy(startAt = newStart)
         every { authorizationService.requireTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_UPDATE) } just runs
+        stubEventRepositoryUpdate()
+        every { auditService.record(currentUser.userId, orgId, "event.updated", "event", imported.id) } just runs
+        every { teamRepository.findById(teamId, orgId) } returns team()
+        every { householdRepository.findActiveForTeam(teamId, orgId) } returns emptyList()
+        every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
 
-        assertFailsWith<ValidationException> {
+        val result =
             service.update(
                 orgId,
                 imported.id,
                 null,
                 null,
                 null,
-                Instant.now(),
+                newStart,
                 null,
                 null,
                 null,
@@ -1069,7 +1076,8 @@ class EventServiceTest {
                 null,
                 currentUser,
             )
-        }
+
+        assertEquals(newStart, result.startAt)
     }
 
     @Test
@@ -1139,6 +1147,149 @@ class EventServiceTest {
         assertEquals(EventSourceType.MANUAL, result.sourceType)
         verify(exactly = 1) { eventRepository.detachFromSource(imported.id, orgId, currentUser.userId) }
         verify(exactly = 1) { auditService.record(currentUser.userId, orgId, "event.detached_from_source", "event", imported.id) }
+    }
+
+    @Test
+    fun `applySourceUpdate rejects an event with nothing staged`() {
+        val event = sampleEvent().copy(provider = "ICS_FEED", sourceType = EventSourceType.ICS_FEED)
+        every { eventRepository.findById(event.id, orgId) } returns event
+        every { authorizationService.requireTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_UPDATE) } just runs
+
+        assertFailsWith<ValidationException> {
+            service.applySourceUpdate(orgId, event.id, currentUser)
+        }
+    }
+
+    @Test
+    fun `applySourceUpdate writes the staged field values, clears the pending snapshot, and records a full before-after audit diff`() {
+        val objectMapper = jacksonObjectMapper()
+        val snapshot =
+            PendingSourceEventSnapshot(
+                title = "Updated title",
+                description = null,
+                status = null,
+                startAt = "2026-09-10T18:00:00Z",
+                endAt = null,
+                arrivalAt = null,
+                venueName = "New venue",
+                address = null,
+                area = null,
+                opponentName = null,
+            )
+        val event =
+            sampleEvent(status = EventStatus.TENTATIVE).copy(
+                provider = "ICS_FEED",
+                sourceType = EventSourceType.ICS_FEED,
+                title = "Old title",
+                venueName = "Old venue",
+                pendingSourceSnapshotJson = objectMapper.writeValueAsString(snapshot),
+                pendingSourceHash = "new-hash-123",
+            )
+        every { eventRepository.findById(event.id, orgId) } returns event andThen
+            event.copy(
+                title = "Updated title",
+                venueName = "New venue",
+                startAt = Instant.parse("2026-09-10T18:00:00Z"),
+                externalSyncHash = "new-hash-123",
+                pendingSourceSnapshotJson = null,
+                pendingSourceHash = null,
+            )
+        every { authorizationService.requireTeamCapability(orgId, teamId, currentUser, Capabilities.EVENT_UPDATE) } just runs
+        // Not the shared stubEventRepositoryUpdate() helper — that one's `any()` matcher list
+        // implicitly requires externalSyncHash/sourceUpdatedAt/allDayDate to be null (their
+        // defaults), but applySourceUpdate explicitly passes real values for the first two.
+        every {
+            eventRepository.update(
+                id = event.id,
+                organizationId = orgId,
+                title = "Updated title",
+                description = null,
+                status = null,
+                startAt = Instant.parse("2026-09-10T18:00:00Z"),
+                endAt = null,
+                arrivalAt = null,
+                meetingAt = null,
+                venueName = "New venue",
+                address = null,
+                latitude = null,
+                longitude = null,
+                area = null,
+                meetingPoint = null,
+                directionsNotes = null,
+                opponentTeamId = null,
+                opponentName = null,
+                updatedByUserId = currentUser.userId,
+                externalSyncHash = "new-hash-123",
+                sourceUpdatedAt = any(),
+            )
+        } returns 1
+        every { eventRepository.clearPendingSourceUpdate(event.id, orgId) } returns 1
+        every { auditService.record(currentUser.userId, orgId, "event.updated_from_source", "event", event.id, metadataJson = any()) } just runs
+        every { teamRepository.findById(teamId, orgId) } returns team()
+        every { householdRepository.findActiveForTeam(teamId, orgId) } returns emptyList()
+        every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
+
+        val result = service.applySourceUpdate(orgId, event.id, currentUser)
+
+        assertEquals("Updated title", result.title)
+        assertEquals("New venue", result.venueName)
+        assertEquals(null, result.pendingSourceSnapshotJson)
+        verify(exactly = 1) { eventRepository.clearPendingSourceUpdate(event.id, orgId) }
+        verify(exactly = 1) {
+            auditService.record(
+                currentUser.userId,
+                orgId,
+                "event.updated_from_source",
+                "event",
+                event.id,
+                metadataJson =
+                    match {
+                        it.contains("\"field\":\"title\"") &&
+                            it.contains("\"oldValue\":\"Old title\"") &&
+                            it.contains("\"newValue\":\"Updated title\"") &&
+                            it.contains("\"field\":\"venueName\"")
+                    },
+            )
+        }
+    }
+
+    @Test
+    fun `describePendingSourceUpdate returns null when nothing is staged`() {
+        val event = sampleEvent()
+
+        assertEquals(null, service.describePendingSourceUpdate(event))
+    }
+
+    @Test
+    fun `describePendingSourceUpdate only includes fields the source actually sets and that actually differ`() {
+        val objectMapper = jacksonObjectMapper()
+        val snapshot =
+            PendingSourceEventSnapshot(
+                title = "Same title",
+                description = null,
+                status = null,
+                startAt = null,
+                endAt = null,
+                arrivalAt = null,
+                venueName = "New venue",
+                address = null,
+                area = null,
+                opponentName = null,
+            )
+        val event =
+            sampleEvent().copy(
+                title = "Same title",
+                venueName = "Old venue",
+                pendingSourceSnapshotJson = objectMapper.writeValueAsString(snapshot),
+                pendingSourceHash = "hash",
+            )
+
+        val changes = service.describePendingSourceUpdate(event)
+
+        assertEquals(1, changes?.size)
+        assertEquals("venueName", changes?.single()?.field)
+        assertEquals("Old venue", changes?.single()?.oldValue)
+        assertEquals("New venue", changes?.single()?.newValue)
     }
 
     @Test

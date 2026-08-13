@@ -11,7 +11,9 @@ import com.rally26.common.web.CurrentUser
 import com.rally26.event.domain.Event
 import com.rally26.event.domain.EventStatus
 import com.rally26.event.domain.EventType
+import com.rally26.event.domain.EventFieldChange
 import com.rally26.event.domain.EventVisibility
+import com.rally26.event.domain.PendingSourceEventSnapshot
 import com.rally26.event.domain.displayTitle
 import com.rally26.event.persistence.EventRepository
 import com.rally26.household.persistence.HouseholdRepository
@@ -316,9 +318,6 @@ class EventService(
     ): Event {
         val event = requireOwnedEvent(organizationId, eventId)
         requireManageAccess(event, currentUser, Capabilities.EVENT_UPDATE)
-        if (event.provider != null) {
-            requireNoSourceOwnedFieldChange(status, startAt, endAt, venueName, address, latitude, longitude, opponentTeamId, opponentName)
-        }
         if (opponentTeamId != null) {
             if (opponentTeamId == event.teamId) throw ValidationException("An event's opponent team cannot be the same as its owning team.")
             teamRepository.findById(opponentTeamId, organizationId)
@@ -421,10 +420,11 @@ class EventService(
     }
 
     /**
-     * Converts an imported event back into a normal MANUAL one (Phase 12 slice 4,
-     * ADR-034) — the "detach from source" option section 14.1A requires before a
-     * source-owned field can be edited through [update]'s normal staff path.
-     * Overlay fields never needed this — they've always been freely editable.
+     * Converts an imported event back into a normal MANUAL one, permanently stopping
+     * all future sync for it (Phase 12 slice 4, ADR-034; redesigned 2026-08-13 — see
+     * [applySourceUpdate]). Every field on an imported event has always been directly
+     * editable through [update] since the redesign; this is for someone who wants to
+     * stop receiving source updates entirely, not a prerequisite for editing.
      */
     @Transactional
     fun detachFromSource(
@@ -440,6 +440,99 @@ class EventService(
         eventRepository.detachFromSource(eventId, organizationId, currentUser.userId)
         auditService.record(currentUser.userId, organizationId, "event.detached_from_source", "event", eventId)
         return eventRepository.findById(eventId, organizationId)!!
+    }
+
+    /**
+     * A source (ICS feed poll, CSV re-import) never writes to a live event field
+     * directly anymore — it only stages a [PendingSourceEventSnapshot] via
+     * [com.rally26.event.persistence.EventRepository.stagePendingSourceUpdate]. This
+     * is the only path that turns a staged change into a real one: writes the new
+     * field values, records a full before/after audit diff (new ground for this
+     * codebase — no prior audit event captures a field-level diff), and clears the
+     * pending snapshot. Local edits made to this event in the meantime (every field
+     * has been directly editable since this redesign) are overwritten by the
+     * source's values for whichever fields the source actually sets — the founder's
+     * explicit direction was that applying a source update is allowed to overwrite
+     * local changes, with a frontend warning before the caller confirms.
+     */
+    @Transactional
+    fun applySourceUpdate(
+        organizationId: UUID,
+        eventId: UUID,
+        currentUser: CurrentUser,
+    ): Event {
+        val event = requireOwnedEvent(organizationId, eventId)
+        requireManageAccess(event, currentUser, Capabilities.EVENT_UPDATE)
+        val snapshotJson = event.pendingSourceSnapshotJson ?: throw ValidationException("This event has no pending update from its source.")
+        val snapshot = objectMapper.readValue(snapshotJson, PendingSourceEventSnapshot::class.java)
+        val changes = diffPendingSnapshot(event, snapshot)
+        eventRepository.update(
+            id = event.id,
+            organizationId = organizationId,
+            title = snapshot.title,
+            description = snapshot.description,
+            status = snapshot.status,
+            startAt = snapshot.startAt?.let { Instant.parse(it) },
+            endAt = snapshot.endAt?.let { Instant.parse(it) },
+            arrivalAt = snapshot.arrivalAt?.let { Instant.parse(it) },
+            meetingAt = null,
+            venueName = snapshot.venueName,
+            address = snapshot.address,
+            latitude = null,
+            longitude = null,
+            area = snapshot.area,
+            meetingPoint = null,
+            directionsNotes = null,
+            opponentTeamId = null,
+            opponentName = snapshot.opponentName,
+            updatedByUserId = currentUser.userId,
+            externalSyncHash = event.pendingSourceHash,
+            sourceUpdatedAt = Instant.now(),
+        )
+        eventRepository.clearPendingSourceUpdate(event.id, organizationId)
+        auditService.record(
+            currentUser.userId,
+            organizationId,
+            "event.updated_from_source",
+            "event",
+            eventId,
+            metadataJson = objectMapper.writeValueAsString(mapOf("changes" to changes)),
+        )
+        val updated = eventRepository.findById(eventId, organizationId)!!
+        if (event.status != EventStatus.DRAFT) notifyMeaningfulChanges(event, updated)
+        return updated
+    }
+
+    /** The diff a pending source update would apply if confirmed — null when nothing is staged. Shared by [applySourceUpdate] (for its audit trail) and the read path (so the frontend can show the diff before the caller confirms), so the two can never disagree about what "applying" means. */
+    fun describePendingSourceUpdate(event: Event): List<EventFieldChange>? {
+        val snapshotJson = event.pendingSourceSnapshotJson ?: return null
+        val snapshot = objectMapper.readValue(snapshotJson, PendingSourceEventSnapshot::class.java)
+        return diffPendingSnapshot(event, snapshot)
+    }
+
+    private fun diffPendingSnapshot(
+        event: Event,
+        snapshot: PendingSourceEventSnapshot,
+    ): List<EventFieldChange> {
+        val candidates =
+            listOf(
+                Triple("title", event.title, snapshot.title),
+                Triple("description", event.description, snapshot.description),
+                Triple("status", event.status.name, snapshot.status?.name),
+                Triple("startAt", event.startAt?.toString(), snapshot.startAt),
+                Triple("endAt", event.endAt?.toString(), snapshot.endAt),
+                Triple("arrivalAt", event.arrivalAt?.toString(), snapshot.arrivalAt),
+                Triple("venueName", event.venueName, snapshot.venueName),
+                Triple("address", event.address, snapshot.address),
+                Triple("area", event.area, snapshot.area),
+                Triple("opponentName", event.opponentName, snapshot.opponentName),
+            )
+        // A snapshot field that's null means "this source doesn't set this field," not "clear it" — same
+        // coalesce-only convention EventRepository.update already uses, so a diff only ever shows a field
+        // the source actually has an opinion on and that opinion differs from the current value.
+        return candidates
+            .filter { (_, old, new) -> new != null && new != old }
+            .map { (field, old, new) -> EventFieldChange(field, old, new) }
     }
 
     // --- Notification wiring (Phase 10 slice 4, ADR-029) ---
@@ -618,32 +711,4 @@ class EventService(
      * are never checked here — they've always been freely editable regardless of
      * [Event.provider].
      */
-    private fun requireNoSourceOwnedFieldChange(
-        status: EventStatus?,
-        startAt: Instant?,
-        endAt: Instant?,
-        venueName: String?,
-        address: String?,
-        latitude: Double?,
-        longitude: Double?,
-        opponentTeamId: UUID?,
-        opponentName: String?,
-    ) {
-        val attemptedSourceOwnedChange =
-            status != null ||
-                startAt != null ||
-                endAt != null ||
-                venueName != null ||
-                address != null ||
-                latitude != null ||
-                longitude != null ||
-                opponentTeamId != null ||
-                opponentName != null
-        if (attemptedSourceOwnedChange) {
-            throw ValidationException(
-                "This event was imported from an external source — opponent, start/end time, venue, and status can't be " +
-                    "edited directly. Detach it from its source first, or update the value in the source system.",
-            )
-        }
-    }
 }

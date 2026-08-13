@@ -1,5 +1,6 @@
 package com.rally26.integration.eventsource.application
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
 import com.rally26.authorization.application.AuthorizationService
 import com.rally26.authorization.domain.Capabilities
@@ -11,6 +12,7 @@ import com.rally26.event.domain.EventSourceType
 import com.rally26.event.domain.EventStatus
 import com.rally26.event.domain.EventType
 import com.rally26.event.domain.EventVisibility
+import com.rally26.event.domain.PendingSourceEventSnapshot
 import com.rally26.event.persistence.EventRepository
 import com.rally26.membership.application.MembershipService
 import com.rally26.team.persistence.TeamRepository
@@ -32,7 +34,8 @@ data class CsvImportRowError(
 
 data class CsvImportResult(
     val createdCount: Int,
-    val updatedCount: Int,
+    /** A detected change against an existing imported event, staged for a staff member to review and apply — not yet written to the live event. See PendingSourceEventSnapshot. */
+    val stagedCount: Int,
     val unchangedCount: Int,
     val errors: List<CsvImportRowError>,
 )
@@ -52,6 +55,7 @@ class CsvEventImportService(
     private val authorizationService: AuthorizationService,
     private val membershipService: MembershipService,
     private val auditService: AuditService,
+    private val objectMapper: ObjectMapper,
 ) {
     @Transactional
     fun import(
@@ -82,7 +86,7 @@ class CsvEventImportService(
         val connectionId = teamId?.toString() ?: "org:$organizationId"
         val visibility = if (teamId != null) EventVisibility.TEAM else EventVisibility.ORGANIZATION
         var created = 0
-        var updated = 0
+        var staged = 0
         var unchanged = 0
         val errors = mutableListOf<CsvImportRowError>()
 
@@ -91,7 +95,7 @@ class CsvEventImportService(
             if (rawRow.all { it.isBlank() }) return@forEachIndexed
             val fields = header.zip(rawRow).toMap()
             try {
-                val (createdRow, updatedRow) =
+                val (createdRow, stagedRow) =
                     importRow(
                         organizationId,
                         teamId,
@@ -103,8 +107,8 @@ class CsvEventImportService(
                     )
                 if (createdRow) {
                     created++
-                } else if (updatedRow) {
-                    updated++
+                } else if (stagedRow) {
+                    staged++
                 } else {
                     unchanged++
                 }
@@ -119,12 +123,12 @@ class CsvEventImportService(
             "event.csv_imported",
             "event",
             teamId ?: organizationId,
-            """{"created":$created,"updated":$updated,"errors":${errors.size}}""",
+            """{"created":$created,"staged":$staged,"errors":${errors.size}}""",
         )
-        return CsvImportResult(created, updated, unchanged, errors)
+        return CsvImportResult(created, staged, unchanged, errors)
     }
 
-    /** Returns (wasCreated, wasUpdated) — both false means the row matched an existing event with an identical sync hash, nothing to do. */
+    /** Returns (wasCreated, wasStaged) — both false means the row matched an existing event with an identical sync hash (already applied) or an identical pending hash (already staged), nothing new to do. */
     private fun importRow(
         organizationId: UUID,
         teamId: UUID?,
@@ -197,31 +201,27 @@ class CsvEventImportService(
             return true to false
         }
         if (existing.externalSyncHash == syncHash) {
+            // Already applied — nothing changed since the last time a human accepted this event's source data.
             return false to false
         }
-        eventRepository.update(
-            id = existing.id,
-            organizationId = organizationId,
-            title = title,
-            description = description,
-            status = null,
-            startAt = startAt,
-            endAt = endAt,
-            arrivalAt = arrivalAt,
-            meetingAt = null,
-            venueName = venueName,
-            address = address,
-            latitude = null,
-            longitude = null,
-            area = area,
-            meetingPoint = null,
-            directionsNotes = null,
-            opponentTeamId = null,
-            opponentName = opponentName,
-            updatedByUserId = currentUserId,
-            externalSyncHash = syncHash,
-            sourceUpdatedAt = now,
-        )
+        if (existing.pendingSourceHash == syncHash) {
+            // Already staged, waiting on a human to review and apply it — don't re-stage the same change on re-upload.
+            return false to false
+        }
+        val snapshot =
+            PendingSourceEventSnapshot(
+                title = title,
+                description = description,
+                status = null,
+                startAt = startAt?.toString(),
+                endAt = endAt?.toString(),
+                arrivalAt = arrivalAt?.toString(),
+                venueName = venueName,
+                address = address,
+                area = area,
+                opponentName = opponentName,
+            )
+        eventRepository.stagePendingSourceUpdate(existing.id, organizationId, objectMapper.writeValueAsString(snapshot), syncHash)
         return false to true
     }
 

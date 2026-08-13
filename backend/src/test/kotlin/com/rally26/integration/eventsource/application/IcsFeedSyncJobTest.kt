@@ -1,5 +1,6 @@
 package com.rally26.integration.eventsource.application
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.config.IcsFeedSyncProperties
 import com.rally26.event.domain.Event
 import com.rally26.event.domain.EventSourceType
@@ -25,7 +26,7 @@ class IcsFeedSyncJobTest {
     private val eventRepository = mockk<EventRepository>()
     private val icsFeedFetcher = mockk<IcsFeedFetcher>()
     private val properties = IcsFeedSyncProperties(enabled = true)
-    private val job = IcsFeedSyncJob(eventSourceConnectionRepository, eventRepository, icsFeedFetcher, properties)
+    private val job = IcsFeedSyncJob(eventSourceConnectionRepository, eventRepository, icsFeedFetcher, properties, ObjectMapper())
 
     private val orgId = UUID.randomUUID()
     private val teamId = UUID.randomUUID()
@@ -169,70 +170,43 @@ class IcsFeedSyncJobTest {
     }
 
     @Test
-    fun `syncOne updates an existing matched event when its sync hash differs`() {
+    fun `syncOne stages a pending update for an existing matched event when its sync hash differs, without writing any live field`() {
         val conn = connection()
         val ics = "BEGIN:VEVENT\nUID:game-1\nSUMMARY:Updated title\nDTSTART:20260905T193000Z\nEND:VEVENT"
         val existing = sampleEvent(syncHash = "stale")
         every { icsFeedFetcher.fetch(conn.feedUrl!!) } returns ics
         every { eventRepository.findByExternalIdentity(orgId, "ICS_FEED", conn.id.toString(), "game-1") } returns existing
-        every {
-            eventRepository.update(
-                id = existing.id,
-                organizationId = orgId,
-                title = "Updated title",
-                description = null,
-                status = null,
-                startAt = Instant.parse("2026-09-05T19:30:00Z"),
-                endAt = null,
-                arrivalAt = null,
-                meetingAt = null,
-                venueName = null,
-                address = null,
-                latitude = null,
-                longitude = null,
-                area = null,
-                meetingPoint = null,
-                directionsNotes = null,
-                opponentTeamId = null,
-                opponentName = null,
-                updatedByUserId = userId,
-                externalSyncHash = any(),
-                sourceUpdatedAt = any(),
-            )
-        } returns 1
+        every { eventRepository.stagePendingSourceUpdate(existing.id, orgId, any(), any()) } returns 1
         every { eventSourceConnectionRepository.recordSyncResult(conn.id, EventSourceSyncStatus.SUCCESS, null) } returns 1
 
         job.syncOne(conn)
 
-        verify(exactly = 1) {
+        verify(exactly = 1) { eventRepository.stagePendingSourceUpdate(existing.id, orgId, any(), any()) }
+        verify(exactly = 0) {
             eventRepository.update(
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
             )
         }
     }
 
     @Test
-    fun `syncOne skips an existing matched event with an identical sync hash`() {
+    fun `syncOne re-stages when the source changes again before the first pending update was ever applied`() {
+        val conn = connection()
+        val ics = "BEGIN:VEVENT\nUID:game-1\nSUMMARY:Updated title\nDTSTART:20260905T193000Z\nEND:VEVENT"
+        val existing = sampleEvent(syncHash = "stale").copy(pendingSourceHash = "some-other-still-pending-hash")
+        every { icsFeedFetcher.fetch(conn.feedUrl!!) } returns ics
+        every { eventRepository.findByExternalIdentity(orgId, "ICS_FEED", conn.id.toString(), "game-1") } returns existing
+        every { eventRepository.stagePendingSourceUpdate(existing.id, orgId, any(), any()) } returns 1
+        every { eventSourceConnectionRepository.recordSyncResult(conn.id, EventSourceSyncStatus.SUCCESS, null) } returns 1
+
+        job.syncOne(conn)
+
+        verify(exactly = 1) { eventRepository.stagePendingSourceUpdate(existing.id, orgId, any(), any()) }
+    }
+
+    @Test
+    fun `syncOne skips an existing matched event with an identical applied sync hash`() {
         val conn = connection()
         val ics = "BEGIN:VEVENT\nUID:game-1\nDTSTART:20260905T193000Z\nEND:VEVENT"
         val payload = listOf(null, null, null, Instant.parse("2026-09-05T19:30:00Z"), null, null).joinToString("|") { it?.toString() ?: "" }
@@ -248,30 +222,26 @@ class IcsFeedSyncJobTest {
 
         job.syncOne(conn)
 
-        verify(exactly = 0) {
-            eventRepository.update(
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-            )
-        }
+        verify(exactly = 0) { eventRepository.stagePendingSourceUpdate(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `syncOne skips an existing matched event whose detected hash matches the already-staged pending hash`() {
+        val conn = connection()
+        val ics = "BEGIN:VEVENT\nUID:game-1\nDTSTART:20260905T193000Z\nEND:VEVENT"
+        val payload = listOf(null, null, null, Instant.parse("2026-09-05T19:30:00Z"), null, null).joinToString("|") { it?.toString() ?: "" }
+        val digest =
+            java.security.MessageDigest
+                .getInstance("SHA-256")
+                .digest(payload.toByteArray(Charsets.UTF_8))
+        val expectedHash = digest.joinToString("") { "%02x".format(it) }
+        val existing = sampleEvent(syncHash = "stale").copy(pendingSourceHash = expectedHash)
+        every { icsFeedFetcher.fetch(conn.feedUrl!!) } returns ics
+        every { eventRepository.findByExternalIdentity(orgId, "ICS_FEED", conn.id.toString(), "game-1") } returns existing
+        every { eventSourceConnectionRepository.recordSyncResult(conn.id, EventSourceSyncStatus.SUCCESS, null) } returns 1
+
+        job.syncOne(conn)
+
+        verify(exactly = 0) { eventRepository.stagePendingSourceUpdate(any(), any(), any(), any()) }
     }
 }

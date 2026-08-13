@@ -32,6 +32,14 @@ export interface Rally26Event {
 	updatedAt: string;
 	/** Phase 24 slice 24.5 (ADR-071): a plain `YYYY-MM-DD` date, never zone-converted. When set, every instant field above is null. */
 	allDayDate: string | null;
+	/** A detected-but-unapplied change from this event's source (ICS feed poll, CSV re-import) — null when nothing is staged. Apply via useApplySourceUpdate. */
+	pendingSourceChanges: EventFieldChange[] | null;
+}
+
+export interface EventFieldChange {
+	field: string;
+	oldValue: string | null;
+	newValue: string | null;
 }
 
 export interface CreateEventInput {

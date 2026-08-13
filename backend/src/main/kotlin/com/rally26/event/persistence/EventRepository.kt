@@ -18,7 +18,8 @@ private const val COLUMNS = """
 	event_type, title, description, status, start_at, end_at, arrival_at, meeting_at,
 	timezone, venue_name, address, latitude, longitude, area, meeting_point, directions_notes,
 	visibility, source_type, provider, connection_id, external_event_id, external_sync_hash,
-	source_updated_at, created_by_user_id, updated_by_user_id, created_at, updated_at, all_day_date
+	source_updated_at, created_by_user_id, updated_by_user_id, created_at, updated_at, all_day_date,
+	pending_source_snapshot_json, pending_source_hash
 """
 
 @Repository
@@ -331,6 +332,40 @@ class EventRepository(
             .update()
     }
 
+    /** Stages a detected-but-not-yet-applied source change without touching any live field — see [PendingSourceEventSnapshot]/`EventService.applySourceUpdate`. Always overwrites any prior pending snapshot (a newer detected change supersedes an older unapplied one). */
+    fun stagePendingSourceUpdate(
+        id: UUID,
+        organizationId: UUID,
+        snapshotJson: String,
+        hash: String,
+    ): Int =
+        jdbcClient
+            .sql(
+                """
+                update event set pending_source_snapshot_json = :snapshotJson, pending_source_hash = :hash
+                where id = :id and organization_id = :organizationId
+                """.trimIndent(),
+            ).param("snapshotJson", snapshotJson)
+            .param("hash", hash)
+            .param("id", id)
+            .param("organizationId", organizationId)
+            .update()
+
+    /** Clears a staged pending update after `EventService.applySourceUpdate` has written its real field values. */
+    fun clearPendingSourceUpdate(
+        id: UUID,
+        organizationId: UUID,
+    ): Int =
+        jdbcClient
+            .sql(
+                """
+                update event set pending_source_snapshot_json = null, pending_source_hash = null
+                where id = :id and organization_id = :organizationId
+                """.trimIndent(),
+            ).param("id", id)
+            .param("organizationId", organizationId)
+            .update()
+
     fun updateStatus(
         id: UUID,
         organizationId: UUID,
@@ -391,5 +426,7 @@ class EventRepository(
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
             allDayDate = rs.getDate("all_day_date")?.toLocalDate(),
+            pendingSourceSnapshotJson = rs.getString("pending_source_snapshot_json"),
+            pendingSourceHash = rs.getString("pending_source_hash"),
         )
 }

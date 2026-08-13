@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "../../components/Button";
+import { Modal } from "../../components/Modal";
 import { Capabilities } from "../../authorization/capabilityConstants";
 import { useContexts } from "../../authorization/api";
 import { hasCapability } from "../../authorization/capabilities";
@@ -13,6 +14,7 @@ import { ClearanceStatusPill } from "../eligibility/ClearanceStatusPill";
 import { ApiError } from "../../lib/apiError";
 import {
 	downloadEventCalendar,
+	useApplySourceUpdate,
 	useCancelEvent,
 	useDetachEvent,
 	useDirections,
@@ -57,6 +59,7 @@ export function EventDetailPage() {
 	const cancel = useCancelEvent(organizationId ?? "", eventId ?? "");
 	const postpone = usePostponeEvent(organizationId ?? "", eventId ?? "");
 	const detach = useDetachEvent(organizationId ?? "", eventId ?? "");
+	const applySourceUpdate = useApplySourceUpdate(organizationId ?? "", eventId ?? "");
 	const [actionError, setActionError] = useState<string | null>(null);
 	const contexts = useContexts();
 
@@ -172,7 +175,17 @@ export function EventDetailPage() {
 				</section>
 			</div>
 
-			{canManage && <EventManagementActions organizationId={organizationId} event={event} publish={() => runAction(() => publish.mutateAsync())} cancel={() => runAction(() => cancel.mutateAsync())} postpone={() => runAction(() => postpone.mutateAsync())} detach={() => runAction(() => detach.mutateAsync())} />}
+			{canManage && (
+				<EventManagementActions
+					organizationId={organizationId}
+					event={event}
+					publish={() => runAction(() => publish.mutateAsync())}
+					cancel={() => runAction(() => cancel.mutateAsync())}
+					postpone={() => runAction(() => postpone.mutateAsync())}
+					detach={() => runAction(() => detach.mutateAsync())}
+					applySourceUpdate={() => runAction(() => applySourceUpdate.mutateAsync())}
+				/>
+			)}
 		</div>
 	);
 }
@@ -233,11 +246,57 @@ function RsvpCount({ label, value }: { label: string; value: number }) {
 	return <div className="rounded-lg bg-ice-white dark:bg-[#0f172a] p-3 text-center"><p className="font-heading text-xl font-bold text-navy dark:text-[#f8fafc]">{value}</p><p className="text-xs text-slate-gray dark:text-[#cbd5e1]">{label}</p></div>;
 }
 
-function EventManagementActions({ organizationId, event, publish, cancel, postpone, detach }: { organizationId: string; event: Rally26Event; publish: () => void; cancel: () => void; postpone: () => void; detach: () => void }) {
+const SOURCE_UPDATE_FIELD_LABELS: Record<string, string> = {
+	title: "Title",
+	description: "Description",
+	status: "Status",
+	startAt: "Start time",
+	endAt: "End time",
+	arrivalAt: "Arrival time",
+	venueName: "Venue",
+	address: "Address",
+	area: "Area",
+	opponentName: "Opponent",
+};
+
+function EventManagementActions({
+	organizationId,
+	event,
+	publish,
+	cancel,
+	postpone,
+	detach,
+	applySourceUpdate,
+}: {
+	organizationId: string;
+	event: Rally26Event;
+	publish: () => void;
+	cancel: () => void;
+	postpone: () => void;
+	detach: () => void;
+	applySourceUpdate: () => void;
+}) {
+	const [showSourceUpdateModal, setShowSourceUpdateModal] = useState(false);
+	const pendingChanges = event.pendingSourceChanges ?? [];
+	const hasPendingSourceUpdate = pendingChanges.length > 0;
+
 	return (
 		<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5">
 			<h2 className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Event actions</h2>
 			<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Only actions allowed by the backend for your role will succeed.</p>
+
+			{hasPendingSourceUpdate && (
+				<div role="status" className="mt-4 rounded-lg border border-championship-gold/40 bg-championship-gold/10 p-3">
+					<p className="text-sm font-medium text-navy dark:text-[#f8fafc]">An update is available from this event's source.</p>
+					<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">
+						{pendingChanges.length} field{pendingChanges.length === 1 ? "" : "s"} changed since this event was last synced.
+					</p>
+					<Button type="button" variant="secondary" className="mt-2" onClick={() => setShowSourceUpdateModal(true)}>
+						Review update
+					</Button>
+				</div>
+			)}
+
 			<div className="mt-4 flex flex-wrap gap-2">
 				{event.status === "DRAFT" && <Button type="button" onClick={publish}>Publish</Button>}
 				{event.status !== "DRAFT" && event.status !== "CANCELLED" && event.status !== "COMPLETED" && event.startAt && new Date(event.startAt).getTime() > Date.now() && (
@@ -247,6 +306,42 @@ function EventManagementActions({ organizationId, event, publish, cancel, postpo
 				{event.status !== "CANCELLED" && event.status !== "COMPLETED" && <Button type="button" variant="danger" onClick={cancel}>Cancel event</Button>}
 				{event.sourceType !== "MANUAL" && <Button type="button" variant="secondary" onClick={detach}>Detach from source</Button>}
 			</div>
+
+			<Modal
+				open={showSourceUpdateModal}
+				onClose={() => setShowSourceUpdateModal(false)}
+				title="Update this event from its source?"
+				actions={
+					<>
+						<Button type="button" variant="secondary" onClick={() => setShowSourceUpdateModal(false)}>Cancel</Button>
+						<Button
+							type="button"
+							onClick={() => {
+								applySourceUpdate();
+								setShowSourceUpdateModal(false);
+							}}
+						>
+							Apply update
+						</Button>
+					</>
+				}
+			>
+				<p>This will overwrite any local changes to the fields below with the data from this event&apos;s source.</p>
+				<dl className="mt-3 flex flex-col gap-2">
+					{pendingChanges.map((change) => (
+						<div key={change.field} className="rounded-md border border-slate-gray/20 p-2">
+							<dt className="text-xs font-medium uppercase tracking-wide text-slate-gray dark:text-[#cbd5e1]">
+								{SOURCE_UPDATE_FIELD_LABELS[change.field] ?? change.field}
+							</dt>
+							<dd className="mt-1 text-sm">
+								<span className="text-slate-gray dark:text-[#cbd5e1] line-through">{change.oldValue ?? "(none)"}</span>
+								{" → "}
+								<span className="font-medium text-navy dark:text-[#f8fafc]">{change.newValue ?? "(none)"}</span>
+							</dd>
+						</div>
+					))}
+				</dl>
+			</Modal>
 		</section>
 	);
 }

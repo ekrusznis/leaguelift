@@ -49,6 +49,10 @@ data class Event(
     val updatedAt: Instant,
     /** Phase 24 slice 24.5 (ADR-071): a true all-day date, never zone-converted. Mutually exclusive with [startAt] (DB check constraint). */
     val allDayDate: LocalDate? = null,
+    /** A detected-but-unapplied change from this event's source (ICS/CSV) — see [PendingSourceEventSnapshot] and `EventService.applySourceUpdate`. Null when there's nothing staged. */
+    val pendingSourceSnapshotJson: String? = null,
+    /** The sync hash of the currently-staged [pendingSourceSnapshotJson], distinct from [externalSyncHash] (the last *applied* hash) — lets a poller avoid re-staging the same unapplied change every run. */
+    val pendingSourceHash: String? = null,
 )
 
 /** A tournament child event may intentionally have TBD time/opponent/area until assigned — see DESIGN-DOC.md section 14.1A. */

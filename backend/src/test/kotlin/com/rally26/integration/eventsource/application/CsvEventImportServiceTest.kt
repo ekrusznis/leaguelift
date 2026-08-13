@@ -1,5 +1,6 @@
 package com.rally26.integration.eventsource.application
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
 import com.rally26.authorization.application.AuthorizationService
 import com.rally26.authorization.domain.Capabilities
@@ -37,7 +38,7 @@ class CsvEventImportServiceTest {
     private val authorizationService = mockk<AuthorizationService>()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
-    private val service = CsvEventImportService(eventRepository, teamRepository, authorizationService, membershipService, auditService)
+    private val service = CsvEventImportService(eventRepository, teamRepository, authorizationService, membershipService, auditService, ObjectMapper())
 
     private val orgId = UUID.randomUUID()
     private val teamId = UUID.randomUUID()
@@ -195,7 +196,7 @@ class CsvEventImportServiceTest {
             )
 
         assertEquals(1, result.createdCount)
-        assertEquals(0, result.updatedCount)
+        assertEquals(0, result.stagedCount)
         assertTrue(result.errors.isEmpty())
     }
 
@@ -216,65 +217,17 @@ class CsvEventImportServiceTest {
         val result = service.import(orgId, teamId, "America/New_York", "external_id,event_type\nrow-1,PRACTICE\n", currentUser)
 
         assertEquals(0, result.createdCount)
-        assertEquals(0, result.updatedCount)
+        assertEquals(0, result.stagedCount)
         assertEquals(1, result.unchangedCount)
-        verify(exactly = 0) {
-            eventRepository.update(
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-                any(),
-            )
-        }
+        verify(exactly = 0) { eventRepository.stagePendingSourceUpdate(any(), any(), any(), any()) }
     }
 
     @Test
-    fun `import updates an existing event when the sync hash differs`() {
+    fun `import stages a pending update for an existing event when the sync hash differs, without writing any live field`() {
         stubTeamAccess()
         val existing = sampleEvent(syncHash = "stale-hash")
         every { eventRepository.findByExternalIdentity(orgId, "CSV_IMPORT", teamId.toString(), "row-1") } returns existing
-        every {
-            eventRepository.update(
-                id = existing.id,
-                organizationId = orgId,
-                title = null,
-                description = null,
-                status = null,
-                startAt = Instant.parse("2026-09-06T15:30:00Z"),
-                endAt = null,
-                arrivalAt = null,
-                meetingAt = null,
-                venueName = null,
-                address = null,
-                latitude = null,
-                longitude = null,
-                area = null,
-                meetingPoint = null,
-                directionsNotes = null,
-                opponentTeamId = null,
-                opponentName = null,
-                updatedByUserId = currentUser.userId,
-                externalSyncHash = any(),
-                sourceUpdatedAt = any(),
-            )
-        } returns 1
+        every { eventRepository.stagePendingSourceUpdate(existing.id, orgId, any(), any()) } returns 1
         every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
 
         val result =
@@ -286,7 +239,14 @@ class CsvEventImportServiceTest {
                 currentUser,
             )
 
-        assertEquals(1, result.updatedCount)
+        assertEquals(1, result.stagedCount)
+        verify(exactly = 1) { eventRepository.stagePendingSourceUpdate(existing.id, orgId, any(), any()) }
+        verify(exactly = 0) {
+            eventRepository.update(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+            )
+        }
     }
 
     @Test

@@ -1,10 +1,12 @@
 package com.rally26.integration.eventsource.application
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.config.IcsFeedSyncProperties
 import com.rally26.event.domain.EventSourceType
 import com.rally26.event.domain.EventStatus
 import com.rally26.event.domain.EventType
 import com.rally26.event.domain.EventVisibility
+import com.rally26.event.domain.PendingSourceEventSnapshot
 import com.rally26.event.persistence.EventRepository
 import com.rally26.integration.eventsource.domain.EventSourceConnection
 import com.rally26.integration.eventsource.domain.EventSourceSyncStatus
@@ -35,6 +37,7 @@ class IcsFeedSyncJob(
     private val eventRepository: EventRepository,
     private val icsFeedFetcher: IcsFeedFetcher,
     private val properties: IcsFeedSyncProperties,
+    private val objectMapper: ObjectMapper,
 ) {
     @Scheduled(cron = "\${rally26.ics-feed.sync.cron:0 */30 * * * *}")
     fun syncAll() {
@@ -161,31 +164,27 @@ class IcsFeedSyncJob(
             return true
         }
         if (existing.externalSyncHash == syncHash) {
+            // Already applied — nothing changed since the last time a human accepted this event's source data.
             return false
         }
-        eventRepository.update(
-            id = existing.id,
-            organizationId = connection.organizationId,
-            title = parsed.summary,
-            description = parsed.description,
-            status = status,
-            startAt = parsed.startAt,
-            endAt = parsed.endAt,
-            arrivalAt = null,
-            meetingAt = null,
-            venueName = parsed.location,
-            address = null,
-            latitude = null,
-            longitude = null,
-            area = null,
-            meetingPoint = null,
-            directionsNotes = null,
-            opponentTeamId = null,
-            opponentName = null,
-            updatedByUserId = connection.createdByUserId,
-            externalSyncHash = syncHash,
-            sourceUpdatedAt = now,
-        )
+        if (existing.pendingSourceHash == syncHash) {
+            // Already staged, waiting on a human to review and apply it — don't re-stage the same change every poll.
+            return false
+        }
+        val snapshot =
+            PendingSourceEventSnapshot(
+                title = parsed.summary,
+                description = parsed.description,
+                status = status,
+                startAt = parsed.startAt?.toString(),
+                endAt = parsed.endAt?.toString(),
+                arrivalAt = null,
+                venueName = parsed.location,
+                address = null,
+                area = null,
+                opponentName = null,
+            )
+        eventRepository.stagePendingSourceUpdate(existing.id, connection.organizationId, objectMapper.writeValueAsString(snapshot), syncHash)
         return false
     }
 

@@ -1,6 +1,7 @@
 package com.rally26.event.web
 
 import com.rally26.event.domain.Event
+import com.rally26.event.domain.EventFieldChange
 import com.rally26.event.domain.EventStatus
 import com.rally26.event.domain.EventType
 import com.rally26.event.domain.EventVisibility
@@ -83,6 +84,14 @@ data class EventResponse(
     val createdAt: Instant,
     val updatedAt: Instant,
     val allDayDate: LocalDate?,
+    /** A detected-but-unapplied change from this event's source (ICS feed poll, CSV re-import) — null when nothing is staged. Apply it via POST .../events/{id}/apply-source-update. */
+    val pendingSourceChanges: List<EventFieldChangeResponse>?,
+)
+
+data class EventFieldChangeResponse(
+    val field: String,
+    val oldValue: String?,
+    val newValue: String?,
 )
 
 data class DirectionsResponse(
@@ -94,7 +103,10 @@ data class TimezoneDefaultResponse(
     val timezone: String,
 )
 
-fun Event.toResponse(displayTitle: String): EventResponse =
+fun Event.toResponse(
+    displayTitle: String,
+    pendingSourceChanges: List<EventFieldChange>? = null,
+): EventResponse =
     EventResponse(
         id,
         organizationId,
@@ -123,4 +135,5 @@ fun Event.toResponse(displayTitle: String): EventResponse =
         createdAt,
         updatedAt,
         allDayDate,
+        pendingSourceChanges?.map { EventFieldChangeResponse(it.field, it.oldValue, it.newValue) },
     )

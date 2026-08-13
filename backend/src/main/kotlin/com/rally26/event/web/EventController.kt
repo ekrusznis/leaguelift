@@ -144,6 +144,13 @@ class EventController(
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): EventResponse = eventService.detachFromSource(organizationId, eventId, currentUser).toResponseWithNames(organizationId)
 
+    @PostMapping("/organizations/{organizationId}/events/{eventId}/apply-source-update")
+    fun applySourceUpdate(
+        @PathVariable organizationId: UUID,
+        @PathVariable eventId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): EventResponse = eventService.applySourceUpdate(organizationId, eventId, currentUser).toResponseWithNames(organizationId)
+
     @GetMapping("/teams/{teamId}/events")
     fun listForTeam(
         @PathVariable teamId: UUID,
@@ -305,5 +312,5 @@ class EventController(
             .body(ics)
 
     private fun Event.toResponseWithNames(organizationId: UUID): EventResponse =
-        toResponse(eventService.displayTitleFor(this, organizationId))
+        toResponse(eventService.displayTitleFor(this, organizationId), eventService.describePendingSourceUpdate(this))
 }

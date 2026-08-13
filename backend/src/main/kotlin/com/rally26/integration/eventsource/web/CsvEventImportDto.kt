@@ -17,7 +17,7 @@ data class CsvImportRowErrorResponse(
 
 data class CsvImportResponse(
     val createdCount: Int,
-    val updatedCount: Int,
+    val stagedCount: Int,
     val unchangedCount: Int,
     val errors: List<CsvImportRowErrorResponse>,
 )
@@ -25,7 +25,7 @@ data class CsvImportResponse(
 fun CsvImportResult.toResponse() =
     CsvImportResponse(
         createdCount = createdCount,
-        updatedCount = updatedCount,
+        stagedCount = stagedCount,
         unchangedCount = unchangedCount,
         errors = errors.map { CsvImportRowErrorResponse(it.rowNumber, it.message) },
     )
