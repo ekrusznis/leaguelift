@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
+import { ArticleAttachmentPicker } from "./ArticleAttachmentPicker";
 import { HELP_CATEGORIES, type SupportArticle, type SupportAudience } from "./types";
 import { useArchiveSupportArticle, usePlatformHelpArticles, usePublishSupportArticle, useSaveSupportArticle, type SaveSupportArticleInput } from "./api";
 
@@ -46,6 +47,15 @@ export function PlatformHelpArticlesPage() {
 					<label className="text-sm font-semibold">Audience<select value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value as SupportAudience })} className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 dark:border-[#334155] px-3 font-normal">{AUDIENCES.map((item) => <option key={item}>{item}</option>)}</select></label>
 					<label className="text-sm font-semibold sm:col-span-2">Summary<textarea required maxLength={400} rows={3} value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-[#334155] px-3 py-2 font-normal" /></label>
 					<label className="text-sm font-semibold sm:col-span-2">Body (safe Markdown subset)<textarea required maxLength={20000} rows={14} value={form.bodyMarkdown} onChange={(e) => setForm({ ...form, bodyMarkdown: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 dark:border-[#334155] px-3 py-2 font-mono text-sm font-normal" /></label>
+					{selected && (
+						<div className="sm:col-span-2">
+							<ArticleAttachmentPicker
+								articleId={selected.id}
+								onInsert={(markdown) => setForm((current) => ({ ...current, bodyMarkdown: current.bodyMarkdown ? `${current.bodyMarkdown}\n\n${markdown}` : markdown }))}
+							/>
+						</div>
+					)}
+					{!selected && <p className="sm:col-span-2 text-xs text-slate-500 dark:text-[#cbd5e1]">Save this article as a draft before attaching images, GIFs, video, or files.</p>}
 					<label className="text-sm font-semibold">Sort order<input type="number" min={0} max={10000} value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })} className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 dark:border-[#334155] px-3 font-normal" /></label>
 					<div className="flex flex-wrap items-end gap-2"><button disabled={save.isPending} className="min-h-11 rounded-lg bg-green-600 px-4 font-semibold text-white">{save.isPending ? "Saving…" : "Save draft"}</button>{selected && selected.status !== "ARCHIVED" && <button type="button" onClick={publishSelected} className="min-h-11 rounded-lg border border-green-600 px-4 font-semibold text-green-700">Publish</button>}{selected && selected.status !== "ARCHIVED" && <button type="button" onClick={archiveSelected} className="min-h-11 rounded-lg border border-error-300 px-4 font-semibold text-error-700">Archive</button>}</div>
 					{(save.isError || publish.isError || archive.isError) && <div className="sm:col-span-2"><ErrorState message="The article change could not be saved." /></div>}

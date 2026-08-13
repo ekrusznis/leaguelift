@@ -18,4 +18,29 @@ describe("SupportMarkdown", () => {
 		expect(screen.getByRole("link", { name: "Unsafe" })).toHaveAttribute("href", "#");
 		expect(screen.getByRole("link", { name: "Safe" })).toHaveAttribute("href", "/help");
 	});
+
+	it("embeds an image from a safe URL", () => {
+		render(<SupportMarkdown body={"![Setup diagram](https://signed.example.com/diagram.png)"} />);
+
+		const image = screen.getByRole("img", { name: "Setup diagram" });
+		expect(image).toHaveAttribute("src", "https://signed.example.com/diagram.png");
+	});
+
+	it("renders a .mp4 or .mov embed as video rather than an image", () => {
+		const { container } = render(
+			<SupportMarkdown body={"![Walkthrough](https://signed.example.com/clip.mp4?X-Amz-Signature=abc)"} />,
+		);
+
+		const video = container.querySelector("video");
+		expect(video).not.toBeNull();
+		expect(video).toHaveAttribute("src", "https://signed.example.com/clip.mp4?X-Amz-Signature=abc");
+		expect(container.querySelector("img")).toBeNull();
+	});
+
+	it("drops an image/video embed pointing at an unsafe URL", () => {
+		render(<SupportMarkdown body={"![Bad](javascript:alert('x'))"} />);
+
+		expect(document.querySelector("img")).toBeNull();
+		expect(document.querySelector("video")).toBeNull();
+	});
 });

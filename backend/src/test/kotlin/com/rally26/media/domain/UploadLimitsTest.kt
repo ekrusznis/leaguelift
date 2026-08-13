@@ -144,4 +144,30 @@ class UploadLimitsTest {
         assertTrue(UploadLimits.isNonImageContentType("video/quicktime"))
         assertFalse(UploadLimits.isNonImageContentType("image/png"))
     }
+
+    @Test
+    fun `detects GIF by its GIF87a or GIF89a header`() {
+        assertEquals("image/gif", UploadLimits.detectContentType("GIF87a".toByteArray(Charsets.US_ASCII) + byteArrayOf(0, 0)))
+        assertEquals("image/gif", UploadLimits.detectContentType("GIF89a".toByteArray(Charsets.US_ASCII) + byteArrayOf(0, 0)))
+    }
+
+    @Test
+    fun `article attachments allow gif, video, and pdf - other slots do not allow gif`() {
+        assertTrue(UploadLimits.isContentTypeAllowed(MediaUsageSlot.ARTICLE_ATTACHMENT, "image/gif"))
+        assertTrue(UploadLimits.isContentTypeAllowed(MediaUsageSlot.ARTICLE_ATTACHMENT, "video/mp4"))
+        assertTrue(UploadLimits.isContentTypeAllowed(MediaUsageSlot.ARTICLE_ATTACHMENT, "application/pdf"))
+        assertFalse(UploadLimits.isContentTypeAllowed(MediaUsageSlot.HOUSEHOLD_MEDIA, "image/gif"))
+        assertFalse(UploadLimits.isContentTypeAllowed(MediaUsageSlot.COVER, "image/gif"))
+    }
+
+    @Test
+    fun `article attachment size limit matches the file class (pdf, video, or image)`() {
+        val pdfLimit = UploadLimits.maxBytes(MediaUsageSlot.ARTICLE_ATTACHMENT, "application/pdf")
+        val videoLimit = UploadLimits.maxBytes(MediaUsageSlot.ARTICLE_ATTACHMENT, "video/mp4")
+        val imageLimit = UploadLimits.maxBytes(MediaUsageSlot.ARTICLE_ATTACHMENT, "image/png")
+        assertEquals(UploadLimits.maxBytes(MediaUsageSlot.DOCUMENT, "application/pdf"), pdfLimit)
+        assertEquals(UploadLimits.maxBytes(MediaUsageSlot.HOUSEHOLD_MEDIA, "video/mp4"), videoLimit)
+        assertEquals(UploadLimits.maxBytes(MediaUsageSlot.HOUSEHOLD_MEDIA, "image/png"), imageLimit)
+        assertTrue(videoLimit > imageLimit)
+    }
 }

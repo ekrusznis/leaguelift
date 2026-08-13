@@ -17,6 +17,7 @@ import com.rally26.participant.persistence.ParticipantRepository
 import com.rally26.publicpage.domain.PageStatus
 import com.rally26.publicpage.domain.PageType
 import com.rally26.publicpage.persistence.PublicPageRepository
+import com.rally26.support.persistence.SupportArticleRepository
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
 import com.rally26.tournament.domain.TournamentStatus
@@ -48,6 +49,7 @@ class MediaEntityAccessService(
     private val householdRepository: HouseholdRepository,
     private val participantRepository: ParticipantRepository,
     private val publicPageRepository: PublicPageRepository,
+    private val supportArticleRepository: SupportArticleRepository,
 ) {
     fun resolveForRead(
         organizationId: UUID,
@@ -216,6 +218,26 @@ class MediaEntityAccessService(
                     entityId,
                     setOf(MediaUsageSlot.HOUSEHOLD_MEDIA),
                     Visibility.HOUSEHOLD_PRIVATE,
+                )
+            }
+
+            // Help Center article attachments (Track 4, 2026-08-13) — the first media
+            // entity type with no owning organization at all (see PlatformOrganization).
+            // Manage-only in practice (an article attachment is never "read" through
+            // this service; embedded images resolve through SupportArticleService's own
+            // audience-gated read path instead, same as public org/team branding does),
+            // so both read and manage require the exact platform capability that
+            // already gates every other help-article mutation.
+            MediaEntityType.SUPPORT_ARTICLE -> {
+                supportArticleRepository.findById(entityId)
+                    ?: throw NotFoundException("SUPPORT_ARTICLE_NOT_FOUND", "The help article could not be found.")
+                authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_HELP_MANAGE)
+                ResolvedMediaTarget(
+                    organizationId,
+                    entityType,
+                    entityId,
+                    setOf(MediaUsageSlot.ARTICLE_ATTACHMENT),
+                    Visibility.PUBLIC,
                 )
             }
 

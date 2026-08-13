@@ -39,6 +39,7 @@ private val EXTENSION_BY_CONTENT_TYPE =
         "image/png" to "png",
         "image/jpeg" to "jpg",
         "image/webp" to "webp",
+        "image/gif" to "gif",
         "image/svg+xml" to "svg",
         "application/pdf" to "pdf",
         "video/mp4" to "mp4",

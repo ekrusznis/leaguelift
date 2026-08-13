@@ -6,6 +6,15 @@ import com.rally26.authorization.application.AuthorizationService
 import com.rally26.authorization.domain.AuthorizationContext
 import com.rally26.authorization.domain.ContextType
 import com.rally26.common.web.CurrentUser
+import com.rally26.media.application.MediaDescriptor
+import com.rally26.media.application.MediaReadService
+import com.rally26.media.domain.MediaAssignment
+import com.rally26.media.domain.MediaEntityType
+import com.rally26.media.domain.MediaUsageSlot
+import com.rally26.media.domain.PublicationStatus
+import com.rally26.media.domain.Visibility
+import com.rally26.media.persistence.MediaAssignmentRepository
+import com.rally26.support.domain.PlatformOrganization
 import com.rally26.support.domain.SupportArticle
 import com.rally26.support.domain.SupportArticleStatus
 import com.rally26.support.domain.SupportAudience
@@ -19,11 +28,14 @@ import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class SupportArticleServiceTest {
     private val repository = mockk<SupportArticleRepository>()
     private val authorizationService = mockk<AuthorizationService>()
     private val auditService = mockk<AuditService>()
+    private val mediaAssignmentRepository = mockk<MediaAssignmentRepository>()
+    private val mediaReadService = mockk<MediaReadService>()
     private val service =
         SupportArticleService(
             repository,
@@ -31,6 +43,8 @@ class SupportArticleServiceTest {
             auditService,
             jacksonObjectMapper(),
             Clock.fixed(Instant.parse("2026-08-01T13:30:00Z"), ZoneOffset.UTC),
+            mediaAssignmentRepository,
+            mediaReadService,
         )
     private val user = CurrentUser(UUID.randomUUID(), "coach@example.com", "Coach User")
 
@@ -72,6 +86,46 @@ class SupportArticleServiceTest {
 
         assertEquals(SupportAudience.COACH, result.single().audience)
         verify(exactly = 1) { repository.listPublished(expected, null, null) }
+    }
+
+    @Test
+    fun `getPublic resolves an attachment placeholder into a signed URL`() {
+        val attachmentId = UUID.randomUUID()
+        val withAttachment = article(SupportAudience.PUBLIC).copy(bodyMarkdown = "See the diagram: ![Setup diagram](attachment:$attachmentId)")
+        every { repository.findPublishedBySlug("getting-started", setOf(SupportAudience.PUBLIC)) } returns withAttachment
+        val assignment =
+            MediaAssignment(
+                id = attachmentId,
+                organizationId = PlatformOrganization.ID,
+                assetId = UUID.randomUUID(),
+                entityType = MediaEntityType.SUPPORT_ARTICLE,
+                entityId = withAttachment.id,
+                usageSlot = MediaUsageSlot.ARTICLE_ATTACHMENT,
+                publicationStatus = PublicationStatus.APPROVED,
+                visibility = Visibility.PUBLIC,
+                altText = null,
+                createdAt = Instant.parse("2026-08-13T00:00:00Z"),
+                updatedAt = Instant.parse("2026-08-13T00:00:00Z"),
+            )
+        every { mediaAssignmentRepository.findById(attachmentId, PlatformOrganization.ID) } returns assignment
+        every { mediaReadService.describe(assignment) } returns
+            MediaDescriptor(assignment, "https://signed.example.com/diagram.png", "image/png", 1024, 400, 300)
+
+        val result = service.getPublic("getting-started")
+
+        assertEquals("See the diagram: ![Setup diagram](https://signed.example.com/diagram.png)", result.bodyMarkdown)
+    }
+
+    @Test
+    fun `getPublic leaves an unresolvable attachment placeholder untouched`() {
+        val attachmentId = UUID.randomUUID()
+        val withAttachment = article(SupportAudience.PUBLIC).copy(bodyMarkdown = "![Gone](attachment:$attachmentId)")
+        every { repository.findPublishedBySlug("getting-started", setOf(SupportAudience.PUBLIC)) } returns withAttachment
+        every { mediaAssignmentRepository.findById(attachmentId, PlatformOrganization.ID) } returns null
+
+        val result = service.getPublic("getting-started")
+
+        assertTrue(result.bodyMarkdown.contains("attachment:$attachmentId"))
     }
 
     private fun article(audience: SupportAudience) =

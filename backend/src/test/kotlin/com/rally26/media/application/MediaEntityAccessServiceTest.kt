@@ -21,6 +21,10 @@ import com.rally26.publicpage.domain.PageStatus
 import com.rally26.publicpage.domain.PageType
 import com.rally26.publicpage.domain.PublicPage
 import com.rally26.publicpage.persistence.PublicPageRepository
+import com.rally26.support.domain.SupportArticle
+import com.rally26.support.domain.SupportArticleStatus
+import com.rally26.support.domain.SupportAudience
+import com.rally26.support.persistence.SupportArticleRepository
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -44,6 +48,7 @@ class MediaEntityAccessServiceTest {
     private val householdRepository = mockk<HouseholdRepository>()
     private val participantRepository = mockk<ParticipantRepository>()
     private val publicPageRepository = mockk<PublicPageRepository>()
+    private val supportArticleRepository = mockk<SupportArticleRepository>()
     private val service =
         MediaEntityAccessService(
             membershipService,
@@ -53,6 +58,7 @@ class MediaEntityAccessServiceTest {
             householdRepository,
             participantRepository,
             publicPageRepository,
+            supportArticleRepository,
         )
 
     private val organizationId = UUID.randomUUID()
@@ -150,6 +156,31 @@ class MediaEntityAccessServiceTest {
     }
 
     @Test
+    fun `a platform admin may manage a support article's attachments`() {
+        val article = supportArticle()
+        every { supportArticleRepository.findById(article.id) } returns article
+        every { authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_HELP_MANAGE) } just runs
+
+        val target = service.resolveForManage(organizationId, MediaEntityType.SUPPORT_ARTICLE, article.id, currentUser)
+
+        assertEquals(setOf(MediaUsageSlot.ARTICLE_ATTACHMENT), target.allowedSlots)
+        assertEquals(Visibility.PUBLIC, target.visibility)
+    }
+
+    @Test
+    fun `a non platform admin cannot manage a support article's attachments`() {
+        val article = supportArticle()
+        every { supportArticleRepository.findById(article.id) } returns article
+        every {
+            authorizationService.requirePlatformCapability(currentUser, Capabilities.PLATFORM_HELP_MANAGE)
+        } throws ForbiddenException("PLATFORM_CAPABILITY_DENIED", "You do not have this platform capability.")
+
+        assertFailsWith<ForbiddenException> {
+            service.resolveForManage(organizationId, MediaEntityType.SUPPORT_ARTICLE, article.id, currentUser)
+        }
+    }
+
+    @Test
     fun `profile targets reject branding slots`() {
         val participant = participant()
         every { participantRepository.findById(participant.id, organizationId) } returns participant
@@ -218,6 +249,24 @@ class MediaEntityAccessServiceTest {
             dateOfBirth = null,
             notes = null,
             status = ParticipantStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
+
+    private fun supportArticle() =
+        SupportArticle(
+            id = UUID.randomUUID(),
+            slug = "getting-started",
+            title = "Getting started",
+            summary = "A practical introduction to the Rally26 workspace.",
+            bodyMarkdown = "## Start here\n\nUse the organization workspace to begin setup.",
+            category = "Getting Started",
+            audience = SupportAudience.PUBLIC,
+            status = SupportArticleStatus.DRAFT,
+            sortOrder = 10,
+            publishedAt = null,
+            createdBy = null,
+            updatedBy = null,
             createdAt = Instant.now(),
             updatedAt = Instant.now(),
         )

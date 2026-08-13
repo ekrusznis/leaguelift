@@ -11,6 +11,10 @@ import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageRequest
 import com.rally26.common.web.PageResponse
+import com.rally26.media.application.MediaReadService
+import com.rally26.media.domain.MediaEntityType
+import com.rally26.media.persistence.MediaAssignmentRepository
+import com.rally26.support.domain.PlatformOrganization
 import com.rally26.support.domain.SupportArticle
 import com.rally26.support.domain.SupportArticleStatus
 import com.rally26.support.domain.SupportAudience
@@ -22,6 +26,8 @@ import java.time.Clock
 import java.time.Instant
 import java.util.UUID
 
+private val ATTACHMENT_TOKEN = Regex("attachment:([0-9a-fA-F-]{36})")
+
 @Service
 class SupportArticleService(
     private val repository: SupportArticleRepository,
@@ -29,28 +35,55 @@ class SupportArticleService(
     private val auditService: AuditService,
     private val objectMapper: ObjectMapper,
     private val clock: Clock,
+    private val mediaAssignmentRepository: MediaAssignmentRepository,
+    private val mediaReadService: MediaReadService,
 ) {
     fun listPublic(
         query: String?,
         category: String?,
-    ) = repository.listPublished(setOf(SupportAudience.PUBLIC), normalizeSearch(query), normalizeCategoryFilter(category))
+    ) = repository.listPublished(setOf(SupportAudience.PUBLIC), normalizeSearch(query), normalizeCategoryFilter(category)).map(::resolveAttachments)
 
     fun getPublic(slug: String): SupportArticle =
-        repository.findPublishedBySlug(slug.trim(), setOf(SupportAudience.PUBLIC))
-            ?: throw NotFoundException("SUPPORT_ARTICLE_NOT_FOUND", "The help article could not be found.")
+        resolveAttachments(
+            repository.findPublishedBySlug(slug.trim(), setOf(SupportAudience.PUBLIC))
+                ?: throw NotFoundException("SUPPORT_ARTICLE_NOT_FOUND", "The help article could not be found."),
+        )
 
     fun listAuthenticated(
         currentUser: CurrentUser,
         query: String?,
         category: String?,
-    ) = repository.listPublished(audiencesFor(currentUser), normalizeSearch(query), normalizeCategoryFilter(category))
+    ) = repository.listPublished(audiencesFor(currentUser), normalizeSearch(query), normalizeCategoryFilter(category)).map(::resolveAttachments)
 
     fun getAuthenticated(
         currentUser: CurrentUser,
         slug: String,
     ): SupportArticle =
-        repository.findPublishedBySlug(slug.trim(), audiencesFor(currentUser))
-            ?: throw NotFoundException("SUPPORT_ARTICLE_NOT_FOUND", "The help article could not be found.")
+        resolveAttachments(
+            repository.findPublishedBySlug(slug.trim(), audiencesFor(currentUser))
+                ?: throw NotFoundException("SUPPORT_ARTICLE_NOT_FOUND", "The help article could not be found."),
+        )
+
+    /**
+     * The stored `bodyMarkdown` keeps durable `attachment:<assignmentId>` placeholders
+     * (see [com.rally26.support.application.SupportArticleAttachmentService]'s doc
+     * comment) so re-saving an article from the platform editor never bakes in an
+     * ephemeral signed URL. Only reader-facing responses (public/authenticated get and
+     * list) resolve those placeholders into a fresh 15-minute signed URL — the platform
+     * CRUD paths ([listPlatform], [create], [update]) intentionally return the raw
+     * placeholder-bearing markdown so the editor round-trips it correctly.
+     */
+    private fun resolveAttachments(article: SupportArticle): SupportArticle {
+        if (!article.bodyMarkdown.contains("attachment:")) return article
+        val resolvedBody =
+            ATTACHMENT_TOKEN.replace(article.bodyMarkdown) { match ->
+                val assignmentId = runCatching { UUID.fromString(match.groupValues[1]) }.getOrNull() ?: return@replace match.value
+                val assignment = mediaAssignmentRepository.findById(assignmentId, PlatformOrganization.ID) ?: return@replace match.value
+                if (assignment.entityType != MediaEntityType.SUPPORT_ARTICLE || assignment.entityId != article.id) return@replace match.value
+                mediaReadService.describe(assignment)?.url ?: match.value
+            }
+        return article.copy(bodyMarkdown = resolvedBody)
+    }
 
     fun listPlatform(
         currentUser: CurrentUser,

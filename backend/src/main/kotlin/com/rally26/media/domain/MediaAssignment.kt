@@ -4,7 +4,7 @@ import java.time.Instant
 import java.util.UUID
 
 /** Polymorphic media targets. Phase 16 adds TEAM/TOURNAMENT branding and private adult/participant profile photos to the existing organization/product/sponsor/document pipeline. */
-enum class MediaEntityType { ORGANIZATION, TEAM, TOURNAMENT, HOUSEHOLD_ADULT, PARTICIPANT, PRODUCT, SPONSOR, HOUSEHOLD }
+enum class MediaEntityType { ORGANIZATION, TEAM, TOURNAMENT, HOUSEHOLD_ADULT, PARTICIPANT, PRODUCT, SPONSOR, HOUSEHOLD, SUPPORT_ARTICLE }
 
 enum class PublicationStatus { PRIVATE, APPROVED, PUBLISHED, RETIRED }
 

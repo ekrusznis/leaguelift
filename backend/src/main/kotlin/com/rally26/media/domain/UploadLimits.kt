@@ -55,6 +55,14 @@ object UploadLimits {
     private val HOUSEHOLD_MEDIA_CONTENT_TYPES = setOf("image/png", "image/jpeg", "image/webp", "video/mp4", "video/quicktime")
     private val HOUSEHOLD_MEDIA_VIDEO_CONTENT_TYPES = setOf("video/mp4", "video/quicktime")
 
+    // Help Center article attachments (Track 4, 2026-08-13) — a platform admin
+    // authoring/enriching an article can attach an image, an animated GIF (explicitly
+    // requested, unlike any other slot), a short video clip, or a PDF handout. Reuses
+    // the household media video cap and the document PDF cap rather than inventing new
+    // numbers for the same underlying file classes.
+    private val ARTICLE_ATTACHMENT_CONTENT_TYPES =
+        setOf("image/png", "image/jpeg", "image/webp", "image/gif", "video/mp4", "video/quicktime", "application/pdf")
+
     fun allowedContentTypes(slot: MediaUsageSlot): Set<String> =
         when (slot) {
             MediaUsageSlot.LOGO -> LOGO_CONTENT_TYPES
@@ -64,6 +72,7 @@ object UploadLimits {
             MediaUsageSlot.SPONSOR_LOGO -> SPONSOR_LOGO_CONTENT_TYPES
             MediaUsageSlot.DOCUMENT -> DOCUMENT_CONTENT_TYPES
             MediaUsageSlot.HOUSEHOLD_MEDIA -> HOUSEHOLD_MEDIA_CONTENT_TYPES
+            MediaUsageSlot.ARTICLE_ATTACHMENT -> ARTICLE_ATTACHMENT_CONTENT_TYPES
         }
 
     fun isVideoContentType(contentType: String): Boolean = contentType in HOUSEHOLD_MEDIA_VIDEO_CONTENT_TYPES
@@ -92,6 +101,12 @@ object UploadLimits {
             MediaUsageSlot.SPONSOR_LOGO -> if (contentType == "image/svg+xml") MAX_LOGO_SVG_BYTES else MAX_LOGO_RASTER_BYTES
             MediaUsageSlot.DOCUMENT -> MAX_DOCUMENT_BYTES
             MediaUsageSlot.HOUSEHOLD_MEDIA -> if (isVideoContentType(contentType)) MAX_HOUSEHOLD_MEDIA_VIDEO_BYTES else MAX_HOUSEHOLD_MEDIA_IMAGE_BYTES
+            MediaUsageSlot.ARTICLE_ATTACHMENT ->
+                when {
+                    contentType == "application/pdf" -> MAX_DOCUMENT_BYTES
+                    isVideoContentType(contentType) -> MAX_HOUSEHOLD_MEDIA_VIDEO_BYTES
+                    else -> MAX_HOUSEHOLD_MEDIA_IMAGE_BYTES
+                }
         }
 
     /** True for any content type this slot allows that isn't a decodable raster/vector image — e.g. a DOCUMENT slot's PDF, or a HOUSEHOLD_MEDIA video. Callers use this to skip image-specific validation (dimension decode/cap) that doesn't apply. */
@@ -106,6 +121,7 @@ object UploadLimits {
         if (isPng(bytes)) return "image/png"
         if (isJpeg(bytes)) return "image/jpeg"
         if (isWebp(bytes)) return "image/webp"
+        if (isGif(bytes)) return "image/gif"
         if (isSvg(bytes)) return "image/svg+xml"
         if (isPdf(bytes)) return "application/pdf"
         detectIsoBaseMediaVideoType(bytes)?.let { return it }
@@ -155,6 +171,13 @@ object UploadLimits {
         val riff = String(bytes, 0, 4, Charsets.US_ASCII)
         val webp = String(bytes, 8, 4, Charsets.US_ASCII)
         return riff == "RIFF" && webp == "WEBP"
+    }
+
+    /** "GIF87a" or "GIF89a" — the only two real-world GIF version signatures. */
+    private fun isGif(bytes: ByteArray): Boolean {
+        if (bytes.size < 6) return false
+        val header = String(bytes, 0, 6, Charsets.US_ASCII)
+        return header == "GIF87a" || header == "GIF89a"
     }
 
     /**
