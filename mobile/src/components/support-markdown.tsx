@@ -1,16 +1,96 @@
 import { type ReactNode } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { WebView } from 'react-native-webview';
 
 import { Spacing } from '@/constants/theme';
+import { env } from '@/lib/env';
 
 import { ThemedText } from './themed-text';
 
+const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm'];
+
+function resolveSafeUrl(url: string): string | null {
+  if (url.startsWith('https://')) return url;
+  if (url.startsWith('/')) return `${env.frontendBaseUrl.replace(/\/$/, '')}${url}`;
+  return null;
+}
+
+function cleanPath(url: string): string {
+  return url.split(/[?#]/)[0]?.toLowerCase() ?? '';
+}
+
+function isVideoUrl(url: string): boolean {
+  const path = cleanPath(url);
+  return VIDEO_EXTENSIONS.some((extension) => path.endsWith(extension));
+}
+
+function isGifUrl(url: string): boolean {
+  return cleanPath(url).endsWith('.gif');
+}
+
+function isPdfUrl(url: string): boolean {
+  return cleanPath(url).endsWith('.pdf');
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+}
+
+function richMediaHtml(url: string, alt: string, video: boolean): string {
+  const safeUrl = escapeHtmlAttribute(url);
+  const safeAlt = escapeHtmlAttribute(alt || (video ? 'Help video' : 'Help animation'));
+  const media = video
+    ? `<video src="${safeUrl}" aria-label="${safeAlt}" controls playsinline preload="metadata"></video>`
+    : `<img src="${safeUrl}" alt="${safeAlt}" />`;
+  return `<!doctype html>
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+<style>
+html,body{margin:0;padding:0;background:transparent;width:100%;height:100%;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+video,img{display:block;width:100%;height:100%;object-fit:contain;border-radius:12px}
+</style></head><body>${media}</body></html>`;
+}
+
+function MediaEmbed({ alt, rawUrl }: { alt: string; rawUrl: string }) {
+  const url = resolveSafeUrl(rawUrl);
+  if (!url) return null;
+
+  if (isPdfUrl(url)) {
+    return (
+      <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(url)} style={styles.documentLink}>
+        <ThemedText type="smallBold">{alt || 'Open attached PDF'}</ThemedText>
+        <ThemedText type="linkPrimary">Open document</ThemedText>
+      </Pressable>
+    );
+  }
+
+  if (isVideoUrl(url) || isGifUrl(url)) {
+    return (
+      <View style={styles.richMediaFrame} accessibilityLabel={alt || undefined}>
+        <WebView
+          source={{ html: richMediaHtml(url, alt, isVideoUrl(url)) }}
+          originWhitelist={['about:blank', 'https://*']}
+          scrollEnabled={false}
+          allowsInlineMediaPlayback
+          mediaPlaybackRequiresUserAction
+          javaScriptEnabled={false}
+          style={styles.webMedia}
+        />
+      </View>
+    );
+  }
+
+  return <Image source={{ uri: url }} accessibilityLabel={alt || undefined} resizeMode="contain" style={styles.image} />;
+}
+
 /**
- * Ported from frontend/src/features/support/SupportMarkdown.tsx (Phase 37.11, ADR-119)
- * — not a markdown library, web's own hand-rolled small-safe-subset parser (headings,
- * paragraphs, un/ordered lists, bold, links; raw HTML never interpreted). Kept as the
- * exact same block/inline split logic so an article renders identically on both
- * platforms; only the JSX output differs (View/ThemedText instead of div/p/ul/a).
+ * Native counterpart to frontend/src/features/support/SupportMarkdown.tsx.
+ * It deliberately implements only Rally26's safe Help-Center Markdown subset; raw HTML
+ * is never interpreted. Standalone ![alt](url) blocks render image/GIF/video/PDF media.
  */
 function inline(text: string, keyPrefix: string): ReactNode[] {
   const parts = text.split(/(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*)/g).filter(Boolean);
@@ -18,7 +98,7 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
     const key = `${keyPrefix}-${index}`;
     const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
     if (link) {
-      const safe = link[2].startsWith('/') || link[2].startsWith('https://') ? link[2] : null;
+      const safe = resolveSafeUrl(link[2]);
       return (
         <ThemedText key={key} type="linkPrimary" onPress={safe ? () => void Linking.openURL(safe) : undefined}>
           {link[1]}
@@ -47,6 +127,10 @@ export function SupportMarkdown({ body }: { body: string }) {
     <View style={styles.container}>
       {blocks.map((block, index) => {
         const key = `block-${index}`;
+        const standaloneEmbed = /^!\[([^\]]*)\]\(([^)]+)\)$/.exec(block);
+        if (standaloneEmbed) {
+          return <MediaEmbed key={key} alt={standaloneEmbed[1]} rawUrl={standaloneEmbed[2]} />;
+        }
         if (block.startsWith('### ')) {
           return (
             <ThemedText key={key} type="subtitle">
@@ -112,5 +196,24 @@ const styles = StyleSheet.create({
   },
   listItemText: {
     flex: 1,
+  },
+  image: {
+    width: '100%',
+    height: 260,
+    borderRadius: 12,
+  },
+  richMediaFrame: {
+    width: '100%',
+    height: 260,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  webMedia: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  documentLink: {
+    gap: Spacing.one,
+    paddingVertical: Spacing.two,
   },
 });

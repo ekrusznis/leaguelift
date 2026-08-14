@@ -4,6 +4,8 @@ import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageResponse
 import com.rally26.fundraising.application.CampaignService
 import com.rally26.fundraising.application.ContributionService
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -20,11 +22,16 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/campaigns")
+@Tag(name = "fundraising", description = "Fundraiser creation, approval, lifecycle, sharing, contributions, and closeout.")
 class CampaignController(
     private val campaignService: CampaignService,
     private val contributionService: ContributionService,
 ) {
     @GetMapping
+    @Operation(
+        summary = "List fundraising campaigns",
+        description = "Returns campaigns visible to the current member plus backend-computed mutation permissions.",
+    )
     fun list(
         @PathVariable organizationId: UUID,
         @RequestParam(defaultValue = "0") page: Int,
@@ -46,6 +53,10 @@ class CampaignController(
     }
 
     @PostMapping
+    @Operation(
+        summary = "Create fundraiser draft",
+        description = "Creates a DRAFT fundraiser within the caller's authorized organization/team scope.",
+    )
     fun create(
         @PathVariable organizationId: UUID,
         @Valid @RequestBody request: CreateCampaignRequest,
@@ -77,6 +88,10 @@ class CampaignController(
     }
 
     @GetMapping("/{campaignId}")
+    @Operation(
+        summary = "Get fundraiser",
+        description = "Returns campaign state, totals, creator/approval metadata, payment availability, and caller permissions.",
+    )
     fun get(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -90,6 +105,10 @@ class CampaignController(
     }
 
     @PatchMapping("/{campaignId}")
+    @Operation(
+        summary = "Edit fundraiser",
+        description = "Creator/owner authorization is backend-enforced; editing pending work returns it to draft for re-review.",
+    )
     fun update(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -117,6 +136,10 @@ class CampaignController(
 
     /** Legacy route retained for existing web clients; now follows the approval policy. */
     @PostMapping("/{campaignId}/publish")
+    @Operation(
+        summary = "Legacy activation route",
+        description = "Compatibility alias for the approval-aware activation workflow. Prefer request-activation in new clients.",
+    )
     fun publish(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -131,6 +154,10 @@ class CampaignController(
 
     /** Preferred web/mobile route: activates immediately or moves to PENDING_APPROVAL. */
     @PostMapping("/{campaignId}/request-activation")
+    @Operation(
+        summary = "Request fundraiser activation",
+        description = "Transitions to PENDING_APPROVAL, SCHEDULED, or ACTIVE according to owner policy and start date.",
+    )
     fun requestActivation(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -144,6 +171,10 @@ class CampaignController(
     }
 
     @PostMapping("/{campaignId}/approve")
+    @Operation(
+        summary = "Approve fundraiser",
+        description = "Owner-only approval. Future-start fundraisers become SCHEDULED; otherwise ACTIVE.",
+    )
     fun approve(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -157,6 +188,10 @@ class CampaignController(
     }
 
     @PostMapping("/{campaignId}/reject-approval")
+    @Operation(
+        summary = "Return fundraiser to draft",
+        description = "Owner-only. Returns PENDING_APPROVAL work to DRAFT for creator changes and resubmission.",
+    )
     fun rejectApproval(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -170,6 +205,10 @@ class CampaignController(
     }
 
     @PatchMapping("/{campaignId}/status")
+    @Operation(
+        summary = "Close or archive fundraiser",
+        description = "Owner closeout route. Approval/activation lifecycle states use their dedicated endpoints.",
+    )
     fun updateStatus(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -184,6 +223,7 @@ class CampaignController(
     }
 
     @GetMapping("/{campaignId}/contributions")
+    @Operation(summary = "List confirmed fundraiser contributions")
     fun listContributions(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -198,6 +238,7 @@ class CampaignController(
     }
 
     @PostMapping("/{campaignId}/contributions/{contributionId}/refund")
+    @Operation(summary = "Refund a confirmed online contribution")
     fun refundContribution(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -206,6 +247,10 @@ class CampaignController(
     ): ContributionResponse = contributionService.refund(organizationId, contributionId, currentUser).toResponse()
 
     @GetMapping("/qr-code")
+    @Operation(
+        summary = "Generate campaign share QR code",
+        description = "Returns the public URL plus a PNG data-URI QR code; no temporary payment-session URL is encoded.",
+    )
     fun getShareLinkQrCode(
         @PathVariable organizationId: UUID,
         @RequestParam url: String,

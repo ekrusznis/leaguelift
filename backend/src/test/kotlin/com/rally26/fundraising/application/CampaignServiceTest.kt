@@ -381,15 +381,39 @@ class CampaignServiceTest {
 
     @Test
     fun `owner can close an active fundraiser`() {
-        val active = sampleCampaign(status = CampaignStatus.ACTIVE, createdByUserId = parent.userId)
-        val completed = active.copy(status = CampaignStatus.COMPLETED)
-        every { membershipService.requireOwnerRole(orgId, owner) } returns membership(owner, MembershipRole.OWNER)
-        every { campaignRepository.findById(active.id, orgId) } returnsMany listOf(active, completed)
-        every { campaignRepository.updateStatus(active.id, orgId, CampaignStatus.COMPLETED, null) } returns 1
+        val active =
+            sampleCampaign(
+                status = CampaignStatus.ACTIVE,
+                createdByUserId = parent.userId,
+            )
+        val closed = active.copy(status = CampaignStatus.CLOSED)
 
-        val result = service.updateStatus(orgId, active.id, CampaignStatus.COMPLETED, owner)
+        every {
+            membershipService.requireOwnerRole(orgId, owner)
+        } returns membership(owner, MembershipRole.OWNER)
 
-        assertEquals(CampaignStatus.COMPLETED, result.status)
+        every {
+            campaignRepository.findById(active.id, orgId)
+        } returnsMany listOf(active, closed)
+
+        every {
+            campaignRepository.updateStatus(
+                active.id,
+                orgId,
+                CampaignStatus.CLOSED,
+                null,
+            )
+        } returns 1
+
+        val result =
+            service.updateStatus(
+                orgId,
+                active.id,
+                CampaignStatus.COMPLETED, // legacy input remains supported
+                owner,
+            )
+
+        assertEquals(CampaignStatus.CLOSED, result.status)
     }
 
     @Test

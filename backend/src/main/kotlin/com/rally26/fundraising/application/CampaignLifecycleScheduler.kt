@@ -5,6 +5,7 @@ import com.rally26.fundraising.domain.Campaign
 import com.rally26.fundraising.persistence.CampaignRepository
 import com.rally26.fundraisinggame.domain.FundraisingGameStatus
 import com.rally26.fundraisinggame.persistence.FundraisingGameRepository
+import com.rally26.outbox.application.OutboxWriter
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -24,6 +25,7 @@ class CampaignLifecycleScheduler(
     private val fundraisingGameRepository: FundraisingGameRepository,
     private val auditService: AuditService,
     private val clock: Clock,
+    private val outboxWriter: OutboxWriter? = null,
 ) {
     @Scheduled(cron = "\${rally26.fundraising.lifecycle-cron:0 5 * * * *}")
     @Transactional
@@ -46,6 +48,7 @@ class CampaignLifecycleScheduler(
                 teamId = campaign.teamId,
                 summary = "Scheduled fundraiser activated",
             )
+            enqueueNotification("fundraiser.activated", campaign)
         }
     }
 
@@ -63,7 +66,21 @@ class CampaignLifecycleScheduler(
                 teamId = campaign.teamId,
                 summary = "Fundraiser reached its end date",
             )
+            enqueueNotification("fundraiser.ended", campaign)
         }
+    }
+
+    private fun enqueueNotification(
+        eventType: String,
+        campaign: Campaign,
+    ) {
+        outboxWriter?.write(
+            aggregateType = "campaign",
+            aggregateId = campaign.id,
+            organizationId = campaign.organizationId,
+            eventType = eventType,
+            payloadJson = """{"campaignId":"${campaign.id}"}""",
+        )
     }
 
     private fun closeAttachedFreeGame(campaign: Campaign) {

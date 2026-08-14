@@ -2,6 +2,8 @@ package com.rally26.fundraisinggame.web
 
 import com.rally26.common.web.CurrentUser
 import com.rally26.fundraisinggame.application.FundraisingGameService
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -17,10 +19,12 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/campaigns/{campaignId}/game")
+@Tag(name = "fundraising-games", description = "Authenticated management of free-entry promotional games attached to fundraisers.")
 class FundraisingGameController(
     private val service: FundraisingGameService,
 ) {
     @GetMapping
+    @Operation(summary = "Get attached free-entry game", description = "Returns null when no game is attached to the campaign.")
     fun get(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -34,6 +38,12 @@ class FundraisingGameController(
     }
 
     @PostMapping
+    @Operation(
+        summary = "Attach free-entry game",
+        description =
+            "Creates a payment-independent game and disables provider-hosted " +
+                "campaign contribution checkout under the current safety policy.",
+    )
     fun create(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -58,6 +68,7 @@ class FundraisingGameController(
     }
 
     @PatchMapping
+    @Operation(summary = "Update free-entry game configuration")
     fun update(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -84,6 +95,7 @@ class FundraisingGameController(
     }
 
     @PostMapping("/open")
+    @Operation(summary = "Open game to public free entries")
     fun open(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -97,6 +109,7 @@ class FundraisingGameController(
     }
 
     @PostMapping("/close")
+    @Operation(summary = "Close game to new entries")
     fun close(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -110,6 +123,7 @@ class FundraisingGameController(
     }
 
     @PostMapping("/draw-winner")
+    @Operation(summary = "Draw free-prize winner", description = "Selects/records a winner where supported; does not transfer prize money.")
     fun drawWinner(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,
@@ -117,6 +131,10 @@ class FundraisingGameController(
     ): FundraisingGameEntryResponse = service.drawWinner(organizationId, campaignId, currentUser).toResponse()
 
     @GetMapping("/entries")
+    @Operation(
+        summary = "List game entries for management",
+        description = "Authorized management response includes entrant email; public responses intentionally do not.",
+    )
     fun entries(
         @PathVariable organizationId: UUID,
         @PathVariable campaignId: UUID,

@@ -18,6 +18,7 @@ import com.rally26.fundraising.persistence.CampaignRepository
 import com.rally26.membership.application.MembershipService
 import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.OrganizationMembership
+import com.rally26.outbox.application.OutboxWriter
 import com.rally26.sponsorship.infra.QrCodeGenerator
 import com.rally26.team.persistence.TeamRepository
 import org.springframework.dao.DuplicateKeyException
@@ -45,6 +46,7 @@ class CampaignService(
     private val fundraisingSettingsService: FundraisingSettingsService,
     private val auditService: AuditService,
     private val qrCodeGenerator: QrCodeGenerator,
+    private val outboxWriter: OutboxWriter? = null,
 ) {
     private val allowedShareLinkPrefixes = listOf("http://", "https://")
     private val publicStatuses =
@@ -136,7 +138,8 @@ class CampaignService(
             canClose = owner && campaign.status in setOf(CampaignStatus.ACTIVE, CampaignStatus.ENDED),
             canArchive =
                 owner &&
-                    campaign.status in setOf(
+                    campaign.status in
+                    setOf(
                         CampaignStatus.DRAFT,
                         CampaignStatus.ENDED,
                         CampaignStatus.CLOSED,
@@ -226,7 +229,10 @@ class CampaignService(
             throw ValidationException("An ended, closed, or archived fundraiser cannot be edited.")
         }
         val settings = fundraisingSettingsService.getInternal(organizationId)
-        if (existing.status in setOf(CampaignStatus.SCHEDULED, CampaignStatus.ACTIVE) && settings.requireOwnerApproval && !isOwner(membership)) {
+        if (existing.status in setOf(CampaignStatus.SCHEDULED, CampaignStatus.ACTIVE) &&
+            settings.requireOwnerApproval &&
+            !isOwner(membership)
+        ) {
             throw ForbiddenException(
                 "FUNDRAISER_ACTIVE_EDIT_REQUIRES_OWNER",
                 "Only the organization owner can edit an approved or active fundraiser while owner approval is required.",
@@ -307,6 +313,7 @@ class CampaignService(
                 teamId = campaign.teamId,
                 summary = "Fundraiser submitted for owner approval",
             )
+            enqueueLifecycleNotification("fundraiser.submitted", campaign)
         } else {
             val approvedBy = if (isOwner(membership)) currentUser.userId else null
             activateOrSchedule(
@@ -357,6 +364,7 @@ class CampaignService(
             actorUserId = currentUser.userId,
             ownerApprovalRequired = true,
         )
+        enqueueLifecycleNotification("fundraiser.approved", campaign, targetStatus)
         return requireCampaign(organizationId, campaignId)
     }
 
@@ -382,6 +390,7 @@ class CampaignService(
             teamId = campaign.teamId,
             summary = "Fundraiser returned to draft by owner",
         )
+        enqueueLifecycleNotification("fundraiser.returned_to_draft", campaign)
         return requireCampaign(organizationId, campaignId)
     }
 
@@ -409,7 +418,9 @@ class CampaignService(
                     "campaign.closed"
                 }
                 CampaignStatus.ARCHIVED -> {
-                    if (existing.status !in setOf(CampaignStatus.DRAFT, CampaignStatus.ENDED, CampaignStatus.CLOSED, CampaignStatus.COMPLETED)) {
+                    if (existing.status !in
+                        setOf(CampaignStatus.DRAFT, CampaignStatus.ENDED, CampaignStatus.CLOSED, CampaignStatus.COMPLETED)
+                    ) {
                         throw ValidationException("Close or end this fundraiser before archiving it.")
                     }
                     "campaign.archived"
@@ -476,7 +487,25 @@ class CampaignService(
                 teamId = campaign.teamId,
                 summary = "Fundraiser activated",
             )
+            if (!ownerApprovalRequired) {
+                enqueueLifecycleNotification("fundraiser.activated", campaign, CampaignStatus.ACTIVE)
+            }
         }
+    }
+
+    private fun enqueueLifecycleNotification(
+        eventType: String,
+        campaign: Campaign,
+        targetStatus: CampaignStatus? = null,
+    ) {
+        val targetStatusJson = targetStatus?.let { ",\"targetStatus\":\"${it.name}\"" } ?: ""
+        outboxWriter?.write(
+            aggregateType = "campaign",
+            aggregateId = campaign.id,
+            organizationId = campaign.organizationId,
+            eventType = eventType,
+            payloadJson = """{"campaignId":"${campaign.id}"$targetStatusJson}""",
+        )
     }
 
     private fun activationTargetStatus(campaign: Campaign): CampaignStatus =

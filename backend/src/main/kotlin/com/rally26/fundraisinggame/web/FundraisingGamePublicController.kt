@@ -1,6 +1,8 @@
 package com.rally26.fundraisinggame.web
 
 import com.rally26.fundraisinggame.application.FundraisingGameService
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -13,10 +15,15 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/v1/public/campaigns/{slug}/game")
+@Tag(name = "fundraising-games", description = "Public, unauthenticated free-entry promotional game participation.")
 class FundraisingGamePublicController(
     private val service: FundraisingGameService,
 ) {
     @GetMapping
+    @Operation(
+        summary = "Get public free-entry game",
+        description = "Public response omits entrant email and includes the server-owned no-purchase disclosure.",
+    )
     fun get(
         @PathVariable slug: String,
     ): PublicFundraisingGameResponse? {
@@ -42,6 +49,12 @@ class FundraisingGamePublicController(
     }
 
     @PostMapping("/entries")
+    @Operation(
+        summary = "Enter promotional game for free",
+        description =
+            "Accepts no payment/contribution identifier and never calls a " +
+                "payment provider. Donations do not improve odds or entry entitlement.",
+    )
     fun enter(
         @PathVariable slug: String,
         @Valid @RequestBody request: CreateFreeGameEntryRequest,

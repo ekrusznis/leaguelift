@@ -32,6 +32,7 @@ enum class CampaignStatus {
     ACTIVE,
     ENDED,
     CLOSED,
+
     /** Legacy closeout state retained for existing rows/API compatibility. New closeout uses CLOSED. */
     COMPLETED,
     ARCHIVED,
