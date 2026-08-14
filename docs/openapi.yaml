@@ -4362,8 +4362,11 @@ paths:
       description: Manager-only. These records describe money received outside Rally26 and never fabricate payment-provider identifiers.
       operationId: listOfflineFinancialRecords
       parameters:
+      - {name: q, in: query, required: false, schema: {type: string, maxLength: 200}}
       - {name: verificationStatus, in: query, required: false, schema: {$ref: "#/components/schemas/OfflineVerificationStatus"}}
       - {name: recordType, in: query, required: false, schema: {$ref: "#/components/schemas/OfflineFinancialRecordType"}}
+      - {name: paymentMethod, in: query, required: false, schema: {$ref: "#/components/schemas/OfflinePaymentMethod"}}
+      - {name: sort, in: query, required: false, schema: {type: string, enum: [newest, oldest], default: newest}}
       - {name: page, in: query, required: false, schema: {type: integer, minimum: 0, default: 0}}
       - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
       responses:
@@ -9004,6 +9007,10 @@ paths:
       summary: List append-only refunds and offline reversals
       operationId: listFinancialCorrections
       parameters:
+      - {name: q, in: query, required: false, schema: {type: string, maxLength: 200}}
+      - {name: targetType, in: query, required: false, schema: {$ref: "#/components/schemas/FinancialCorrectionTargetType"}}
+      - {name: correctionType, in: query, required: false, schema: {$ref: "#/components/schemas/FinancialCorrectionType"}}
+      - {name: sort, in: query, required: false, schema: {type: string, enum: [newest, oldest], default: newest}}
       - {name: page, in: query, required: false, schema: {type: integer, minimum: 0, default: 0}}
       - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
       responses:
@@ -9049,6 +9056,44 @@ paths:
         "409": {$ref: "#/components/responses/Conflict"}
         "503": {description: Payment provider unavailable, content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}}
 
+  /organizations/{organizationId}/disputes:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [financial-operations]
+      summary: List read-only payment disputes
+      description: Manager-only visibility. Evidence submission remains outside Rally26.
+      operationId: listDisputes
+      responses:
+        "200":
+          description: Payment disputes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/DisputeResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+
+  /organizations/{organizationId}/disputes/search:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [financial-operations]
+      summary: Search and page read-only payment disputes
+      operationId: searchDisputes
+      parameters:
+      - {name: q, in: query, required: false, schema: {type: string, maxLength: 200}}
+      - {name: status, in: query, required: false, schema: {$ref: "#/components/schemas/DisputeStatus"}}
+      - {name: sourceType, in: query, required: false, schema: {$ref: "#/components/schemas/DisputeSourceType"}}
+      - {name: sort, in: query, required: false, schema: {type: string, enum: [newest, oldest], default: newest}}
+      - {name: page, in: query, required: false, schema: {type: integer, minimum: 0, default: 0}}
+      - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+      responses:
+        "200": {description: Payment disputes, content: {application/json: {schema: {$ref: "#/components/schemas/DisputePageResponse"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+
   /organizations/{organizationId}/reconciliation-runs:
     parameters:
     - $ref: "#/components/parameters/OrganizationIdParam"
@@ -9057,6 +9102,8 @@ paths:
       summary: List durable reconciliation-run history
       operationId: listReconciliationRuns
       parameters:
+      - {name: status, in: query, required: false, schema: {$ref: "#/components/schemas/ReconciliationRunStatus"}}
+      - {name: sort, in: query, required: false, schema: {type: string, enum: [newest, oldest], default: newest}}
       - {name: page, in: query, required: false, schema: {type: integer, minimum: 0, default: 0}}
       - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
       responses:
@@ -9095,6 +9142,27 @@ paths:
       operationId: getReconciliationRun
       responses:
         "200": {description: Reconciliation run and issues, content: {application/json: {schema: {$ref: "#/components/schemas/ReconciliationResultResponse"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /organizations/{organizationId}/reconciliation-runs/{runId}/issues:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - {name: runId, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      tags: [financial-operations]
+      summary: Search and page reconciliation issues for one durable run
+      operationId: listReconciliationIssues
+      parameters:
+      - {name: q, in: query, required: false, schema: {type: string, maxLength: 200}}
+      - {name: severity, in: query, required: false, schema: {$ref: "#/components/schemas/ReconciliationSeverity"}}
+      - {name: resourceType, in: query, required: false, schema: {type: string, maxLength: 120}}
+      - {name: sort, in: query, required: false, schema: {type: string, enum: [newest, oldest], default: newest}}
+      - {name: page, in: query, required: false, schema: {type: integer, minimum: 0, default: 0}}
+      - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+      responses:
+        "200": {description: Reconciliation issues, content: {application/json: {schema: {$ref: "#/components/schemas/ReconciliationIssuePageResponse"}}}}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
@@ -17356,6 +17424,35 @@ components:
         size: {type: integer}
         totalElements: {type: integer, format: int64}
 
+    DisputeSourceType:
+      type: string
+      enum: [CONTRIBUTION, ORDER, SPONSORSHIP, FEE_PAYMENT]
+    DisputeStatus:
+      type: string
+      enum: [NEEDS_RESPONSE, UNDER_REVIEW, WON, LOST]
+    DisputeResponse:
+      type: object
+      required: [id, sourceType, sourceId, amountMinor, currency, reason, status, openedAt]
+      properties:
+        id: {type: string, format: uuid}
+        sourceType: {$ref: "#/components/schemas/DisputeSourceType"}
+        sourceId: {type: string, format: uuid}
+        amountMinor: {type: integer, format: int64}
+        currency: {type: string}
+        reason: {type: string}
+        status: {$ref: "#/components/schemas/DisputeStatus"}
+        evidenceDueBy: {type: string, format: date-time, nullable: true}
+        openedAt: {type: string, format: date-time}
+        resolvedAt: {type: string, format: date-time, nullable: true}
+    DisputePageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items: {type: array, items: {$ref: "#/components/schemas/DisputeResponse"}}
+        page: {type: integer}
+        size: {type: integer}
+        totalElements: {type: integer, format: int64}
+
     ReconciliationRunStatus:
       type: string
       enum: [RUNNING, COMPLETED, FAILED]
@@ -17400,6 +17497,15 @@ components:
       required: [items, page, size, totalElements]
       properties:
         items: {type: array, items: {$ref: "#/components/schemas/ReconciliationRunResponse"}}
+        page: {type: integer}
+        size: {type: integer}
+        totalElements: {type: integer, format: int64}
+
+    ReconciliationIssuePageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items: {type: array, items: {$ref: "#/components/schemas/ReconciliationIssueResponse"}}
         page: {type: integer}
         size: {type: integer}
         totalElements: {type: integer, format: int64}

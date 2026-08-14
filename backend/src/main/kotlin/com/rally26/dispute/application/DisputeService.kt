@@ -2,6 +2,7 @@ package com.rally26.dispute.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
+import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.config.DisputeProperties
 import com.rally26.dispute.domain.DisputeSourceType
@@ -167,6 +168,45 @@ class DisputeService(
     ): List<PaymentDispute> {
         membershipService.requireManagerRole(organizationId, currentUser)
         return paymentDisputeRepository.findByOrganization(organizationId)
+    }
+
+    fun search(
+        organizationId: UUID,
+        query: String?,
+        status: DisputeStatus?,
+        sourceType: DisputeSourceType?,
+        ascending: Boolean,
+        offset: Int,
+        limit: Int,
+        currentUser: CurrentUser,
+    ): List<PaymentDispute> {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        return paymentDisputeRepository.search(
+            organizationId,
+            normalizeSearchQuery(query),
+            status,
+            sourceType,
+            ascending,
+            offset.coerceAtLeast(0),
+            limit.coerceIn(1, 100),
+        )
+    }
+
+    fun count(
+        organizationId: UUID,
+        query: String?,
+        status: DisputeStatus?,
+        sourceType: DisputeSourceType?,
+        currentUser: CurrentUser,
+    ): Long {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        return paymentDisputeRepository.count(organizationId, normalizeSearchQuery(query), status, sourceType)
+    }
+
+    private fun normalizeSearchQuery(query: String?): String? {
+        val normalized = query?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        if (normalized.length > 200) throw ValidationException("Search text must be 200 characters or fewer.")
+        return normalized
     }
 
     private fun resolveSource(paymentIntentId: String): DisputeSource? {

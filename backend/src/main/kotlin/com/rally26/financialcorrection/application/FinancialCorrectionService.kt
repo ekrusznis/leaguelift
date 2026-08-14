@@ -171,6 +171,45 @@ class FinancialCorrectionService(
         return repository.count(organizationId)
     }
 
+    fun search(
+        organizationId: UUID,
+        query: String?,
+        targetType: FinancialCorrectionTargetType?,
+        correctionType: FinancialCorrectionType?,
+        ascending: Boolean,
+        offset: Int,
+        limit: Int,
+        currentUser: CurrentUser,
+    ): List<FinancialCorrection> {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        return repository.search(
+            organizationId,
+            normalizeListQuery(query),
+            targetType,
+            correctionType,
+            ascending,
+            offset,
+            limit.coerceIn(1, 100),
+        )
+    }
+
+    fun countSearch(
+        organizationId: UUID,
+        query: String?,
+        targetType: FinancialCorrectionTargetType?,
+        correctionType: FinancialCorrectionType?,
+        currentUser: CurrentUser,
+    ): Long {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        return repository.countSearch(organizationId, normalizeListQuery(query), targetType, correctionType)
+    }
+
+    private fun normalizeListQuery(query: String?): String? {
+        val normalized = query?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        if (normalized.length > 200) throw ValidationException("Search text must be 200 characters or fewer.")
+        return normalized
+    }
+
     private fun findIdempotentResult(
         organizationId: UUID,
         idempotencyKey: String,

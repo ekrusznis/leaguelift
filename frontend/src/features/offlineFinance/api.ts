@@ -7,26 +7,41 @@ import type {
 	OfflineFinancialRecord,
 	OfflineFinancialRecordPage,
 	OfflineFinancialRecordType,
+	OfflinePaymentMethod,
 	OfflineVerificationStatus,
 } from "./types";
 
 const recordsKey = (organizationId: string) => ["organizations", organizationId, "offline-financial-records"] as const;
 
+export interface OfflineFinancialRecordListOptions {
+	query?: string;
+	paymentMethod?: OfflinePaymentMethod | "";
+	sort?: "newest" | "oldest";
+	page?: number;
+	size?: number;
+}
+
 export function useOfflineFinancialRecords(
 	organizationId: string,
 	verificationStatus: OfflineVerificationStatus | "" = "",
 	recordType: OfflineFinancialRecordType | "" = "",
+	options: OfflineFinancialRecordListOptions = {},
 ) {
-	const params = new URLSearchParams({ page: "0", size: "100" });
+	const params = new URLSearchParams({
+		page: String(options.page ?? 0),
+		size: String(options.size ?? 25),
+		sort: options.sort ?? "newest",
+	});
+	if (options.query?.trim()) params.set("q", options.query.trim());
 	if (verificationStatus) params.set("verificationStatus", verificationStatus);
 	if (recordType) params.set("recordType", recordType);
+	if (options.paymentMethod) params.set("paymentMethod", options.paymentMethod);
 	return useQuery({
-		queryKey: [...recordsKey(organizationId), verificationStatus, recordType] as const,
+		queryKey: [...recordsKey(organizationId), verificationStatus, recordType, options] as const,
 		queryFn: () => apiFetch<OfflineFinancialRecordPage>(`/organizations/${organizationId}/offline-financial-records?${params}`),
 		enabled: !!organizationId,
 	});
 }
-
 function useCreateRecord<TInput>(organizationId: string, suffix: string) {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -37,7 +52,6 @@ function useCreateRecord<TInput>(organizationId: string, suffix: string) {
 		},
 	});
 }
-
 export function useCreateOfflineContribution(organizationId: string) {
 	return useCreateRecord<CreateOfflineContributionInput>(organizationId, "contributions");
 }
@@ -49,7 +63,6 @@ export function useCreateOfflineSponsorship(organizationId: string) {
 export function useCreateOfflineOrder(organizationId: string) {
 	return useCreateRecord<CreateOfflineOrderInput>(organizationId, "orders");
 }
-
 export function useVerifyOfflineFinancialRecord(organizationId: string) {
 	const queryClient = useQueryClient();
 	return useMutation({

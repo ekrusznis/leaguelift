@@ -136,6 +136,65 @@ class FinancialCorrectionRepository(
             .query(Long::class.java)
             .single()
 
+    fun search(
+        organizationId: UUID,
+        query: String?,
+        targetType: FinancialCorrectionTargetType?,
+        correctionType: FinancialCorrectionType?,
+        ascending: Boolean,
+        offset: Int,
+        limit: Int,
+    ): List<FinancialCorrection> {
+        val sql =
+            buildString {
+                append("select $COLUMNS from financial_correction where organization_id = :organizationId")
+                if (query != null) {
+                    append(
+                        " and (lower(reason) like :query or lower(coalesce(provider_reference, '')) like :query" +
+                            " or lower(cast(target_id as text)) like :query)",
+                    )
+                }
+                if (targetType != null) append(" and target_type = :targetType")
+                if (correctionType != null) append(" and correction_type = :correctionType")
+                append(" order by created_at ${if (ascending) "asc" else "desc"} offset :offset limit :limit")
+            }
+        var statement =
+            jdbcClient
+                .sql(sql)
+                .param("organizationId", organizationId)
+                .param("offset", offset)
+                .param("limit", limit)
+        if (query != null) statement = statement.param("query", "%${query.lowercase()}%")
+        if (targetType != null) statement = statement.param("targetType", targetType.name)
+        if (correctionType != null) statement = statement.param("correctionType", correctionType.name)
+        return statement.query(::mapRow).list()
+    }
+
+    fun countSearch(
+        organizationId: UUID,
+        query: String?,
+        targetType: FinancialCorrectionTargetType?,
+        correctionType: FinancialCorrectionType?,
+    ): Long {
+        val sql =
+            buildString {
+                append("select count(*) from financial_correction where organization_id = :organizationId")
+                if (query != null) {
+                    append(
+                        " and (lower(reason) like :query or lower(coalesce(provider_reference, '')) like :query" +
+                            " or lower(cast(target_id as text)) like :query)",
+                    )
+                }
+                if (targetType != null) append(" and target_type = :targetType")
+                if (correctionType != null) append(" and correction_type = :correctionType")
+            }
+        var statement = jdbcClient.sql(sql).param("organizationId", organizationId)
+        if (query != null) statement = statement.param("query", "%${query.lowercase()}%")
+        if (targetType != null) statement = statement.param("targetType", targetType.name)
+        if (correctionType != null) statement = statement.param("correctionType", correctionType.name)
+        return statement.query(Long::class.java).single()
+    }
+
     private fun mapRow(
         rs: ResultSet,
         rowNum: Int,

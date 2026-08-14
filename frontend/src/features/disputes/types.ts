@@ -14,3 +14,10 @@ export interface Dispute {
 	openedAt: string;
 	resolvedAt: string | null;
 }
+
+export interface DisputePage {
+	items: Dispute[];
+	page: number;
+	size: number;
+	totalElements: number;
+}

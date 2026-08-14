@@ -15,7 +15,30 @@ export interface StoreResponse {
   createdAt: string;
   updatedAt: string;
 }
-
+export type CatalogSource = 'PRINTIFY' | 'MANUAL';
+export type ProductStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+export interface ProductResponse {
+  id: string;
+  organizationId: string;
+  storeId: string;
+  name: string;
+  description: string | null;
+  catalogSource: CatalogSource;
+  status: ProductStatus;
+}
+export interface ProductVariantResponse {
+  id: string;
+  productId: string;
+  catalogSource: CatalogSource;
+  label: string;
+  sku: string | null;
+  size: string | null;
+  color: string | null;
+  currency: string;
+  costMinor: number;
+  priceMinor: number;
+  isActive: boolean;
+}
 export type OrderStatus = 'CONFIRMED' | 'REFUNDED';
 export type PaymentSource = 'STRIPE' | 'OFFLINE';
 export type FulfillmentStatus =
@@ -38,7 +61,6 @@ export interface ShippingAddress {
   postalCode: string | null;
   country: string | null;
 }
-
 export interface OrderSearchItem {
   id: string;
   storeId: string;
@@ -60,7 +82,6 @@ export type OrderSearchSort =
   | 'SUPPORTER_ASC'
   | 'STATUS_ASC'
   | 'FULFILLMENT_ASC';
-
 export interface OrderSearchFilters {
   q?: string;
   status?: OrderStatus | '';
@@ -68,7 +89,6 @@ export interface OrderSearchFilters {
   fulfillmentStatus?: FulfillmentStatus | '';
   sort?: OrderSearchSort;
 }
-
 export function useStores(organizationId: string | null) {
   return useQuery({
     queryKey: ['organizations', organizationId, 'stores', 'owner-order-selector'],
@@ -80,7 +100,28 @@ export function useStores(organizationId: string | null) {
     enabled: !!organizationId,
   });
 }
-
+export function useStoreProducts(organizationId: string | null, storeId: string | null) {
+  return useQuery({
+    queryKey: ['organizations', organizationId, 'stores', storeId, 'products', 'owner-order-selector'],
+    queryFn: ({ signal }) =>
+      apiFetch<PageResponse<ProductResponse>>(
+        `/organizations/${organizationId}/stores/${storeId}/products?size=100`,
+        { signal },
+      ),
+    enabled: !!organizationId && !!storeId,
+  });
+}
+export function useProductVariants(organizationId: string | null, productId: string | null) {
+  return useQuery({
+    queryKey: ['organizations', organizationId, 'products', productId, 'variants', 'owner-order-selector'],
+    queryFn: ({ signal }) =>
+      apiFetch<ProductVariantResponse[]>(
+        `/organizations/${organizationId}/products/${productId}/variants`,
+        { signal },
+      ),
+    enabled: !!organizationId && !!productId,
+  });
+}
 export function useInfiniteOrderSearch(
   organizationId: string | null,
   storeId: string | null,
@@ -98,7 +139,6 @@ export function useInfiniteOrderSearch(
       if (filters.status) search.set('status', filters.status);
       if (filters.paymentSource) search.set('paymentSource', filters.paymentSource);
       if (filters.fulfillmentStatus) search.set('fulfillmentStatus', filters.fulfillmentStatus);
-
       return apiFetch<PageResponse<OrderSearchItem>>(
         `/organizations/${organizationId}/stores/${storeId}/orders/search?${search.toString()}`,
         { signal },
@@ -112,7 +152,6 @@ export function useInfiniteOrderSearch(
     enabled: !!organizationId && !!storeId,
   });
 }
-
 export function flattenOrderPages(pages: PageResponse<OrderSearchItem>[] | undefined) {
   return pages?.flatMap((page) => page.items) ?? [];
 }

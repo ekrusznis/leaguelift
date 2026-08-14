@@ -114,6 +114,74 @@ class OfflineFinancialRecordRepository(
         return statement.query(Long::class.java).single()
     }
 
+    fun search(
+        organizationId: UUID,
+        query: String?,
+        verificationStatus: OfflineVerificationStatus?,
+        recordType: OfflineFinancialRecordType?,
+        paymentMethod: OfflinePaymentMethod?,
+        ascending: Boolean,
+        offset: Int,
+        limit: Int,
+    ): List<OfflineFinancialRecord> {
+        val sql =
+            buildString {
+                append("select $COLUMNS from offline_financial_record where organization_id = :organizationId")
+                if (query != null) {
+                    append(
+                        " and (lower(display_label) like :query or lower(coalesce(payer_name, '')) like :query" +
+                            " or lower(coalesce(payer_email, '')) like :query" +
+                            " or lower(coalesce(payment_reference, '')) like :query)",
+                    )
+                }
+                if (verificationStatus != null) append(" and verification_status = :verificationStatus")
+                if (recordType != null) append(" and record_type = :recordType")
+                if (paymentMethod != null) append(" and payment_method = :paymentMethod")
+                append(" order by received_at ${if (ascending) "asc" else "desc"}, created_at ${if (ascending) "asc" else "desc"}")
+                append(" offset :offset limit :limit")
+            }
+        var statement =
+            jdbcClient
+                .sql(sql)
+                .param("organizationId", organizationId)
+                .param("offset", offset)
+                .param("limit", limit)
+        if (query != null) statement = statement.param("query", "%${query.lowercase()}%")
+        if (verificationStatus != null) statement = statement.param("verificationStatus", verificationStatus.name)
+        if (recordType != null) statement = statement.param("recordType", recordType.name)
+        if (paymentMethod != null) statement = statement.param("paymentMethod", paymentMethod.name)
+        return statement.query(::mapRow).list()
+    }
+
+    fun countSearch(
+        organizationId: UUID,
+        query: String?,
+        verificationStatus: OfflineVerificationStatus?,
+        recordType: OfflineFinancialRecordType?,
+        paymentMethod: OfflinePaymentMethod?,
+    ): Long {
+        val sql =
+            buildString {
+                append("select count(*) from offline_financial_record where organization_id = :organizationId")
+                if (query != null) {
+                    append(
+                        " and (lower(display_label) like :query or lower(coalesce(payer_name, '')) like :query" +
+                            " or lower(coalesce(payer_email, '')) like :query" +
+                            " or lower(coalesce(payment_reference, '')) like :query)",
+                    )
+                }
+                if (verificationStatus != null) append(" and verification_status = :verificationStatus")
+                if (recordType != null) append(" and record_type = :recordType")
+                if (paymentMethod != null) append(" and payment_method = :paymentMethod")
+            }
+        var statement = jdbcClient.sql(sql).param("organizationId", organizationId)
+        if (query != null) statement = statement.param("query", "%${query.lowercase()}%")
+        if (verificationStatus != null) statement = statement.param("verificationStatus", verificationStatus.name)
+        if (recordType != null) statement = statement.param("recordType", recordType.name)
+        if (paymentMethod != null) statement = statement.param("paymentMethod", paymentMethod.name)
+        return statement.query(Long::class.java).single()
+    }
+
     fun countPending(organizationId: UUID): Long =
         jdbcClient
             .sql(

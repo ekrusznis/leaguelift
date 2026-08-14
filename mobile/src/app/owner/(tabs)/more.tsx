@@ -1,7 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
-
 import { PlatformStatusSpacer } from '@/components/platform-status-spacer';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -9,10 +8,10 @@ import { useDashboardContext } from '@/features/dashboard/api';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { webEmbedRoute } from '@/lib/webEmbed';
-
 /**
  * Owner More hub.
- * Native management: Fundraising, Fees/Collections, Swag Orders, Sponsorships, Payout Account.
+ * Native management: Fundraising, Financial Operations, Fees/Collections, Swag Orders,
+ * Sponsorships, Payout Account.
  * Swag Shop catalog/design configuration retains its current web surface for now.
  */
 export default function OwnerMoreScreen() {
@@ -24,6 +23,7 @@ export default function OwnerMoreScreen() {
     { icon: 'chatbubbles-outline', label: 'Broadcasts', onPress: () => router.push('/owner/broadcasts-manage') },
     { icon: 'bar-chart-outline', label: 'Reports', onPress: () => router.push('/owner/reports') },
     { icon: 'wallet-outline', label: 'Fees & Collections', onPress: () => router.push('/owner/fees' as any) },
+    { icon: 'cash-outline', label: 'Financial Operations', onPress: () => router.push('/owner/financial-operations' as any) },
     { icon: 'card-outline', label: 'Payout Account', onPress: () => router.push('/owner/payout') },
     { icon: 'receipt-outline', label: 'Swag Orders', onPress: () => router.push('/owner/orders' as any) },
     {
@@ -54,7 +54,6 @@ export default function OwnerMoreScreen() {
     { icon: 'help-circle-outline', label: 'Help Center', onPress: () => router.push('/help') },
     { icon: 'settings-outline', label: 'Settings', onPress: () => router.push('/settings') },
   ];
-
   return (
     <ThemedView style={styles.container}>
       <PlatformStatusSpacer />
@@ -76,7 +75,6 @@ export default function OwnerMoreScreen() {
     </ThemedView>
   );
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: Spacing.four, paddingVertical: Spacing.two },

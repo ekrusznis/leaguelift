@@ -116,6 +116,48 @@ class OfflineFinancialRecordService(
         return repository.count(organizationId, verificationStatus, recordType)
     }
 
+    fun search(
+        organizationId: UUID,
+        query: String?,
+        verificationStatus: OfflineVerificationStatus?,
+        recordType: OfflineFinancialRecordType?,
+        paymentMethod: OfflinePaymentMethod?,
+        ascending: Boolean,
+        offset: Int,
+        limit: Int,
+        currentUser: CurrentUser,
+    ): List<OfflineFinancialRecord> {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        return repository.search(
+            organizationId,
+            normalizeQuery(query),
+            verificationStatus,
+            recordType,
+            paymentMethod,
+            ascending,
+            offset,
+            limit.coerceIn(1, 100),
+        )
+    }
+
+    fun countSearch(
+        organizationId: UUID,
+        query: String?,
+        verificationStatus: OfflineVerificationStatus?,
+        recordType: OfflineFinancialRecordType?,
+        paymentMethod: OfflinePaymentMethod?,
+        currentUser: CurrentUser,
+    ): Long {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        return repository.countSearch(organizationId, normalizeQuery(query), verificationStatus, recordType, paymentMethod)
+    }
+
+    private fun normalizeQuery(query: String?): String? {
+        val normalized = query?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        if (normalized.length > 200) throw ValidationException("Search text must be 200 characters or fewer.")
+        return normalized
+    }
+
     fun get(
         organizationId: UUID,
         recordId: UUID,

@@ -1,8 +1,11 @@
 package com.rally26.financialcorrection.web
 
+import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageResponse
 import com.rally26.financialcorrection.application.FinancialCorrectionService
+import com.rally26.financialcorrection.domain.FinancialCorrectionTargetType
+import com.rally26.financialcorrection.domain.FinancialCorrectionType
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -60,11 +63,37 @@ class FinancialCorrectionController(
     @GetMapping
     fun list(
         @PathVariable organizationId: UUID,
+        @RequestParam(required = false) q: String?,
+        @RequestParam(required = false) targetType: FinancialCorrectionTargetType?,
+        @RequestParam(required = false) correctionType: FinancialCorrectionType?,
+        @RequestParam(defaultValue = "newest") sort: String,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<FinancialCorrectionResponse> {
-        val items = service.list(organizationId, page * size, size, currentUser).map { it.toResponse() }
-        return PageResponse(items, page, size, service.count(organizationId, currentUser))
+        val safePage = page.coerceAtLeast(0)
+        val safeSize = size.coerceIn(1, 100)
+        val ascending = parseAscending(sort)
+        val items =
+            service
+                .search(
+                    organizationId,
+                    q,
+                    targetType,
+                    correctionType,
+                    ascending,
+                    safePage * safeSize,
+                    safeSize,
+                    currentUser,
+                ).map { it.toResponse() }
+        val total = service.countSearch(organizationId, q, targetType, correctionType, currentUser)
+        return PageResponse(items, safePage, safeSize, total)
     }
+
+    private fun parseAscending(sort: String): Boolean =
+        when (sort.lowercase()) {
+            "newest" -> false
+            "oldest" -> true
+            else -> throw ValidationException("sort must be 'newest' or 'oldest'.")
+        }
 }
