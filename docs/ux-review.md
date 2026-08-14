@@ -1,6 +1,6 @@
 # Rally26 full-site UX/sales review
 
-**Status:** Not started (inventory built 2026-08-13; expanded with real per-feature filter/list/action detail 2026-08-13; mobile app coverage added 2026-08-13 — full web parity required, QuickBooks the sole exception)
+**Status:** In progress (inventory built 2026-08-13; expanded with real per-feature filter/list/action detail 2026-08-13; mobile app coverage added 2026-08-13; heuristic product/UX review + build-health validation added 2026-08-13; live browser/device walkthrough still pending — full web parity required, QuickBooks the sole exception)
 **Requested by:** Founder, after the Stripe-fee/reorder/sync-redesign/household-media/Help-Center batch
 **Deliverable shape:** This document. A page/flow inventory walked in-browser, top to bottom, by a reviewer acting as a sales-and-UX engineer — not a code reviewer. Every page row below now carries the *real, currently-built* filters/sort/bulk-actions/columns/empty-state for that page (gathered by reading the actual components, not guessed), so a reviewer checks the page against its own real behavior, not a blind wishlist. Findings get logged inline in the **Notes** column as they're found; this doc is not necessarily fixed inline during the pass itself (fixes get scoped and prioritized afterward).
 
@@ -20,6 +20,102 @@ These emerged independently, by the same pattern, across every feature domain re
 6. **Dead code found**: `frontend/src/features/reporting/PlatformOrganizationsPage.tsx` is a second, simpler "Organizations" table that is **not wired into `AppRoutes.tsx`** — superseded by `frontend/src/features/platformAdmin/PlatformOrganizationsPage.tsx`. Not a UX issue (nothing renders it), but worth deleting rather than leaving as confusing dead code.
 7. **Missing empty-state messaging found on two platform-admin pages**: `PlatformHelpArticlesPage` and `PlatformSupportCasesPage` render nothing (not even a "no results" message) when a search/filter returns zero rows — every other list in the app has real empty-state copy.
 8. **A real gap, not just unreviewed**: there is no page listing an organization's *already-active* staff members with their roles and a remove action — "Members & Invitations" (`InvitationsPanel`) only manages pending invitations; existing member/role changes only happen through the separate, per-team/tournament `RoleAssignmentsPanel`, with no single roster view.
+
+## Heuristic review summary (docs + code + validation pass, 2026-08-13)
+
+This section is **not** a substitute for the live browser/device walkthrough below. It is the founder-ready readout from reviewing the current product intent (`README.md`, `DESIGN-DOC.md`), the implemented web/mobile shells and dashboards, and the existing frontend/mobile validation checks.
+
+### Overall impression
+
+**The good news:** Rally26 already reads as a serious, trustworthy, premium youth-sports operations product more than it reads as a side-project admin panel. The brand system is coherent (deep navy + green + restrained gold), the marketing site is visually stronger than a typical early-stage B2B app, and the shared dashboard shells show real care around hierarchy, accessibility, and role-aware navigation.
+
+**The risk:** once a user moves past the first impression, the experience becomes much more operational and table-driven than sales-site-polished. The application feels strongest when it is acting like a guided dashboard, and weakest when it becomes a dense admin workspace without search/sort/bulk tools. In other words: the product currently looks more trustworthy than it feels effortless.
+
+### What already feels strong
+
+1. **Brand/visual identity is coherent.** The marketing shell, auth pages, dashboard chrome, and card system all use a consistent tone. Nothing obvious in the reviewed code suggests a clashing second design language.
+2. **Navigation intent is honest.** The dashboard context label is correctly no longer a fake switcher; capability-filtered nav avoids teasing inaccessible destinations; public/auth/app shells are clearly separated.
+3. **Marketing first impression is credible.** `HomePage.tsx` presents a modern, premium, B2B product posture rather than a juvenile sports aesthetic, which fits the founder/treasurer/director buyer better.
+4. **Shared-state UX discipline exists.** The codebase has real empty states, loading states, and guarded destructive actions in many places — a sign that the product is maturing beyond happy-path demos.
+5. **Public monetization flows are product-complete enough to review seriously.** Fundraising, Swag Shop, sponsorship, public pages, and Help Center are substantial enough that a true top-to-bottom UX pass is worth doing now.
+
+### What currently weakens trust or ease of use
+
+1. **The highest-priority issue is now stability, not taste.** The web app does **not** currently pass `npm run typecheck` or `npm run build`, and the mobile app does **not** currently pass `npm run typecheck` or `npm run lint`. That means the next UX pass risks mixing visual/usability observations with active implementation regressions.
+2. **The product's information architecture is broad, but many management views are still low-control lists.** Owners/managers can reach many areas, but they often cannot search, sort, or batch-operate once they get there.
+3. **There is a growing expectation gap between the sales promise and the day-to-day admin ergonomics.** The public site feels curated and premium; many owner-facing operations screens still feel utilitarian and row-by-row.
+4. **Mobile parity is now a product promise, but not yet a user-trust reality.** The code/docs explicitly state full parity is required, yet several important mobile workflows remain missing or partially wired.
+5. **A few honest placeholders remain visible in product-critical places.** An enabled control that ends in a "not available yet" toast reads like broken software to a reviewer even if the team knows it is deferred.
+
+## Stability findings from the validation pass (2026-08-13)
+
+These are important because they directly affect how credible the product feels during a top-to-bottom review.
+
+1. **Web app build health is currently red.** Running `frontend`'s existing checks produced:
+   - `npm run typecheck` → **failed** (26 TypeScript errors)
+   - `npm run test` → **3 failing tests**, all in `src/features/fundraising/__tests__/CampaignList.test.tsx`
+   - `npm run build` → **failed** (same TypeScript error set as typecheck)
+2. **The breakage centers on fundraising-related work plus a few unrelated regressions.** Concrete examples from the failing checks:
+   - `src/features/fundraising/fundraising/CampaignList.tsx` has unresolved imports / typing issues.
+   - `src/pages/OrganizationDetailPage.tsx` passes a `canManage` prop that no longer matches `CampaignList`'s current prop contract.
+   - `src/dashboard/roles/PlatformAdminDashboard.tsx` has a `Link` wrapper typing bug.
+   - `src/test/setup.ts` is stale versus the current DOM lib (`IntersectionObserver.scrollMargin`).
+3. **Mobile app build health is also currently red.** Running `mobile`'s existing checks produced:
+   - `npm run typecheck` → **failed** (22 TypeScript errors)
+   - `npm run lint` → **failed** (4 import-resolution errors, same fundraising slice)
+4. **The mobile breakage is concentrated in newly-added fundraising screens/routes.** Concrete examples from the failing checks:
+   - `src/app/fundraising.tsx`, `src/app/fundraising-detail.tsx`, `src/app/fundraising-form.tsx`, and `src/app/fundraising-game.tsx` reference unresolved `@/features/fundraising/*` and `@/features/fundraisingGames/*` modules.
+   - several `router.push`/`router.replace` calls target paths Expo Router does not currently recognize in the generated route typing.
+5. **Implication for UX review:** before judging polish, we should assume the fundraising experience is in active flux and may currently present real breakage if walked live.
+
+## Initial UX punch list (before the live walk)
+
+### P0 — blockers / trust-damaging issues
+
+1. **Restore green build health on both web and mobile before the formal full review.** A UI/UX pass is dramatically more useful when reviewers are not stepping through half-integrated fundraising work.
+2. **Remove or disable every "broken-but-clickable" mobile control.** The explicit known example is mobile Event Details' enabled Edit action that ends in a "not available yet" toast; the rule should be universal.
+3. **Align public-facing status docs with the actual product.** `README.md` still says only Phases 0-2 are complete, while the application and `DESIGN-DOC.md` clearly contain much more. A reviewer/customer noticing that mismatch loses confidence fast.
+
+### P1 — major UX improvements likely to pay off fastest
+
+1. **Add list ergonomics to owner/manager-heavy surfaces.** Search first, then sort, then selective bulk actions. Highest-value candidates from this inventory:
+   - Teams
+   - Tournaments
+   - Households & Athletes
+   - Fee templates / collections / disputes
+   - Campaigns / contributions
+   - Sponsorship packages / sponsors
+   - Documents
+   - Eligibility requirements
+2. **Create a single, clear active-members roster for organizations.** This is both a product gap and a UX gap; owners expect one place to answer "who currently has access here?"
+3. **Tighten the owner dashboard's action hierarchy.** It already has many cards plus multiple quick actions; confirm the one next-best action for a new owner is obvious rather than merely available.
+4. **Standardize empty/zero-result states across all admin lists.** Especially finish the Platform Admin pages already known to render a blank void for zero results.
+5. **Audit terminology for consistency:** household vs family, owner vs administrator, organization vs club, fundraiser vs campaign, storefront vs Swag Shop.
+
+### P2 — parity and flow quality
+
+1. **Close the mobile parity gaps that are now explicitly in-scope product work:**
+   - Household media
+   - Help Center + support ticketing
+   - Action Center
+   - Owner documents
+   - Owner event create/edit
+   - SafeSport restriction management
+   - family credit application / transfer where supported
+2. **Review every WebView-embedded flow for "native-shell fit" rather than only functional parity.** Back behavior, auth handoff, keyboard handling, loading state, and post-Stripe return are as important as the underlying web page.
+3. **Reduce row-by-row fatigue in operational workflows.** The product has depth now; if every admin action remains a single-record action, larger organizations will feel friction sooner than they feel delight.
+
+## Recommended live-review order
+
+To get the highest-value findings quickly, walk in this order once the current build regressions are resolved enough to browse safely:
+
+1. **Public first impression:** Home → Solutions → Pricing/CTA → Help Center → one public article
+2. **Owner new-customer journey:** Register → Stripe checkout/resume → onboarding → org overview
+3. **Owner operations core:** Teams → Households → Fees & Payments → Fundraising → Swag Shop → Sponsorships → Reports → Documents → Members
+4. **Guardian reality check:** Parent dashboard → fees → schedule → documents → media → fundraiser/share link
+5. **Coach speed/usability:** dashboard → team switcher → schedule → roster → fundraising
+6. **Platform Admin trust check:** organizations → support console → help articles → support cases → payments → audit
+7. **Mobile pass by persona:** Parent first, then Owner, then Coach, then Athlete; only then test WebView embeds and Stripe return behavior
 
 ## What "good" looks like — review criteria
 

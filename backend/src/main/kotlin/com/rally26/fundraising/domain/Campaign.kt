@@ -25,7 +25,17 @@ enum class CampaignType {
  * fundraising approval requirement. ACTIVE remains the only state that can
  * accept new public contributions.
  */
-enum class CampaignStatus { DRAFT, PENDING_APPROVAL, ACTIVE, COMPLETED, ARCHIVED }
+enum class CampaignStatus {
+    DRAFT,
+    PENDING_APPROVAL,
+    SCHEDULED,
+    ACTIVE,
+    ENDED,
+    CLOSED,
+    /** Legacy closeout state retained for existing rows/API compatibility. New closeout uses CLOSED. */
+    COMPLETED,
+    ARCHIVED,
+}
 
 /** Which starter template, if any, produced this campaign (Phase 42, DESIGN-DOC.md §14.1Q). Null means a blank/custom campaign. */
 enum class FundraiserTemplateKey {
@@ -64,6 +74,7 @@ data class Campaign(
     val submittedAt: Instant? = null,
     val approvedAt: Instant? = null,
     val approvedByUserId: UUID? = null,
+    val onlineContributionsEnabled: Boolean = true,
 )
 
 private val SLUG_PATTERN = Regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")

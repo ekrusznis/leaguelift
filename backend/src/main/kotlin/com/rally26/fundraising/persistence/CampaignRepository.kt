@@ -14,7 +14,9 @@ import java.util.UUID
 
 private const val COLUMNS =
     "id, organization_id, team_id, name, slug, description, campaign_type, goal_amount_minor, currency, start_date, end_date, status, " +
-        "event_location_name, event_address, published_at, created_by_user_id, template_key, submitted_at, approved_at, approved_by_user_id, created_at, updated_at"
+        "event_location_name, event_address, published_at, created_by_user_id," +
+        " template_key, submitted_at, approved_at, approved_by_user_id, " +
+        "online_contributions_enabled, created_at, updated_at"
 
 @Repository
 class CampaignRepository(
@@ -246,6 +248,97 @@ class CampaignRepository(
             .update()
     }
 
+    fun markScheduled(
+        id: UUID,
+        organizationId: UUID,
+        approvedByUserId: UUID?,
+    ): Int {
+        val now = Instant.now()
+        val approvedAt = approvedByUserId?.let { Timestamp.from(now) }
+        return jdbcClient
+            .sql(
+                """
+                update campaign
+                set status = 'SCHEDULED',
+                    published_at = coalesce(published_at, :now),
+                    approved_at = :approvedAt,
+                    approved_by_user_id = :approvedByUserId,
+                    updated_at = :now
+                where id = :id and organization_id = :organizationId
+                """.trimIndent(),
+            ).param("approvedAt", approvedAt)
+            .param("approvedByUserId", approvedByUserId)
+            .param("now", Timestamp.from(now))
+            .param("id", id)
+            .param("organizationId", organizationId)
+            .update()
+    }
+
+    fun findScheduledDue(today: LocalDate): List<Campaign> =
+        jdbcClient
+            .sql(
+                """
+                select $COLUMNS from campaign
+                where status = 'SCHEDULED'
+                  and (start_date is null or start_date <= :today)
+                order by start_date nulls first, created_at
+                """.trimIndent(),
+            ).param("today", Date.valueOf(today))
+            .query(::mapRow)
+            .list()
+
+    fun findActiveReadyToEnd(today: LocalDate): List<Campaign> =
+        jdbcClient
+            .sql(
+                """
+                select $COLUMNS from campaign
+                where status = 'ACTIVE'
+                  and end_date is not null
+                  and end_date < :today
+                order by end_date, created_at
+                """.trimIndent(),
+            ).param("today", Date.valueOf(today))
+            .query(::mapRow)
+            .list()
+
+    fun activateScheduled(
+        id: UUID,
+        organizationId: UUID,
+    ): Int {
+        val now = Instant.now()
+        return jdbcClient
+            .sql(
+                """
+                update campaign
+                set status = 'ACTIVE',
+                    published_at = coalesce(published_at, :now),
+                    updated_at = :now
+                where id = :id and organization_id = :organizationId and status = 'SCHEDULED'
+                """.trimIndent(),
+            ).param("now", Timestamp.from(now))
+            .param("id", id)
+            .param("organizationId", organizationId)
+            .update()
+    }
+
+    fun markEnded(
+        id: UUID,
+        organizationId: UUID,
+    ): Int {
+        val now = Instant.now()
+        return jdbcClient
+            .sql(
+                """
+                update campaign
+                set status = 'ENDED', updated_at = :now
+                where id = :id and organization_id = :organizationId and status = 'ACTIVE'
+                """.trimIndent(),
+            ).param("now", Timestamp.from(now))
+            .param("id", id)
+            .param("organizationId", organizationId)
+            .update()
+    }
+
     fun returnToDraft(
         id: UUID,
         organizationId: UUID,
@@ -318,6 +411,7 @@ class CampaignRepository(
             submittedAt = rs.getTimestamp("submitted_at")?.toInstant(),
             approvedAt = rs.getTimestamp("approved_at")?.toInstant(),
             approvedByUserId = rs.getObject("approved_by_user_id", UUID::class.java),
+            onlineContributionsEnabled = rs.getBoolean("online_contributions_enabled"),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
         )

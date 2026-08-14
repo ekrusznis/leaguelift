@@ -31,7 +31,40 @@ class ActionCenterService(
                 .filter { it.contextType == ContextType.ORGANIZATION && Capabilities.ORG_MANAGE in it.capabilities }
                 .mapNotNull { it.organizationId }
                 .toSet()
+        val fundraisingApprovalOrganizationIds =
+            contexts
+                .filter { it.contextType == ContextType.ORGANIZATION && Capabilities.ORG_FUNDRAISING_APPROVE in it.capabilities }
+                .mapNotNull { it.organizationId }
+                .toSet()
         val items = mutableListOf<ActionCenterItem>()
+        fundraisingApprovalOrganizationIds.forEach { organizationId ->
+            val pendingFundraisers = repository.countPendingFundraiserApprovals(organizationId)
+            if (pendingFundraisers > 0) {
+                items +=
+                    aggregate(
+                        "org:$organizationId:fundraiser-approval",
+                        ActionCenterType.FUNDRAISER_APPROVAL,
+                        ActionCenterPriority.HIGH,
+                        "Review fundraiser submissions",
+                        "$pendingFundraisers fundraiser${plural(pendingFundraisers)} await your approval.",
+                        "/app/organizations/$organizationId/fundraising",
+                        organizationId,
+                    )
+            }
+            val endedFundraisers = repository.countEndedFundraisers(organizationId)
+            if (endedFundraisers > 0) {
+                items +=
+                    aggregate(
+                        "org:$organizationId:fundraiser-closeout",
+                        ActionCenterType.FUNDRAISER_CLOSEOUT,
+                        ActionCenterPriority.NORMAL,
+                        "Close ended fundraisers",
+                        "$endedFundraisers fundraiser${plural(endedFundraisers)} reached the end date and are ready for owner closeout.",
+                        "/app/organizations/$organizationId/fundraising",
+                        organizationId,
+                    )
+            }
+        }
 
         managerOrganizationIds.forEach { organizationId ->
             val corrections = repository.countPendingCorrections(organizationId)

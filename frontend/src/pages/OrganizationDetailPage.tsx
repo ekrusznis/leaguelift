@@ -244,7 +244,7 @@ function OrganizationSectionContent({
 				</Section>
 			);
 		case "fundraising":
-			return <Section title="Fundraising Campaigns"><CampaignList organizationId={organization.id} canManage={canManageOrganization} /></Section>;
+			return <Section title="Fundraising Campaigns"><CampaignList organizationId={organization.id} canManageOrganization={canManageOrganization} /></Section>;
 		case "swag-shop":
 			return <Section title="Swag Shop"><StoreList organizationId={organization.id} /></Section>;
 		case "financial-operations":

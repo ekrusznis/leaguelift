@@ -90,6 +90,12 @@ class ContributionService(
         if (campaign.status != CampaignStatus.ACTIVE) {
             throw ValidationException("This campaign isn't currently accepting contributions.")
         }
+        if (!campaign.onlineContributionsEnabled) {
+            throw ValidationException(
+                "Online card contributions are unavailable for fundraisers that include a promotional game. " +
+                    "Game entry remains free and separate from any offline contribution.",
+            )
+        }
         if (!ContributionLimits.isAmountAllowed(amountMinor)) {
             throw ValidationException(
                 "Contribution amount must be between " +

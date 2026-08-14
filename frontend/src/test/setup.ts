@@ -32,6 +32,7 @@ if (!window.IntersectionObserver) {
 	class MockIntersectionObserver implements IntersectionObserver {
 		readonly root: Element | Document | null = null;
 		readonly rootMargin = "";
+		readonly scrollMargin = "";
 		readonly thresholds: ReadonlyArray<number> = [];
 		observe() {}
 		unobserve() {}

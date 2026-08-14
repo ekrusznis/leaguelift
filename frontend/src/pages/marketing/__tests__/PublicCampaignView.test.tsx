@@ -18,9 +18,15 @@ const campaign: PublicCampaign = {
 	currency: "USD",
 	startDate: "2026-01-01",
 	endDate: "2026-06-01",
+	eventLocationName: null,
+	eventAddress: null,
 	status: "ACTIVE",
 	publishedAt: new Date().toISOString(),
 	raisedMinor: 100000,
+	logoUrl: null,
+	coverUrl: null,
+	primaryColor: "#0d5e44",
+	secondaryColor: "#f5a623",
 };
 
 function jsonResponse(body: unknown, status = 200) {

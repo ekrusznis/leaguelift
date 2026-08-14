@@ -84,6 +84,8 @@ data class CampaignResponse(
     val updatedAt: Instant,
     /** Sum of CONFIRMED contributions (fundraising/persistence/ContributionRepository.kt). Real, not demo data. */
     val raisedMinor: Long,
+    /** False when provider-hosted contribution checkout is intentionally disabled for this campaign. */
+    val onlineContributionsEnabled: Boolean = true,
 )
 
 /** Public-facing shape for the campaign's public page (section 16.6: `GET /public/campaigns/{slug}`). */
@@ -108,6 +110,8 @@ data class PublicCampaignResponse(
     val coverUrl: String?,
     val primaryColor: String,
     val secondaryColor: String,
+    val onlineContributionAllowed: Boolean = true,
+    val onlineContributionUnavailableReason: String? = null,
 )
 
 fun Campaign.toResponse(
@@ -146,6 +150,7 @@ fun Campaign.toResponse(
     createdAt,
     updatedAt,
     raisedMinor,
+    onlineContributionsEnabled,
 )
 
 fun Campaign.toPublicResponse(
@@ -175,4 +180,16 @@ fun Campaign.toPublicResponse(
     coverUrl,
     primaryColor,
     secondaryColor,
+    onlineContributionsEnabled && status == CampaignStatus.ACTIVE,
+    onlineContributionUnavailableReason(),
 )
+
+private fun Campaign.onlineContributionUnavailableReason(): String? =
+    when {
+        !onlineContributionsEnabled ->
+            "Online card contributions are disabled for fundraisers that include a promotional game. Free game entry remains separate from offline contributions."
+        status == CampaignStatus.SCHEDULED -> "This fundraiser is scheduled and is not accepting online contributions yet."
+        status in setOf(CampaignStatus.ENDED, CampaignStatus.CLOSED, CampaignStatus.COMPLETED) ->
+            "This fundraiser is no longer accepting online contributions."
+        else -> null
+    }

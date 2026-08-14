@@ -19,6 +19,20 @@ class ActionCenterRepository(
             .query(Long::class.java)
             .single()
 
+    fun countPendingFundraiserApprovals(organizationId: UUID): Long =
+        jdbcClient
+            .sql("select count(*) from campaign where organization_id = :organizationId and status = 'PENDING_APPROVAL'")
+            .param("organizationId", organizationId)
+            .query(Long::class.java)
+            .single()
+
+    fun countEndedFundraisers(organizationId: UUID): Long =
+        jdbcClient
+            .sql("select count(*) from campaign where organization_id = :organizationId and status = 'ENDED'")
+            .param("organizationId", organizationId)
+            .query(Long::class.java)
+            .single()
+
     fun countOverdueFees(organizationId: UUID): Long =
         jdbcClient
             .sql(

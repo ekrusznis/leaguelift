@@ -19,6 +19,8 @@ enum class ActionCenterType {
     SUPPORT_CASE_RESPONSE,
     PLATFORM_SUPPORT_QUEUE,
     PLATFORM_DELIVERY_FAILURES,
+    FUNDRAISER_APPROVAL,
+    FUNDRAISER_CLOSEOUT,
 }
 
 data class ActionCenterItem(

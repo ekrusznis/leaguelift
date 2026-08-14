@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "../../components/Button";
-import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { formatMoneyMinorUnits } from "../../lib/money";
 import { BoxPoolGrid } from "./BoxPoolGrid";

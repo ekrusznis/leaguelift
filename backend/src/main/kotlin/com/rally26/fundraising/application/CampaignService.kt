@@ -47,6 +47,14 @@ class CampaignService(
     private val qrCodeGenerator: QrCodeGenerator,
 ) {
     private val allowedShareLinkPrefixes = listOf("http://", "https://")
+    private val publicStatuses =
+        setOf(
+            CampaignStatus.SCHEDULED,
+            CampaignStatus.ACTIVE,
+            CampaignStatus.ENDED,
+            CampaignStatus.CLOSED,
+            CampaignStatus.COMPLETED,
+        )
 
     fun buildShareLink(
         organizationId: UUID,
@@ -92,7 +100,7 @@ class CampaignService(
         val campaign =
             campaignRepository.findBySlug(slug)
                 ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
-        if (campaign.status != CampaignStatus.ACTIVE && campaign.status != CampaignStatus.COMPLETED) {
+        if (campaign.status !in publicStatuses) {
             throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
         }
         return campaign
@@ -115,16 +123,25 @@ class CampaignService(
         val editableStatus =
             campaign.status == CampaignStatus.DRAFT ||
                 campaign.status == CampaignStatus.PENDING_APPROVAL ||
+                campaign.status == CampaignStatus.SCHEDULED ||
                 campaign.status == CampaignStatus.ACTIVE
-        val canEditActive = campaign.status != CampaignStatus.ACTIVE || !settings.requireOwnerApproval || owner
+        val alreadyApprovedOrLive = campaign.status == CampaignStatus.SCHEDULED || campaign.status == CampaignStatus.ACTIVE
+        val canEditActive = !alreadyApprovedOrLive || !settings.requireOwnerApproval || owner
 
         return CampaignPermissions(
             canEdit = creatorStillHasAccess && editableStatus && canEditActive,
             canRequestActivation = creatorStillHasAccess && campaign.status == CampaignStatus.DRAFT,
             canApprove = owner && campaign.status == CampaignStatus.PENDING_APPROVAL,
             canReturnToDraft = owner && campaign.status == CampaignStatus.PENDING_APPROVAL,
-            canClose = owner && campaign.status == CampaignStatus.ACTIVE,
-            canArchive = owner && campaign.status != CampaignStatus.ACTIVE && campaign.status != CampaignStatus.ARCHIVED,
+            canClose = owner && campaign.status in setOf(CampaignStatus.ACTIVE, CampaignStatus.ENDED),
+            canArchive =
+                owner &&
+                    campaign.status in setOf(
+                        CampaignStatus.DRAFT,
+                        CampaignStatus.ENDED,
+                        CampaignStatus.CLOSED,
+                        CampaignStatus.COMPLETED,
+                    ),
             canManageBoxPool = manager,
         )
     }
@@ -205,14 +222,14 @@ class CampaignService(
         val existing = requireCampaign(organizationId, campaignId)
         requireCanEdit(existing, membership, currentUser)
 
-        if (existing.status == CampaignStatus.COMPLETED || existing.status == CampaignStatus.ARCHIVED) {
-            throw ValidationException("A completed or archived fundraiser cannot be edited.")
+        if (existing.status in setOf(CampaignStatus.ENDED, CampaignStatus.CLOSED, CampaignStatus.COMPLETED, CampaignStatus.ARCHIVED)) {
+            throw ValidationException("An ended, closed, or archived fundraiser cannot be edited.")
         }
         val settings = fundraisingSettingsService.getInternal(organizationId)
-        if (existing.status == CampaignStatus.ACTIVE && settings.requireOwnerApproval && !isOwner(membership)) {
+        if (existing.status in setOf(CampaignStatus.SCHEDULED, CampaignStatus.ACTIVE) && settings.requireOwnerApproval && !isOwner(membership)) {
             throw ForbiddenException(
                 "FUNDRAISER_ACTIVE_EDIT_REQUIRES_OWNER",
-                "Only the organization owner can edit an active fundraiser while owner approval is required.",
+                "Only the organization owner can edit an approved or active fundraiser while owner approval is required.",
             )
         }
 
@@ -270,9 +287,9 @@ class CampaignService(
         val membership = membershipService.requireActiveMembership(organizationId, currentUser)
         val campaign = requireCampaign(organizationId, campaignId)
 
-        if (campaign.status == CampaignStatus.ACTIVE || campaign.status == CampaignStatus.COMPLETED) return campaign
-        if (campaign.status == CampaignStatus.ARCHIVED) {
-            throw ValidationException("An archived fundraiser cannot be activated.")
+        if (campaign.status == CampaignStatus.SCHEDULED || campaign.status == CampaignStatus.ACTIVE) return campaign
+        if (campaign.status in setOf(CampaignStatus.ENDED, CampaignStatus.CLOSED, CampaignStatus.COMPLETED, CampaignStatus.ARCHIVED)) {
+            throw ValidationException("An ended, closed, completed, or archived fundraiser cannot be activated.")
         }
         requireCanRequestActivation(campaign, membership, currentUser)
 
@@ -292,17 +309,11 @@ class CampaignService(
             )
         } else {
             val approvedBy = if (isOwner(membership)) currentUser.userId else null
-            campaignRepository.markActive(campaignId, organizationId, approvedBy)
-            auditService.record(
-                currentUser.userId,
-                organizationId,
-                "campaign.activated",
-                "campaign",
-                campaignId,
-                metadataJson =
-                    """{"statusBefore":"${campaign.status.name}","statusAfter":"ACTIVE","ownerApprovalRequired":$requireOwnerApproval}""",
-                teamId = campaign.teamId,
-                summary = "Fundraiser activated",
+            activateOrSchedule(
+                campaign = campaign,
+                approvedByUserId = approvedBy,
+                actorUserId = currentUser.userId,
+                ownerApprovalRequired = requireOwnerApproval,
             )
         }
         return requireCampaign(organizationId, campaignId)
@@ -324,31 +335,27 @@ class CampaignService(
     ): Campaign {
         membershipService.requireOwnerRole(organizationId, currentUser)
         val campaign = requireCampaign(organizationId, campaignId)
-        if (campaign.status == CampaignStatus.ACTIVE) return campaign
+        if (campaign.status == CampaignStatus.SCHEDULED || campaign.status == CampaignStatus.ACTIVE) return campaign
         if (campaign.status != CampaignStatus.PENDING_APPROVAL) {
             throw ValidationException("Only a fundraiser pending approval can be approved.")
         }
 
-        campaignRepository.markActive(campaignId, organizationId, currentUser.userId)
+        val targetStatus = activationTargetStatus(campaign)
         auditService.record(
             currentUser.userId,
             organizationId,
             "campaign.approved",
             "campaign",
             campaignId,
-            metadataJson = """{"statusBefore":"PENDING_APPROVAL","statusAfter":"ACTIVE"}""",
+            metadataJson = """{"statusBefore":"PENDING_APPROVAL","statusAfter":"${targetStatus.name}"}""",
             teamId = campaign.teamId,
             summary = "Fundraiser approved by owner",
         )
-        auditService.record(
-            currentUser.userId,
-            organizationId,
-            "campaign.activated",
-            "campaign",
-            campaignId,
-            metadataJson = """{"statusBefore":"PENDING_APPROVAL","statusAfter":"ACTIVE","ownerApprovalRequired":true}""",
-            teamId = campaign.teamId,
-            summary = "Fundraiser activated",
+        activateOrSchedule(
+            campaign = campaign,
+            approvedByUserId = currentUser.userId,
+            actorUserId = currentUser.userId,
+            ownerApprovalRequired = true,
         )
         return requireCampaign(organizationId, campaignId)
     }
@@ -395,39 +402,85 @@ class CampaignService(
 
         val action =
             when (status) {
-                CampaignStatus.COMPLETED -> {
-                    if (existing.status != CampaignStatus.ACTIVE) {
-                        throw ValidationException("Only an active fundraiser can be closed.")
+                CampaignStatus.CLOSED -> {
+                    if (existing.status !in setOf(CampaignStatus.ACTIVE, CampaignStatus.ENDED)) {
+                        throw ValidationException("Only an active or ended fundraiser can be closed.")
                     }
                     "campaign.closed"
                 }
-
                 CampaignStatus.ARCHIVED -> {
-                    if (existing.status == CampaignStatus.ACTIVE) {
-                        throw ValidationException("Close an active fundraiser before archiving it.")
+                    if (existing.status !in setOf(CampaignStatus.DRAFT, CampaignStatus.ENDED, CampaignStatus.CLOSED, CampaignStatus.COMPLETED)) {
+                        throw ValidationException("Close or end this fundraiser before archiving it.")
                     }
                     "campaign.archived"
                 }
-
+                CampaignStatus.COMPLETED -> {
+                    // Legacy client compatibility: COMPLETED now persists as CLOSED.
+                    if (existing.status !in setOf(CampaignStatus.ACTIVE, CampaignStatus.ENDED)) {
+                        throw ValidationException("Only an active or ended fundraiser can be closed.")
+                    }
+                    "campaign.closed"
+                }
                 CampaignStatus.DRAFT,
                 CampaignStatus.PENDING_APPROVAL,
+                CampaignStatus.SCHEDULED,
                 CampaignStatus.ACTIVE,
+                CampaignStatus.ENDED,
                 -> throw ValidationException("Use the fundraiser approval/activation workflow for this status change.")
             }
-
-        campaignRepository.updateStatus(campaignId, organizationId, status)
+        val persistedStatus = if (status == CampaignStatus.COMPLETED) CampaignStatus.CLOSED else status
+        campaignRepository.updateStatus(campaignId, organizationId, persistedStatus)
         auditService.record(
             currentUser.userId,
             organizationId,
             action,
             "campaign",
             campaignId,
-            metadataJson = """{"statusBefore":"${existing.status.name}","statusAfter":"${status.name}"}""",
+            metadataJson = """{"statusBefore":"${existing.status.name}","statusAfter":"${persistedStatus.name}"}""",
             teamId = existing.teamId,
-            summary = if (status == CampaignStatus.COMPLETED) "Fundraiser closed" else "Fundraiser archived",
+            summary = if (persistedStatus == CampaignStatus.CLOSED) "Fundraiser closed" else "Fundraiser archived",
         )
         return requireCampaign(organizationId, campaignId)
     }
+
+    private fun activateOrSchedule(
+        campaign: Campaign,
+        approvedByUserId: UUID?,
+        actorUserId: UUID,
+        ownerApprovalRequired: Boolean,
+    ) {
+        val targetStatus = activationTargetStatus(campaign)
+        if (targetStatus == CampaignStatus.SCHEDULED) {
+            campaignRepository.markScheduled(campaign.id, campaign.organizationId, approvedByUserId)
+            auditService.record(
+                actorUserId,
+                campaign.organizationId,
+                "campaign.scheduled",
+                "campaign",
+                campaign.id,
+                metadataJson =
+                    """{"statusBefore":"${campaign.status.name}","statusAfter":"SCHEDULED","ownerApprovalRequired":$ownerApprovalRequired,"startDate":"${campaign.startDate}"}""",
+                teamId = campaign.teamId,
+                summary = "Fundraiser scheduled",
+            )
+        } else {
+            campaignRepository.markActive(campaign.id, campaign.organizationId, approvedByUserId)
+            auditService.record(
+                actorUserId,
+                campaign.organizationId,
+                "campaign.activated",
+                "campaign",
+                campaign.id,
+                metadataJson =
+                    """{"statusBefore":"${campaign.status.name}","statusAfter":"ACTIVE","ownerApprovalRequired":$ownerApprovalRequired}""",
+                teamId = campaign.teamId,
+                summary = "Fundraiser activated",
+            )
+        }
+    }
+
+    private fun activationTargetStatus(campaign: Campaign): CampaignStatus =
+        if (campaign.startDate != null && campaign.startDate.isAfter(LocalDate.now())) CampaignStatus.SCHEDULED else CampaignStatus.ACTIVE
 
     private fun hasCreatorAccessWithoutThrowing(
         organizationId: UUID,
