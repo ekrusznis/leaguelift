@@ -82,7 +82,7 @@ export default function FundraisingScreen() {
           <Pressable
             hitSlop={8}
             onPress={() => router.push({
-              pathname: '/fundraising-form',
+              pathname: '/fundraising-form' as any,
               params: { organizationId, persona, mode: 'create', defaultTeamId, defaultTeamName },
             })}>
             <Ionicons name="add-circle-outline" size={25} color={Brand.championshipGold} />
@@ -102,7 +102,7 @@ export default function FundraisingScreen() {
           <Button
             style={styles.heroButton}
             onPress={() => router.push({
-              pathname: '/fundraising-form',
+              pathname: '/fundraising-form' as any,
               params: { organizationId, persona, mode: 'create', defaultTeamId, defaultTeamName },
             })}>
             Create
@@ -133,7 +133,7 @@ export default function FundraisingScreen() {
         {isOwner && pending.length > 0 && (
           <View style={styles.section}>
             <ThemedText type="smallBold">Needs your approval ({pending.length})</ThemedText>
-            {pending.map((campaign) => (
+            {pending.map((campaign: any) => (
               <ThemedView key={campaign.id} type="backgroundElement" style={styles.approvalCard}>
                 <Pressable style={styles.flexOne} onPress={() => openDetail(campaign)}>
                   <ThemedText type="smallBold">{campaign.name}</ThemedText>
@@ -163,7 +163,7 @@ export default function FundraisingScreen() {
           </ThemedView>
         ) : (
           <View style={[styles.cards, wide && styles.cardsWide]}>
-            {campaigns.data.items.map((campaign) => (
+            {campaigns.data.items.map((campaign: any) => (
               <CampaignCard
                 key={campaign.id}
                 campaign={campaign}
@@ -185,9 +185,9 @@ export default function FundraisingScreen() {
     </ThemedView>
   );
 
-  function openDetail(campaign: Campaign) {
+  function openDetail(campaign: any) {
     router.push({
-      pathname: '/fundraising-detail',
+      pathname: '/fundraising-detail' as any,
       params: { organizationId, campaignId: campaign.id, persona, defaultTeamId, defaultTeamName },
     });
   }

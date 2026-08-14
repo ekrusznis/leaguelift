@@ -151,7 +151,7 @@ function FundraisingFormFields({ organizationId, campaignId, persona, existing, 
           templateKey,
         });
         toast.show('Fundraiser created.', 'success');
-        router.replace({ pathname: '/fundraising-detail', params: { organizationId, campaignId: created.id, persona, defaultTeamId, defaultTeamName } });
+        router.replace({ pathname: '/fundraising-detail' as any, params: { organizationId, campaignId: created.id, persona, defaultTeamId, defaultTeamName } });
       }
     } catch {
       toast.show(isEdit ? 'Could not update that fundraiser.' : 'Could not create that fundraiser.', 'error');

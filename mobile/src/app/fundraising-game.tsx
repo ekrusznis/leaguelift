@@ -48,7 +48,7 @@ function GameEditor({ organizationId, campaignId, slug, existing }: { organizati
   const open = useOpenFundraisingGame(organizationId, campaignId);
   const close = useCloseFundraisingGame(organizationId, campaignId);
   const drawWinner = useDrawFundraisingGameWinner(organizationId, campaignId);
-  const entries = useFundraisingGameEntries(organizationId, campaignId, !!existing);
+  const entries = useFundraisingGameEntries(organizationId, campaignId, existing?.id || null);
   const [gameType, setGameType] = useState<FundraisingGameType>(existing?.gameType ?? 'BIG_GAME_SQUARES');
   const [title, setTitle] = useState(existing?.title ?? 'Big Game Squares Challenge');
   const [instructions, setInstructions] = useState(existing?.instructions ?? 'Choose an open square for free. Supporting the fundraiser is optional and never changes your odds or number of entries.');
@@ -60,7 +60,7 @@ function GameEditor({ organizationId, campaignId, slug, existing }: { organizati
   const wide = width >= 760;
   const disclosure = 'No purchase or donation is necessary to enter. Donating does not improve your odds or provide additional entries.';
   const publicGameUrl = `${env.frontendBaseUrl}/campaigns/${slug}/play`;
-  const canConfigure = !existing || existing.permissions.canConfigure;
+  const canConfigure = !existing || (existing.permissions?.canEdit ?? false);
   const busy = create.isPending || update.isPending || open.isPending || close.isPending || drawWinner.isPending;
 
   function selectType(value: FundraisingGameType) {
@@ -80,7 +80,7 @@ function GameEditor({ organizationId, campaignId, slug, existing }: { organizati
     if (gameType === 'BIG_GAME_SQUARES' && (!Number.isInteger(r) || !Number.isInteger(c) || !r || !c || r < 1 || c < 1 || r > 26 || c > 26)) return toast.show('Squares grids can be 1–26 rows and columns.', 'error');
     try {
       if (existing) {
-        await update.mutateAsync({ title: title.trim(), instructions: instructions.trim() || null, prizeDescription: prizeDescription.trim() || null, maxEntries: limit, entriesPerPerson: perPerson, rows: r, cols: c });
+        await update.mutateAsync({ gameId: existing.id, data: { title: title.trim(), instructions: instructions.trim() || null, prizeDescription: prizeDescription.trim() || null, maxEntries: limit, entriesPerPerson: perPerson, rows: r, cols: c } });
         toast.show('Free game updated.', 'success');
       } else {
         await create.mutateAsync({ gameType, title: title.trim(), instructions: instructions.trim() || null, prizeDescription: prizeDescription.trim() || null, maxEntries: limit, entriesPerPerson: perPerson, rows: r, cols: c });
@@ -137,9 +137,9 @@ function GameEditor({ organizationId, campaignId, slug, existing }: { organizati
         {existing && <ThemedView type="backgroundElement" style={styles.actionsCard}>
           <View style={styles.flexOne}><ThemedText type="smallBold">Game actions</ThemedText><ThemedText type="small" themeColor="textSecondary">Opening a game allows public free entries. Close it before a random prize drawing is selected.</ThemedText></View>
           <View style={styles.actions}>
-            {existing.permissions.canOpen && <Button disabled={busy} onPress={() => doAction('Free game opened.', () => open.mutateAsync())}>Open Game</Button>}
-            {existing.permissions.canClose && <Button variant="secondary" disabled={busy} onPress={() => doAction('Free game closed.', () => close.mutateAsync())}>Close Game</Button>}
-            {existing.permissions.canDrawWinner && <Button disabled={busy} onPress={() => doAction('Winner selected.', () => drawWinner.mutateAsync())}>Draw Winner</Button>}
+            {existing.permissions?.canOpen && <Button disabled={busy} onPress={() => doAction('Free game opened.', () => open.mutateAsync(existing.id))}>Open Game</Button>}
+            {existing.permissions?.canClose && <Button variant="secondary" disabled={busy} onPress={() => doAction('Free game closed.', () => close.mutateAsync(existing.id))}>Close Game</Button>}
+            {existing.permissions?.canDrawWinner && <Button disabled={busy} onPress={() => doAction('Winner selected.', () => drawWinner.mutateAsync({ gameId: existing.id, drawId: '' }))}>Draw Winner</Button>}
           </View>
         </ThemedView>}
 
@@ -153,7 +153,7 @@ function GameEditor({ organizationId, campaignId, slug, existing }: { organizati
           {entries.isLoading && <LoadingState label="Loading entries…" />}
           {entries.isError && <ErrorState message="Could not load free-game entries." onRetry={() => entries.refetch()} />}
           {entries.data?.length === 0 && <ThemedView type="backgroundElement" style={styles.empty}><ThemedText type="small" themeColor="textSecondary">No free entries yet.</ThemedText></ThemedView>}
-          {entries.data?.map((entry) => <ThemedView key={entry.id} type="backgroundElement" style={[styles.entryRow, entry.isWinner && styles.winnerRow]}>
+          {entries.data?.map((entry: any) => <ThemedView key={entry.id} type="backgroundElement" style={[styles.entryRow, entry.isWinner && styles.winnerRow]}>
             <View style={styles.flexOne}><ThemedText type="smallBold">{entry.displayName}{entry.isWinner ? ' · Winner' : ''}</ThemedText><ThemedText type="small" themeColor="textSecondary">{entry.email}</ThemedText>{entry.selectionKey && <ThemedText type="small" themeColor="textSecondary">Square: {entry.selectionKey}</ThemedText>}{entry.selectionText && <ThemedText type="small" themeColor="textSecondary">Pick: {entry.selectionText}</ThemedText>}</View>
           </ThemedView>)}
         </>}

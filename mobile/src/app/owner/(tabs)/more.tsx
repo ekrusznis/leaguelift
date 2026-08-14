@@ -20,7 +20,7 @@ export default function OwnerMoreScreen() {
     { icon: 'bar-chart-outline', label: 'Reports', onPress: () => router.push('/owner/reports') },
     { icon: 'card-outline', label: 'Payout Account', onPress: () => router.push('/owner/payout') },
     { icon: 'shirt-outline', label: 'Swag Shop', onPress: () => router.push(webEmbedRoute(`/app/organizations/${organizationId}/swag-shop`, 'Swag Shop')) },
-    { icon: 'heart-outline', label: 'Fundraising', onPress: () => router.push({ pathname: '/fundraising', params: { organizationId: organizationId ?? '', persona: 'owner' } }) },
+    { icon: 'heart-outline', label: 'Fundraising', onPress: () => router.push({ pathname: '/fundraising' as any, params: { organizationId: organizationId ?? '', persona: 'owner' } }) },
     { icon: 'ribbon-outline', label: 'Sponsorships', onPress: () => router.push(webEmbedRoute(`/app/organizations/${organizationId}/sponsorships`, 'Sponsorships')) },
     { icon: 'notifications-outline', label: 'My Announcements', onPress: () => router.push('/announcements') },
     { icon: 'document-text-outline', label: 'Documents', onPress: () => router.push('/owner/documents') },

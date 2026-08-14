@@ -67,10 +67,10 @@ export default function FundraisingDetailScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScreenHeader
-        title="Fundraiser"
-        right={permissions?.canEdit ? <Pressable hitSlop={8} onPress={() => router.push({ pathname: '/fundraising-form', params: { organizationId, campaignId, persona, mode: 'edit', defaultTeamId, defaultTeamName } })}><Ionicons name="create-outline" size={23} color={Brand.championshipGold} /></Pressable> : undefined}
-      />
+       <ScreenHeader
+         title="Fundraiser"
+         right={permissions?.canEdit ? <Pressable hitSlop={8} onPress={() => router.push({ pathname: '/fundraising-form' as any, params: { organizationId, campaignId, persona, mode: 'edit', defaultTeamId, defaultTeamName } })}><Ionicons name="create-outline" size={23} color={Brand.championshipGold} /></Pressable> : undefined}
+       />
       <ScrollView contentContainerStyle={[styles.content, wide && styles.contentWide]}>
         <View style={[styles.topGrid, wide && styles.topGridWide]}>
           <View style={styles.mainColumn}>
@@ -111,7 +111,7 @@ export default function FundraisingDetailScreen() {
             <ThemedText type="smallBold">Free fundraising game</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">Add Big Game Squares, a bracket/prediction challenge, trivia, or a free prize drawing. Entries stay separate from donations.</ThemedText>
           </View>
-          <Button variant="secondary" onPress={() => router.push({ pathname: '/fundraising-game', params: { organizationId, campaignId: item.id, slug: item.slug, persona } })}>Manage Game</Button>
+          <Button variant="secondary" onPress={() => router.push({ pathname: '/fundraising-game' as any, params: { organizationId, campaignId: item.id, slug: item.slug, persona } })}>Manage Game</Button>
         </ThemedView>}
 
         <View style={styles.sectionHeader}>
@@ -121,7 +121,7 @@ export default function FundraisingDetailScreen() {
         {contributions.isLoading && <LoadingState label="Loading contributions…" />}
         {contributions.isError && <ErrorState message="Could not load contributions." onRetry={() => contributions.refetch()} />}
         {contributions.data?.items.length === 0 && <ThemedView type="backgroundElement" style={styles.empty}><ThemedText type="small" themeColor="textSecondary">No contributions yet.</ThemedText></ThemedView>}
-        {contributions.data?.items.map((contribution) => (
+        {contributions.data?.items.map((contribution: any) => (
           <ThemedView key={contribution.id} type="backgroundElement" style={styles.contributionRow}>
             <View style={styles.flexOne}>
               <ThemedText type="smallBold">{contribution.isAnonymous ? 'Anonymous supporter' : (contribution.supporterName || 'Supporter')}</ThemedText>

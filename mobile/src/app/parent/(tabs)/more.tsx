@@ -15,7 +15,7 @@ export default function ParentMoreScreen() {
   const { organizationId } = useHouseholdCtx();
   const items: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }[] = [
     { icon: 'shirt-outline', label: 'Swag Shop', onPress: () => router.push(webEmbedRoute(`/app/organizations/${organizationId}/swag-shop/order`, 'Swag Shop')) },
-    { icon: 'heart-outline', label: 'Fundraising', onPress: () => router.push({ pathname: '/fundraising', params: { organizationId: organizationId ?? '', persona: 'parent' } }) },
+    { icon: 'heart-outline', label: 'Fundraising', onPress: () => router.push({ pathname: '/fundraising' as any, params: { organizationId: organizationId ?? '', persona: 'parent' } }) },
     { icon: 'megaphone-outline', label: 'Announcements', onPress: () => router.push('/announcements') },
     { icon: 'document-text-outline', label: 'Documents', onPress: () => router.push('/documents') },
     { icon: 'shield-checkmark-outline', label: 'Messaging Safety', onPress: () => router.push('/safety-controls') },

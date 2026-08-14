@@ -23,7 +23,7 @@ export default function MoreScreen() {
     {
       icon: 'heart-outline',
       label: 'Fundraising',
-      onPress: () => router.push({ pathname: '/fundraising', params: { organizationId: organizationId ?? '', persona: 'coach', defaultTeamId: selectedTeamId ?? '', defaultTeamName: selectedTeam?.name ?? '' } }),
+      onPress: () => router.push({ pathname: '/fundraising' as any, params: { organizationId: organizationId ?? '', persona: 'coach', defaultTeamId: selectedTeamId ?? '', defaultTeamName: selectedTeam?.name ?? '' } }),
     },
     { icon: 'megaphone-outline', label: 'Announcements', onPress: () => router.push('/announcements') },
     { icon: 'checkbox-outline', label: 'Action Center', onPress: () => router.push('/action-center') },
