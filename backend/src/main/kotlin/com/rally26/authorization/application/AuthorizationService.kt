@@ -355,6 +355,36 @@ class AuthorizationService(
         return capability in CapabilityRegistry.householdCapabilities() && relationship.organizationId == organizationId
     }
 
+    /**
+     * Whether this user is an active guardian anywhere in the organization.
+     * Used by organization-scoped workflows (such as creating a fundraiser) that
+     * intentionally allow guardians without granting blanket access to another
+     * household's private records.
+     */
+    fun hasGuardianRelationshipInOrganization(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): Boolean {
+        if (currentUser.platformAdministrator) return true
+        return guardianRelationshipRepository
+            .findActiveForUser(currentUser.userId)
+            .any { it.organizationId == organizationId }
+    }
+
+    /**
+     * Whether this guardian has an active athlete assignment on the requested team.
+     * Organization owner/admin inheritance is intentionally not included here: callers
+     * handle those roles through their normal organization authorization path.
+     */
+    fun hasGuardianRelationshipForTeam(
+        organizationId: UUID,
+        teamId: UUID,
+        currentUser: CurrentUser,
+    ): Boolean {
+        if (currentUser.platformAdministrator) return true
+        return guardianRelationshipRepository.hasActiveForTeam(currentUser.userId, organizationId, teamId)
+    }
+
     /** Exact guardian relationship check for privacy-sensitive household actions. */
     fun hasGuardianRelationship(
         organizationId: UUID,

@@ -18,10 +18,26 @@ enum class CampaignType {
     SPONSOR_SUPPORTED,
 }
 
-enum class CampaignStatus { DRAFT, ACTIVE, COMPLETED, ARCHIVED }
+/**
+ * Campaign lifecycle.
+ *
+ * PENDING_APPROVAL is used only when the organization owner has enabled the
+ * fundraising approval requirement. ACTIVE remains the only state that can
+ * accept new public contributions.
+ */
+enum class CampaignStatus { DRAFT, PENDING_APPROVAL, ACTIVE, COMPLETED, ARCHIVED }
 
-/** Which starter template, if any, produced this campaign (Phase 42, DESIGN-DOC.md §14.1Q). Null means a blank/custom campaign, today's unchanged behavior. */
-enum class FundraiserTemplateKey { BOX_POOL, BAKE_SALE, CAR_WASH }
+/** Which starter template, if any, produced this campaign (Phase 42, DESIGN-DOC.md §14.1Q). Null means a blank/custom campaign. */
+enum class FundraiserTemplateKey {
+    GENERAL,
+    IN_PERSON_EVENT,
+    SPONSOR_MATCH,
+    MILESTONE_CHALLENGE,
+    FUNDRAISING_CHALLENGE,
+    BOX_POOL,
+    BAKE_SALE,
+    CAR_WASH,
+}
 
 data class Campaign(
     val id: UUID,
@@ -35,10 +51,15 @@ data class Campaign(
     val currency: String,
     val startDate: LocalDate?,
     val endDate: LocalDate?,
+    val eventLocationName: String?,
+    val eventAddress: String?,
     val status: CampaignStatus,
     val publishedAt: Instant?,
     val createdByUserId: UUID?,
     val templateKey: FundraiserTemplateKey?,
+    val submittedAt: Instant?,
+    val approvedAt: Instant?,
+    val approvedByUserId: UUID?,
     val createdAt: Instant,
     val updatedAt: Instant,
 )

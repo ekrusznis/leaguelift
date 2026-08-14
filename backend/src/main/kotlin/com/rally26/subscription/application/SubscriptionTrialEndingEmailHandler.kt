@@ -28,7 +28,8 @@ class SubscriptionTrialEndingEmailHandler(
 
     override fun handle(event: OutboxEvent) {
         val payload = objectMapper.readValue(event.payload, OrganizationBillingTrialEndingPayload::class.java)
-        val actionUrl = event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/billing" } ?: frontendProperties.baseUrl
+        val actionUrl =
+            event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/billing" } ?: frontendProperties.baseUrl
         payload.ownerEmails.forEach { email ->
             emailProvider.send(
                 EmailMessage(
@@ -45,7 +46,8 @@ class SubscriptionTrialEndingEmailHandler(
                                 variables =
                                     mapOf(
                                         "NOTIFICATION_TITLE" to "${payload.organizationName}'s trial ends ${payload.trialEndDate}",
-                                        "NOTIFICATION_DETAILS" to "Add a payment method from Billing settings before ${payload.trialEndDate} to keep uninterrupted access.",
+                                        "NOTIFICATION_DETAILS" to
+                                            "Add a payment method from Billing settings before ${payload.trialEndDate} to keep uninterrupted access.",
                                         "ACTION_URL" to actionUrl,
                                     ),
                             )

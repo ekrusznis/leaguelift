@@ -53,12 +53,13 @@ class StripeSponsorshipCheckoutClient(
                                 .setCurrency(currency.lowercase())
                                 .setUnitAmount(amountMinor)
                                 .setProductData(
-                                    StripeTaxSupport.applyTaxCode(
-                                        SessionCreateParams.LineItem.PriceData.ProductData
-                                            .builder()
-                                            .setName("Sponsorship: $packageName"),
-                                        stripeTaxProperties.sponsorshipTaxCode,
-                                    ).build(),
+                                    StripeTaxSupport
+                                        .applyTaxCode(
+                                            SessionCreateParams.LineItem.PriceData.ProductData
+                                                .builder()
+                                                .setName("Sponsorship: $packageName"),
+                                            stripeTaxProperties.sponsorshipTaxCode,
+                                        ).build(),
                                 ).build(),
                         ).build(),
                 )

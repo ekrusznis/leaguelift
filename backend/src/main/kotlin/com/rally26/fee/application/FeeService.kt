@@ -372,7 +372,13 @@ class FeeService(
                 assignment.id,
             )
             ledgerService.recordConfirmedFeePayment(payment.organizationId, payment.id, payment.amountMinor, payment.currency)
-            ledgerService.recordStripeProcessingFee(payment.organizationId, LedgerSourceType.FEE_PAYMENT, payment.id, payment.currency, stripePaymentIntentId)
+            ledgerService.recordStripeProcessingFee(
+                payment.organizationId,
+                LedgerSourceType.FEE_PAYMENT,
+                payment.id,
+                payment.currency,
+                stripePaymentIntentId,
+            )
             if (payment.payerEmail != null) {
                 outboxWriter.write(
                     aggregateType = "fee_payment",

@@ -60,8 +60,21 @@ class PaymentDisputeRepository(
             .param("now", Timestamp.from(now))
             .update()
         return PaymentDispute(
-            id, organizationId, sourceType, sourceId, stripeDisputeId, stripeChargeId,
-            amountMinor, currency, reason, status, evidenceDueBy, openedAt, null, now, now,
+            id,
+            organizationId,
+            sourceType,
+            sourceId,
+            stripeDisputeId,
+            stripeChargeId,
+            amountMinor,
+            currency,
+            reason,
+            status,
+            evidenceDueBy,
+            openedAt,
+            null,
+            now,
+            now,
         )
     }
 

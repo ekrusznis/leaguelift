@@ -54,6 +54,42 @@ class GuardianRelationshipRepository(
             .optional()
             .orElse(null)
 
+    /**
+     * True only when this guardian has an active relationship to a household with an
+     * active participant assigned to the requested team. This keeps guardian-created
+     * team fundraisers scoped to teams their household actually participates in.
+     */
+    fun hasActiveForTeam(
+        userId: UUID,
+        organizationId: UUID,
+        teamId: UUID,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                select exists(
+                    select 1
+                    from guardian_relationship gr
+                    join participant p
+                      on p.household_id = gr.household_id
+                     and p.organization_id = gr.organization_id
+                     and p.status = 'ACTIVE'
+                    join participant_team pt
+                      on pt.participant_id = p.id
+                     and pt.organization_id = p.organization_id
+                     and pt.status = 'ACTIVE'
+                    where gr.user_id = :userId
+                      and gr.organization_id = :organizationId
+                      and gr.status = 'ACTIVE'
+                      and pt.team_id = :teamId
+                )
+                """.trimIndent(),
+            ).param("userId", userId)
+            .param("organizationId", organizationId)
+            .param("teamId", teamId)
+            .query(Boolean::class.java)
+            .single()
+
     fun insert(
         organizationId: UUID,
         householdId: UUID,

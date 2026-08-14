@@ -1,5 +1,6 @@
 package com.rally26.fundraising.web
 
+import com.rally26.fundraising.application.CampaignPermissions
 import com.rally26.fundraising.domain.Campaign
 import com.rally26.fundraising.domain.CampaignStatus
 import com.rally26.fundraising.domain.CampaignType
@@ -22,6 +23,8 @@ data class CreateCampaignRequest(
     @field:Size(min = 3, max = 3) val currency: String = "USD",
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,
+    @field:Size(max = 160) val eventLocationName: String? = null,
+    @field:Size(max = 500) val eventAddress: String? = null,
     val templateKey: FundraiserTemplateKey? = null,
 )
 
@@ -31,6 +34,8 @@ data class UpdateCampaignRequest(
     @field:Min(0) val goalAmountMinor: Long? = null,
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,
+    @field:Size(max = 160) val eventLocationName: String? = null,
+    @field:Size(max = 500) val eventAddress: String? = null,
 )
 
 data class UpdateCampaignStatusRequest(
@@ -41,6 +46,16 @@ data class UpdateCampaignStatusRequest(
 data class CampaignShareLinkResponse(
     val url: String,
     val qrCodeDataUri: String,
+)
+
+data class CampaignPermissionsResponse(
+    val canEdit: Boolean,
+    val canRequestActivation: Boolean,
+    val canApprove: Boolean,
+    val canReturnToDraft: Boolean,
+    val canClose: Boolean,
+    val canArchive: Boolean,
+    val canManageBoxPool: Boolean,
 )
 
 data class CampaignResponse(
@@ -55,10 +70,16 @@ data class CampaignResponse(
     val currency: String,
     val startDate: LocalDate?,
     val endDate: LocalDate?,
+    val eventLocationName: String?,
+    val eventAddress: String?,
     val status: String,
     val publishedAt: Instant?,
     val createdByUserId: UUID?,
     val templateKey: String?,
+    val submittedAt: Instant?,
+    val approvedAt: Instant?,
+    val approvedByUserId: UUID?,
+    val permissions: CampaignPermissionsResponse,
     val createdAt: Instant,
     val updatedAt: Instant,
     /** Sum of CONFIRMED contributions (fundraising/persistence/ContributionRepository.kt). Real, not demo data. */
@@ -78,6 +99,8 @@ data class PublicCampaignResponse(
     val currency: String,
     val startDate: LocalDate?,
     val endDate: LocalDate?,
+    val eventLocationName: String?,
+    val eventAddress: String?,
     val status: String,
     val publishedAt: Instant?,
     val raisedMinor: Long,
@@ -87,27 +110,43 @@ data class PublicCampaignResponse(
     val secondaryColor: String,
 )
 
-fun Campaign.toResponse(raisedMinor: Long) =
-    CampaignResponse(
-        id,
-        organizationId,
-        teamId,
-        name,
-        slug,
-        description,
-        campaignType.name,
-        goalAmountMinor,
-        currency,
-        startDate,
-        endDate,
-        status.name,
-        publishedAt,
-        createdByUserId,
-        templateKey?.name,
-        createdAt,
-        updatedAt,
-        raisedMinor,
-    )
+fun Campaign.toResponse(
+    raisedMinor: Long,
+    permissions: CampaignPermissions,
+) = CampaignResponse(
+    id,
+    organizationId,
+    teamId,
+    name,
+    slug,
+    description,
+    campaignType.name,
+    goalAmountMinor,
+    currency,
+    startDate,
+    endDate,
+    eventLocationName,
+    eventAddress,
+    status.name,
+    publishedAt,
+    createdByUserId,
+    templateKey?.name,
+    submittedAt,
+    approvedAt,
+    approvedByUserId,
+    CampaignPermissionsResponse(
+        canEdit = permissions.canEdit,
+        canRequestActivation = permissions.canRequestActivation,
+        canApprove = permissions.canApprove,
+        canReturnToDraft = permissions.canReturnToDraft,
+        canClose = permissions.canClose,
+        canArchive = permissions.canArchive,
+        canManageBoxPool = permissions.canManageBoxPool,
+    ),
+    createdAt,
+    updatedAt,
+    raisedMinor,
+)
 
 fun Campaign.toPublicResponse(
     raisedMinor: Long,
@@ -127,6 +166,8 @@ fun Campaign.toPublicResponse(
     currency,
     startDate,
     endDate,
+    eventLocationName,
+    eventAddress,
     status.name,
     publishedAt,
     raisedMinor,

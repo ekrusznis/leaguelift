@@ -81,7 +81,18 @@ class PlatformAdminController(
         @RequestParam(defaultValue = "25") size: Int,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<PlatformPaymentListItemResponse> {
-        val result = service.listPayments(currentUser, type, status, organizationId, teamId, query, dateFrom, dateTo, PageRequest(page, size))
+        val result =
+            service.listPayments(
+                currentUser,
+                type,
+                status,
+                organizationId,
+                teamId,
+                query,
+                dateFrom,
+                dateTo,
+                PageRequest(page, size),
+            )
         return PageResponse(result.items.map { it.toResponse() }, result.page, result.size, result.totalElements)
     }
 
@@ -96,7 +107,16 @@ class PlatformAdminController(
         @RequestParam(defaultValue = "25") size: Int,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<PlatformAthleteListItemResponse> {
-        val result = service.listAthletes(currentUser, organizationId, teamId, householdId, eligibilityStatus, query, PageRequest(page, size))
+        val result =
+            service.listAthletes(
+                currentUser,
+                organizationId,
+                teamId,
+                householdId,
+                eligibilityStatus,
+                query,
+                PageRequest(page, size),
+            )
         return PageResponse(result.items.map { it.toResponse() }, result.page, result.size, result.totalElements)
     }
 

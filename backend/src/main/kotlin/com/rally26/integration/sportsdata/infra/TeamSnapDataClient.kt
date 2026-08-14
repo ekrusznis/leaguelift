@@ -36,11 +36,18 @@ class TeamSnapDataClient {
     fun fetchSnapshot(accessToken: String): List<SportsDataExternalRecord> {
         val records = mutableListOf<SportsDataExternalRecord>()
         fetchCollection("/teams", accessToken).forEach { fields ->
-            records += SportsDataExternalRecord(SportsDataEntityType.TEAM, fields.require("id"), fields["division_id"], fields["name"], fields)
+            records +=
+                SportsDataExternalRecord(SportsDataEntityType.TEAM, fields.require("id"), fields["division_id"], fields["name"], fields)
         }
         fetchCollection("/members", accessToken).forEach { fields ->
             records +=
-                SportsDataExternalRecord(SportsDataEntityType.PARTICIPANT, fields.require("id"), fields["team_id"], fields.fullName(), fields)
+                SportsDataExternalRecord(
+                    SportsDataEntityType.PARTICIPANT,
+                    fields.require("id"),
+                    fields["team_id"],
+                    fields.fullName(),
+                    fields,
+                )
         }
         fetchCollection("/events", accessToken).forEach { fields ->
             records += SportsDataExternalRecord(SportsDataEntityType.EVENT, fields.require("id"), fields["team_id"], fields["name"], fields)

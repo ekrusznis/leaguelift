@@ -14,7 +14,7 @@ import java.util.UUID
 
 private const val COLUMNS =
     "id, organization_id, team_id, name, slug, description, campaign_type, goal_amount_minor, currency, start_date, end_date, status, " +
-        "published_at, created_by_user_id, template_key, created_at, updated_at"
+        "event_location_name, event_address, published_at, created_by_user_id, template_key, submitted_at, approved_at, approved_by_user_id, created_at, updated_at"
 
 @Repository
 class CampaignRepository(
@@ -32,7 +32,7 @@ class CampaignRepository(
             .optional()
             .orElse(null)
 
-    /** Most recently created active campaign for a team — used by the owner dashboard's team-performance row (one team, one headline fundraiser at a time is enough for that card). */
+    /** Most recently created active campaign for a team — used by the owner dashboard's team-performance row. */
     fun findActiveByTeam(
         teamId: UUID,
         organizationId: UUID,
@@ -96,6 +96,8 @@ class CampaignRepository(
         currency: String,
         startDate: LocalDate?,
         endDate: LocalDate?,
+        eventLocationName: String?,
+        eventAddress: String?,
         createdByUserId: UUID?,
         templateKey: FundraiserTemplateKey?,
     ): Campaign {
@@ -104,8 +106,15 @@ class CampaignRepository(
         jdbcClient
             .sql(
                 """
-                insert into campaign (id, organization_id, team_id, name, slug, description, campaign_type, goal_amount_minor, currency, start_date, end_date, status, created_by_user_id, template_key, created_at, updated_at)
-                values (:id, :organizationId, :teamId, :name, :slug, :description, :campaignType, :goalAmountMinor, :currency, :startDate, :endDate, 'DRAFT', :createdByUserId, :templateKey, :now, :now)
+                insert into campaign (
+                    id, organization_id, team_id, name, slug, description, campaign_type,
+                    goal_amount_minor, currency, start_date, end_date, event_location_name, event_address, status,
+                    created_by_user_id, template_key, created_at, updated_at
+                ) values (
+                    :id, :organizationId, :teamId, :name, :slug, :description, :campaignType,
+                    :goalAmountMinor, :currency, :startDate, :endDate, :eventLocationName, :eventAddress, 'DRAFT',
+                    :createdByUserId, :templateKey, :now, :now
+                )
                 """.trimIndent(),
             ).param("id", id)
             .param("organizationId", organizationId)
@@ -118,6 +127,8 @@ class CampaignRepository(
             .param("currency", currency)
             .param("startDate", startDate?.let { Date.valueOf(it) })
             .param("endDate", endDate?.let { Date.valueOf(it) })
+            .param("eventLocationName", eventLocationName)
+            .param("eventAddress", eventAddress)
             .param("createdByUserId", createdByUserId)
             .param("templateKey", templateKey?.name)
             .param("now", Timestamp.from(now))
@@ -134,10 +145,15 @@ class CampaignRepository(
             currency = currency,
             startDate = startDate,
             endDate = endDate,
+            eventLocationName = eventLocationName,
+            eventAddress = eventAddress,
             status = CampaignStatus.DRAFT,
             publishedAt = null,
             createdByUserId = createdByUserId,
             templateKey = templateKey,
+            submittedAt = null,
+            approvedAt = null,
+            approvedByUserId = null,
             createdAt = now,
             updatedAt = now,
         )
@@ -151,6 +167,8 @@ class CampaignRepository(
         goalAmountMinor: Long?,
         startDate: LocalDate?,
         endDate: LocalDate?,
+        eventLocationName: String?,
+        eventAddress: String?,
     ): Int {
         val now = Instant.now()
         return jdbcClient
@@ -162,6 +180,8 @@ class CampaignRepository(
                     goal_amount_minor = coalesce(:goalAmountMinor, goal_amount_minor),
                     start_date        = coalesce(:startDate, start_date),
                     end_date          = coalesce(:endDate, end_date),
+                    event_location_name = coalesce(:eventLocationName, event_location_name),
+                    event_address       = coalesce(:eventAddress, event_address),
                     updated_at        = :now
                 where id = :id and organization_id = :organizationId
                 """.trimIndent(),
@@ -170,24 +190,99 @@ class CampaignRepository(
             .param("goalAmountMinor", goalAmountMinor)
             .param("startDate", startDate?.let { Date.valueOf(it) })
             .param("endDate", endDate?.let { Date.valueOf(it) })
+            .param("eventLocationName", eventLocationName)
+            .param("eventAddress", eventAddress)
             .param("now", Timestamp.from(now))
             .param("id", id)
             .param("organizationId", organizationId)
             .update()
     }
 
-    fun updateStatus(
+    fun markPendingApproval(
         id: UUID,
         organizationId: UUID,
-        status: CampaignStatus,
-        publishedAt: Instant?,
     ): Int {
         val now = Instant.now()
         return jdbcClient
             .sql(
                 """
                 update campaign
-                set status = :status, published_at = coalesce(:publishedAt, published_at), updated_at = :now
+                set status = 'PENDING_APPROVAL',
+                    submitted_at = :now,
+                    approved_at = null,
+                    approved_by_user_id = null,
+                    updated_at = :now
+                where id = :id and organization_id = :organizationId
+                """.trimIndent(),
+            ).param("now", Timestamp.from(now))
+            .param("id", id)
+            .param("organizationId", organizationId)
+            .update()
+    }
+
+    fun markActive(
+        id: UUID,
+        organizationId: UUID,
+        approvedByUserId: UUID?,
+    ): Int {
+        val now = Instant.now()
+        val approvedAt = approvedByUserId?.let { Timestamp.from(now) }
+        return jdbcClient
+            .sql(
+                """
+                update campaign
+                set status = 'ACTIVE',
+                    published_at = coalesce(published_at, :now),
+                    approved_at = :approvedAt,
+                    approved_by_user_id = :approvedByUserId,
+                    updated_at = :now
+                where id = :id and organization_id = :organizationId
+                """.trimIndent(),
+            ).param("approvedAt", approvedAt)
+            .param("approvedByUserId", approvedByUserId)
+            .param("now", Timestamp.from(now))
+            .param("id", id)
+            .param("organizationId", organizationId)
+            .update()
+    }
+
+    fun returnToDraft(
+        id: UUID,
+        organizationId: UUID,
+    ): Int {
+        val now = Instant.now()
+        return jdbcClient
+            .sql(
+                """
+                update campaign
+                set status = 'DRAFT',
+                    submitted_at = null,
+                    approved_at = null,
+                    approved_by_user_id = null,
+                    updated_at = :now
+                where id = :id and organization_id = :organizationId
+                """.trimIndent(),
+            ).param("now", Timestamp.from(now))
+            .param("id", id)
+            .param("organizationId", organizationId)
+            .update()
+    }
+
+    /** Generic terminal-state transition retained for COMPLETED/ARCHIVED. */
+    fun updateStatus(
+        id: UUID,
+        organizationId: UUID,
+        status: CampaignStatus,
+        publishedAt: Instant? = null,
+    ): Int {
+        val now = Instant.now()
+        return jdbcClient
+            .sql(
+                """
+                update campaign
+                set status = :status,
+                    published_at = coalesce(:publishedAt, published_at),
+                    updated_at = :now
                 where id = :id and organization_id = :organizationId
                 """.trimIndent(),
             ).param("status", status.name)
@@ -214,10 +309,15 @@ class CampaignRepository(
             currency = rs.getString("currency"),
             startDate = rs.getDate("start_date")?.toLocalDate(),
             endDate = rs.getDate("end_date")?.toLocalDate(),
+            eventLocationName = rs.getString("event_location_name"),
+            eventAddress = rs.getString("event_address"),
             status = CampaignStatus.valueOf(rs.getString("status")),
             publishedAt = rs.getTimestamp("published_at")?.toInstant(),
             createdByUserId = rs.getObject("created_by_user_id", UUID::class.java),
             templateKey = rs.getString("template_key")?.let { FundraiserTemplateKey.valueOf(it) },
+            submittedAt = rs.getTimestamp("submitted_at")?.toInstant(),
+            approvedAt = rs.getTimestamp("approved_at")?.toInstant(),
+            approvedByUserId = rs.getObject("approved_by_user_id", UUID::class.java),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
         )

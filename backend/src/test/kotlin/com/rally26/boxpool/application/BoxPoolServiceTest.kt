@@ -22,9 +22,7 @@ import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.runs
 import io.mockk.verify
 import java.time.Instant
 import java.util.UUID
@@ -47,7 +45,15 @@ class BoxPoolServiceTest {
     private val currentUser = CurrentUser(UUID.randomUUID(), "manager@example.com", "Manager")
 
     private fun managerMembership() =
-        OrganizationMembership(UUID.randomUUID(), orgId, currentUser.userId, MembershipRole.ADMINISTRATOR, MembershipStatus.ACTIVE, Instant.now(), Instant.now())
+        OrganizationMembership(
+            UUID.randomUUID(),
+            orgId,
+            currentUser.userId,
+            MembershipRole.ADMINISTRATOR,
+            MembershipStatus.ACTIVE,
+            Instant.now(),
+            Instant.now(),
+        )
 
     private fun campaign(templateKey: FundraiserTemplateKey? = FundraiserTemplateKey.BOX_POOL) =
         Campaign(
@@ -68,10 +74,26 @@ class BoxPoolServiceTest {
             templateKey = templateKey,
             createdAt = Instant.now(),
             updatedAt = Instant.now(),
+            approvedByUserId = UUID.randomUUID(),
+            submittedAt = Instant.now(),
+            approvedAt = Instant.now(),
         )
 
     private fun pool() =
-        BoxPool(UUID.randomUUID(), campaignId, orgId, "FOOTBALL", 10, 10, 500, "Home", "Away", "Winner takes the pot", Instant.now(), Instant.now())
+        BoxPool(
+            UUID.randomUUID(),
+            campaignId,
+            orgId,
+            "FOOTBALL",
+            10,
+            10,
+            500,
+            "Home",
+            "Away",
+            "Winner takes the pot",
+            Instant.now(),
+            Instant.now(),
+        )
 
     private fun box(status: BoxPoolBoxStatus = BoxPoolBoxStatus.OPEN) =
         BoxPoolBox(UUID.randomUUID(), pool().id, 0, 0, status, null, null, null, null, null, Instant.now(), Instant.now())
@@ -103,7 +125,8 @@ class BoxPoolServiceTest {
         every { campaignRepository.findById(campaignId, orgId) } returns campaign()
         every { boxPoolRepository.findByCampaignId(campaignId) } returns null
         val created = pool()
-        every { boxPoolRepository.insert(campaignId, orgId, "FOOTBALL", 10, 10, 500, "Home", "Away", "Winner takes the pot") } returns created
+        every { boxPoolRepository.insert(campaignId, orgId, "FOOTBALL", 10, 10, 500, "Home", "Away", "Winner takes the pot") } returns
+            created
         every { boxPoolBoxRepository.insertGrid(created.id, 10, 10) } returns emptyList()
 
         val result = service.create(orgId, campaignId, "FOOTBALL", 10, 10, 500, "Home", "Away", "Winner takes the pot", currentUser)
@@ -135,7 +158,15 @@ class BoxPoolServiceTest {
         every { boxPoolRepository.findByCampaignId(theCampaign.id) } returns thePool
         every { boxPoolBoxRepository.findClaimableByPosition(thePool.id, 0, 0) } returns openBox
         every {
-            contributionService.createCheckoutSession(slug, thePool.pricePerBoxMinor, "Jamie", false, "jamie@example.com", "https://success", "https://cancel")
+            contributionService.createCheckoutSession(
+                slug,
+                thePool.pricePerBoxMinor,
+                "Jamie",
+                false,
+                "jamie@example.com",
+                "https://success",
+                "https://cancel",
+            )
         } returns checkout
         every { boxPoolBoxRepository.reserve(openBox.id, "Jamie", "jamie@example.com", checkout.contributionId, any()) } returns 1
 

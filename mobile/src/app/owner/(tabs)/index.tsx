@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-
+import { Button } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { LoadingState } from '@/components/loading-state';
@@ -19,6 +20,7 @@ import {
 } from '@/features/owner/api';
 import { Brand, Spacing } from '@/constants/theme';
 import { formatMoneyMinorUnits } from '@/lib/money';
+import { webEmbedRoute } from '@/lib/webEmbed';
 
 /**
  * Owner Dashboard (Home tab) — real backend data (ADR-105). No "attention required"
@@ -29,6 +31,19 @@ import { formatMoneyMinorUnits } from '@/lib/money';
 export default function OwnerDashboardScreen() {
   const dashboardContext = useDashboardContext(true);
   const organizationId = dashboardContext.data?.organizationId ?? null;
+  const refetchDashboardContext = dashboardContext.refetch;
+  const dashboardContextIsLoading = dashboardContext.isLoading;
+
+  // The owner may finish organization onboarding in the authenticated web flow.
+  // Re-check /me/dashboard-context whenever this screen regains focus so returning
+  // from that flow unlocks the native dashboard without requiring logout/restart.
+  useFocusEffect(
+    useCallback(() => {
+      if (!organizationId && !dashboardContextIsLoading) {
+        void refetchDashboardContext();
+      }
+    }, [dashboardContextIsLoading, organizationId, refetchDashboardContext]),
+  );
 
   const summaryQuery = useOwnerSummary(organizationId);
   const financialQuery = useOwnerFinancialOverview(organizationId);
@@ -50,10 +65,17 @@ export default function OwnerDashboardScreen() {
     return (
       <ThemedView style={styles.container}>
         <PlatformStatusSpacer />
-        <EmptyState
-          title="Organization setup isn't finished"
-          description="Finish your organization's onboarding on the Rally26 web app, then come back here."
-        />
+        <View style={styles.onboardingGate}>
+          <EmptyState
+            title="Organization setup isn't finished"
+            description="Complete your organization's onboarding to unlock your Rally26 owner dashboard."
+          />
+          <Button
+            onPress={() => router.push(webEmbedRoute('/app/onboarding', 'Complete Organization Setup'))}
+            style={styles.onboardingButton}>
+            Continue Setup
+          </Button>
+        </View>
       </ThemedView>
     );
   }
@@ -66,7 +88,6 @@ export default function OwnerDashboardScreen() {
           RALLY<ThemedText type="title" style={[styles.wordmark, styles.wordmarkAccent]}>26</ThemedText>
         </ThemedText>
       </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {summaryQuery.isLoading && <LoadingState label="Loading summary…" />}
         {summaryQuery.isError && <ErrorState message="Could not load your organization." onRetry={() => summaryQuery.refetch()} />}
@@ -83,7 +104,6 @@ export default function OwnerDashboardScreen() {
             </View>
           </>
         )}
-
         <ThemedText type="smallBold" style={styles.sectionTitle}>
           Financials
         </ThemedText>
@@ -103,7 +123,6 @@ export default function OwnerDashboardScreen() {
             <FinancialCard label="Pending Payout" valueMinor={financialQuery.data.pendingPayoutMinor} currency={financialQuery.data.currency} />
           </View>
         )}
-
         <View style={styles.sectionHeader}>
           <ThemedText type="smallBold">Team Performance</ThemedText>
         </View>
@@ -130,7 +149,6 @@ export default function OwnerDashboardScreen() {
             </ThemedView>
           ))}
         </View>
-
         <View style={styles.sectionHeader}>
           <ThemedText type="smallBold">Upcoming Events</ThemedText>
         </View>
@@ -157,7 +175,6 @@ export default function OwnerDashboardScreen() {
             </Pressable>
           ))}
         </View>
-
         <View style={styles.sectionHeader}>
           <ThemedText type="smallBold">Reports Snapshot</ThemedText>
           <ThemedText type="link" themeColor="textSecondary" onPress={() => router.push('/owner/reports')}>
@@ -170,7 +187,6 @@ export default function OwnerDashboardScreen() {
             <FinancialCard key={metric.label} label={metric.label} valueMinor={metric.valueMinor} currency={financialQuery.data?.currency ?? 'USD'} />
           ))}
         </View>
-
         <View style={styles.sectionHeader}>
           <ThemedText type="smallBold">Recent Activity</ThemedText>
         </View>
@@ -223,6 +239,15 @@ function FinancialCard({ label, valueMinor, currency, demo }: { label: string; v
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  onboardingGate: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.five,
+    paddingBottom: Spacing.six,
+  },
+  onboardingButton: {
+    alignSelf: 'stretch',
   },
   topBar: {
     flexDirection: 'row',

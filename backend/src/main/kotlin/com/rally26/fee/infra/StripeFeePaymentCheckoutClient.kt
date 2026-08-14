@@ -50,12 +50,13 @@ class StripeFeePaymentCheckoutClient(
                                 .setCurrency(currency.lowercase())
                                 .setUnitAmount(amountMinor)
                                 .setProductData(
-                                    StripeTaxSupport.applyTaxCode(
-                                        SessionCreateParams.LineItem.PriceData.ProductData
-                                            .builder()
-                                            .setName(feeDescription),
-                                        stripeTaxProperties.feePaymentTaxCode,
-                                    ).build(),
+                                    StripeTaxSupport
+                                        .applyTaxCode(
+                                            SessionCreateParams.LineItem.PriceData.ProductData
+                                                .builder()
+                                                .setName(feeDescription),
+                                            stripeTaxProperties.feePaymentTaxCode,
+                                        ).build(),
                                 ).build(),
                         ).build(),
                 )

@@ -35,7 +35,12 @@ class CampaignController(
         val items =
             campaignService
                 .list(organizationId, currentUser, offset, size)
-                .map { it.toResponse(contributionService.getConfirmedTotal(it.id)) }
+                .map { campaign ->
+                    campaign.toResponse(
+                        contributionService.getConfirmedTotal(campaign.id),
+                        campaignService.permissionsFor(campaign, currentUser),
+                    )
+                }
         val total = campaignService.count(organizationId, currentUser)
         return PageResponse(items, page, size, total)
     }
@@ -58,10 +63,17 @@ class CampaignController(
                 request.currency,
                 request.startDate,
                 request.endDate,
+                request.eventLocationName,
+                request.eventAddress,
                 currentUser,
                 request.templateKey,
             )
-        return ResponseEntity.status(HttpStatus.CREATED).body(campaign.toResponse(raisedMinor = 0))
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+            campaign.toResponse(
+                raisedMinor = 0,
+                permissions = campaignService.permissionsFor(campaign, currentUser),
+            ),
+        )
     }
 
     @GetMapping("/{campaignId}")
@@ -71,7 +83,10 @@ class CampaignController(
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): CampaignResponse {
         val campaign = campaignService.get(organizationId, campaignId, currentUser)
-        return campaign.toResponse(contributionService.getConfirmedTotal(campaign.id))
+        return campaign.toResponse(
+            contributionService.getConfirmedTotal(campaign.id),
+            campaignService.permissionsFor(campaign, currentUser),
+        )
     }
 
     @PatchMapping("/{campaignId}")
@@ -90,11 +105,17 @@ class CampaignController(
                 request.goalAmountMinor,
                 request.startDate,
                 request.endDate,
+                request.eventLocationName,
+                request.eventAddress,
                 currentUser,
             )
-        return campaign.toResponse(contributionService.getConfirmedTotal(campaign.id))
+        return campaign.toResponse(
+            contributionService.getConfirmedTotal(campaign.id),
+            campaignService.permissionsFor(campaign, currentUser),
+        )
     }
 
+    /** Legacy route retained for existing web clients; now follows the approval policy. */
     @PostMapping("/{campaignId}/publish")
     fun publish(
         @PathVariable organizationId: UUID,
@@ -102,7 +123,50 @@ class CampaignController(
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): CampaignResponse {
         val campaign = campaignService.publish(organizationId, campaignId, currentUser)
-        return campaign.toResponse(contributionService.getConfirmedTotal(campaign.id))
+        return campaign.toResponse(
+            contributionService.getConfirmedTotal(campaign.id),
+            campaignService.permissionsFor(campaign, currentUser),
+        )
+    }
+
+    /** Preferred web/mobile route: activates immediately or moves to PENDING_APPROVAL. */
+    @PostMapping("/{campaignId}/request-activation")
+    fun requestActivation(
+        @PathVariable organizationId: UUID,
+        @PathVariable campaignId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): CampaignResponse {
+        val campaign = campaignService.requestActivation(organizationId, campaignId, currentUser)
+        return campaign.toResponse(
+            contributionService.getConfirmedTotal(campaign.id),
+            campaignService.permissionsFor(campaign, currentUser),
+        )
+    }
+
+    @PostMapping("/{campaignId}/approve")
+    fun approve(
+        @PathVariable organizationId: UUID,
+        @PathVariable campaignId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): CampaignResponse {
+        val campaign = campaignService.approve(organizationId, campaignId, currentUser)
+        return campaign.toResponse(
+            contributionService.getConfirmedTotal(campaign.id),
+            campaignService.permissionsFor(campaign, currentUser),
+        )
+    }
+
+    @PostMapping("/{campaignId}/reject-approval")
+    fun rejectApproval(
+        @PathVariable organizationId: UUID,
+        @PathVariable campaignId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): CampaignResponse {
+        val campaign = campaignService.rejectApproval(organizationId, campaignId, currentUser)
+        return campaign.toResponse(
+            contributionService.getConfirmedTotal(campaign.id),
+            campaignService.permissionsFor(campaign, currentUser),
+        )
     }
 
     @PatchMapping("/{campaignId}/status")
@@ -113,7 +177,10 @@ class CampaignController(
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): CampaignResponse {
         val campaign = campaignService.updateStatus(organizationId, campaignId, request.status, currentUser)
-        return campaign.toResponse(contributionService.getConfirmedTotal(campaign.id))
+        return campaign.toResponse(
+            contributionService.getConfirmedTotal(campaign.id),
+            campaignService.permissionsFor(campaign, currentUser),
+        )
     }
 
     @GetMapping("/{campaignId}/contributions")

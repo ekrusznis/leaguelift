@@ -102,7 +102,8 @@ class BoxPoolService(
 
     /** Public — the pool plus every box, including claimant *names* (never emails) for already-claimed/reserved boxes, so a visitor sees which squares are taken by whom. */
     fun getPublic(campaignSlug: String): Pair<BoxPool, List<BoxPoolBox>> {
-        val campaign = campaignRepository.findBySlug(campaignSlug) ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
+        val campaign =
+            campaignRepository.findBySlug(campaignSlug) ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
         val pool =
             boxPoolRepository.findByCampaignId(campaign.id)
                 ?: throw NotFoundException("BOX_POOL_NOT_FOUND", "This campaign has no box pool.")
@@ -138,7 +139,8 @@ class BoxPoolService(
         successUrl: String,
         cancelUrl: String,
     ): ContributionCheckout {
-        val campaign = campaignRepository.findBySlug(campaignSlug) ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
+        val campaign =
+            campaignRepository.findBySlug(campaignSlug) ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
         val pool =
             boxPoolRepository.findByCampaignId(campaign.id)
                 ?: throw NotFoundException("BOX_POOL_NOT_FOUND", "This campaign has no box pool.")
@@ -155,7 +157,14 @@ class BoxPoolService(
                 successUrl,
                 cancelUrl,
             )
-        val reserved = boxPoolBoxRepository.reserve(box.id, claimantName, claimantEmail, checkout.contributionId, Instant.now().plus(BOX_RESERVATION_WINDOW))
+        val reserved =
+            boxPoolBoxRepository.reserve(
+                box.id,
+                claimantName,
+                claimantEmail,
+                checkout.contributionId,
+                Instant.now().plus(BOX_RESERVATION_WINDOW),
+            )
         if (reserved == 0) {
             throw ConflictException("BOX_NOT_AVAILABLE", "This box has already been claimed.")
         }

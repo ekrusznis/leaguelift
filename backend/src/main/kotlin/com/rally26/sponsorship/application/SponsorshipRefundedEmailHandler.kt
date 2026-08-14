@@ -42,7 +42,8 @@ class SponsorshipRefundedEmailHandler(
                             variables =
                                 mapOf(
                                     "RECEIPT_TITLE" to "Sponsorship refunded",
-                                    "RECEIPT_DATA" to "Package: ${payload.packageName}\nAmount: $amount\nDate: ${payload.refundedAt}\nSponsor: ${payload.sponsorName}",
+                                    "RECEIPT_DATA" to
+                                        "Package: ${payload.packageName}\nAmount: $amount\nDate: ${payload.refundedAt}\nSponsor: ${payload.sponsorName}",
                                     "ORDER_URL" to orderUrl,
                                 ),
                         )

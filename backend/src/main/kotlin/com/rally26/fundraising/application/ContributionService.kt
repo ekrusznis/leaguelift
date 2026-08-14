@@ -154,7 +154,13 @@ class ContributionService(
         if (updated > 0) {
             auditService.record(null, contribution.organizationId, "contribution.confirmed", "contribution", contribution.id)
             ledgerService.recordConfirmedContribution(contribution.copy(status = ContributionStatus.CONFIRMED))
-            ledgerService.recordStripeProcessingFee(contribution.organizationId, LedgerSourceType.CONTRIBUTION, contribution.id, contribution.currency, stripePaymentIntentId)
+            ledgerService.recordStripeProcessingFee(
+                contribution.organizationId,
+                LedgerSourceType.CONTRIBUTION,
+                contribution.id,
+                contribution.currency,
+                stripePaymentIntentId,
+            )
             if (contribution.attributedHouseholdId != null) {
                 familyCreditService.grantForContribution(
                     contribution.organizationId,

@@ -26,7 +26,8 @@ class DisputeResolvedEmailHandler(
         val payload = objectMapper.readValue(event.payload, DisputeNotificationPayload::class.java)
         val amount = NumberFormat.getCurrencyInstance(Locale.US).format(payload.amountMinor / 100.0)
         val won = payload.outcome == "won"
-        val actionUrl = event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/disputes" } ?: frontendProperties.baseUrl
+        val actionUrl =
+            event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/disputes" } ?: frontendProperties.baseUrl
         payload.ownerEmails.forEach { email ->
             emailProvider.send(
                 EmailMessage(

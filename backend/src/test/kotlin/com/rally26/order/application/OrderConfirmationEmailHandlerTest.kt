@@ -26,7 +26,10 @@ class OrderConfirmationEmailHandlerTest {
     @Test
     fun `sends a confirmation email built from the payload`() {
         val now = Instant.now()
-        val payload = objectMapper.writeValueAsString(OrderConfirmedPayload("supporter@example.test", "Jane Doe", 5_000L, "USD", "spring-store", now.toString()))
+        val payload =
+            objectMapper.writeValueAsString(
+                OrderConfirmedPayload("supporter@example.test", "Jane Doe", 5_000L, "USD", "spring-store", now.toString()),
+            )
         val event =
             OutboxEvent(
                 id = UUID.randomUUID(),

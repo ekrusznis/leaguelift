@@ -1224,7 +1224,8 @@ class EventServiceTest {
             )
         } returns 1
         every { eventRepository.clearPendingSourceUpdate(event.id, orgId) } returns 1
-        every { auditService.record(currentUser.userId, orgId, "event.updated_from_source", "event", event.id, metadataJson = any()) } just runs
+        every { auditService.record(currentUser.userId, orgId, "event.updated_from_source", "event", event.id, metadataJson = any()) } just
+            runs
         every { teamRepository.findById(teamId, orgId) } returns team()
         every { householdRepository.findActiveForTeam(teamId, orgId) } returns emptyList()
         every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs

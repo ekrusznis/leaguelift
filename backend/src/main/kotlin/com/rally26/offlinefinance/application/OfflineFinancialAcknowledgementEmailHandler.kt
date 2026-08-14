@@ -58,7 +58,11 @@ class OfflineFinancialAcknowledgementEmailHandler(
                                 mapOf(
                                     "RECEIPT_TITLE" to "Offline payment recorded",
                                     "RECEIPT_DATA" to
-                                        "For: ${payload.displayLabel}\nAmount: $amount\nReceived: $received via ${payload.paymentMethod.lowercase().replace('_', ' ')}$referenceLine\nRecorded: ${payload.verifiedAt}",
+                                        "For: ${payload.displayLabel}\nAmount: $amount\n" +
+                                        "Received: $received via ${payload.paymentMethod.lowercase().replace(
+                                            '_',
+                                            ' ',
+                                        )}$referenceLine\nRecorded: ${payload.verifiedAt}",
                                     "ORDER_URL" to orderUrl,
                                 ),
                         )

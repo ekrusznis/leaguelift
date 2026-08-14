@@ -41,7 +41,8 @@ class OrderConfirmationEmailHandler(
                             variables =
                                 mapOf(
                                     "RECEIPT_TITLE" to "Order confirmed",
-                                    "RECEIPT_DATA" to "Amount: $amount\nDate: ${payload.confirmedAt}\nSupporter: ${payload.supporterName ?: payload.supporterEmail}",
+                                    "RECEIPT_DATA" to
+                                        "Amount: $amount\nDate: ${payload.confirmedAt}\nSupporter: ${payload.supporterName ?: payload.supporterEmail}",
                                     "ORDER_URL" to orderUrl,
                                 ),
                         )

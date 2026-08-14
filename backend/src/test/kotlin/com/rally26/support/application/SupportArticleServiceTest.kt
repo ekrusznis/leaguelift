@@ -91,7 +91,10 @@ class SupportArticleServiceTest {
     @Test
     fun `getPublic resolves an attachment placeholder into a signed URL`() {
         val attachmentId = UUID.randomUUID()
-        val withAttachment = article(SupportAudience.PUBLIC).copy(bodyMarkdown = "See the diagram: ![Setup diagram](attachment:$attachmentId)")
+        val withAttachment =
+            article(
+                SupportAudience.PUBLIC,
+            ).copy(bodyMarkdown = "See the diagram: ![Setup diagram](attachment:$attachmentId)")
         every { repository.findPublishedBySlug("getting-started", setOf(SupportAudience.PUBLIC)) } returns withAttachment
         val assignment =
             MediaAssignment(

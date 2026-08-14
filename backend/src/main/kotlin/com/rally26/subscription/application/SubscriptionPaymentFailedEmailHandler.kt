@@ -27,7 +27,8 @@ class SubscriptionPaymentFailedEmailHandler(
 
     override fun handle(event: OutboxEvent) {
         val payload = objectMapper.readValue(event.payload, OrganizationBillingLifecyclePayload::class.java)
-        val actionUrl = event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/billing" } ?: frontendProperties.baseUrl
+        val actionUrl =
+            event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/billing" } ?: frontendProperties.baseUrl
         payload.ownerEmails.forEach { email ->
             emailProvider.send(
                 EmailMessage(
@@ -45,7 +46,8 @@ class SubscriptionPaymentFailedEmailHandler(
                                 variables =
                                     mapOf(
                                         "NOTIFICATION_TITLE" to "Payment issue with your subscription",
-                                        "NOTIFICATION_DETAILS" to "We couldn't process the latest subscription payment for ${payload.organizationName}. Access continues while you resolve this — please update your payment method soon.",
+                                        "NOTIFICATION_DETAILS" to
+                                            "We couldn't process the latest subscription payment for ${payload.organizationName}. Access continues while you resolve this — please update your payment method soon.",
                                         "ACTION_URL" to actionUrl,
                                     ),
                             )

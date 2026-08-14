@@ -85,8 +85,14 @@ class TeamSnapAuthorizationAdapter : IntegrationAuthorizationAdapter {
                     .post()
                     .uri(request.tokenUri)
                     .header(HttpHeaders.CONTENT_TYPE, "application/json")
-                    .body(TeamSnapTokenExchangeRequest(clientId = request.clientId, clientSecret = request.clientSecret, code = request.code, redirectUri = request.redirectUri))
-                    .retrieve()
+                    .body(
+                        TeamSnapTokenExchangeRequest(
+                            clientId = request.clientId,
+                            clientSecret = request.clientSecret,
+                            code = request.code,
+                            redirectUri = request.redirectUri,
+                        ),
+                    ).retrieve()
                     .body(TeamSnapTokenResponse::class.java)
             } catch (ex: RestClientException) {
                 log.warn("TeamSnap token exchange failed: {}", ex.message)
@@ -100,7 +106,12 @@ class TeamSnapAuthorizationAdapter : IntegrationAuthorizationAdapter {
         return ProviderTokenSet(
             accessToken = accessToken,
             refreshToken = response.refreshToken,
-            expiresAt = response.expiresIn?.let { java.time.Instant.now().plusSeconds(it) },
+            expiresAt =
+                response.expiresIn?.let {
+                    java.time.Instant
+                        .now()
+                        .plusSeconds(it)
+                },
             grantedScopes = request.requestedScopes,
             externalAccountId = null,
             externalAccountName = null,
@@ -117,8 +128,13 @@ class TeamSnapAuthorizationAdapter : IntegrationAuthorizationAdapter {
                     .post()
                     .uri(request.tokenUri)
                     .header(HttpHeaders.CONTENT_TYPE, "application/json")
-                    .body(TeamSnapRefreshRequest(clientId = request.clientId, clientSecret = request.clientSecret, refreshToken = request.refreshToken))
-                    .retrieve()
+                    .body(
+                        TeamSnapRefreshRequest(
+                            clientId = request.clientId,
+                            clientSecret = request.clientSecret,
+                            refreshToken = request.refreshToken,
+                        ),
+                    ).retrieve()
                     .body(TeamSnapTokenResponse::class.java)
             } catch (ex: RestClientException) {
                 log.warn("TeamSnap token refresh failed: {}", ex.message)
@@ -132,7 +148,12 @@ class TeamSnapAuthorizationAdapter : IntegrationAuthorizationAdapter {
         return ProviderTokenSet(
             accessToken = accessToken,
             refreshToken = response.refreshToken ?: request.refreshToken,
-            expiresAt = response.expiresIn?.let { java.time.Instant.now().plusSeconds(it) },
+            expiresAt =
+                response.expiresIn?.let {
+                    java.time.Instant
+                        .now()
+                        .plusSeconds(it)
+                },
             grantedScopes = request.currentScopes,
             externalAccountId = null,
             externalAccountName = null,

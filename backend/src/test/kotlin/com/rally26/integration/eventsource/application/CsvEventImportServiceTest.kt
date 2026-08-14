@@ -38,7 +38,8 @@ class CsvEventImportServiceTest {
     private val authorizationService = mockk<AuthorizationService>()
     private val membershipService = mockk<MembershipService>()
     private val auditService = mockk<AuditService>()
-    private val service = CsvEventImportService(eventRepository, teamRepository, authorizationService, membershipService, auditService, ObjectMapper())
+    private val service =
+        CsvEventImportService(eventRepository, teamRepository, authorizationService, membershipService, auditService, ObjectMapper())
 
     private val orgId = UUID.randomUUID()
     private val teamId = UUID.randomUUID()
@@ -243,8 +244,27 @@ class CsvEventImportServiceTest {
         verify(exactly = 1) { eventRepository.stagePendingSourceUpdate(existing.id, orgId, any(), any()) }
         verify(exactly = 0) {
             eventRepository.update(
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
             )
         }
     }

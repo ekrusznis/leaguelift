@@ -19,7 +19,12 @@ object StripeTaxSupport {
         builder: SessionCreateParams.Builder,
         collectBillingAddress: Boolean,
     ): SessionCreateParams.Builder {
-        builder.setAutomaticTax(SessionCreateParams.AutomaticTax.builder().setEnabled(true).build())
+        builder.setAutomaticTax(
+            SessionCreateParams.AutomaticTax
+                .builder()
+                .setEnabled(true)
+                .build(),
+        )
         if (collectBillingAddress) {
             builder.setBillingAddressCollection(SessionCreateParams.BillingAddressCollection.REQUIRED)
         }

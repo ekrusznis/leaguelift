@@ -64,7 +64,8 @@ class SponsorshipRenewalReminderHandler(
                             variables =
                                 mapOf(
                                     "NOTIFICATION_TITLE" to "Your sponsorship of $packageName is ending soon",
-                                    "NOTIFICATION_DETAILS" to "Your sponsorship placement for \"$packageName\" is scheduled to end on $placementEndDate. Reach out to the organization if you'd like to renew.",
+                                    "NOTIFICATION_DETAILS" to
+                                        "Your sponsorship placement for \"$packageName\" is scheduled to end on $placementEndDate. Reach out to the organization if you'd like to renew.",
                                     "ACTION_URL" to actionUrl,
                                 ),
                         )

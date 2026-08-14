@@ -53,12 +53,13 @@ class StripeCheckoutClient(
                                 .setCurrency(currency.lowercase())
                                 .setUnitAmount(amountMinor)
                                 .setProductData(
-                                    StripeTaxSupport.applyTaxCode(
-                                        SessionCreateParams.LineItem.PriceData.ProductData
-                                            .builder()
-                                            .setName("Contribution to $campaignName"),
-                                        stripeTaxProperties.contributionTaxCode,
-                                    ).build(),
+                                    StripeTaxSupport
+                                        .applyTaxCode(
+                                            SessionCreateParams.LineItem.PriceData.ProductData
+                                                .builder()
+                                                .setName("Contribution to $campaignName"),
+                                            stripeTaxProperties.contributionTaxCode,
+                                        ).build(),
                                 ).build(),
                         ).build(),
                 )

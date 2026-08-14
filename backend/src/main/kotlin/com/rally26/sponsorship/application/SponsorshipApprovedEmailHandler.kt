@@ -40,7 +40,8 @@ class SponsorshipApprovedEmailHandler(
                             variables =
                                 mapOf(
                                     "NOTIFICATION_TITLE" to "Your sponsorship is now live",
-                                    "NOTIFICATION_DETAILS" to "Your sponsorship of \"${payload.packageName}\" has been approved and is now visible on the organization's public sponsor directory. Thank you for your support.",
+                                    "NOTIFICATION_DETAILS" to
+                                        "Your sponsorship of \"${payload.packageName}\" has been approved and is now visible on the organization's public sponsor directory. Thank you for your support.",
                                     "ACTION_URL" to actionUrl,
                                 ),
                         )

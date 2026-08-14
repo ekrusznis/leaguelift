@@ -41,7 +41,8 @@ class ContributionThankYouEmailHandler(
                             variables =
                                 mapOf(
                                     "RECEIPT_TITLE" to "Thank you for your contribution",
-                                    "RECEIPT_DATA" to "Campaign: ${payload.campaignName}\nAmount: $amount\nDate: ${payload.confirmedAt}\nSupporter: ${payload.supporterName ?: payload.supporterEmail}",
+                                    "RECEIPT_DATA" to
+                                        "Campaign: ${payload.campaignName}\nAmount: $amount\nDate: ${payload.confirmedAt}\nSupporter: ${payload.supporterName ?: payload.supporterEmail}",
                                     "ORDER_URL" to orderUrl,
                                 ),
                         )

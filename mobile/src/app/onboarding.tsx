@@ -1,24 +1,21 @@
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
-  Dimensions,
   FlatList,
   Image,
   Pressable,
   StyleSheet,
   View,
+  useWindowDimensions,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
   type ImageSourcePropType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { Button } from '@/components/button';
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Spacing } from '@/constants/theme';
 import { useOnboarding } from '@/lib/onboarding';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface Slide {
   image: ImageSourcePropType;
@@ -35,6 +32,11 @@ interface Slide {
  * 37.13) — `resizeMode="cover"` always center-crops in React Native's built-in Image
  * component (no `object-position` equivalent), which was clipping the top of those
  * two illustrations; slide 1's framing already reads correctly centered.
+ *
+ * The hero frame is sized from the live window height rather than a fixed percentage
+ * of the remaining FlatList area. This keeps the illustration and copy visually grouped
+ * on phones while capping the artwork on tablets/foldables so it does not push the copy
+ * too far down the screen.
  */
 const SLIDES: Slide[] = [
   {
@@ -60,6 +62,11 @@ export default function OnboardingScreen() {
   const [index, setIndex] = useState(0);
   const listRef = useRef<FlatList<Slide>>(null);
   const { markSeen } = useOnboarding();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
+  // Pull the artwork closer to the copy on tall phones while keeping a useful minimum
+  // on compact devices and preventing oversized hero art on tablets/foldables.
+  const imageFrameHeight = Math.min(Math.max(screenHeight * 0.36, 250), 400);
 
   async function finish() {
     await markSeen();
@@ -75,12 +82,11 @@ export default function OnboardingScreen() {
   }
 
   function onScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
     if (nextIndex !== index) setIndex(nextIndex);
   }
 
   const isLast = index === SLIDES.length - 1;
-
   return (
     <View style={styles.container}>
       <FlatList
@@ -91,9 +97,10 @@ export default function OnboardingScreen() {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={onScroll}
+        getItemLayout={(_, itemIndex) => ({ length: screenWidth, offset: screenWidth * itemIndex, index: itemIndex })}
         renderItem={({ item }) => (
-          <View style={[styles.slide, { width: SCREEN_WIDTH }]}>
-            <View style={styles.slideImageFrame}>
+          <View style={[styles.slide, { width: screenWidth }]}>
+            <View style={[styles.slideImageFrame, { height: imageFrameHeight }]}>
               <Image
                 source={item.image}
                 resizeMode="cover"
@@ -111,7 +118,6 @@ export default function OnboardingScreen() {
           </View>
         )}
       />
-
       <SafeAreaView style={styles.footer} edges={['bottom']}>
         <View style={styles.dots}>
           {SLIDES.map((slide, i) => (
@@ -120,7 +126,6 @@ export default function OnboardingScreen() {
         </View>
 
         <Button onPress={next}>{isLast ? 'Get Started' : 'Next'}</Button>
-
         {!isLast && (
           <Pressable onPress={finish} style={styles.skip}>
             <ThemedText themeColor="textSecondary">Skip</ThemedText>
@@ -141,7 +146,6 @@ const styles = StyleSheet.create({
   },
   slideImageFrame: {
     width: '100%',
-    height: '55%',
     overflow: 'hidden',
   },
   slideImage: {
@@ -159,7 +163,7 @@ const styles = StyleSheet.create({
   slideTextWrap: {
     flex: 1,
     paddingHorizontal: Spacing.five,
-    paddingTop: Spacing.five,
+    paddingTop: Spacing.three,
   },
   slideTitle: {
     textAlign: 'center',

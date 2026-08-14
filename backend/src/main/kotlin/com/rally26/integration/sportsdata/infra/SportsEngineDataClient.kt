@@ -96,8 +96,7 @@ class SportsEngineDataClient {
         return records
     }
 
-    private fun mapOfNotNullValues(vararg pairs: Pair<String, String?>): Map<String, String?> =
-        pairs.filter { it.second != null }.toMap()
+    private fun mapOfNotNullValues(vararg pairs: Pair<String, String?>): Map<String, String?> = pairs.filter { it.second != null }.toMap()
 
     private companion object {
         // Relay-style connections, near-universal id/name fields only — see class doc for why
