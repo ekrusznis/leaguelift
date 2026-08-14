@@ -1,6 +1,6 @@
 # Rally26 full-site UX/sales review
 
-**Status:** In progress (inventory built 2026-08-13; expanded with real per-feature filter/list/action detail 2026-08-13; mobile app coverage added 2026-08-13; heuristic product/UX review + build-health validation added 2026-08-13; live browser/device walkthrough still pending — full web parity required, QuickBooks the sole exception)
+**Status:** In progress (inventory built 2026-08-13; expanded with real per-feature filter/list/action detail 2026-08-13; mobile app coverage added 2026-08-13; heuristic product/UX review + build-health validation added 2026-08-13; **delta re-review completed 2026-08-14 to retire stale findings after the search/sort/filter/mobile-parity push**; live browser/device walkthrough still pending — full web parity required, QuickBooks the sole exception)
 **Requested by:** Founder, after the Stripe-fee/reorder/sync-redesign/household-media/Help-Center batch
 **Deliverable shape:** This document. A page/flow inventory walked in-browser, top to bottom, by a reviewer acting as a sales-and-UX engineer — not a code reviewer. Every page row below now carries the *real, currently-built* filters/sort/bulk-actions/columns/empty-state for that page (gathered by reading the actual components, not guessed), so a reviewer checks the page against its own real behavior, not a blind wishlist. Findings get logged inline in the **Notes** column as they're found; this doc is not necessarily fixed inline during the pass itself (fixes get scoped and prioritized afterward).
 
@@ -8,18 +8,44 @@
 
 The product has real depth now — payments, fundraising, Swag Shop, sponsorships, eligibility/waivers, a platform admin console, a mobile app — built incrementally across many phases, each correct in isolation. This pass checks whether it *feels* like one cohesive product: consistent placement, clear actions, plain language, working links, and a UI that doesn't feel like it was assembled feature-by-feature.
 
+## Delta re-review (2026-08-14)
+
+This refresh specifically re-checked the places that had aged fastest since the 2026-08-13 inventory, especially the old cross-cutting list-control findings and the mobile parity notes. The big takeaway: **several of the sharpest “operational UX” gaps are no longer current and should be struck from the active punch list.**
+
+### Can now be struck / retired from the active punch list
+
+1. **Web/mobile build-health blockers are no longer current.** The fundraising regressions that made the last pass unsafe to browse were fixed; the 2026-08-13 stability section is now historical context, not the current state.
+2. **“No search almost anywhere” is no longer true.** Teams, Households, Fee Templates, Collections, Events, Campaigns, Contributions, Orders, Team Roster, and the new Organization Members roster all now have real list controls.
+3. **“No sort anywhere except Audit History” is no longer true.** Sort controls now exist across multiple owner/operator-heavy surfaces.
+4. **Platform Admin zero-result blank states were fixed.** Help Articles and Support Cases now both render real empty states instead of a blank void.
+5. **The “no active-members roster” gap is resolved.** `InvitationsPanel` now embeds `OrganizationMembersPanel`, giving organizations a real active-member/staff roster with role changes and disable-access actions.
+6. **Several mobile parity blockers are no longer current.** Help Center, support request submission, Action Center, owner-side Documents, guardian messaging-safety controls, and mobile event create/edit now exist.
+
+### Still remaining
+
+1. **List controls are still uneven, just no longer absent.** Tournaments remain the clearest holdout, and several older owner-facing panels (Sponsorship packages, Organization Documents, Eligibility requirements, Disputes, Adults/Participants, household Fee Assignments) still lag behind the newer toolbar/search/pagination pattern.
+2. **Bulk actions are still unusually rare.** Household media public-release and message recipient selection remain the only real multi-select/bulk patterns found in product code.
+3. **Mobile parity is much better, but not complete.** Household media, family credit application/transfer, org profile / credit-settings edit, and owner team/tournament create-edit-archive still appear missing.
+4. **Documentation drift is now its own trust risk.** `mobile/README.md` and parts of this document had already fallen behind the shipped app (for example, they still described Action Center / Help / owner Documents as missing after those screens landed).
+
+### New / newly clearer follow-ups
+
+1. **The new list-toolbar pattern needs consistency review, not invention.** The work now exists; the next question is whether placeholder text, filter naming, sort defaults, result counts, and empty states feel uniform enough across Teams, Households, Fees, Collections, Fundraising, Orders, Events, and Members.
+2. **The owner/member-management story should now be reviewed as a whole flow.** There is finally a real active-members roster; the next pass should verify whether the split between “Active members & staff” and “Pending invitations” reads naturally in-browser.
+3. **Mobile parity notes now need a real code-read, not just README-based assumptions.** This refresh already corrected several stale assumptions from the earlier mobile section.
+
 ## Cross-cutting findings from the inventory pass (2026-08-13, before any live browsing)
 
 These emerged independently, by the same pattern, across every feature domain researched — not isolated to one page. Worth the founder's attention as product-level decisions, not per-page nitpicks.
 
-1. **No free-text search box exists almost anywhere in the app.** Confirmed absent on: fee templates, collections, orders, campaigns/contributions, sponsorship packages, disputes, households, teams, tournaments, eligibility requirements, organization documents, correction reviews, offline financial records, financial corrections, reconciliation. The only pages with real text search are the **Platform Admin console** (organizations/users/duplicates/swag-shop/payments/roster/help-articles/support-cases all have one) and **Audit History** (personal + platform). Every organization/household-facing list is filter-dropdown-at-best or entirely unfiltered. Worth an explicit product decision: is this acceptable at pilot scale (few dozen rows per org) with search added later, or is it a real gap today?
+1. **The app is no longer “searchless,” but list-control maturity is still uneven.** Real free-text search now exists on Teams, Households, Fee Templates, Collections, Events, Campaigns, Contributions, Orders, Team Roster, Organization Members, plus the Platform Admin console and Audit History. The remaining gap is now **consistency**, not total absence: Tournaments, Sponsorship packages, Disputes, Organization Documents, Eligibility requirements, Adults/Participants, and several financial-ops panels still lack the same control surface.
 2. **No bulk-select/bulk-action UI exists anywhere except two places**: the household media "Release publicly" multi-select (Track 5, this session), and the multi-recipient picker when starting a family conversation in Messages. Every other action (waive, cancel, verify, approve, reject, archive, publish, refund) is single-row only, everywhere in the app.
-3. **No sort control exists anywhere except Audit History** (Date/Action/Result × Ascending/Descending) — every other list renders in whatever order the API returns, with no user control.
-4. **Pagination is inconsistent and often invisible.** Several lists hardcode a large page size (e.g. Collections at 100, Help Articles/Support Cases at 100) with no visible pager despite the underlying API being paginated (`totalElements` exists in the response shape); most other lists just render `data.items` directly with no pagination concept surfaced in the UI at all. Worth checking whether any real organization's data volume would actually exceed these hardcoded sizes.
+3. **Sort controls now exist on several high-value operational lists, but not everywhere.** Teams, Households, Fee Templates, Collections, Events, Campaigns, Contributions, Orders, Team Roster, Organization Members, and Audit History all expose sorting now. The remaining issue is again uneven adoption across older panels.
+4. **Pagination is improving and is no longer mostly invisible, but it is still inconsistent.** The newer search-driven lists now tend to pair `ListToolbar` with visible `Pagination`, while some older screens still render `data.items` directly or keep fixed-size admin lists with no visible pager.
 5. **Money formatting is inconsistent under the hood** — ad hoc per-file `formatAmount`/`formatMoney`/`humanize` helpers alongside a shared `formatMoneyMinorUnits`, rather than one component everywhere. Not user-visible as a bug unless two pages actually render the same amount differently; worth a quick cross-check.
 6. **Dead code found**: `frontend/src/features/reporting/PlatformOrganizationsPage.tsx` is a second, simpler "Organizations" table that is **not wired into `AppRoutes.tsx`** — superseded by `frontend/src/features/platformAdmin/PlatformOrganizationsPage.tsx`. Not a UX issue (nothing renders it), but worth deleting rather than leaving as confusing dead code.
-7. **Missing empty-state messaging found on two platform-admin pages**: `PlatformHelpArticlesPage` and `PlatformSupportCasesPage` render nothing (not even a "no results" message) when a search/filter returns zero rows — every other list in the app has real empty-state copy.
-8. **A real gap, not just unreviewed**: there is no page listing an organization's *already-active* staff members with their roles and a remove action — "Members & Invitations" (`InvitationsPanel`) only manages pending invitations; existing member/role changes only happen through the separate, per-team/tournament `RoleAssignmentsPanel`, with no single roster view.
+7. **This is resolved:** `PlatformHelpArticlesPage` and `PlatformSupportCasesPage` now render explicit zero-result empty states.
+8. **This is resolved:** there is now a real active-member roster via `OrganizationMembersPanel`, embedded above pending invitations in `InvitationsPanel`.
 
 ## Heuristic review summary (docs + code + validation pass, 2026-08-13)
 
@@ -51,57 +77,49 @@ This section is **not** a substitute for the live browser/device walkthrough bel
 
 These are important because they directly affect how credible the product feels during a top-to-bottom review.
 
-1. **Web app build health is currently red.** Running `frontend`'s existing checks produced:
-   - `npm run typecheck` → **failed** (26 TypeScript errors)
-   - `npm run test` → **3 failing tests**, all in `src/features/fundraising/__tests__/CampaignList.test.tsx`
-   - `npm run build` → **failed** (same TypeScript error set as typecheck)
+**2026-08-14 update:** this section is now a historical snapshot. The fundraising regression set called out below has since been fixed and should not remain on the active UX blocker list.
+
+1. **Web app build health was red in the 2026-08-13 snapshot, but is no longer the current blocker.** At that time, `npm run typecheck`, `npm run test`, and `npm run build` all failed around the fundraising slice.
 2. **The breakage centers on fundraising-related work plus a few unrelated regressions.** Concrete examples from the failing checks:
    - `src/features/fundraising/fundraising/CampaignList.tsx` has unresolved imports / typing issues.
    - `src/pages/OrganizationDetailPage.tsx` passes a `canManage` prop that no longer matches `CampaignList`'s current prop contract.
    - `src/dashboard/roles/PlatformAdminDashboard.tsx` has a `Link` wrapper typing bug.
    - `src/test/setup.ts` is stale versus the current DOM lib (`IntersectionObserver.scrollMargin`).
-3. **Mobile app build health is also currently red.** Running `mobile`'s existing checks produced:
-   - `npm run typecheck` → **failed** (22 TypeScript errors)
-   - `npm run lint` → **failed** (4 import-resolution errors, same fundraising slice)
+3. **Mobile app build health was also red in the 2026-08-13 snapshot, but is no longer the current blocker.** At that time, `npm run typecheck` and `npm run lint` both failed around newly-added fundraising screens/routes.
 4. **The mobile breakage is concentrated in newly-added fundraising screens/routes.** Concrete examples from the failing checks:
    - `src/app/fundraising.tsx`, `src/app/fundraising-detail.tsx`, `src/app/fundraising-form.tsx`, and `src/app/fundraising-game.tsx` reference unresolved `@/features/fundraising/*` and `@/features/fundraisingGames/*` modules.
    - several `router.push`/`router.replace` calls target paths Expo Router does not currently recognize in the generated route typing.
-5. **Implication for UX review:** before judging polish, we should assume the fundraising experience is in active flux and may currently present real breakage if walked live.
+5. **Implication for UX review (updated):** the fundraising-specific build blockers should be struck from the active review checklist; the higher-value work now is validating whether the newly-added list controls and mobile screens actually feel cohesive in-browser/in-app.
 
 ## Initial UX punch list (before the live walk)
 
 ### P0 — blockers / trust-damaging issues
 
-1. **Restore green build health on both web and mobile before the formal full review.** A UI/UX pass is dramatically more useful when reviewers are not stepping through half-integrated fundraising work.
-2. **Remove or disable every "broken-but-clickable" mobile control.** The explicit known example is mobile Event Details' enabled Edit action that ends in a "not available yet" toast; the rule should be universal.
+1. **Keep web and mobile build health green while the live review happens.** The earlier fundraising regressions are resolved; the goal now is preventing another half-integrated slice from reintroducing noise into the UX pass.
+2. **Keep the “no broken-but-clickable mobile controls” rule active.** The old Event Details Edit example is no longer current, but the rule still matters product-wide: every mobile control should be disabled with context, open a working screen, or open a working WebView — never end in a placeholder toast.
 3. **Align public-facing status docs with the actual product.** `README.md` still says only Phases 0-2 are complete, while the application and `DESIGN-DOC.md` clearly contain much more. A reviewer/customer noticing that mismatch loses confidence fast.
 
 ### P1 — major UX improvements likely to pay off fastest
 
 1. **Add list ergonomics to owner/manager-heavy surfaces.** Search first, then sort, then selective bulk actions. Highest-value candidates from this inventory:
-   - Teams
    - Tournaments
-   - Households & Athletes
-   - Fee templates / collections / disputes
-   - Campaigns / contributions
+   - Adults / Participants / household fee assignments
+   - Disputes
    - Sponsorship packages / sponsors
    - Documents
    - Eligibility requirements
-2. **Create a single, clear active-members roster for organizations.** This is both a product gap and a UX gap; owners expect one place to answer "who currently has access here?"
+2. **Stress-test the new active-members roster for clarity.** The product gap is closed; the live pass should now verify whether role-editing, disable-access, and pending-invitation management feel like one coherent access-management surface.
 3. **Tighten the owner dashboard's action hierarchy.** It already has many cards plus multiple quick actions; confirm the one next-best action for a new owner is obvious rather than merely available.
-4. **Standardize empty/zero-result states across all admin lists.** Especially finish the Platform Admin pages already known to render a blank void for zero results.
+4. **Standardize empty/zero-result states across the newer toolbar pages.** The obvious Platform Admin blank-state bug is fixed; the next check is whether the new “No results found / Try changing your search or filters” pattern is consistent enough everywhere it now appears.
 5. **Audit terminology for consistency:** household vs family, owner vs administrator, organization vs club, fundraiser vs campaign, storefront vs Swag Shop.
 
 ### P2 — parity and flow quality
 
 1. **Close the mobile parity gaps that are now explicitly in-scope product work:**
    - Household media
-   - Help Center + support ticketing
-   - Action Center
-   - Owner documents
-   - Owner event create/edit
-   - SafeSport restriction management
    - family credit application / transfer where supported
+   - org profile / credit-settings edit
+   - owner team/tournament create/edit/archive
 2. **Review every WebView-embedded flow for "native-shell fit" rather than only functional parity.** Back behavior, auth handoff, keyboard handling, loading state, and post-Stripe return are as important as the underlying web page.
 3. **Reduce row-by-row fatigue in operational workflows.** The product has depth now; if every admin action remains a single-record action, larger organizations will feel friction sooner than they feel delight.
 
@@ -191,7 +209,7 @@ Use a **Status** value per row: `Not reviewed` (default) / `Clean` (checked, not
 | Tournament events | `/app/organizations/:organizationId/tournaments/:tournamentId/events` | Not reviewed | |
 | Participant events (athlete schedule) | `/app/organizations/:organizationId/participants/:participantId/events` | Not reviewed | |
 | Organization billing | `/app/organizations/:organizationId/billing` | Not reviewed | |
-| Collections | `/app/organizations/:organizationId/collections` | Not reviewed | Filters: Status select, "Overdue only" checkbox — no text search. No sort, no bulk. Real `<table>`: Household (link)/Participant/Description/Original/Paid/Adjusted/Balance/Due/Status. Only action: **Export CSV** (respects filters). Empty: "Nothing to collect." Flag: hardcoded `size: 100`, no visible pager. |
+| Collections | `/app/organizations/:organizationId/collections` | Not reviewed | `CollectionsPage`. Search: household / athlete / fee / template. Filters: Status select, "Overdue only" checkbox. Sort: Due date (asc/desc), Balance (asc/desc), Household, Fee name, Newest, Oldest. Real `<table>`: Household (link)/Participant/Description/Original/Paid/Adjusted/Balance/Due/Status. Action: **Export current results**. Empty: "Nothing to collect" / "No results found." Visible pagination now exists. |
 | Disputes | `/app/organizations/:organizationId/disputes` | Not reviewed | No filters/sort/bulk. Real `<table>`: Source (contribution/order/sponsorship/fee)/Amount/Reason/Opened/Evidence due/Status. Explicitly read-only — evidence handled in the Stripe Dashboard, not here. Empty: "No disputes." Flag: unlike every other financial list, no link back to the underlying source record from a dispute row. |
 | Swag Shop order flow | `/app/organizations/:organizationId/swag-shop/order` | Not reviewed | Buyer-facing checkout/reorder flow (distinct from the org-facing Orders management under the Swag Shop organization section, below). Include Reorder and the vendor-unavailable dialog (Track 2). |
 
@@ -204,11 +222,11 @@ Route shape: `/app/organizations/:organizationId/:section`
 | Overview | Not reviewed | |
 | Onboarding (checklist) | Not reviewed | |
 | Corrections | Not reviewed | `OrganizationCorrectionReviewPanel`. Filter: Status select (Pending default/Approved/Rejected/Withdrawn/All) — no text search, no sort, no bulk. Rows: target+field, current→requested value, reason, requester, timestamp, status. Per-row: Reject (disabled until note ≥3 chars), Approve (note optional) — both PENDING-only. Empty: "No matching correction requests." |
-| Teams | Not reviewed | `TeamList`. No filter/search/sort/bulk. Rows: name/sport/season/age group/gender/level. Per-row: Schedule, Roster, Branding (inline panel), Manage access, Timezone (inline editor), Colors (inline panel), Archive. Empty: "No teams yet." |
-| Tournaments | Not reviewed | `TournamentList`. No filter/search/sort/bulk. Rows: name/sport/date range/location. Per-row: Schedule, Branding, Manage access, Timezone, Archive — **no Roster action** (unlike Teams). Empty: "No tournaments yet." |
-| Households & Athletes | Not reviewed | `HouseholdList`. No filter/search/sort/bulk. Rows: display name + contact email (phone captured but not shown). Per-row: "View" link only. Empty: "No households yet." |
-| Fees & Payments | Not reviewed | `FeeTemplateList` (managers) or read-only `OrganizationReportsPanel` (report-only viewers). No filter/search/sort/bulk. Rows: template name, amount, description. Per-row: Archive (no confirm dialog). Empty: "No fee templates yet." Links out to Disputes and Collections. |
-| Fundraising | Not reviewed | `CampaignList` + nested `ContributionList`. No filter/search/sort/bulk on either. Campaign rows: name/status/raised-of-goal/slug; per-row View/Hide contributions, Send launch notice (ACTIVE), Publish (DRAFT). Contribution rows: supporter name (or Anonymous), offline/refunded badges, amount; per-row Preview refund (CONFIRMED + Stripe only). Empty: "No campaigns yet" / "No contributions yet." **2026-08-13 (Phase 42)**: now role-aware via `canManage` — Coach/Parent get read-only list + contributions + QR/share, no create/publish/box-pool-setup. Gained a template picker (Blank/Box Pool/Bake Sale/Car Wash) and a per-campaign QR-code button. Box-pool campaigns show `BoxPoolManagementPanel` (grid + setup form) inline, manager-only. **Not built yet**: the print-friendly branded flyer page for box pools (Slice 5's other half) — still queued. |
+| Teams | Not reviewed | `TeamList`. Search: name / sport / season / age group / level. Filters: Sport, Season, Gender, Status. Sort: Name A–Z / Z–A, Sport, Newest, Oldest. Visible pagination. Rows: name/sport/season/age group/gender/level/status. Per-row: Schedule, Roster, Branding (inline panel), Manage access, Timezone (inline editor), Colors (inline panel), Archive. Empty: "No teams yet" / "No results found." |
+| Tournaments | Not reviewed | `TournamentList`. **Still a holdout:** no filter/search/sort/bulk and no visible pagination despite sibling lists now having them. Rows: name/sport/date range/location. Per-row: Schedule, Branding, Manage access, Timezone, Archive — **no Roster action** (unlike Teams). Empty: "No tournaments yet." |
+| Households & Athletes | Not reviewed | `HouseholdList`. Search: household / parent email / athlete. Filters: Team, Status. Sort: Name A–Z / Z–A, Newest, Oldest. Visible pagination. Rows: display name + contact email + status (phone captured but not shown). Per-row: "View" link only. Empty: "No households yet" / "No results found." |
+| Fees & Payments | Not reviewed | `FeeTemplateList` (managers) or read-only `OrganizationReportsPanel` (report-only viewers). Search: template name or description. Filter: Status. Sort: Name A–Z / Z–A, Amount asc/desc, Newest, Oldest. Visible pagination. Rows: template name, amount, description. Per-row: Archive (no confirm dialog). Empty: "No fee templates yet" / "No results found." Links out to Disputes and Collections. |
+| Fundraising | Not reviewed | `CampaignList` + nested `ContributionList`. **Campaign list now has real controls:** search (name/description/venue/address), filters (Status/Type/Team), sort (Newest, Name, Start, End, Most raised, Largest goal), visible pagination. Campaign rows: name/status/raised-of-goal/date/location; per-row QR & share, Print flyer, Contributions, Edit, Submit for approval / Approve / Return / Close / Archive depending on permissions. Contributions now also have search (supporter/email), Status + payment-source filters, sort (Newest/Oldest/Amount/Supporter), and pagination. Empty: "No fundraisers yet" / "No contributions yet" / "No results found." Coach/Parent stay role-aware read-only here; box-pool management remains manager-only. |
 | Swag Shop | Not reviewed | `StoreList` (no filter/sort/bulk; rows: name/status/slug; actions: View/Activate/Manage products) → `OrderList` nested per store (no filter/sort/bulk; rows: supporter, payment-source badge, refunded badge, fulfillment status; actions: Manage fulfillment, Preview refund). Empty: "No confirmed orders yet." |
 | Financial operations | Not reviewed | Three stacked panels, none with text search: **Offline records** (filters: Verification status, Record type; per-row Verify; empty "No offline financial records"), **Corrections** (no filter; form-driven Preview→Confirm refund/reversal flow; empty "No financial corrections"), **Reconciliation** (no filter; "Run reconciliation" button; per-issue "Review record" link; empty "No reconciliation run yet" / "No exceptions found"). |
 | Sponsorships | Not reviewed | `SponsorshipPackageList`. No filter/search/sort/bulk on the package list. Rows: name/status/Exclusive/Sold out/price/confirmed-of-max. Per-row: Publish, Archive, Share (QR + link), Manage sponsors (nested panel: sponsor rows with review-status badge, per-row Edit contact/Preview refund) + org-wide "Review pending sponsorships" queue (Approve / Reject & refund via `window.confirm`). Empty: "No sponsorship packages yet." |
@@ -216,7 +234,7 @@ Route shape: `/app/organizations/:organizationId/:section`
 | Reports | Not reviewed | `OrganizationReportsPanel`. Filter: From/To date range only. No sort/bulk. 4 metric tiles + 4 breakdown tables (revenue by source/team, campaign performance, product performance). Only action: **Export revenue CSV**. Includes the new Stripe-fee-visibility metrics (Track 1) on the Platform side — confirm whether the org-facing report should surface any of this too. |
 | Documents | Not reviewed | `OrganizationDocumentsPanel`. No filter/search/sort/bulk (though "Send to every household" acts like a broadcast on upload). Rows: title (link) + file size. Per-row: Remove. Empty: "No documents yet." |
 | Eligibility | Not reviewed | `EligibilityRequirementList`. No filter/search/sort/bulk — list is implicitly ACTIVE-only (no way to view archived/expired requirements). Rows: title/version/mode/sport/season/team/effective date. Per-row: New version (inline form, publishes rather than overwrites), Archive. Empty: "No eligibility requirements yet." |
-| Members | Not reviewed | `InvitationsPanel` — **manages pending invitations only**, no filter/search/sort/bulk. Rows: invitee email + role. Per-row: Revoke (pending only). Empty: "No pending invitations." **Flag**: no page lists already-active members with a remove/role-change action (see cross-cutting finding #8) — existing-member role changes only happen per-team/tournament via `RoleAssignmentsPanel`. |
+| Members | Not reviewed | `InvitationsPanel` now starts with `OrganizationMembersPanel`, so this section is no longer pending-invitations-only. **Active members & staff**: search (name/email), filters (Role/Status), sort (Name/Role/Newest/Oldest), visible pagination; per-row role change + Disable access (non-owner active members only). **Pending invitations** remain below as a separate simple list with Send invitation / Revoke. |
 | Organization Integrations | Not reviewed | |
 | Settings | Not reviewed | |
 | Organization dashboard (Owner nav item) | Not reviewed | `OwnerDashboard.tsx`. Cards, none with their own filter/sort/bulk (all deep-link to the real filterable page): Organization Summary, Financial Overview (some fields flagged demo data), **Team Performance table** (Team/Sport, Participants, Fundraising progress, Status — no sort/filter), Upcoming Events, Recent Activity, Reports Snapshot, Quick Actions tiles. Header: Collections & Export / Invite Member / Create Team. |
@@ -283,8 +301,8 @@ Route shape: `/app/platform/:section`. This is the one persona where filtering i
 | Reports | `reports` | Not reviewed | Filter: From/To date range only. No sort/bulk. 10 metric tiles only, no tables/rows — includes the new Stripe-fee margin figures (Track 1). **Flag**: unlike the org-facing report, there is no CSV export here. No "no data" empty-state treatment for an all-zero period (falls back to a generic error/retry state on failure only). |
 | Audit | `audit` | Not reviewed | Thin wrapper around the same `AuditHistoryPage` as the personal Audit History above — same rich filter/sort set, plus platform-wide scope. |
 | Support Sessions | `support-sessions` | Not reviewed | Filter: Status select only (All/Active/Ended/Expired) — no text search. No sort/bulk. Columns: Employee/Organization (link)/Reason/Status/Started/Expires-ended. Empty: "No support sessions match this status." |
-| Help Articles (authoring) | `help-articles` | Not reviewed | **New this batch (Track 4)** — attachment picker (image/GIF/video/PDF), insert-embed flow, Markdown body editor. List: single free-text search (title/content), fixed page size 100, no visible category/audience filter. **Flag**: no empty-state message for zero search results (see cross-cutting finding #7). Actions: New article, Save draft, Publish, Archive. |
-| Support Cases | `support-cases` | Not reviewed | Text search + Status select, fixed page size 100. No sort/bulk. Card layout (not a table): category/subject/requester/org/description, then per-case editable Status/Priority/Assigned-to/Resolution note. Actions: Save case, Send email (one-way composer, no reply thread). **Flag**: no empty-state message for zero results (see cross-cutting finding #7). |
+| Help Articles (authoring) | `help-articles` | Not reviewed | **New this batch (Track 4)** — attachment picker (image/GIF/video/PDF), insert-embed flow, Markdown body editor. List: single free-text search (title/content), fixed page size 100, no visible category/audience filter. Zero-result state now exists ("No results found" / "No help articles yet"). Actions: New article, Save draft, Publish, Archive. |
+| Support Cases | `support-cases` | Not reviewed | Text search + Status select, fixed page size 100. No sort/bulk. Card layout (not a table): category/subject/requester/org/description, then per-case editable Status/Priority/Assigned-to/Resolution note. Actions: Save case, Send email (one-way composer, no reply thread). Zero-result state now exists ("No results found" / "No support cases yet"). |
 | Swag Shop (cross-org) | `swag-shop` | Not reviewed | Text search (product/store/org) + Status select. No sort/bulk. Columns: Organization/Team-Store/Product/Status/Variants/Logo ready. Per-row: "Open organization" only — explicitly read-only, status/delete changes must happen inside the org's own Swag Shop section. Empty: "No Swag Shop products match these filters." |
 | Payments (cross-org) | `payments` | Not reviewed | Refund/void actions. Text search (payer/org/team) + Type select + Status select + From/To date. No sort/bulk. Columns: Organization/Team/Type/Payer/Amount/Status/Date. Per-row: Refund/Void (label depends on type, `window.confirm` guard, requires active support session for that org) + "Open organization." Empty: "No payments match these filters." |
 | Athletes & Coaches (roster) | `roster` | Not reviewed | Table/card toggle. Person-type tabs (Athletes/Coaches) + text search + Eligibility status select (athletes only). No sort/bulk. Athlete columns: name+DOB/Organization/Household/Teams/Eligibility. Coach columns: name+email/Organization/Team/Role. Per-row: "Open organization" only, explicitly read-only. Empty: "No {athletes|coaches} match these filters." |
@@ -293,7 +311,7 @@ Route shape: `/app/platform/:section`. This is the one persona where filtering i
 
 **Parity requirement (founder decision, 2026-08-13): mobile must have all the same functionality as the website. QuickBooks connection is the only confirmed, permanent exception** — its own web-side OAuth core is inactive too, so there's nothing live to reach either way. Every other web feature is in scope for mobile, whether or not it's built yet. See [[rally26-mobile-full-parity-decision]] for the full resolution of prior gap analysis into required work.
 
-This section is built from existing, detailed mobile-build records ([[rally26-mobile-scaffold]], [[rally26-mobile-web-parity-gap-analysis]], [[rally26-mobile-qa-followups]]) plus `mobile/README.md`'s own Screens tables, not a fresh code read — flag anything below that looks stale when the live pass actually happens, since mobile has moved fast across many same-day ADRs.
+This section was originally seeded from existing mobile-build records plus `mobile/README.md`, but parts of it were refreshed by direct code read on 2026-08-14 after the parity push. **Assume older “missing entirely” claims below are stale unless they survive this refresh.**
 
 ### Shared screens (all 4 personas)
 
@@ -302,9 +320,12 @@ This section is built from existing, detailed mobile-build records ([[rally26-mo
 | Sign in | `/login` | Not reviewed | Real `POST /auth/login`, `expo-secure-store` token storage |
 | First-launch onboarding | `/onboarding` | Not reviewed | 3-slide carousel, real splash/onboarding art (ADR-107) |
 | Non-built-role fallback | `/role-not-available` | Not reviewed | Real `GET /me/dashboard-context`; working sign-out |
+| Action Center | `/action-center` | Not reviewed | Real cross-persona action list with two summary tiles (Total, High priority), real item rows, open-destination routing, and a real empty state ("All caught up") |
+| Help Center | `/help`, `/help/[slug]` | Not reviewed | Real search + category chips + article list; header action opens support request |
+| Support request | `/support-request` | Not reviewed | Real case submission form plus "My recent cases" list |
 | Thread detail | `/messages/[threadId]` | Not reviewed | Real messages, working send (respects `canReply`), mark-read — no filter/sort, matches web's own Messages having none either |
 | My Guardians (Athlete only) | `/guardians` | Not reviewed | Real data |
-| Event Details | `/event-details?id=` | Not reviewed | Real event + RSVP summary/picker (guardian-per-athlete or self); **Edit is an honest "not available yet" toast** — a real, known gap against web's real event edit form; Share uses RN's native share sheet. **Violates the 2026-08-13 "no broken mobile UI" rule** (every control must be disabled, a working page, or a working WebView — never an enabled button with a "not implemented" toast) — should become either a disabled Edit control or a real edit form; not fixed this session, see [[feedback-mobile-no-broken-ui]] |
+| Event Details | `/event-details?id=` | Not reviewed | Real event + RSVP summary/picker (guardian-per-athlete or self); Share uses RN's native share sheet; **Edit now routes to the real `/event-form` create/edit screen instead of a placeholder toast** |
 | Announcements | `/announcements` | Not reviewed | Real data, **All/Unread filter** (one of the only filters that exists anywhere in the mobile app), mark-read on open |
 | Announcement detail | `/announcement-details?id=` | Not reviewed | Full body |
 | Settings | `/settings` | Not reviewed | Real appearance/notification/SMS-consent, real Log Out. **Known gap**: appearance saves but many screens still hardcode dark-only hex colors in their own StyleSheets (ADR-107) — same class of issue as [[feedback-dark-mode-full-inversion]] on web, not yet audited on mobile. Worth a dedicated pass. |
@@ -326,8 +347,8 @@ This section is built from existing, detailed mobile-build records ([[rally26-mo
 | Payments | Not reviewed | Real balance + itemized fees + credit balance — **read-only, no in-app payment collection** (note: web itself has no Stripe fee-checkout either, so this specifically is not a parity gap — confirmed in the original gap analysis) |
 | Fee Details | Not reviewed | Per-fee payment history |
 | Documents | Not reviewed | Real household document list + acknowledge — plain upload/ack, no Phase 31 eligibility/waivers concept (doesn't exist on mobile's backend contract usage yet) |
-| **Household media (Photos & Videos)** | **Missing entirely** | Web shipped this today (Track 5) — guardian upload, multi-select, "Release publicly." Zero mobile equivalent. New gap per [[rally26-mobile-full-parity-decision]]. |
-| **SafeSport restriction management** | **Missing entirely** | Deferred at ADR-107 QA round, now required for full parity |
+| **Household media (Photos & Videos)** | **Missing entirely** | Web shipped this today (Track 5) — guardian upload, multi-select, "Release publicly." Still no mobile equivalent found in code. |
+| Messaging Safety controls | Not reviewed | Real `/safety-controls` screen now exists: guardian athlete picker + restriction kind chips + record/lift restriction flow |
 | **Family credit application / P2P transfer** | **Missing entirely** | Payments screen is read-only; the real backend endpoints exist and are confirmed, just not wired to mobile |
 
 ### Athlete persona (`/athlete`, 4 tabs: Home/Calendar/Messages/More — deliberately no Teams/Payments tab, matches real backend access)
@@ -351,25 +372,24 @@ This section is built from existing, detailed mobile-build records ([[rally26-mo
 | Announcements (manage) | Not reviewed | Real list + publish |
 | New Announcement | Not reviewed | Draft-then-publish, **org-scoped only** — no team/tournament-scoped compose yet |
 | Broadcasts (manage) / New Broadcast / Broadcast Detail | Not reviewed | Real thread list/create/send, **org-scoped only** — no messaging to specific teams/coaches/parents yet (deferred at ADR-107 QA round) |
-| **Event create/edit** | **Toast only, not a real form** | A known, explicit gap — Event Details' Edit button shows "not available yet" |
-| **Documents (owner-side)** | **Missing entirely** | Parent has document upload/acknowledge; Owner's org-wide upload + "send to every household" broadcast + remove doesn't exist on mobile at all |
+| Event create/edit | Not reviewed | Real shared `/event-form` screen now exists for create + edit |
+| Documents (owner-side) | Not reviewed | Real `/owner/documents` screen now exists: add document, send to every household, remove |
 | **Org profile / credit-settings edit** | **Missing entirely** | |
 | **Team/tournament create/edit/archive** | **Missing entirely** | |
 
-### WebView-embedded features (Swag Shop, Fundraising, Sponsorships — ADR-106)
+### WebView-embedded features (Swag Shop, Sponsorships — ADR-106)
 
-Rather than native rebuilds, `/web-embed` loads the **real `frontend/` pages** for these three inside an in-app WebView, authenticated by injecting the same session JSON `frontend/src/auth/AuthContext.tsx` already reads from `sessionStorage` — no new backend endpoint needed. Stripe checkout rides along for free since web itself only redirects to Stripe's hosted Checkout.
+Rather than native rebuilds, `/web-embed` loads the **real `frontend/` pages** for these embedded feature areas inside an in-app WebView, authenticated by injecting the same session JSON `frontend/src/auth/AuthContext.tsx` already reads from `sessionStorage` — no new backend endpoint needed. Stripe checkout rides along for free since web itself only redirects to Stripe's hosted Checkout.
 
-**Because these are literally the web pages, their filter/sort/list/action behavior is identical to what's already documented in this doc's web sections above** (Swag Shop under Owner/Coach/Parent's Swag Shop rows, Fundraising and Sponsorships under the Owner organization-sections table) — no separate mobile-specific inventory needed for these three; the review question here is narrower: does the WebView wrapper itself behave well (loading state, back-navigation, the injected-session auth actually working, `status=success`/`status=canceled` toast on Stripe return, and general fit-and-finish of a web page inside a native shell — safe-area insets, keyboard behavior on the checkout form, etc.)
+**Because these are literally the web pages, their filter/sort/list/action behavior is identical to what's already documented in this doc's web sections above** (Swag Shop under Owner/Coach/Parent's Swag Shop rows, Sponsorships under the Owner organization-sections table) — no separate mobile-specific inventory needed for these embedded pages; the review question here is narrower: does the WebView wrapper itself behave well (loading state, back-navigation, the injected-session auth actually working, `status=success`/`status=canceled` toast on Stripe return, and general fit-and-finish of a web page inside a native shell — safe-area insets, keyboard behavior on the checkout form, etc.)
 
 | Entry point | Status | Notes |
 |---|---|---|
-| Owner More → Swag Shop / Fundraising / Sponsorships | Not reviewed | Points at the owner-management frontend sections |
+| Owner More → Swag Shop / Sponsorships | Not reviewed | Points at the owner-management frontend sections |
 | Coach More → Swag Shop | Not reviewed | Points at the buyer/personalization/checkout order-flow route, not owner management |
 | Parent More → Swag Shop | Not reviewed | Same buyer-flow route as Coach |
-| Coach More → Fundraising / Parent More → Fundraising | Not reviewed | **New 2026-08-13** — both point at the same `/app/organizations/{id}/fundraising` route Owner uses, now role-aware (`CampaignList`'s `canManage` prop): read-only list/contributions/QR-share for non-managers, full management for Owner. Closes a real pre-existing gap (ADR-106 only ever wired Swag Shop for Coach/Parent, never Fundraising) |
-| **Help Center + Support ticketing** | **Missing entirely, not even WebView-embedded** | Real and product-complete on web (including this session's new attachment/embed richness, Track 4) — required for full parity, currently zero mobile presence of any kind |
-| **Action Center** | **Missing entirely** | Cross-cutting task aggregation, exists for every persona on web |
+| Coach More → Fundraising / Parent More → Fundraising | Not reviewed | No longer a WebView-only note — these now route to the native fundraising screens (`/fundraising`, `/fundraising-detail`, `/fundraising-form`, `/fundraising-game`), while Swag Shop and Sponsorships remain the deliberate embedded/web exceptions |
+| Help Center / Support ticketing / Action Center | Not reviewed | No longer missing: these exist as native shared screens (`/help`, `/support-request`, `/action-center`) rather than WebView wrappers |
 
 ### Imagery / assets
 
@@ -399,7 +419,7 @@ These span several of the pages above — worth a dedicated pass rather than onl
 | Support case submission → Platform Admin triage → resolution email | Not reviewed | §15 journey #17 |
 | Guardian e-sign waiver (Phase 31 eligibility) | Not reviewed | |
 | Mobile: sign in → each persona's real screens → WebView-embedded Swag Shop/Fundraising/Sponsorships checkout | Not reviewed | Walk the injected-session WebView auth end to end on a real device/emulator, not just confirm the screens render |
-| Mobile parity punch list: household media, Help Center, Action Center, owner Documents/event-edit/team-messaging, Parent SafeSport controls | **Not started** | See the Mobile section above and [[rally26-mobile-full-parity-decision]] — these are now required work, not optional, per the founder's 2026-08-13 decision |
+| Mobile parity punch list: household media, family-credit actions, owner org-profile/credit-settings edit, owner team/tournament create-edit-archive | **In progress** | Help Center, support request, Action Center, owner Documents, event create/edit, and guardian messaging-safety controls can be struck from the old mobile parity list; these remaining gaps still need live validation and prioritization |
 
 ---
 

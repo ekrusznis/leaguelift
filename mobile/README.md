@@ -118,10 +118,10 @@ Documents (owner-side), team/tournament create/edit/archive, and team-scoped (vs
 org-scoped) announcements/broadcasts. Swag Shop, Fundraising, and Sponsorships are
 covered — see WebView embeds below (ADR-106).
 
-## WebView embeds — Swag Shop, Fundraising, Sponsorships (ADR-106)
+## WebView embeds — Swag Shop and Sponsorships (ADR-106)
 
 Rather than rebuild these natively, `/web-embed` (`src/app/web-embed.tsx`) loads the
-**real, already-built `frontend/` pages** for these three feature areas inside an
+**real, already-built `frontend/` pages** for these two feature areas inside an
 in-app WebView (`react-native-webview`) — a deliberate exception to "not a WebView
 wrapper around `frontend/`" (that principle is about the app's overall identity/
 navigation, not a blanket ban on embedding one bounded, complex feature where a native
@@ -146,26 +146,31 @@ native toast.
 
 | Route | Screen | Entry points |
 |---|---|---|
-| `/web-embed?path=&title=` | Real `frontend/` page in a WebView | Owner More: Swag Shop (`/app/organizations/{id}/swag-shop`, management), Fundraising (`/app/organizations/{id}/fundraising`, management), Sponsorships (`/app/organizations/{id}/sponsorships`, management). Coach More + Parent More: Swag Shop (`/app/organizations/{id}/swag-shop/order`, the real buyer/personalization/checkout flow) |
+| `/web-embed?path=&title=` | Real `frontend/` page in a WebView | Owner More: Swag Shop (`/app/organizations/{id}/swag-shop`, management) and Sponsorships (`/app/organizations/{id}/sponsorships`, management). Coach More + Parent More: Swag Shop (`/app/organizations/{id}/swag-shop/order`, the real buyer/personalization/checkout flow) |
 
 **Known limitation:** the authenticated in-app Swag Shop *order* flow's Stripe
 success/cancel redirect target is hardcoded server-side to `frontendProperties.baseUrl`
 (`OrderService.createSwagShopCheckoutSession`, `OrderDto.kt`'s doc comment confirms no
 caller-supplied override exists) — it redirects back to the same `frontend/` page
 inside the WebView, which is fine, but there's no way to redirect out to a
-`rally26://` deep link instead without a backend change. Fundraising/Sponsorship
-checkout endpoints *do* accept caller-supplied `successUrl`/`cancelUrl`, but this slice
-still routes them through the WebView (not a native deep-link handoff) for consistency
-with Swag Shop and to avoid a second redirect pattern for no real gain yet.
+`rally26://` deep link instead without a backend change. Sponsorship checkout does
+accept caller-supplied `successUrl`/`cancelUrl`, but this slice still routes it through
+the WebView (not a native deep-link handoff) for consistency with Swag Shop and to
+avoid a second redirect pattern for no real gain yet.
 
 **QuickBooks stays web-only, no mobile screen at all** — not even a WebView link. Its
 own Intuit OAuth core is inactive on web too (fails closed,
 `QUICKBOOKS_CLIENT_NOT_ACTIVATED`), so there's nothing live to reach from mobile right
 now.
 
-**Still native-only, not yet built anywhere on mobile:** Help Center + Support
-ticketing, owner-side Documents (upload/broadcast-to-all-households), and Action
-Center — see the mobile-vs-web parity gap analysis (2026-08-10) for sizing.
+**Now built natively on mobile:** Fundraising management (`/fundraising*`), Help
+Center (`/help`, `/help/[slug]`), support ticketing (`/support-request`), Action
+Center (`/action-center`), owner-side Documents (`/owner/documents`), guardian
+messaging-safety controls (`/safety-controls`), and event create/edit (`/event-form`).
+
+**Still missing for full parity:** household media, family credit application /
+transfer, owner org-profile / credit-settings edit, and owner team/tournament
+create-edit-archive.
 
 ## Local development
 
