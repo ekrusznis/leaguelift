@@ -9,6 +9,7 @@ import com.rally26.event.domain.EventType
 import com.rally26.event.domain.EventVisibility
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
+import java.sql.Date
 import java.sql.Timestamp
 import java.util.UUID
 
@@ -176,13 +177,48 @@ class EventSearchRepository(
             sql.append(" and e.status = :status")
             params["status"] = it.name
         }
-        criteria.from?.let {
-            sql.append(" and coalesce(e.start_at, e.all_day_date::timestamp with time zone) >= :fromInstant")
-            params["fromInstant"] = Timestamp.from(it)
+        when {
+            criteria.from != null && criteria.fromDate != null -> {
+                sql.append(
+                    " and ((e.start_at is not null and e.start_at >= :fromInstant) " +
+                        "or (e.all_day_date is not null and e.all_day_date >= :fromDate))",
+                )
+                params["fromInstant"] = Timestamp.from(criteria.from)
+                params["fromDate"] = Date.valueOf(criteria.fromDate)
+            }
+
+            criteria.from != null -> {
+                // Backward-compatible behavior for callers that only send an Instant.
+                sql.append(" and coalesce(e.start_at, e.all_day_date::timestamp with time zone) >= :fromInstant")
+                params["fromInstant"] = Timestamp.from(criteria.from)
+            }
+
+            criteria.fromDate != null -> {
+                sql.append(" and e.all_day_date >= :fromDate")
+                params["fromDate"] = Date.valueOf(criteria.fromDate)
+            }
         }
-        criteria.to?.let {
-            sql.append(" and coalesce(e.start_at, e.all_day_date::timestamp with time zone) <= :toInstant")
-            params["toInstant"] = Timestamp.from(it)
+
+        when {
+            criteria.to != null && criteria.toDate != null -> {
+                sql.append(
+                    " and ((e.start_at is not null and e.start_at <= :toInstant) " +
+                        "or (e.all_day_date is not null and e.all_day_date <= :toDate))",
+                )
+                params["toInstant"] = Timestamp.from(criteria.to)
+                params["toDate"] = Date.valueOf(criteria.toDate)
+            }
+
+            criteria.to != null -> {
+                // Backward-compatible behavior for callers that only send an Instant.
+                sql.append(" and coalesce(e.start_at, e.all_day_date::timestamp with time zone) <= :toInstant")
+                params["toInstant"] = Timestamp.from(criteria.to)
+            }
+
+            criteria.toDate != null -> {
+                sql.append(" and e.all_day_date <= :toDate")
+                params["toDate"] = Date.valueOf(criteria.toDate)
+            }
         }
 
         if (!countOnly) {

@@ -58,6 +58,8 @@ export function useEventSearch(scope: EventScope, params: EventSearchParams) {
 	const to = dateBoundary(params.toDate, true);
 	if (from) search.set("from", from);
 	if (to) search.set("to", to);
+	if (params.fromDate) search.set("fromDate", params.fromDate);
+	if (params.toDate) search.set("toDate", params.toDate);
 
 	return useQuery({
 		queryKey: [...eventScopeKey(scope), "search", Object.fromEntries(search.entries())],

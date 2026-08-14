@@ -52,3 +52,13 @@ export function parseMajorAmountToMinorUnits(value: string, currency: string): n
 	if (!Number.isSafeInteger(absoluteMinor)) return null;
 	return match[1] === "-" ? -absoluteMinor : absoluteMinor;
 }
+
+/**
+ * Strict major-unit -> integer minor-unit conversion for API/domain boundaries.
+ * Feature code should call this instead of multiplying by 100.
+ */
+export function majorAmountToMinorUnits(value: string | number, currency: string): number {
+	const parsed = parseMajorAmountToMinorUnits(String(value), currency);
+	if (parsed === null) throw new Error("Invalid money amount.");
+	return parsed;
+}

@@ -399,7 +399,7 @@ function CampaignEditForm({ organizationId, campaign, onDone }: { organizationId
 			eventAddress: campaign.eventAddress ?? "",
 		},
 	});
-	const submit = form.handleSubmit(async (values) => { await update.mutateAsync({ campaignId: campaign.id, values }); onDone(); });
+	const submit = form.handleSubmit(async (values) => { await update.mutateAsync({ campaignId: campaign.id, values, currency: campaign.currency }); onDone(); });
 	return (
 		<form onSubmit={submit} className="mt-4 grid gap-3 border-t border-slate-gray/20 pt-4 md:grid-cols-2" aria-label={`Edit ${campaign.name}`}>
 			<FormField label="Name" error={form.formState.errors.name?.message}><input {...form.register("name")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></FormField>

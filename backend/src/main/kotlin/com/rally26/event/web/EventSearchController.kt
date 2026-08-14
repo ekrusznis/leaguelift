@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 @RestController
@@ -34,6 +35,8 @@ class EventSearchController(
         @RequestParam(required = false) status: String?,
         @RequestParam(required = false) from: Instant?,
         @RequestParam(required = false) to: Instant?,
+        @RequestParam(required = false) fromDate: LocalDate?,
+        @RequestParam(required = false) toDate: LocalDate?,
         @RequestParam(defaultValue = "DATE_ASC") sort: String,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<EventResponse> =
@@ -41,7 +44,7 @@ class EventSearchController(
             organizationId,
             page,
             size,
-            criteria(q, eventType, status, from, to, sort),
+            criteria(q, eventType, status, from, to, fromDate, toDate, sort),
         ) { offset, limit, listCriteria ->
             searchService.organization(organizationId, listCriteria, currentUser, offset, limit)
         }
@@ -57,10 +60,17 @@ class EventSearchController(
         @RequestParam(required = false) status: String?,
         @RequestParam(required = false) from: Instant?,
         @RequestParam(required = false) to: Instant?,
+        @RequestParam(required = false) fromDate: LocalDate?,
+        @RequestParam(required = false) toDate: LocalDate?,
         @RequestParam(defaultValue = "DATE_ASC") sort: String,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<EventResponse> =
-        response(organizationId, page, size, criteria(q, eventType, status, from, to, sort)) { offset, limit, listCriteria ->
+        response(
+            organizationId,
+            page,
+            size,
+            criteria(q, eventType, status, from, to, fromDate, toDate, sort),
+        ) { offset, limit, listCriteria ->
             searchService.team(organizationId, teamId, listCriteria, currentUser, offset, limit)
         }
 
@@ -75,10 +85,17 @@ class EventSearchController(
         @RequestParam(required = false) status: String?,
         @RequestParam(required = false) from: Instant?,
         @RequestParam(required = false) to: Instant?,
+        @RequestParam(required = false) fromDate: LocalDate?,
+        @RequestParam(required = false) toDate: LocalDate?,
         @RequestParam(defaultValue = "DATE_ASC") sort: String,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<EventResponse> =
-        response(organizationId, page, size, criteria(q, eventType, status, from, to, sort)) { offset, limit, listCriteria ->
+        response(
+            organizationId,
+            page,
+            size,
+            criteria(q, eventType, status, from, to, fromDate, toDate, sort),
+        ) { offset, limit, listCriteria ->
             searchService.tournament(organizationId, tournamentId, listCriteria, currentUser, offset, limit)
         }
 
@@ -93,10 +110,17 @@ class EventSearchController(
         @RequestParam(required = false) status: String?,
         @RequestParam(required = false) from: Instant?,
         @RequestParam(required = false) to: Instant?,
+        @RequestParam(required = false) fromDate: LocalDate?,
+        @RequestParam(required = false) toDate: LocalDate?,
         @RequestParam(defaultValue = "DATE_ASC") sort: String,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<EventResponse> =
-        response(organizationId, page, size, criteria(q, eventType, status, from, to, sort)) { offset, limit, listCriteria ->
+        response(
+            organizationId,
+            page,
+            size,
+            criteria(q, eventType, status, from, to, fromDate, toDate, sort),
+        ) { offset, limit, listCriteria ->
             searchService.household(organizationId, householdId, listCriteria, currentUser, offset, limit)
         }
 
@@ -111,10 +135,17 @@ class EventSearchController(
         @RequestParam(required = false) status: String?,
         @RequestParam(required = false) from: Instant?,
         @RequestParam(required = false) to: Instant?,
+        @RequestParam(required = false) fromDate: LocalDate?,
+        @RequestParam(required = false) toDate: LocalDate?,
         @RequestParam(defaultValue = "DATE_ASC") sort: String,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<EventResponse> =
-        response(organizationId, page, size, criteria(q, eventType, status, from, to, sort)) { offset, limit, listCriteria ->
+        response(
+            organizationId,
+            page,
+            size,
+            criteria(q, eventType, status, from, to, fromDate, toDate, sort),
+        ) { offset, limit, listCriteria ->
             searchService.participant(organizationId, participantId, listCriteria, currentUser, offset, limit)
         }
 
@@ -141,6 +172,8 @@ class EventSearchController(
         status: String?,
         from: Instant?,
         to: Instant?,
+        fromDate: LocalDate?,
+        toDate: LocalDate?,
         sort: String,
     ): EventListCriteria =
         EventListCriteria(
@@ -149,6 +182,8 @@ class EventSearchController(
             status = enumValueOrNull<EventStatus>(status, "event status"),
             from = from,
             to = to,
+            fromDate = fromDate,
+            toDate = toDate,
             sort = enumValue<EventListSort>(sort, "event sort"),
         )
 

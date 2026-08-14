@@ -32,11 +32,22 @@ function scopePath(scope: EventSearchScope) {
   return `/participants/${scope.participantId}/events/search`;
 }
 
+function localIsoDate(year: number, month0: number, day: number) {
+  const month = String(month0 + 1).padStart(2, '0');
+  return `${year}-${month}-${String(day).padStart(2, '0')}`;
+}
+
 function monthRange(year: number, month0: number) {
   const from = new Date(year, month0, 1, 0, 0, 0, 0);
   const to = new Date(year, month0 + 1, 1, 0, 0, 0, 0);
   to.setMilliseconds(to.getMilliseconds() - 1);
-  return { from: from.toISOString(), to: to.toISOString() };
+  const lastDay = new Date(year, month0 + 1, 0).getDate();
+  return {
+    from: from.toISOString(),
+    to: to.toISOString(),
+    fromDate: localIsoDate(year, month0, 1),
+    toDate: localIsoDate(year, month0, lastDay),
+  };
 }
 
 /**
@@ -67,6 +78,8 @@ export function useInfiniteEventMonthSearch(
         size: '25',
         from: range.from,
         to: range.to,
+        fromDate: range.fromDate,
+        toDate: range.toDate,
         sort: filters.sort ?? 'DATE_ASC',
       });
       if (filters.q?.trim()) search.set('q', filters.q.trim());

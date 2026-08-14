@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { currencyFractionDigits, formatMoneyMinorUnits, minorUnitsToMajorInput, parseMajorAmountToMinorUnits } from "../money";
+import { currencyFractionDigits, formatMoneyMinorUnits, majorAmountToMinorUnits, minorUnitsToMajorInput, parseMajorAmountToMinorUnits } from "../money";
 
 describe("money helpers", () => {
 	it("formats integer minor units consistently", () => {
@@ -19,6 +19,13 @@ describe("money helpers", () => {
 		expect(parseMajorAmountToMinorUnits("-25", "USD")).toBe(-2500);
 		expect(parseMajorAmountToMinorUnits("12.345", "USD")).toBeNull();
 		expect(parseMajorAmountToMinorUnits("$25.00", "USD")).toBeNull();
+	});
+
+
+	it("uses the strict shared converter at API/domain boundaries", () => {
+		expect(majorAmountToMinorUnits("123.45", "USD")).toBe(12345);
+		expect(majorAmountToMinorUnits(25, "USD")).toBe(2500);
+		expect(() => majorAmountToMinorUnits("12.345", "USD")).toThrow("Invalid money amount.");
 	});
 
 	it("respects currencies that do not use two fraction digits", () => {
