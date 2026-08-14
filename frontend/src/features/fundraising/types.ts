@@ -11,7 +11,15 @@ export type CampaignType =
 	| "APPAREL_BASED"
 	| "SPONSOR_SUPPORTED";
 
-export type CampaignStatus = "DRAFT" | "PENDING_APPROVAL" | "ACTIVE" | "COMPLETED" | "ARCHIVED";
+export type CampaignStatus =
+	| "DRAFT"
+	| "PENDING_APPROVAL"
+	| "SCHEDULED"
+	| "ACTIVE"
+	| "ENDED"
+	| "CLOSED"
+	| "COMPLETED"
+	| "ARCHIVED";
 
 /** Starter/configuration style used to create the fundraiser. Legacy BOX_POOL remains readable but is no longer offered for new campaigns. */
 export type FundraiserTemplateKey =
@@ -59,6 +67,7 @@ export interface Campaign {
 	createdAt: string;
 	updatedAt: string;
 	raisedMinor: number;
+	onlineContributionsEnabled?: boolean;
 }
 
 export interface CampaignPage { items: Campaign[]; page: number; size: number; totalElements: number; }
@@ -84,6 +93,8 @@ export interface PublicCampaign {
 	coverUrl: string | null;
 	primaryColor: string;
 	secondaryColor: string;
+	onlineContributionAllowed?: boolean;
+	onlineContributionUnavailableReason?: string | null;
 }
 
 export interface FundraisingSettings {
@@ -97,6 +108,7 @@ export interface CampaignShareLink { url: string; qrCodeDataUri: string; }
 export type ContributionStatus = "PENDING" | "CONFIRMED" | "CANCELED" | "REFUNDED";
 export interface ContributionCheckout { contributionId: string; checkoutUrl: string; }
 export interface ContributionStatusResult { id: string; status: ContributionStatus; amountMinor: number; currency: string; confirmedAt: string | null; }
+
 export interface Contribution {
 	id: string;
 	status: ContributionStatus;
