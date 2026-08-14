@@ -67,11 +67,11 @@ This section is **not** a substitute for the live browser/device walkthrough bel
 
 ### What currently weakens trust or ease of use
 
-1. **The highest-priority issue is now stability, not taste.** The web app does **not** currently pass `npm run typecheck` or `npm run build`, and the mobile app does **not** currently pass `npm run typecheck` or `npm run lint`. That means the next UX pass risks mixing visual/usability observations with active implementation regressions.
-2. **The product's information architecture is broad, but many management views are still low-control lists.** Owners/managers can reach many areas, but they often cannot search, sort, or batch-operate once they get there.
-3. **There is a growing expectation gap between the sales promise and the day-to-day admin ergonomics.** The public site feels curated and premium; many owner-facing operations screens still feel utilitarian and row-by-row.
-4. **Mobile parity is now a product promise, but not yet a user-trust reality.** The code/docs explicitly state full parity is required, yet several important mobile workflows remain missing or partially wired.
-5. **A few honest placeholders remain visible in product-critical places.** An enabled control that ends in a "not available yet" toast reads like broken software to a reviewer even if the team knows it is deferred.
+1. **The biggest remaining risk is consistency, not raw stability.** The regression set from the previous pass is now fixed; what can still trip a reviewer is inconsistent control patterns between newer toolbar-driven pages and older low-control screens.
+2. **The product's information architecture is broad, but not uniformly ergonomic.** Many owner/managers can now search/sort, but several important lists still lack the newer toolbar, visible pagination, or a clear bulk story.
+3. **There is still an expectation gap between the sales promise and day-to-day admin ergonomics.** The public site feels curated and premium; some operational areas still feel utilitarian and row-by-row.
+4. **Mobile parity is materially better, but not complete.** Several foundational workflows now exist, but the remaining gaps are still real and should be reviewed as product work, not mere polish.
+5. **Documentation drift remains a trust risk.** Both this doc and `mobile/README.md` had to be updated after the last review because they were already behind the shipped app.
 
 ## Stability findings from the validation pass (2026-08-13)
 
@@ -91,17 +91,17 @@ These are important because they directly affect how credible the product feels 
    - several `router.push`/`router.replace` calls target paths Expo Router does not currently recognize in the generated route typing.
 5. **Implication for UX review (updated):** the fundraising-specific build blockers should be struck from the active review checklist; the higher-value work now is validating whether the newly-added list controls and mobile screens actually feel cohesive in-browser/in-app.
 
-## Initial UX punch list (before the live walk)
+## Current UX punch list (post delta re-review)
 
 ### P0 — blockers / trust-damaging issues
 
-1. **Keep web and mobile build health green while the live review happens.** The earlier fundraising regressions are resolved; the goal now is preventing another half-integrated slice from reintroducing noise into the UX pass.
-2. **Keep the “no broken-but-clickable mobile controls” rule active.** The old Event Details Edit example is no longer current, but the rule still matters product-wide: every mobile control should be disabled with context, open a working screen, or open a working WebView — never end in a placeholder toast.
-3. **Align public-facing status docs with the actual product.** `README.md` still says only Phases 0-2 are complete, while the application and `DESIGN-DOC.md` clearly contain much more. A reviewer/customer noticing that mismatch loses confidence fast.
+1. **Align public-facing status docs with the actual product.** `README.md` still says only Phases 0-2 are complete, while the application and `DESIGN-DOC.md` clearly contain much more. A reviewer/customer noticing that mismatch loses confidence fast.
+2. **Keep the “no broken-but-clickable mobile controls” rule active.** Even though the previous Event Details example is now fixed, the rule still matters product-wide: every mobile control should be disabled with context, open a working screen, or open a working WebView — never end in a placeholder toast.
+3. **Prevent the new list-control patterns from drifting out of sync.** The newer toolbar pages are good enough to review, but they still need a pass for consistent copy, filter names, pagination behavior, and empty-state language so the app feels designed rather than accumulated.
 
 ### P1 — major UX improvements likely to pay off fastest
 
-1. **Add list ergonomics to owner/manager-heavy surfaces.** Search first, then sort, then selective bulk actions. Highest-value candidates from this inventory:
+1. **Add list ergonomics to the remaining holdouts.** Search first, then sort, then selective bulk actions. Highest-value candidates from this inventory:
    - Tournaments
    - Adults / Participants / household fee assignments
    - Disputes
@@ -110,7 +110,7 @@ These are important because they directly affect how credible the product feels 
    - Eligibility requirements
 2. **Stress-test the new active-members roster for clarity.** The product gap is closed; the live pass should now verify whether role-editing, disable-access, and pending-invitation management feel like one coherent access-management surface.
 3. **Tighten the owner dashboard's action hierarchy.** It already has many cards plus multiple quick actions; confirm the one next-best action for a new owner is obvious rather than merely available.
-4. **Standardize empty/zero-result states across the newer toolbar pages.** The obvious Platform Admin blank-state bug is fixed; the next check is whether the new “No results found / Try changing your search or filters” pattern is consistent enough everywhere it now appears.
+4. **Standardize empty/zero-result states across the newer toolbar pages.** The Platform Admin blank-state bug is fixed; the next check is whether the new “No results found / Try changing your search or filters” pattern is consistent enough everywhere it now appears.
 5. **Audit terminology for consistency:** household vs family, owner vs administrator, organization vs club, fundraiser vs campaign, storefront vs Swag Shop.
 
 ### P2 — parity and flow quality
