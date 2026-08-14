@@ -9,6 +9,7 @@ import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { formatMoneyMinorUnits } from "../../lib/money";
 import { BoxPoolManagementPanel } from "../boxpool/BoxPoolManagementPanel";
+import { GameManagementPanel } from "../fundraisingGames/GameManagementPanel";
 import { ReminderButton } from "../communications/ReminderButton";
 import { useTeams } from "../teams/api";
 import {
@@ -103,6 +104,7 @@ export function CampaignList({ organizationId, canCreate = false, canApprove = f
 	const [showForm, setShowForm] = useState(false);
 	const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null);
 	const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
+	const [gameCampaignId, setGameCampaignId] = useState<string | null>(null);
 	const [templateKey, setTemplateKey] = useState<FundraiserTemplateKey>("GENERAL");
 	const form = useForm<z.input<typeof createCampaignSchema>, unknown, z.output<typeof createCampaignSchema>>({
 		resolver: zodResolver(createCampaignSchema),
@@ -177,7 +179,7 @@ export function CampaignList({ organizationId, canCreate = false, canApprove = f
 					{campaign.startDate || campaign.endDate ? <p className="mt-1 text-xs text-slate-gray dark:text-[#94a3b8]">{campaign.startDate ? `Starts ${campaign.startDate}` : "Starts immediately"}{campaign.endDate ? ` · Ends ${campaign.endDate}` : ""}</p> : null}
 					{campaign.eventLocationName || campaign.eventAddress ? <p className="mt-1 text-xs text-slate-gray dark:text-[#94a3b8]">📍 {[campaign.eventLocationName, campaign.eventAddress].filter(Boolean).join(" · ")}</p> : null}</div>
 					<div className="flex flex-wrap items-center justify-end gap-2"><QrCodeButton organizationId={organizationId} url={`${window.location.origin}/campaigns/${campaign.slug}`} /><Link to={`/app/organizations/${organizationId}/fundraising/${campaign.id}/flyer`} className="inline-flex min-h-11 items-center rounded-md border border-slate-gray/30 px-3 text-sm font-medium text-navy dark:text-[#f8fafc]">Print flyer</Link>
-					<Button type="button" variant="secondary" onClick={() => setExpandedCampaignId((current) => current === campaign.id ? null : campaign.id)}>{expandedCampaignId === campaign.id ? "Hide contributions" : "Contributions"}</Button>
+					<Button type="button" variant="secondary" onClick={() => setExpandedCampaignId((current) => current === campaign.id ? null : campaign.id)}>{expandedCampaignId === campaign.id ? "Hide contributions" : "Contributions"}</Button><Button type="button" variant="secondary" onClick={() => setGameCampaignId((current) => current === campaign.id ? null : campaign.id)}>{gameCampaignId === campaign.id ? "Hide free game" : "Free game"}</Button>
 					{permissions.canEdit && <Button type="button" variant="secondary" onClick={() => setEditingCampaignId((current) => current === campaign.id ? null : campaign.id)}>{editingCampaignId === campaign.id ? "Cancel edit" : "Edit"}</Button>}
 					{permissions.canRequestActivation && <Button type="button" disabled={requestActivation.isPending} onClick={() => requestActivation.mutate(campaign.id)}>{ownerApprovalRequired && !permissions.canApprove ? "Submit for approval" : "Activate"}</Button>}
 					{permissions.canApprove && <Button type="button" disabled={approveCampaign.isPending} onClick={() => approveCampaign.mutate(campaign.id)}>Approve</Button>}
@@ -186,6 +188,7 @@ export function CampaignList({ organizationId, canCreate = false, canApprove = f
 					{permissions.canArchive && <Button type="button" variant="secondary" onClick={() => updateStatus.mutate({ campaignId: campaign.id, status: "ARCHIVED" })}>Archive</Button>}
 					{canManageOrganization && campaign.status === "ACTIVE" && <ReminderButton organizationId={organizationId} resourceType="CAMPAIGN" resourceId={campaign.id} label="Send launch notice" />}</div></div>
 					{editingCampaignId === campaign.id && <CampaignEditForm organizationId={organizationId} campaign={campaign} onDone={() => setEditingCampaignId(null)} />}
+					{gameCampaignId === campaign.id && <div className="mt-3 border-t border-slate-gray/20 pt-3"><GameManagementPanel organizationId={organizationId} campaignId={campaign.id} canCreateGame={permissions.canEdit} /></div>}
 					{permissions.canManageBoxPool && campaign.templateKey === "BOX_POOL" && <div className="mt-3 border-t border-slate-gray/20 pt-3"><p className="mb-2 text-xs text-championship-gold">Legacy paid box pool — keep for historical campaigns only. New free-play games are introduced in the next phase.</p><BoxPoolManagementPanel organizationId={organizationId} campaignId={campaign.id} /></div>}
 					{expandedCampaignId === campaign.id && <div className="mt-3 border-t border-slate-gray/20 pt-3"><ContributionList organizationId={organizationId} campaignId={campaign.id} /></div>}
 				</li>;

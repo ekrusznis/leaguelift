@@ -220,6 +220,9 @@ class ParentDashboardServiceTest {
                 templateKey = null,
                 createdAt = Instant.now(),
                 updatedAt = Instant.now(),
+                approvedByUserId = UUID.randomUUID(),
+                submittedAt = Instant.now(),
+                approvedAt = Instant.now(),
             )
         every { householdRepository.findById(householdId, orgId) } returns household()
         every { membershipRepository.findActiveMembership(orgId, guardian.userId) } returns null

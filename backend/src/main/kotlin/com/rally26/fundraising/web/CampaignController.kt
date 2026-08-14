@@ -53,20 +53,20 @@ class CampaignController(
     ): ResponseEntity<CampaignResponse> {
         val campaign =
             campaignService.create(
-                organizationId,
-                request.teamId,
-                request.name,
-                request.slug,
-                request.description,
-                request.campaignType,
-                request.goalAmountMinor,
-                request.currency,
-                request.startDate,
-                request.endDate,
-                request.eventLocationName,
-                request.eventAddress,
-                currentUser,
-                request.templateKey,
+                organizationId = organizationId,
+                teamId = request.teamId,
+                name = request.name,
+                slug = request.slug,
+                description = request.description,
+                campaignType = request.campaignType,
+                goalAmountMinor = request.goalAmountMinor,
+                currency = request.currency,
+                startDate = request.startDate,
+                endDate = request.endDate,
+                currentUser = currentUser,
+                templateKey = request.templateKey,
+                eventLocationName = request.eventLocationName,
+                eventAddress = request.eventAddress,
             )
         return ResponseEntity.status(HttpStatus.CREATED).body(
             campaign.toResponse(
@@ -98,16 +98,16 @@ class CampaignController(
     ): CampaignResponse {
         val campaign =
             campaignService.update(
-                organizationId,
-                campaignId,
-                request.name,
-                request.description,
-                request.goalAmountMinor,
-                request.startDate,
-                request.endDate,
-                request.eventLocationName,
-                request.eventAddress,
-                currentUser,
+                organizationId = organizationId,
+                campaignId = campaignId,
+                name = request.name,
+                description = request.description,
+                goalAmountMinor = request.goalAmountMinor,
+                startDate = request.startDate,
+                endDate = request.endDate,
+                currentUser = currentUser,
+                eventLocationName = request.eventLocationName,
+                eventAddress = request.eventAddress,
             )
         return campaign.toResponse(
             contributionService.getConfirmedTotal(campaign.id),

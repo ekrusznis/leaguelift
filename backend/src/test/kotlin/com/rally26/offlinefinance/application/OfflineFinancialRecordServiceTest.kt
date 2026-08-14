@@ -220,6 +220,7 @@ class OfflineFinancialRecordServiceTest {
             null,
             receivedAt,
             receivedAt,
+            approvedByUserId = UUID.randomUUID(),
         )
 
     private fun contribution() =

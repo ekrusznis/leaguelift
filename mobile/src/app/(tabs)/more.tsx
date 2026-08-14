@@ -1,7 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
-
 import { PlatformStatusSpacer } from '@/components/platform-status-spacer';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -10,11 +9,11 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { webEmbedRoute } from '@/lib/webEmbed';
 
-/** More tab — a menu hub for less-frequent destinations, matching the 5-tab structure in docs/design/mobile_sample_design.png (ADR-101). Swag Shop added ADR-106 — real frontend/ order flow via WebView, not rebuilt natively. */
+/** Coach More hub. Fundraising is native; Swag Shop remains the deliberate commerce WebView exception. */
 export default function MoreScreen() {
   const theme = useTheme();
-  const { organizationId } = useCoach();
-
+  const { organizationId, selectedTeamId, teams } = useCoach();
+  const selectedTeam = teams.find((team) => team.teamId === selectedTeamId) ?? null;
   const items: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }[] = [
     {
       icon: 'shirt-outline',
@@ -24,20 +23,17 @@ export default function MoreScreen() {
     {
       icon: 'heart-outline',
       label: 'Fundraising',
-      onPress: () => router.push(webEmbedRoute(`/app/organizations/${organizationId}/fundraising`, 'Fundraising')),
+      onPress: () => router.push({ pathname: '/fundraising', params: { organizationId: organizationId ?? '', persona: 'coach', defaultTeamId: selectedTeamId ?? '', defaultTeamName: selectedTeam?.name ?? '' } }),
     },
     { icon: 'megaphone-outline', label: 'Announcements', onPress: () => router.push('/announcements') },
     { icon: 'checkbox-outline', label: 'Action Center', onPress: () => router.push('/action-center') },
     { icon: 'help-circle-outline', label: 'Help Center', onPress: () => router.push('/help') },
     { icon: 'settings-outline', label: 'Settings', onPress: () => router.push('/settings') },
   ];
-
   return (
     <ThemedView style={styles.container}>
       <PlatformStatusSpacer />
-      <View style={styles.header}>
-        <ThemedText type="smallBold">More</ThemedText>
-      </View>
+      <View style={styles.header}><ThemedText type="smallBold">More</ThemedText></View>
       <View style={styles.list}>
         {items.map((item) => (
           <Pressable key={item.label} onPress={item.onPress} disabled={(item.label === 'Swag Shop' || item.label === 'Fundraising') && !organizationId}>
@@ -52,27 +48,10 @@ export default function MoreScreen() {
     </ThemedView>
   );
 }
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-  },
-  list: {
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.two,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
-  },
-  label: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  header: { paddingHorizontal: Spacing.four, paddingVertical: Spacing.two },
+  list: { paddingHorizontal: Spacing.four, gap: Spacing.two },
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, borderRadius: Spacing.three, padding: Spacing.three },
+  label: { flex: 1 },
 });

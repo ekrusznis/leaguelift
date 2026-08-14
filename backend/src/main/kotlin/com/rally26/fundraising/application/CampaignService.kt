@@ -141,10 +141,10 @@ class CampaignService(
         currency: String,
         startDate: LocalDate?,
         endDate: LocalDate?,
-        eventLocationName: String?,
-        eventAddress: String?,
         currentUser: CurrentUser,
         templateKey: FundraiserTemplateKey? = null,
+        eventLocationName: String? = null,
+        eventAddress: String? = null,
     ): Campaign {
         requireCreatorAccess(organizationId, teamId, currentUser)
         validateSlug(slug)
@@ -158,20 +158,20 @@ class CampaignService(
         return try {
             val campaign =
                 campaignRepository.insert(
-                    organizationId,
-                    teamId,
-                    name,
-                    slug,
-                    description,
-                    campaignType,
-                    goalAmountMinor,
-                    currency,
-                    startDate,
-                    endDate,
-                    eventLocationName?.trim()?.takeIf { it.isNotEmpty() },
-                    eventAddress?.trim()?.takeIf { it.isNotEmpty() },
-                    currentUser.userId,
-                    templateKey,
+                    organizationId = organizationId,
+                    teamId = teamId,
+                    name = name,
+                    slug = slug,
+                    description = description,
+                    campaignType = campaignType,
+                    goalAmountMinor = goalAmountMinor,
+                    currency = currency,
+                    startDate = startDate,
+                    endDate = endDate,
+                    createdByUserId = currentUser.userId,
+                    templateKey = templateKey,
+                    eventLocationName = eventLocationName?.trim()?.takeIf { it.isNotEmpty() },
+                    eventAddress = eventAddress?.trim()?.takeIf { it.isNotEmpty() },
                 )
             auditService.record(
                 currentUser.userId,
@@ -197,9 +197,9 @@ class CampaignService(
         goalAmountMinor: Long?,
         startDate: LocalDate?,
         endDate: LocalDate?,
-        eventLocationName: String?,
-        eventAddress: String?,
         currentUser: CurrentUser,
+        eventLocationName: String? = null,
+        eventAddress: String? = null,
     ): Campaign {
         val membership = membershipService.requireActiveMembership(organizationId, currentUser)
         val existing = requireCampaign(organizationId, campaignId)
@@ -219,15 +219,15 @@ class CampaignService(
         validateDateRange(startDate ?: existing.startDate, endDate ?: existing.endDate)
         validateEventLocation(existing.templateKey, eventLocationName ?: existing.eventLocationName, eventAddress ?: existing.eventAddress)
         campaignRepository.update(
-            campaignId,
-            organizationId,
-            name,
-            description,
-            goalAmountMinor,
-            startDate,
-            endDate,
-            eventLocationName,
-            eventAddress,
+            id = campaignId,
+            organizationId = organizationId,
+            name = name,
+            description = description,
+            goalAmountMinor = goalAmountMinor,
+            startDate = startDate,
+            endDate = endDate,
+            eventLocationName = eventLocationName,
+            eventAddress = eventAddress,
         )
 
         // Editing a pending request changes what the owner would be approving. Return it

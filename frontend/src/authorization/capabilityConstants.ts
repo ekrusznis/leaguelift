@@ -8,7 +8,6 @@
 export const Capabilities = {
 	PROFILE_VIEW: "profile.view",
 	PROFILE_MANAGE: "profile.manage",
-
 	ORG_MANAGE: "organization.manage",
 	ORG_MEMBERS_MANAGE: "organization.members.manage",
 	ORG_BILLING_MANAGE: "organization.billing.manage",
@@ -17,9 +16,10 @@ export const Capabilities = {
 	ORG_TEAM_MANAGE: "organization.team.manage",
 	ORG_TOURNAMENT_MANAGE: "organization.tournament.manage",
 	ORG_COMMUNICATION_MANAGE: "organization.communication.manage",
+	ORG_FUNDRAISING_APPROVE: "organization.fundraising.approve",
 	ORG_ELIGIBILITY_MANAGE: "organization.eligibility.manage",
-
 	TEAM_VIEW: "team.view",
+	TEAM_FUNDRAISING_CREATE: "team.fundraising.create",
 	TEAM_PAGE_EDIT: "team.page.edit",
 	TEAM_FUNDRAISING_MANAGE: "team.fundraising.manage",
 	TEAM_STORE_MANAGE: "team.store.manage",
@@ -29,13 +29,11 @@ export const Capabilities = {
 	TEAM_FEE_VIEW: "team.fee.view",
 	TEAM_COMMUNICATION_MANAGE: "team.communication.manage",
 	TEAM_ELIGIBILITY_VIEW: "team.eligibility.view",
-
 	TOURNAMENT_VIEW: "tournament.view",
 	TOURNAMENT_MANAGE: "tournament.manage",
 	TOURNAMENT_PAGE_EDIT: "tournament.page.edit",
 	TOURNAMENT_TEAM_MANAGE: "tournament.team.manage",
 	TOURNAMENT_COMMUNICATION_MANAGE: "tournament.communication.manage",
-
 	HOUSEHOLD_VIEW: "household.view",
 	HOUSEHOLD_FEE_VIEW: "household.fee.view",
 	HOUSEHOLD_FEE_PAY: "household.fee.pay",
@@ -45,14 +43,13 @@ export const Capabilities = {
 	HOUSEHOLD_ORDER_VIEW: "household.order.view",
 	HOUSEHOLD_ORDER_CREATE: "household.order.create",
 	HOUSEHOLD_PROFILE_MANAGE: "household.profile.manage",
-
+	HOUSEHOLD_FUNDRAISING_CREATE: "household.fundraising.create",
 	ATHLETE_PROFILE_VIEW: "athlete.profile.view",
 	ATHLETE_PROFILE_UPDATE: "athlete.profile.update",
 	ATHLETE_SCHEDULE_VIEW: "athlete.schedule.view",
 	ATHLETE_ORDER_VIEW: "athlete.order.view",
 	ATHLETE_TEAM_VIEW: "athlete.team.view",
 	ATHLETE_GUARDIAN_VIEW: "athlete.guardian.view",
-
 	EVENT_READ: "event.read",
 	EVENT_CREATE: "event.create",
 	EVENT_UPDATE: "event.update",
@@ -64,7 +61,6 @@ export const Capabilities = {
 	TEAM_EVENT_MANAGE: "team.event.manage",
 	TOURNAMENT_EVENT_MANAGE: "tournament.event.manage",
 	ORG_EVENT_MANAGE: "organization.event.manage",
-
 	PLATFORM_ORG_VIEW: "platform.organization.view",
 	PLATFORM_ORG_MANAGE: "platform.organization.manage",
 	PLATFORM_USER_VIEW: "platform.user.view",

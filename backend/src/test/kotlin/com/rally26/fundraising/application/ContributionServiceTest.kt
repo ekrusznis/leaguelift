@@ -421,6 +421,9 @@ class ContributionServiceTest {
             templateKey = null,
             createdAt = Instant.now(),
             updatedAt = Instant.now(),
+            approvedByUserId = UUID.randomUUID(),
+            approvedAt = Instant.now(),
+            submittedAt = Instant.now(),
         )
 
     private fun pendingContribution(campaign: Campaign) =

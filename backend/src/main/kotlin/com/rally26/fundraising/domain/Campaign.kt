@@ -51,17 +51,19 @@ data class Campaign(
     val currency: String,
     val startDate: LocalDate?,
     val endDate: LocalDate?,
-    val eventLocationName: String?,
-    val eventAddress: String?,
     val status: CampaignStatus,
     val publishedAt: Instant?,
     val createdByUserId: UUID?,
     val templateKey: FundraiserTemplateKey?,
-    val submittedAt: Instant?,
-    val approvedAt: Instant?,
-    val approvedByUserId: UUID?,
     val createdAt: Instant,
     val updatedAt: Instant,
+    // Added after the original Campaign fields so existing positional Kotlin call sites
+    // remain source-compatible. New code should prefer named arguments.
+    val eventLocationName: String? = null,
+    val eventAddress: String? = null,
+    val submittedAt: Instant? = null,
+    val approvedAt: Instant? = null,
+    val approvedByUserId: UUID? = null,
 )
 
 private val SLUG_PATTERN = Regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")

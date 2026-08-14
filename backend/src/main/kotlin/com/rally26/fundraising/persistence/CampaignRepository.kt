@@ -96,10 +96,10 @@ class CampaignRepository(
         currency: String,
         startDate: LocalDate?,
         endDate: LocalDate?,
-        eventLocationName: String?,
-        eventAddress: String?,
         createdByUserId: UUID?,
         templateKey: FundraiserTemplateKey?,
+        eventLocationName: String? = null,
+        eventAddress: String? = null,
     ): Campaign {
         val now = Instant.now()
         val id = UUID.randomUUID()
@@ -167,8 +167,8 @@ class CampaignRepository(
         goalAmountMinor: Long?,
         startDate: LocalDate?,
         endDate: LocalDate?,
-        eventLocationName: String?,
-        eventAddress: String?,
+        eventLocationName: String? = null,
+        eventAddress: String? = null,
     ): Int {
         val now = Instant.now()
         return jdbcClient
