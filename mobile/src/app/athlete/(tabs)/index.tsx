@@ -16,17 +16,10 @@ import { useParticipantEvents } from '@/features/events/api';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/**
- * Athlete Dashboard (Home tab) — real backend data (ADR-104), mirrors coach/parent
- * Dashboard structure. No "recent history"/"orders" card: both are confirmed
- * hardcoded emptyList() server-side (AthleteDashboardService), so a card here would
- * always be empty by current backend design, not a real feature.
- */
 export default function AthleteDashboardScreen() {
   const theme = useTheme();
   const athleteSelf = useAthleteSelf();
   const [now] = useState(() => Date.now());
-
   const overviewQuery = useAthleteOverview(true);
   const teamsQuery = useAthleteTeams(true);
   const announcementsQuery = useMyAnnouncements();
@@ -61,7 +54,6 @@ export default function AthleteDashboardScreen() {
   }
 
   const overview = overviewQuery.data;
-
   return (
     <ThemedView style={styles.container}>
       <PlatformStatusSpacer />
@@ -81,47 +73,49 @@ export default function AthleteDashboardScreen() {
 
         {overview?.nextEvent ? (
           <ThemedView type="backgroundElement" style={styles.nextEventCard}>
-            <ThemedText type="small" themeColor="textSecondary">
-              Next Up
-            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">Next Up</ThemedText>
             <ThemedText type="smallBold">{overview.nextEvent.title}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               {overview.nextEvent.dateLabel}
               {overview.nextEvent.subtitle ? ` · ${overview.nextEvent.subtitle}` : ''}
             </ThemedText>
             {overview.nextEvent.location && (
-              <ThemedText type="small" themeColor="textSecondary">
-                {overview.nextEvent.location}
-              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">{overview.nextEvent.location}</ThemedText>
             )}
           </ThemedView>
         ) : (
-          overview && (
-            <ThemedText type="small" themeColor="textSecondary" style={styles.emptyNextEvent}>
-              Nothing coming up yet.
-            </ThemedText>
-          )
+          overview && <ThemedText type="small" themeColor="textSecondary" style={styles.emptyNextEvent}>Nothing coming up yet.</ThemedText>
         )}
 
-        <ThemedText type="smallBold" style={styles.sectionTitle}>
-          Your Teams
-        </ThemedText>
+        <View style={styles.sectionHeader}>
+          <ThemedText type="smallBold">Your Teams</ThemedText>
+          {athleteSelf.organizationId && athleteSelf.participantId && (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                router.push({
+                  pathname: '/participant-teams',
+                  params: {
+                    organizationId: athleteSelf.organizationId ?? '',
+                    participantId: athleteSelf.participantId ?? '',
+                    participantName: overview?.displayName ?? '',
+                  },
+                })
+              }>
+              <ThemedText type="link" themeColor="textSecondary">Coaches & Staff</ThemedText>
+            </Pressable>
+          )}
+        </View>
         {teamsQuery.isLoading && <LoadingState label="Loading teams…" />}
         {teamsQuery.data && teamsQuery.data.length === 0 && (
-          <ThemedText type="small" themeColor="textSecondary">
-            No teams linked yet.
-          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">No teams linked yet.</ThemedText>
         )}
         <View style={styles.teamsList}>
           {teamsQuery.data?.map((team) => (
             <ThemedView key={team.name} type="backgroundElement" style={styles.teamCard}>
               <ThemedText type="smallBold">{team.name}</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {team.detail}
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                Coach: {team.coachName}
-              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">{team.detail}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">Coach: {team.coachName}</ThemedText>
             </ThemedView>
           ))}
         </View>
@@ -129,37 +123,27 @@ export default function AthleteDashboardScreen() {
         <View style={styles.sectionHeader}>
           <ThemedText type="smallBold">Upcoming</ThemedText>
           <Pressable onPress={() => router.push('/athlete/(tabs)/calendar')}>
-            <ThemedText type="link" themeColor="textSecondary">
-              View All
-            </ThemedText>
+            <ThemedText type="link" themeColor="textSecondary">View All</ThemedText>
           </Pressable>
         </View>
         {eventsQuery.isLoading && <LoadingState label="Loading schedule…" />}
         {eventsQuery.isError && <ErrorState message="Could not load your schedule." onRetry={() => eventsQuery.refetch()} />}
         {eventsQuery.data && upcomingEvents.length === 0 && (
-          <ThemedText type="small" themeColor="textSecondary">
-            Nothing scheduled yet.
-          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">Nothing scheduled yet.</ThemedText>
         )}
         <View style={styles.list}>
-          {upcomingEvents.map((event) => (
-            <EventCard key={event.id} event={event} />
-          ))}
+          {upcomingEvents.map((event) => <EventCard key={event.id} event={event} />)}
         </View>
 
         <View style={styles.sectionHeader}>
           <ThemedText type="smallBold">Recent Announcements</ThemedText>
           <Pressable onPress={() => router.push('/announcements')}>
-            <ThemedText type="link" themeColor="textSecondary">
-              View All
-            </ThemedText>
+            <ThemedText type="link" themeColor="textSecondary">View All</ThemedText>
           </Pressable>
         </View>
         {announcementsQuery.isLoading && <LoadingState label="Loading announcements…" />}
         {announcementsQuery.data && recentAnnouncements.length === 0 && (
-          <ThemedText type="small" themeColor="textSecondary">
-            No announcements yet.
-          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">No announcements yet.</ThemedText>
         )}
         <View style={styles.list}>
           {recentAnnouncements.map(({ announcement }) => (
@@ -168,9 +152,7 @@ export default function AthleteDashboardScreen() {
                 <Ionicons name="megaphone" size={18} color={Brand.championshipGold} />
                 <ThemedText type="smallBold">{announcement.title}</ThemedText>
               </View>
-              <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-                {announcement.body}
-              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>{announcement.body}</ThemedText>
             </ThemedView>
           ))}
         </View>
@@ -180,9 +162,7 @@ export default function AthleteDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -190,13 +170,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
   },
-  wordmark: {
-    fontSize: 20,
-    lineHeight: 24,
-  },
-  wordmarkAccent: {
-    color: Brand.championshipGold,
-  },
+  wordmark: { fontSize: 20, lineHeight: 24 },
+  wordmarkAccent: { color: Brand.championshipGold },
   scrollContent: {
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.six,
@@ -212,11 +187,12 @@ const styles = StyleSheet.create({
     gap: 2,
     marginBottom: Spacing.two,
   },
-  emptyNextEvent: {
-    marginBottom: Spacing.two,
-  },
-  sectionTitle: {
-    marginTop: Spacing.two,
+  emptyNextEvent: { marginBottom: Spacing.two },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Spacing.three,
     marginBottom: Spacing.two,
   },
   teamsList: {
@@ -228,16 +204,7 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: 2,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: Spacing.three,
-    marginBottom: Spacing.two,
-  },
-  list: {
-    gap: Spacing.two,
-  },
+  list: { gap: Spacing.two },
   announcementCard: {
     borderRadius: Spacing.three,
     padding: Spacing.three,

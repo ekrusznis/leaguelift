@@ -12,12 +12,6 @@ import { useOrgTeam } from '@/features/organization-teams/api';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/**
- * Team detail, pushed from the Teams tab — real GET /organizations/{id}/teams/{teamId}
- * (ADR-105). Team field editing is still a later slice; New Event and Message Team
- * were added (ADR-108) so Owner has the same event-management and team-messaging
- * reach Coach already had, per founder QA follow-up.
- */
 export default function OwnerTeamDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
@@ -44,7 +38,6 @@ export default function OwnerTeamDetailScreen() {
   }
 
   const team = teamQuery.data;
-
   return (
     <ThemedView style={styles.container}>
       <ScreenHeader
@@ -70,6 +63,27 @@ export default function OwnerTeamDetailScreen() {
           <View style={[styles.colorSwatch, { backgroundColor: team.secondaryColor }]} />
         </View>
 
+        <Pressable
+          accessibilityRole="button"
+          onPress={() =>
+            router.push({
+              pathname: '/team-staff',
+              params: {
+                organizationId: organizationId ?? '',
+                teamId: team.id,
+                teamName: team.name,
+              },
+            })
+          }>
+          <ThemedView type="backgroundElement" style={styles.staffRow}>
+            <View style={styles.staffLabel}>
+              <Ionicons name="people-outline" size={20} color={theme.text} />
+              <ThemedText type="smallBold">Coaches & Staff</ThemedText>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+          </ThemedView>
+        </Pressable>
+
         <DetailRow label="Sport" value={team.sport} />
         <DetailRow label="Season" value={team.season} />
         <DetailRow label="Age Group" value={team.ageGroup} />
@@ -86,18 +100,14 @@ export default function OwnerTeamDetailScreen() {
 function DetailRow({ label, value }: { label: string; value: string | null }) {
   return (
     <ThemedView type="backgroundElement" style={styles.detailRow}>
-      <ThemedText type="small" themeColor="textSecondary">
-        {label}
-      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">{label}</ThemedText>
       <ThemedText type="smallBold">{value ?? '—'}</ThemedText>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   content: {
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.six,
@@ -116,6 +126,19 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: Spacing.two,
+  },
+  staffRow: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: Spacing.three,
+    padding: Spacing.three,
+  },
+  staffLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   detailRow: {
     flexDirection: 'row',
