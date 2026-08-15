@@ -57,7 +57,7 @@ describe("SponsorshipPackageList", () => {
 
 		await user.click(screen.getByRole("button", { name: /add sponsorship package/i }));
 		await user.type(screen.getByLabelText(/^name/i), "Gold Sponsor");
-		await user.type(screen.getByLabelText(/price \(cents\)/i), "50000");
+		await user.type(screen.getByPlaceholderText("500.00"), "500");
 		await user.click(screen.getByRole("button", { name: /create package/i }));
 
 		await waitFor(() =>
@@ -120,7 +120,7 @@ describe("SponsorshipPackageList", () => {
 
 	it("approves a pending-review sponsorship from the review queue", async () => {
 		const fetchMock = vi.fn((url: string, init?: RequestInit) => {
-			if (url.includes("/pending-review")) return Promise.resolve(jsonResponse(pendingReviewPage));
+			if (url.includes("reviewStatus=PENDING_REVIEW")) return Promise.resolve(jsonResponse(pendingReviewPage));
 			if (url.includes("/approve")) return Promise.resolve(jsonResponse({ ...pendingReviewSponsorship, reviewStatus: "APPROVED" }));
 			if (init?.method === "POST") return Promise.resolve(jsonResponse(draftPackage, 201));
 			return Promise.resolve(jsonResponse(emptyPackages));
@@ -146,7 +146,7 @@ describe("SponsorshipPackageList", () => {
 
 	it("rejects a pending-review sponsorship after confirmation", async () => {
 		const fetchMock = vi.fn((url: string, init?: RequestInit) => {
-			if (url.includes("/pending-review")) return Promise.resolve(jsonResponse(pendingReviewPage));
+			if (url.includes("reviewStatus=PENDING_REVIEW")) return Promise.resolve(jsonResponse(pendingReviewPage));
 			if (url.includes("/reject")) return Promise.resolve(jsonResponse({ ...pendingReviewSponsorship, reviewStatus: "REJECTED", status: "REFUNDED" }));
 			if (init?.method === "POST") return Promise.resolve(jsonResponse(draftPackage, 201));
 			return Promise.resolve(jsonResponse(emptyPackages));

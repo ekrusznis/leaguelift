@@ -1,0 +1,124 @@
+--- a/DESIGN-DOC.md
++++ b/DESIGN-DOC.md
+@@ -1,8 +1,8 @@
+ # Rally26 Product and Engineering Design Document
+ 
+ **Document status:** Consolidated single source of truth (replaces the prior `DESIGN-DOC.md` plus `docs/architecture.md`, `docs/ai-agent-guardrails.md`, `docs/operations-runbook.md`, `docs/security.md`, `docs/privacy-data-inventory.md`, `docs/launch-checklist.md`, `docs/GA-TRANSITION-CHECKLIST.md`, `docs/RALLY26_DASHBOARD_DESIGN.md`, `docs/RALLY26_SALES_SITE_DESIGN.md`, `docs/RALLY26_MEDIA_ASSET_DESIGN.md`)
+-**Version:** 3.0
+-**Date:** 2026-08-15 (v3.0 Pilot Readiness reconciliation: documents the large merged Phase 31/34/35/mobile/financial-operations/fundraising/UX batch through V92, the P0 owner-onboarding hardening and V93 plan-catalog repair in this change set, and the next product phases for rally26.com, Our Pillars, four-tier subscriptions, entitlement gating, free-tier advertising, and final launch QA. Current State and Design Target are separated explicitly; future pricing/ads are not represented as already shipped.)**
++**Version:** 3.1
++**Date:** 2026-08-15 (v3.1 Android AI QA addition: retains the v3.0 Pilot Readiness reconciliation and adds the source-controlled Firebase App Testing agent Android QA/UX/UI unit, role/authority and subscription-gating matrices, repeatable smoke/full suites, and launch-gate expectations recorded by ADR-120. iOS automated/device QA remains a separate follow-on once Android is stabilized.)**
+ **Primary audience:** Claude Code and other software-development agents, the founder, future engineers, designers, and technical reviewers
+ **Product stage:** Pilot readiness / soft-launch hardening
+ 
+@@ -34,6 +34,7 @@
+ - **Communications and safety:** announcements, broadcasts, coach/family conversations, safety reports/locks, guardian messaging controls, runtime-gated athlete messaging, Action Center, Help Center/support intake, Documents, and media controls are implemented.
+ - **Native mobile:** Coach, Parent, Athlete, and Owner personas are backend-wired. Native screens cover the core high-frequency workflows; authenticated WebView is the deliberate parity seam for complex existing web workflows such as Swag Shop and selected owner/household administration. QuickBooks remains the one intentional web-only exception.
+ - **P0 owner onboarding hardening in this v3.0 change set:** V93 repairs the three-plan catalog; the web wizard loads onboarding and plans independently with retry UI; mobile reads authenticated owner-onboarding state, resumes the exact persisted step, understands Checkout success/cancel return signals, and denies all Owner navigation until the backend reports webhook-backed subscription activation plus an `ACTIVE` organization. A `DRAFT` organization never unlocks Owner functionality.
++- **Android AI-guided QA/UX/UI unit in this v3.1 change set (ADR-120):** a repository-root `qa/` package defines version-controlled Firebase App Testing agent YAML suites for Coach, Parent/Guardian, Athlete, Owner, Platform Admin boundary behavior, authority tiers, subscription lifecycle states, and Starter/Club entitlement UX. The unit also owns a role-feature matrix, subscription-gating matrix, repeatable test-account/data contract, smoke/full runner, and P0-P3 triage format. Firebase is an Android user-visible regression/interaction layer only; backend authorization, money, webhook, audit, and isolation tests remain authoritative.
+ - **CI/test contract closeout in this v3.0 change set:** event-search, dispute-search, and invitations/member-search component tests are updated to the current paginated response contracts; production code is not weakened to accommodate stale array-shaped mocks.
+ 
+ The next phases in §14.1R-§14.1V are **Design Target**. In particular, FREE-tier advertising and the four-tier subscription model do not exist merely because they are described here.
+@@ -280,6 +281,11 @@
+ |       |-- pages/ (incl. pages/marketing/, pages/auth/)
+ |       |-- routes/ (AppRoutes, ProtectedRoute)
+ |       `-- lib/, styles/, test/
++|-- qa/
++|   |-- firebase/android/ (Firebase App Testing agent YAML suites, runner, device/credential templates)
++|   |-- matrices/ (role-feature, subscription-gating, and coverage contracts)
++|   |-- test-data/ (QA account/data-state contract; no committed passwords)
++|   `-- triage/ (P0-P3 severity guide and bug-report template)
+ |-- docs/
+ |   |-- openapi.yaml
+ |   `-- adr/
+@@ -1581,6 +1587,63 @@
+ 
+ After Phases 44-47: stop discretionary feature work; run role-by-role browser and device QA, billing/checkout/webhook recovery, invitation/onboarding, permissions/entitlements, public fundraising/sponsorship/store flows, mobile deep links/WebViews, accessibility, observability, backup/restore, security/dependency scans, transactional email, production provider credentials, and support/runbook checks. The founding-organization pilot begins only after blockers are closed or explicitly accepted with an owner and rollback/mitigation plan.
+ 
++The Android portion of this gate must use the source-controlled AI-guided testing unit in §14.1X/ADR-120 as a repeatable baseline rather than relying only on founder click-through. iOS remains a separate follow-on device/automation gate once the Android app and its role/subscription regressions are stable; Android-specific Firebase tooling must not be represented as proof of iOS behavior.
++
++### 14.1X Android AI-Guided Mobile QA/UX/UI Testing Unit — Current State in this v3.1 change set
++
++**Purpose:** establish a repeatable first-round Android testing system that behaves like a user across Rally26's real personas, fields, navigation, WebViews, authority tiers, and subscription states; captures visible regressions and UX/UI defects; and produces evidence that can be triaged into launch-blocking bugs. This unit complements, but never replaces, backend/service/integration/security testing.
++
++**Selected tool:** Firebase App Distribution **App Testing agent (Android)**, currently a preview Gemini-powered testing feature. Test cases are written in natural-language YAML, versioned with the repository, and executed against an Android APK through the Firebase CLI. Rally26's registered Android package must match the real app package `com.rally26.mobile`. No Firebase SDK is required solely to register/distribute/test the app through this feature; adding unrelated Firebase runtime SDKs is not part of this decision.
++
++**Repository contract (`qa/`):**
++- `qa/firebase/android/tests/` — suite-per-persona/state YAML, with `[SMOKE]` cases for the fast first pass and fuller regression cases for deeper review;
++- `qa/firebase/android/run-suite.sh` — one-suite CLI wrapper using `firebase apptesting:execute`, a Firebase App ID, device list, and runtime-only credential files;
++- `qa/firebase/android/.credentials/` — local/CI secret files only, ignored by Git; passwords never belong in YAML or source control;
++- `qa/matrices/ROLE-FEATURE-MATRIX.md` — expected feature visibility/authority by `OWNER`, `ADMINISTRATOR`, `VIEWER`, `TEAM_MANAGER`, `TEAM_EDITOR`, `COACH_READ`, Parent/Guardian, Athlete, and Platform Admin;
++- `qa/matrices/SUBSCRIPTION-GATING-MATRIX.md` — owner onboarding/subscription lifecycle plus plan-entitlement expectations;
++- `qa/matrices/COVERAGE-MATRIX.md` — maps product areas to executable suites;
++- `qa/test-data/TEST-ACCOUNTS.md` — stable QA organization/account/data-state requirements;
++- `qa/triage/` — P0-P3 severity and reproducible bug-report format using Firebase screenshots/video/action trace/accessibility view/logs.
++
++**Initial Android suite contract:** cover at least these distinct test identities/states rather than one over-permissioned account:
++1. Coach with `TEAM_MANAGER`, plus separate `TEAM_EDITOR` and `COACH_READ` authority accounts.
++2. Parent/Guardian linked to a representative multi-athlete/multi-team household.
++3. Athlete with a real `ATHLETE_SELF` link; athlete tests must verify self/schedule/guardian/eligibility privacy and SafeSport-scoped messaging without financial or teammate-roster leakage.
++4. Active Owner, separate Organization `ADMINISTRATOR`, and Organization `VIEWER`.
++5. Platform Admin, which currently validates the honest mobile boundary rather than forcing a customer persona.
++6. Disposable/resettable incomplete Owner for organization → plan → review → Stripe checkout/cancel/resume.
++7. Separate subscription-state owners for no-organization, PLAN, REVIEW, CHECKOUT_PENDING, ACTIVE, PAST_DUE, and CANCELED/SUSPENDED behavior.
++8. Separate Starter and Club organizations for visible plan-entitlement behavior. Starter is expected to enforce the current backend limits (three-team cap and plan-gated SMS/SportsEngine/TeamSnap/QuickBooks); the AI suite validates the user-visible upgrade/availability behavior while backend tests prove the restrictions cannot be bypassed directly.
++
++**Required QA behavior:**
++- Assertions describe what is visibly true on the final screen; do not ask the agent to infer invisible database/webhook state.
++- Every major role sweep checks normal success paths plus loading/empty/error/unauthorized presentation, field visibility/usability, scrolling, keyboard/safe-area behavior, clipped/overlapping content, dead taps, and misleading controls.
++- Authority tests verify both positive access and negative leakage. Hiding/disabling a control is UX only; the backend remains the security boundary and must keep direct-API authorization tests.
++- Owner onboarding tests explicitly prove that a saved `DRAFT` organization, selected plan, checkout return, or pending webhook cannot unlock native Owner routes. Only the authoritative server state documented in §14.1R/`isOwnerAccessUnlocked` may unlock.
++- Financial, payout, refund, transfer, destructive member, live checkout, and other irreversible actions stay non-destructive in the normal AI suite unless a dedicated disposable/test-mode workflow is designed for that mutation.
++- WebView tests verify authenticated mobile-width usability and correct persona destination, not just that a URL loaded.
++- Cross-organization/household/youth-data leakage is P0.
++- The same YAML suite may be run on more than one Android model/version, but the first baseline should use one representative phone to conserve preview quota and reduce noisy variance; broaden device coverage only after smoke tests are stable.
++- Firebase's AI test result is evidence, not truth: review screenshots, action trace, accessibility view, video, and logs for failures and suspicious passes.
++
++**Execution order for the first AI QA round:** shared first-launch/login → Coach → Parent → Athlete → Owner → Platform Admin boundary → Owner onboarding → authority tiers → subscription lifecycle/entitlements. Run `[SMOKE]` first and close P0/P1 findings before spending quota on full regression/device expansion.
++
++**Maintenance rule:** any mobile change that alters a route, visible field, action, authority boundary, onboarding/subscription gate, or WebView destination must update the affected `qa/firebase/android` YAML and the relevant matrix in the same change. A new backend capability/role/plan entitlement that changes mobile behavior is incomplete until its positive and negative Android QA expectations are represented.
++
++**Current limitation / iOS boundary:** Firebase App Testing agent in this decision is Android-specific. It is not evidence of iOS correctness. Once Android reaches the founder-approved stable baseline, choose and document the iOS equivalent (TestFlight/device UAT plus an automation framework/provider appropriate to the then-current Expo/iOS toolchain) in a separate ADR rather than forcing Android's Firebase implementation onto iOS.
++
++**Acceptance criteria:**
++1. The `qa/` unit is committed with parseable Firebase YAML and no credentials.
++2. Firebase registers `com.rally26.mobile` exactly and the project has an App ID available to local/CI execution.
++3. Dedicated QA accounts/data states exist for each primary persona, authority tier, and subscription state used by a suite.
++4. All `[SMOKE]` suites execute against the same release-candidate APK on at least one representative Android phone.
++5. P0/P1 failures are fixed or explicitly accepted with owner, reason, mitigation, and rollback before pilot release.
++6. Permission/subscription failures found by the agent are backed by direct backend regression tests when the defect could be bypassed outside the UI.
++7. Full regression is rerun after blocker fixes; screenshots/videos/traces are retained long enough to support triage.
++8. Android success is recorded separately from iOS readiness.
++
++**Reference:** `docs/adr/ADR-120-android-ai-guided-mobile-qa.md` and Firebase's current official App Testing agent documentation. Re-verify preview status, CLI flags, devices, quotas, and limits before changing CI/release policy because this provider surface is explicitly preview software.
++
+ ### 14.2 Explicitly deferred (do not build during early phases)
+ 
+ Child login accounts (beyond the guardian-mediated `ATHLETE_SELF` model already shipped in Phase 7 — a child never self-registers independently), cash-withdrawable family wallets, full team scheduling, live scoring, volunteer management, medical records, school records, Kubernetes, microservices, premature accounting integrations, broad sports-platform integrations without pilot demand.
+@@ -1614,6 +1677,8 @@
+ **Live Fulfillment Launch** (not cleared): Printify catalog/product/variant mapping, real cost snapshots, draft order submission, and order confirmation notifications exist. Still required: credentialed shop verification, send-to-production policy, shipment webhook authenticity/idempotency, cancellation/reprint handling, tracking/customer updates, exception queue/support process, and a manual fulfillment fallback (Phase 18).
+ 
+ **Production-Ready Release Gate:** Phase 13 completed the code-level security/test/accessibility/runbook slices, but the infrastructure/stakeholder items remain open. Phase 21, now single-environment scoped (ADR-061), must prove protected `main`-only branch promotion and automatic deployment (already real, ADR-008), migration/readiness/smoke behavior (already real), a documented rollback procedure (not yet written), realistic load/failure testing, database restoration rehearsal (resolved 2026-08-12 against the local dev database — see §14.6 item #12/`docs/BACKUP-RESTORE-RUNBOOK.md`; still needs one real pass against production Spaces credentials), object-storage restoration (versioning not yet enabled), incident-response rehearsal (written procedure exists, §18.3 — most scenarios still not rehearsed against a real system), production monitoring/alerts (not yet configured), Rally26-domain email delivery (Phase 20), Help Center/support escalation, legal-content/privacy review, pilot UAT, release-blocker triage, and explicit founder go/no-go. Provider readiness code, unverified workflows, or placeholder secrets do not satisfy this gate. A dedicated staging environment is not a prerequisite for this gate — it's deferred to a later phase, per ADR-061.
++
++**Android mobile AI QA gate (ADR-120):** before an Android build is called pilot-ready, the source-controlled `[SMOKE]` suites for shared auth/first launch, Coach, Parent, Athlete, Owner, Platform Admin boundary, and Owner onboarding must run against the same release-candidate APK. Authority/subscription suites are mandatory before paid pilot use. Any P0 cross-organization/household leak, unauthorized financial/admin action, onboarding/subscription bypass, crash, or blocked core role is a release blocker. Android completion does not clear iOS; iOS has its own later device/automation gate.
+ 
+ ### 14.5 Credentials Needed for Production (as of 2026-08-12)
+ 
+@@ -1906,6 +1971,8 @@
+ - Never invent an API endpoint without updating `docs/openapi.yaml`.
+ - Never put authorization logic only in React; add backend membership/role checks to every organization-owned query.
+ - Add tests with every behavior change.
++- For Android mobile changes, update the affected `qa/firebase/android` YAML and role/subscription/coverage matrices when routes, fields, actions, role/capability boundaries, onboarding gates, plan entitlements, or WebView destinations change. Do not let the AI suite drift behind the app.
++- Treat Firebase App Testing agent assertions as user-visible QA evidence only; never weaken or remove backend authorization, organization-isolation, payment, webhook, audit, or idempotency tests because a UI test passes.
+ - Use Flyway for every schema change; never edit an already-applied migration.
+ - Money is always `bigint` minor units + ISO-4217 currency — never floating point.
+ - Never edit historical ledger or credit events — reversals only (future phases).
+@@ -1921,7 +1988,7 @@
+ 
+ ### 20.3 Before completing a task
+ 
+-Run backend tests, frontend typecheck + tests, and integration tests where applicable; verify migrations, organization isolation, that no secrets were committed, that OpenAPI matches behavior, error states, and mobile behavior; update documentation (this file, `docs/openapi.yaml`, relevant ADR); summarize changes, tests, and remaining limitations in the handoff.
++Run backend tests, frontend typecheck + tests, and integration tests where applicable; verify migrations, organization isolation, that no secrets were committed, that OpenAPI matches behavior, error states, and mobile behavior; update documentation (this file, `docs/openapi.yaml`, relevant ADR); summarize changes, tests, and remaining limitations in the handoff. For an Android release candidate or a change that materially alters mobile routing/permissions/onboarding/subscription behavior, also run the applicable `qa/firebase/android` smoke/regression suite when Firebase test infrastructure and required QA accounts are available; if execution is blocked by preview/provider/credential availability, record that limitation explicitly rather than claiming the mobile QA gate passed.
+ 
+ ### 20.4 Hard prohibitions
+ 

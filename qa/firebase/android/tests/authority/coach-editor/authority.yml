@@ -1,0 +1,24 @@
+tests:
+  - displayName: "[SMOKE] Team Editor - sign in"
+    id: coach-editor-login
+    steps:
+      - goal: Complete first-launch walkthrough if needed and sign in with TEAM_EDITOR credentials.
+        finalScreenAssertion: The assigned Coach/Team workspace is visible.
+
+  - displayName: "Team Editor - event and communication authority"
+    id: coach-editor-allowed
+    prerequisiteTestCaseId: coach-editor-login
+    steps:
+      - goal: Inspect create/edit event and team communication entry points.
+        finalScreenAssertion: >-
+          TEAM_EDITOR can reach event create/update/publish and team communication
+          functions for the assigned team without receiving an incorrect authorization error.
+
+  - displayName: "[SMOKE] Team Editor - manager-only boundary"
+    id: coach-editor-denied
+    prerequisiteTestCaseId: coach-editor-login
+    steps:
+      - goal: Inspect roster/staff management and event-cancel options.
+        finalScreenAssertion: >-
+          TEAM_EDITOR is not offered usable roster-management, staff-management, or
+          event-cancel actions that require TEAM_MANAGER authority.

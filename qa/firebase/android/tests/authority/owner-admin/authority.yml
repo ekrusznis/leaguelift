@@ -1,0 +1,26 @@
+tests:
+  - displayName: "[SMOKE] Organization Administrator - sign in"
+    id: owner-admin-login
+    steps:
+      - goal: Complete first-launch walkthrough if needed and sign in with supplied ADMINISTRATOR credentials.
+        finalScreenAssertion: >-
+          The organization administrator reaches the owner-style organization workspace.
+
+  - displayName: "Organization Administrator - permitted management"
+    id: owner-admin-manage
+    prerequisiteTestCaseId: owner-admin-login
+    steps:
+      - goal: Inspect Members, Teams, Announcements management, and Organization Settings.
+        finalScreenAssertion: >-
+          Organization management appropriate to ADMINISTRATOR authority is usable and
+          does not fail merely because the account is not the primary OWNER.
+
+  - displayName: "[SMOKE] Organization Administrator - owner-only financial authority boundary"
+    id: owner-admin-owner-only
+    prerequisiteTestCaseId: owner-admin-login
+    steps:
+      - goal: Review payout/subscription/fundraiser-approval entry points without executing a mutation.
+        finalScreenAssertion: >-
+          Primary-owner-only billing/payout or fundraiser-approval actions are hidden,
+          disabled, or fail closed with a clear authorization message rather than
+          appearing to succeed.

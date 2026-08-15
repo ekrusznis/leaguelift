@@ -1,0 +1,121 @@
+tests:
+  - displayName: "[SMOKE] Parent - sign in and route correctly"
+    id: parent-login
+    steps:
+      - goal: >-
+          Reach the Rally26 sign-in screen. If the first-launch walkthrough is shown,
+          complete it first.
+        finalScreenAssertion: >-
+          The Rally26 sign-in screen is visible with usable Email, Password, and Sign In controls.
+      - goal: Sign in using the test credentials supplied to the App Testing agent.
+        hint: Wait for role routing to finish.
+        finalScreenAssertion: >-
+          The Parent/Guardian experience is visible and the bottom navigation shows Home,
+          Calendar, Payments, Messages, and More.
+
+  - displayName: "[SMOKE] Parent - household dashboard"
+    id: parent-dashboard
+    prerequisiteTestCaseId: parent-login
+    steps:
+      - goal: Review the complete Parent Home screen.
+        hint: Scroll from top to bottom.
+        finalScreenAssertion: >-
+          Linked athlete, schedule, balance, and announcement areas are readable when data
+          exists, or have intentional empty states. No owner/coach management controls are
+          presented as normal parent actions.
+
+  - displayName: "[SMOKE] Parent - family calendar and RSVP"
+    id: parent-calendar-rsvp
+    prerequisiteTestCaseId: parent-login
+    steps:
+      - goal: Open Calendar and inspect family events.
+        finalScreenAssertion: >-
+          Family Calendar is readable and events are clearly associated with the household's
+          linked athletes/teams where shown.
+      - goal: Open an event and inspect RSVP controls for a linked athlete.
+        hint: >-
+          If an RSVP picker is visible, change it to Maybe and then leave the screen.
+          Do not alter unrelated athletes.
+        finalScreenAssertion: >-
+          Event Details remains readable and RSVP controls, when present, clearly identify
+          the linked athlete being updated.
+
+  - displayName: "Parent - payments and fee details"
+    id: parent-payments
+    prerequisiteTestCaseId: parent-login
+    steps:
+      - goal: Open Payments and inspect balances and fee rows.
+        finalScreenAssertion: >-
+          Outstanding balance, fee items, credit information, or intentional empty states
+          are clearly labeled and money values are not clipped.
+      - goal: Open one fee detail if available.
+        finalScreenAssertion: >-
+          Fee Details shows a readable fee summary and payment history or a deliberate empty
+          history state. No other household's financial data is visible.
+
+  - displayName: "Parent - documents and messaging safety"
+    id: parent-docs-safety
+    prerequisiteTestCaseId: parent-login
+    steps:
+      - goal: From More, open Documents and inspect the list.
+        finalScreenAssertion: >-
+          Household documents are readable or a clear empty state is shown, with no
+          restricted document belonging to another household visible.
+      - goal: Return to More and open Messaging Safety.
+        finalScreenAssertion: >-
+          Messaging Safety controls are readable, clearly scoped to the guardian/household,
+          and do not expose platform or organization administration controls.
+
+  - displayName: "Parent - messages"
+    id: parent-messages
+    prerequisiteTestCaseId: parent-login
+    steps:
+      - goal: Open Messages, open a thread if available, and inspect reply controls.
+        finalScreenAssertion: >-
+          Parent message content is readable and any reply control accurately reflects
+          whether the parent may reply.
+      - goal: If replying is allowed, send "QA Android parent reply - safe to delete".
+        finalScreenAssertion: >-
+          When sent, the QA reply appears in the correct thread without exposing another
+          household's private conversation.
+
+  - displayName: "Parent - fundraising and Swag Shop"
+    id: parent-commerce
+    prerequisiteTestCaseId: parent-login
+    steps:
+      - goal: From More, open Fundraising.
+        finalScreenAssertion: >-
+          Fundraising loads without an authorization error and is scoped to eligible
+          organization/team context for this guardian.
+      - goal: Return to More and open Swag Shop.
+        hint: Do not complete checkout.
+        finalScreenAssertion: >-
+          The authenticated buyer flow loads inside Rally26 and does not show an owner
+          catalog-management page.
+
+  - displayName: "Parent - household media and family credits web surfaces"
+    id: parent-household-web
+    prerequisiteTestCaseId: parent-login
+    steps:
+      - goal: From More, open Household Media if enabled.
+        finalScreenAssertion: >-
+          The household-specific media surface loads for the current household, or the
+          control is clearly disabled when no household context exists.
+      - goal: Return and open Fees & Family Credits if enabled.
+        hint: Do not initiate a real financial transfer.
+        finalScreenAssertion: >-
+          The household fee/credit surface loads for the current household and does not
+          expose another household's data.
+
+  - displayName: "Parent - announcements, Action Center, Help, Settings"
+    id: parent-supporting-features
+    prerequisiteTestCaseId: parent-login
+    steps:
+      - goal: Open Announcements from More.
+        finalScreenAssertion: Announcements are readable or a clear empty state is shown.
+      - goal: Return and open Action Center.
+        finalScreenAssertion: Action Center is readable and scoped to this parent/household.
+      - goal: Return and open Help Center.
+        finalScreenAssertion: Help Center loads readable support content.
+      - goal: Return and open Settings.
+        finalScreenAssertion: Settings is usable with no clipped controls or unexpected error.

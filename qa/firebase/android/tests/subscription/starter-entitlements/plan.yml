@@ -1,0 +1,11 @@
+tests:
+  - displayName: "[SMOKE] Starter - plan-limited UX"
+    id: starter-entitlements
+    steps:
+      - goal: Sign in with the supplied active Starter-plan OWNER test account.
+        finalScreenAssertion: The native Owner workspace is visible.
+      - goal: Inspect Team Management and integration/communication settings without committing destructive changes.
+        finalScreenAssertion: >-
+          Starter clearly communicates its restrictions where relevant: maximum 3 teams,
+          no gated SportsEngine/TeamSnap/QuickBooks connection, and no plan-gated SMS
+          capability. Upgrade-required states are understandable rather than raw 403 errors.

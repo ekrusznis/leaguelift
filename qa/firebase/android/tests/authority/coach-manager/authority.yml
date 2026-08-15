@@ -1,0 +1,15 @@
+tests:
+  - displayName: "[SMOKE] Team Manager - sign in"
+    id: coach-manager-login
+    steps:
+      - goal: Complete first-launch walkthrough if needed and sign in with TEAM_MANAGER credentials.
+        finalScreenAssertion: The assigned Coach/Team workspace is visible.
+
+  - displayName: "Team Manager - scoped manager authority"
+    id: coach-manager-allowed
+    prerequisiteTestCaseId: coach-manager-login
+    steps:
+      - goal: Inspect roster, staff, event, communication, fee-view, fundraising, and store entry points for the assigned team.
+        finalScreenAssertion: >-
+          TEAM_MANAGER can access scoped management functions for the assigned team and
+          does not gain organization-wide owner management authority.

@@ -1,0 +1,10 @@
+tests:
+  - displayName: "[SMOKE] Subscription state - Plan step"
+    id: subscription-plan
+    steps:
+      - goal: >-
+          Complete the first-launch walkthrough if needed and sign in with the supplied
+          owner account pre-provisioned specifically in the plan step state.
+        hint: Do not change the account's subscription state during this test.
+        finalScreenAssertion: >-
+          The owner is routed directly to the saved Plan step and sees Starter $49/month, Club $149/month, and League/contact.

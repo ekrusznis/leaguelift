@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../../test/testUtils";
 import { OrderList } from "../OrderList";
@@ -66,7 +66,9 @@ describe("OrderList", () => {
 		renderWithProviders(<OrderList organizationId={organizationId} storeId={storeId} />);
 		await screen.findByText("Jane Doe");
 
-		expect(screen.getByText(/refunded/i)).toBeInTheDocument();
+		const orderRow = screen.getByText("Jane Doe").closest("li");
+		expect(orderRow).not.toBeNull();
+		expect(within(orderRow as HTMLLIElement).getByText(/^refunded$/i)).toBeInTheDocument();
 		expect(screen.queryByRole("link", { name: /preview refund/i })).not.toBeInTheDocument();
 	});
 });
