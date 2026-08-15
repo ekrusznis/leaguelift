@@ -1342,7 +1342,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PayoutAccountResponse"
+                type: object
+                allOf: [{$ref: "#/components/schemas/PayoutAccountResponse"}]
                 nullable: true
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -6818,7 +6819,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TeamPageStatusItem"
+                type: object
+                allOf: [{$ref: "#/components/schemas/TeamPageStatusItem"}]
                 nullable: true
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -6846,7 +6848,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FundraisingProgress"
+                type: object
+                allOf: [{$ref: "#/components/schemas/FundraisingProgress"}]
                 nullable: true
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -14248,6 +14251,7 @@ components:
           maxLength: 20
           nullable: true
         personalizationPlacement:
+          type: string
           allOf: [{$ref: "#/components/schemas/PersonalizationPlacement"}]
           nullable: true
         personalizationLogoSize:

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/apiClient";
+import { majorAmountToMinorUnits } from "../../lib/money";
 import type { MediaAssignment } from "../media/types";
 import type { CreateSponsorshipCheckoutFormValues, CreateSponsorshipPackageFormValues, UpdateSponsorFormValues } from "./schema";
 import type {
@@ -37,7 +38,7 @@ export function useCreateSponsorshipPackage(organizationId: string) {
 				body: {
 					name: values.name,
 					description: values.description || null,
-					priceMinor: values.priceMinor,
+					priceMinor: majorAmountToMinorUnits(values.priceDollars, values.currency),
 					maxQuantity: values.maxQuantity === "" || values.maxQuantity == null ? null : values.maxQuantity,
 					exclusive: values.exclusive,
 					placementStartDate: values.placementStartDate || null,
