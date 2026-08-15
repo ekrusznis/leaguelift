@@ -5,10 +5,38 @@ import type { Tournament, TournamentPage } from "./types";
 
 const tournamentsQueryKey = (organizationId: string) => ["organizations", organizationId, "tournaments"] as const;
 
+/**
+ * Tournaments are a relatively small organization-level collection, but the backend endpoint is paginated.
+ * Load every page through the existing endpoint so the web list can provide honest client-side search/sort
+ * without adding a second search service or endpoint.
+ */
 export function useTournaments(organizationId: string) {
 	return useQuery({
 		queryKey: tournamentsQueryKey(organizationId),
-		queryFn: () => apiFetch<TournamentPage>(`/organizations/${organizationId}/tournaments`),
+		queryFn: async () => {
+			const pageSize = 100;
+			const first = await apiFetch<TournamentPage>(
+				`/organizations/${organizationId}/tournaments?page=0&size=${pageSize}`,
+			);
+			if (first.items.length >= first.totalElements) return first;
+
+			const totalPages = Math.ceil(first.totalElements / pageSize);
+			const remaining = await Promise.all(
+				Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) =>
+					apiFetch<TournamentPage>(
+						`/organizations/${organizationId}/tournaments?page=${index + 1}&size=${pageSize}`,
+					),
+				),
+			);
+
+			const items = [first, ...remaining].flatMap((page) => page.items);
+			return {
+				...first,
+				items,
+				page: 0,
+				size: items.length,
+			};
+		},
 		enabled: !!organizationId,
 	});
 }

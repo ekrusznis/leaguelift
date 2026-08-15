@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Capabilities } from "../../authorization/capabilityConstants";
 import { useContexts } from "../../authorization/api";
@@ -34,20 +34,18 @@ export function TeamRosterPage() {
 	});
 	const clearanceByParticipant = new Map((clearanceQuery.data ?? []).map((c) => [c.participantId, c]));
 	const roster = rosterQuery.data ?? [];
-
-	const visibleRoster = useMemo(() => {
-		const needle = query.trim().toLowerCase();
-		const filtered = roster.filter((participant) => {
+	const needle = query.trim().toLowerCase();
+	const visibleRoster = roster
+		.filter((participant) => {
 			if (eligibilityFilter === "INELIGIBLE" && !clearanceByParticipant.has(participant.id)) return false;
 			if (!needle) return true;
 			return `${participant.firstName} ${participant.lastName}`.toLowerCase().includes(needle);
-		});
-		return [...filtered].sort((a, b) => {
+		})
+		.sort((a, b) => {
 			const left = `${a.lastName} ${a.firstName}`.toLowerCase();
 			const right = `${b.lastName} ${b.firstName}`.toLowerCase();
 			return sort === "NAME_ASC" ? left.localeCompare(right) : right.localeCompare(left);
 		});
-	}, [roster, eligibilityFilter, clearanceByParticipant, query, sort]);
 
 	const hasFilters = eligibilityFilter !== "ALL";
 
