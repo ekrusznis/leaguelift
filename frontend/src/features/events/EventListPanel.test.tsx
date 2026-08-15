@@ -12,6 +12,15 @@ function jsonResponse(body: unknown, status = 200) {
 	return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
 
+function eventPage(items: Rally26Event[]) {
+	return {
+		items,
+		page: 0,
+		size: 25,
+		totalElements: items.length,
+	};
+}
+
 function sampleEvent(overrides: Partial<Rally26Event> = {}): Rally26Event {
 	return {
 		id: "22222222-2222-2222-2222-222222222222",
@@ -53,7 +62,10 @@ describe("EventListPanel", () => {
 
 	it("shows an all-day event's fixed-format date with no time, instead of a timed timestamp", async () => {
 		const event = sampleEvent({ startAt: null, allDayDate: "2026-07-04" });
-		const fetchMock = vi.fn(() => Promise.resolve(jsonResponse([event])));
+		const fetchMock = vi.fn((url: string) => {
+			if (url.includes("/events/search")) return Promise.resolve(jsonResponse(eventPage([event])));
+			return Promise.resolve(jsonResponse(null));
+		});
 		vi.stubGlobal("fetch", fetchMock);
 
 		renderWithProviders(<EventListPanel scope={{ type: "organization", organizationId }} />);
@@ -66,7 +78,7 @@ describe("EventListPanel", () => {
 			if (init?.method === "POST" && url.includes("/events")) return Promise.resolve(jsonResponse(sampleEvent(), 200));
 			if (url.includes("/events/timezone-default")) return Promise.resolve(jsonResponse({ timezone: "America/Chicago" }));
 			if (url.includes("/event-templates")) return Promise.resolve(jsonResponse([]));
-			if (url.includes("/events")) return Promise.resolve(jsonResponse([]));
+			if (url.includes("/events/search")) return Promise.resolve(jsonResponse(eventPage([])));
 			return Promise.resolve(jsonResponse(null));
 		});
 		vi.stubGlobal("fetch", fetchMock);
@@ -98,7 +110,7 @@ describe("EventListPanel", () => {
 		const fetchMock = vi.fn((url: string) => {
 			if (url.includes("/events/timezone-default")) return Promise.resolve(jsonResponse({ timezone: "America/Denver" }));
 			if (url.includes("/event-templates")) return Promise.resolve(jsonResponse([]));
-			if (url.includes("/events")) return Promise.resolve(jsonResponse([]));
+			if (url.includes("/events/search")) return Promise.resolve(jsonResponse(eventPage([])));
 			return Promise.resolve(jsonResponse(null));
 		});
 		vi.stubGlobal("fetch", fetchMock);

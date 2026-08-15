@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../../test/testUtils";
@@ -9,6 +9,15 @@ const organizationId = "11111111-1111-1111-1111-111111111111";
 
 function jsonResponse(body: unknown, status = 200) {
 	return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+}
+
+function disputePage(items: Dispute[]) {
+	return {
+		items,
+		page: 0,
+		size: 20,
+		totalElements: items.length,
+	};
 }
 
 function renderPage() {
@@ -39,7 +48,7 @@ describe("DisputesPage", () => {
 	});
 
 	it("shows an empty state when there are no disputes", async () => {
-		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse([])));
+		vi.stubGlobal("fetch", vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(disputePage([])))));
 
 		renderPage();
 
@@ -47,13 +56,15 @@ describe("DisputesPage", () => {
 	});
 
 	it("lists a dispute with its status and source", async () => {
-		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse([openDispute])));
+		vi.stubGlobal("fetch", vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(disputePage([openDispute])))));
 
 		renderPage();
 
-		expect(await screen.findByText("Store order")).toBeInTheDocument();
-		expect(screen.getByText("Needs response")).toBeInTheDocument();
-		expect(screen.getByText("fraudulent")).toBeInTheDocument();
-		expect(screen.getByText("$50.00")).toBeInTheDocument();
+		const reason = await screen.findByText("fraudulent");
+		const row = reason.closest("tr");
+		expect(row).not.toBeNull();
+		expect(within(row as HTMLTableRowElement).getByText("Store order")).toBeInTheDocument();
+		expect(within(row as HTMLTableRowElement).getByText("Needs response")).toBeInTheDocument();
+		expect(within(row as HTMLTableRowElement).getByText("$50.00")).toBeInTheDocument();
 	});
 });

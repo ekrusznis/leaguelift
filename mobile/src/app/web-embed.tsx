@@ -1,5 +1,6 @@
-import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { WebView, type WebViewNavigation } from 'react-native-webview';
 
@@ -7,27 +8,54 @@ import { ErrorState } from '@/components/error-state';
 import { ScreenHeader } from '@/components/screen-header';
 import { ThemedView } from '@/components/themed-view';
 import { useToast } from '@/components/toast';
-import { useAuth } from '@/features/auth/AuthContext';
 import { Brand } from '@/constants/theme';
+import { useAuth } from '@/features/auth/AuthContext';
+import { useOwnerOnboarding, ownerOnboardingQueryKey } from '@/features/ownerOnboarding/api';
+import { checkoutSignalFromUrl, isOwnerAccessUnlocked, type CheckoutSignal } from '@/features/ownerOnboarding/routing';
 import { env } from '@/lib/env';
 
 /**
- * Shared embed for real frontend/ pages inside the app (ADR-106) — Swag Shop,
- * Fundraising, Sponsorships stay web-only rather than being rebuilt natively.
- * `authenticated` (default true) bootstraps the WebView's own sessionStorage by
- * injecting the exact JSON shape frontend/src/auth/AuthContext.tsx reads under its
- * "rally26.session" key, via injectedJavaScriptBeforeContentLoaded — verified against
- * the real web auth code that nothing else (no cookie/CSRF token) gates access, so no
- * new backend "exchange token" endpoint was needed. `path` is relative to
- * EXPO_PUBLIC_FRONTEND_BASE_URL, e.g. `/app/organizations/{id}/swag-shop`.
+ * Shared authenticated embed for real frontend pages (ADR-106). Commerce and the
+ * owner setup wizard reuse the existing web implementation instead of duplicating
+ * domain logic in React Native. The owner-onboarding flow is special only in its
+ * navigation gate: Checkout redirects are informational; webhook-backed onboarding
+ * state is authoritative before native Owner routes unlock.
  */
 export default function WebEmbedScreen() {
-  const { path, title, authenticated } = useLocalSearchParams<{ path: string; title: string; authenticated?: string }>();
+  const { path, title, authenticated, flow } = useLocalSearchParams<{
+    path: string;
+    title: string;
+    authenticated?: string;
+    flow?: string;
+  }>();
   const { getWebSession } = useAuth();
   const toast = useToast();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
+  const [checkoutSignal, setCheckoutSignal] = useState<CheckoutSignal>(null);
+  const transitioned = useRef(false);
   const requiresAuth = authenticated !== 'false';
+  const ownerOnboardingFlow = flow === 'owner-onboarding';
   const session = requiresAuth ? getWebSession() : null;
+  const onboarding = useOwnerOnboarding(ownerOnboardingFlow && !!session);
+
+  useEffect(() => {
+    if (!ownerOnboardingFlow || checkoutSignal !== 'success') return;
+    const timer = setInterval(() => void onboarding.refetch(), 2000);
+    return () => clearInterval(timer);
+  }, [checkoutSignal, onboarding.refetch, ownerOnboardingFlow]);
+
+  useEffect(() => {
+    if (!ownerOnboardingFlow || transitioned.current || !isOwnerAccessUnlocked(onboarding.data)) return;
+    transitioned.current = true;
+    void (async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ownerOnboardingQueryKey }),
+        queryClient.invalidateQueries({ queryKey: ['me', 'dashboard-context'] }),
+      ]);
+      router.replace('/owner' as never);
+    })();
+  }, [onboarding.data, ownerOnboardingFlow, queryClient]);
 
   if (requiresAuth && !session) {
     return (
@@ -44,9 +72,24 @@ export default function WebEmbedScreen() {
     : undefined;
 
   function onNavigationStateChange(navState: WebViewNavigation) {
-    if (navState.url.includes('status=success')) {
+    const signal = checkoutSignalFromUrl(navState.url);
+
+    if (ownerOnboardingFlow) {
+      if (signal === 'success') {
+        setCheckoutSignal('success');
+        toast.show('Checkout received. Waiting for subscription activation…', 'info');
+        void onboarding.refetch();
+      } else if (signal === 'cancelled') {
+        setCheckoutSignal('cancelled');
+        toast.show('Checkout canceled. Your setup is saved.', 'info');
+        void onboarding.refetch();
+      }
+      return;
+    }
+
+    if (signal === 'success') {
       toast.show('Completed successfully.', 'success');
-    } else if (navState.url.includes('status=canceled')) {
+    } else if (signal === 'cancelled') {
       toast.show('Canceled.', 'info');
     }
   }
