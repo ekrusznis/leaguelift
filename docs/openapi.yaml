@@ -810,6 +810,7 @@ paths:
           content:
             application/json:
               schema:
+                type: object
                 allOf: [{$ref: "#/components/schemas/OrganizationSubscriptionResponse"}]
                 nullable: true
         "401": {$ref: "#/components/responses/Unauthorized"}
@@ -3452,6 +3453,7 @@ paths:
           content:
             application/json:
               schema:
+                type: object
                 allOf:
                 - $ref: "#/components/schemas/FundraisingGameResponse"
                 nullable: true
@@ -4129,6 +4131,7 @@ paths:
           content:
             application/json:
               schema:
+                type: object
                 allOf:
                 - $ref: "#/components/schemas/PublicFundraisingGameResponse"
                 nullable: true
@@ -10400,10 +10403,10 @@ paths:
             schema: {$ref: '#/components/schemas/ResolveDuplicateIdentityRequest'}
       responses:
         '200': {description: Completed or idempotently replayed resolution receipt, content: {application/json: {schema: {$ref: '#/components/schemas/IdentityResolutionReceiptResponse'}}}}
-        '400': {description: Invalid confirmation, reason, preview hash, or source/target pair}
+        '400': {description: "Invalid confirmation, reason, preview hash, or source/target pair"}
         '403': {description: Platform manage/support capability or active support-session scope required}
         '404': {description: Identity not found}
-        '409': {description: Preview stale, resolution blocked, source already resolved differently, or relationships changed during mutation}
+        '409': {description: "Preview stale, resolution blocked, source already resolved differently, or relationships changed during mutation"}
 
 components:
   securitySchemes:
@@ -11322,6 +11325,7 @@ components:
         id: {type: string, format: uuid}
         currentStep: {type: string, enum: [ORGANIZATION, PLAN, REVIEW, CHECKOUT, COMPLETE]}
         organization:
+          type: object
           allOf: [{$ref: "#/components/schemas/OnboardingOrganizationResponse"}]
           nullable: true
         selectedPlanCode: {type: string, nullable: true}
@@ -12824,6 +12828,7 @@ components:
         eventLocationName: {type: string, maxLength: 160, nullable: true}
         eventAddress: {type: string, maxLength: 500, nullable: true}
         templateKey:
+          type: string
           allOf:
           - $ref: "#/components/schemas/FundraiserTemplateKey"
           nullable: true
@@ -12917,6 +12922,7 @@ components:
         publishedAt: {type: string, format: date-time, nullable: true}
         createdByUserId: {type: string, format: uuid, nullable: true}
         templateKey:
+          type: string
           allOf:
           - $ref: "#/components/schemas/FundraiserTemplateKey"
           nullable: true
@@ -13950,9 +13956,11 @@ components:
         personalizationName: {type: string, maxLength: 60, nullable: true}
         personalizationNumber: {type: string, maxLength: 20, nullable: true}
         personalizationPlacement:
+          type: string
           allOf: [{$ref: "#/components/schemas/PersonalizationPlacement"}]
           nullable: true
         personalizationLogoSize:
+          type: string
           allOf: [{$ref: "#/components/schemas/SwagLogoSize"}]
           nullable: true
 
@@ -14243,6 +14251,7 @@ components:
           allOf: [{$ref: "#/components/schemas/PersonalizationPlacement"}]
           nullable: true
         personalizationLogoSize:
+          type: string
           allOf: [{$ref: "#/components/schemas/SwagLogoSize"}]
           nullable: true
         supporterName:
@@ -18192,7 +18201,7 @@ components:
         archivedAt: {type: string, format: date-time, nullable: true}
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}
-        safetyLockedAt: {type: string, format: date-time, nullable: true, description: When present, all new sends/replies are paused for safety review.}
+        safetyLockedAt: {type: string, format: date-time, nullable: true, description: "When present, all new sends/replies are paused for safety review."}
         safetyLockReason: {type: string, nullable: true}
     BroadcastMessageResponse:
       type: object
