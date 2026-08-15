@@ -1,14 +1,22 @@
 import type { ReactNode } from "react";
 
-const VIDEO_EXTENSIONS = [".mp4", ".mov"];
+const VIDEO_EXTENSIONS = [".mp4", ".mov", ".webm"];
 
 function isSafeUrl(url: string): boolean {
 	return url.startsWith("/") || url.startsWith("https://");
 }
 
+function cleanPath(url: string): string {
+	return url.split(/[?#]/)[0]?.toLowerCase() ?? "";
+}
+
 function isVideoUrl(url: string): boolean {
-	const path = url.split(/[?#]/)[0]?.toLowerCase() ?? "";
+	const path = cleanPath(url);
 	return VIDEO_EXTENSIONS.some((extension) => path.endsWith(extension));
+}
+
+function isPdfUrl(url: string): boolean {
+	return cleanPath(url).endsWith(".pdf");
 }
 
 function inline(text: string): ReactNode[] {
@@ -20,9 +28,16 @@ function inline(text: string): ReactNode[] {
 			if (!isSafeUrl(url)) return null;
 			if (isVideoUrl(url)) {
 				return (
-					<video key={index} src={url} controls aria-label={alt || "Video"} className="max-w-full rounded-lg">
-						Your browser does not support embedded video. <a href={url}>Download the video</a> instead.
+					<video key={index} src={url} controls playsInline aria-label={alt || "Video"} className="max-w-full rounded-lg">
+						Your browser does not support embedded video. <a href={url}>Open the video</a> instead.
 					</video>
+				);
+			}
+			if (isPdfUrl(url)) {
+				return (
+					<a key={index} href={url} target="_blank" rel="noreferrer" className="inline-flex rounded-lg border border-slate-200 px-4 py-3 font-medium text-info-blue underline hover:no-underline dark:border-slate-700">
+						{alt || "Open attached PDF"}
+					</a>
 				);
 			}
 			return <img key={index} src={url} alt={alt} loading="lazy" className="max-w-full rounded-lg" />;
@@ -30,14 +45,15 @@ function inline(text: string): ReactNode[] {
 		const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
 		if (link) {
 			const safe = isSafeUrl(link[2]) ? link[2] : "#";
-			return <a key={index} href={safe} className="font-medium text-info-blue underline hover:no-underline">{link[1]}</a>;
+			const external = safe.startsWith("https://");
+			return <a key={index} href={safe} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined} className="font-medium text-info-blue underline hover:no-underline">{link[1]}</a>;
 		}
 		if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
 		return part;
 	});
 }
 
-/** Small safe Markdown subset: headings, paragraphs, ordered/unordered lists, bold, links, and image/video embeds (`![alt](url)`, video inferred from a .mp4/.mov extension). Raw HTML is never interpreted. */
+/** Small safe Markdown subset: headings, paragraphs, ordered/unordered lists, bold, links, and image/GIF/video/PDF embeds (`![alt](url)`). Raw HTML is never interpreted. */
 export function SupportMarkdown({ body }: { body: string }) {
 	const blocks = body.replace(/\r\n/g, "\n").split(/\n\s*\n/).map((block) => block.trim()).filter(Boolean);
 	return (

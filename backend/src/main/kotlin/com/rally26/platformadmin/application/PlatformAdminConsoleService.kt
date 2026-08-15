@@ -152,10 +152,29 @@ class PlatformAdminConsoleService(
         val normalizedType = normalizeStatus(type, PAYMENT_TYPES, "payment type")
         val normalizedStatus = normalizeStatus(status, PAYMENT_STATUSES, "payment status")
         return PageResponse(
-            items = consoleRepository.listPayments(normalizedType, normalizedStatus, organizationId, teamId, query?.trim(), dateFrom, dateTo, pageRequest),
+            items =
+                consoleRepository.listPayments(
+                    normalizedType,
+                    normalizedStatus,
+                    organizationId,
+                    teamId,
+                    query?.trim(),
+                    dateFrom,
+                    dateTo,
+                    pageRequest,
+                ),
             page = pageRequest.page,
             size = pageRequest.size,
-            totalElements = consoleRepository.countPayments(normalizedType, normalizedStatus, organizationId, teamId, query?.trim(), dateFrom, dateTo),
+            totalElements =
+                consoleRepository.countPayments(
+                    normalizedType,
+                    normalizedStatus,
+                    organizationId,
+                    teamId,
+                    query?.trim(),
+                    dateFrom,
+                    dateTo,
+                ),
         )
     }
 

@@ -1,8 +1,10 @@
 package com.rally26.fundraising.web
 
+import com.rally26.fundraising.application.CampaignPermissions
 import com.rally26.fundraising.domain.Campaign
 import com.rally26.fundraising.domain.CampaignStatus
 import com.rally26.fundraising.domain.CampaignType
+import com.rally26.fundraising.domain.FundraiserTemplateKey
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
@@ -21,6 +23,9 @@ data class CreateCampaignRequest(
     @field:Size(min = 3, max = 3) val currency: String = "USD",
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,
+    @field:Size(max = 160) val eventLocationName: String? = null,
+    @field:Size(max = 500) val eventAddress: String? = null,
+    val templateKey: FundraiserTemplateKey? = null,
 )
 
 data class UpdateCampaignRequest(
@@ -29,10 +34,28 @@ data class UpdateCampaignRequest(
     @field:Min(0) val goalAmountMinor: Long? = null,
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,
+    @field:Size(max = 160) val eventLocationName: String? = null,
+    @field:Size(max = 500) val eventAddress: String? = null,
 )
 
 data class UpdateCampaignStatusRequest(
     @field:NotNull val status: CampaignStatus,
+)
+
+/** `GET /organizations/{id}/campaigns/qr-code` response — mirrors sponsorship's `ShareLinkResponse` shape exactly (a plain URL plus a ready-to-render `data:image/png;base64,...` QR image of that same URL; no click-through tracking, nothing persisted). */
+data class CampaignShareLinkResponse(
+    val url: String,
+    val qrCodeDataUri: String,
+)
+
+data class CampaignPermissionsResponse(
+    val canEdit: Boolean,
+    val canRequestActivation: Boolean,
+    val canApprove: Boolean,
+    val canReturnToDraft: Boolean,
+    val canClose: Boolean,
+    val canArchive: Boolean,
+    val canManageBoxPool: Boolean,
 )
 
 data class CampaignResponse(
@@ -47,12 +70,22 @@ data class CampaignResponse(
     val currency: String,
     val startDate: LocalDate?,
     val endDate: LocalDate?,
+    val eventLocationName: String?,
+    val eventAddress: String?,
     val status: String,
     val publishedAt: Instant?,
+    val createdByUserId: UUID?,
+    val templateKey: String?,
+    val submittedAt: Instant?,
+    val approvedAt: Instant?,
+    val approvedByUserId: UUID?,
+    val permissions: CampaignPermissionsResponse,
     val createdAt: Instant,
     val updatedAt: Instant,
     /** Sum of CONFIRMED contributions (fundraising/persistence/ContributionRepository.kt). Real, not demo data. */
     val raisedMinor: Long,
+    /** False when provider-hosted contribution checkout is intentionally disabled for this campaign. */
+    val onlineContributionsEnabled: Boolean = true,
 )
 
 /** Public-facing shape for the campaign's public page (section 16.6: `GET /public/campaigns/{slug}`). */
@@ -68,45 +101,95 @@ data class PublicCampaignResponse(
     val currency: String,
     val startDate: LocalDate?,
     val endDate: LocalDate?,
+    val eventLocationName: String?,
+    val eventAddress: String?,
     val status: String,
     val publishedAt: Instant?,
     val raisedMinor: Long,
+    val logoUrl: String?,
+    val coverUrl: String?,
+    val primaryColor: String,
+    val secondaryColor: String,
+    val onlineContributionAllowed: Boolean = true,
+    val onlineContributionUnavailableReason: String? = null,
 )
 
-fun Campaign.toResponse(raisedMinor: Long) =
-    CampaignResponse(
-        id,
-        organizationId,
-        teamId,
-        name,
-        slug,
-        description,
-        campaignType.name,
-        goalAmountMinor,
-        currency,
-        startDate,
-        endDate,
-        status.name,
-        publishedAt,
-        createdAt,
-        updatedAt,
-        raisedMinor,
-    )
+fun Campaign.toResponse(
+    raisedMinor: Long,
+    permissions: CampaignPermissions,
+) = CampaignResponse(
+    id,
+    organizationId,
+    teamId,
+    name,
+    slug,
+    description,
+    campaignType.name,
+    goalAmountMinor,
+    currency,
+    startDate,
+    endDate,
+    eventLocationName,
+    eventAddress,
+    status.name,
+    publishedAt,
+    createdByUserId,
+    templateKey?.name,
+    submittedAt,
+    approvedAt,
+    approvedByUserId,
+    CampaignPermissionsResponse(
+        canEdit = permissions.canEdit,
+        canRequestActivation = permissions.canRequestActivation,
+        canApprove = permissions.canApprove,
+        canReturnToDraft = permissions.canReturnToDraft,
+        canClose = permissions.canClose,
+        canArchive = permissions.canArchive,
+        canManageBoxPool = permissions.canManageBoxPool,
+    ),
+    createdAt,
+    updatedAt,
+    raisedMinor,
+    onlineContributionsEnabled,
+)
 
-fun Campaign.toPublicResponse(raisedMinor: Long) =
-    PublicCampaignResponse(
-        id,
-        organizationId,
-        teamId,
-        name,
-        slug,
-        description,
-        campaignType.name,
-        goalAmountMinor,
-        currency,
-        startDate,
-        endDate,
-        status.name,
-        publishedAt,
-        raisedMinor,
-    )
+fun Campaign.toPublicResponse(
+    raisedMinor: Long,
+    logoUrl: String? = null,
+    coverUrl: String? = null,
+    primaryColor: String = "#0B1F33",
+    secondaryColor: String = "#20B26B",
+) = PublicCampaignResponse(
+    id,
+    organizationId,
+    teamId,
+    name,
+    slug,
+    description,
+    campaignType.name,
+    goalAmountMinor,
+    currency,
+    startDate,
+    endDate,
+    eventLocationName,
+    eventAddress,
+    status.name,
+    publishedAt,
+    raisedMinor,
+    logoUrl,
+    coverUrl,
+    primaryColor,
+    secondaryColor,
+    onlineContributionsEnabled && status == CampaignStatus.ACTIVE,
+    onlineContributionUnavailableReason(),
+)
+
+private fun Campaign.onlineContributionUnavailableReason(): String? =
+    when {
+        !onlineContributionsEnabled ->
+            "Online card contributions are disabled for fundraisers that include a promotional game. Free game entry remains separate from offline contributions."
+        status == CampaignStatus.SCHEDULED -> "This fundraiser is scheduled and is not accepting online contributions yet."
+        status in setOf(CampaignStatus.ENDED, CampaignStatus.CLOSED, CampaignStatus.COMPLETED) ->
+            "This fundraiser is no longer accepting online contributions."
+        else -> null
+    }

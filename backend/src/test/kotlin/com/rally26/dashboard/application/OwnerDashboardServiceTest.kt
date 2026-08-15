@@ -193,8 +193,13 @@ class OwnerDashboardServiceTest {
                 endDate = null,
                 status = CampaignStatus.ACTIVE,
                 publishedAt = Instant.now(),
+                createdByUserId = null,
+                templateKey = null,
                 createdAt = Instant.now(),
                 updatedAt = Instant.now(),
+                approvedByUserId = UUID.randomUUID(),
+                submittedAt = Instant.now(),
+                approvedAt = Instant.now(),
             )
         every { membershipService.requireActiveMembership(orgId, currentUser) } returns membership()
         every { teamRepository.findAll(orgId, 0, 10) } returns listOf(team)

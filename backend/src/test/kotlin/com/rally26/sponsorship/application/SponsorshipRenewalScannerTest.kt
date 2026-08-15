@@ -79,7 +79,14 @@ class SponsorshipRenewalScannerTest {
 
     @Test
     fun `does nothing when there are no due candidates`() {
-        val scanner = SponsorshipRenewalScanner(sponsorshipRepository, organizationRepository, outboxWriter, SponsorshipRenewalReminderProperties(), objectMapper)
+        val scanner =
+            SponsorshipRenewalScanner(
+                sponsorshipRepository,
+                organizationRepository,
+                outboxWriter,
+                SponsorshipRenewalReminderProperties(),
+                objectMapper,
+            )
         every { sponsorshipRepository.findNeedingRenewalReminder(any()) } returns emptyList()
 
         scanner.scanAndEnqueue()
@@ -90,7 +97,14 @@ class SponsorshipRenewalScannerTest {
 
     @Test
     fun `still marks reminded when a sponsor has no contact email on file`() {
-        val scanner = SponsorshipRenewalScanner(sponsorshipRepository, organizationRepository, outboxWriter, SponsorshipRenewalReminderProperties(), objectMapper)
+        val scanner =
+            SponsorshipRenewalScanner(
+                sponsorshipRepository,
+                organizationRepository,
+                outboxWriter,
+                SponsorshipRenewalReminderProperties(),
+                objectMapper,
+            )
         val candidate =
             SponsorshipRenewalCandidate(
                 sponsorshipId = UUID.randomUUID(),

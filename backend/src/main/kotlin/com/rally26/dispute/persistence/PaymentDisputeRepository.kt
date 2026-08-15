@@ -60,8 +60,21 @@ class PaymentDisputeRepository(
             .param("now", Timestamp.from(now))
             .update()
         return PaymentDispute(
-            id, organizationId, sourceType, sourceId, stripeDisputeId, stripeChargeId,
-            amountMinor, currency, reason, status, evidenceDueBy, openedAt, null, now, now,
+            id,
+            organizationId,
+            sourceType,
+            sourceId,
+            stripeDisputeId,
+            stripeChargeId,
+            amountMinor,
+            currency,
+            reason,
+            status,
+            evidenceDueBy,
+            openedAt,
+            null,
+            now,
+            now,
         )
     }
 
@@ -79,6 +92,65 @@ class PaymentDisputeRepository(
             .param("organizationId", organizationId)
             .query(::mapRow)
             .list()
+
+    fun search(
+        organizationId: UUID,
+        query: String?,
+        status: DisputeStatus?,
+        sourceType: DisputeSourceType?,
+        ascending: Boolean,
+        offset: Int,
+        limit: Int,
+    ): List<PaymentDispute> {
+        val sql =
+            buildString {
+                append("select $COLUMNS from payment_dispute where organization_id = :organizationId")
+                if (query != null) {
+                    append(
+                        " and (lower(reason) like :query or lower(stripe_dispute_id) like :query" +
+                            " or lower(cast(source_id as text)) like :query)",
+                    )
+                }
+                if (status != null) append(" and status = :status")
+                if (sourceType != null) append(" and source_type = :sourceType")
+                append(" order by opened_at ${if (ascending) "asc" else "desc"} offset :offset limit :limit")
+            }
+        var statement =
+            jdbcClient
+                .sql(sql)
+                .param("organizationId", organizationId)
+                .param("offset", offset)
+                .param("limit", limit)
+        if (query != null) statement = statement.param("query", "%${query.lowercase()}%")
+        if (status != null) statement = statement.param("status", status.name)
+        if (sourceType != null) statement = statement.param("sourceType", sourceType.name)
+        return statement.query(::mapRow).list()
+    }
+
+    fun count(
+        organizationId: UUID,
+        query: String?,
+        status: DisputeStatus?,
+        sourceType: DisputeSourceType?,
+    ): Long {
+        val sql =
+            buildString {
+                append("select count(*) from payment_dispute where organization_id = :organizationId")
+                if (query != null) {
+                    append(
+                        " and (lower(reason) like :query or lower(stripe_dispute_id) like :query" +
+                            " or lower(cast(source_id as text)) like :query)",
+                    )
+                }
+                if (status != null) append(" and status = :status")
+                if (sourceType != null) append(" and source_type = :sourceType")
+            }
+        var statement = jdbcClient.sql(sql).param("organizationId", organizationId)
+        if (query != null) statement = statement.param("query", "%${query.lowercase()}%")
+        if (status != null) statement = statement.param("status", status.name)
+        if (sourceType != null) statement = statement.param("sourceType", sourceType.name)
+        return statement.query(Long::class.java).single()
+    }
 
     fun resolve(
         stripeDisputeId: String,

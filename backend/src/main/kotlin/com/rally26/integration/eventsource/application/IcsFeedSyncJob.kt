@@ -184,7 +184,12 @@ class IcsFeedSyncJob(
                 area = null,
                 opponentName = null,
             )
-        eventRepository.stagePendingSourceUpdate(existing.id, connection.organizationId, objectMapper.writeValueAsString(snapshot), syncHash)
+        eventRepository.stagePendingSourceUpdate(
+            existing.id,
+            connection.organizationId,
+            objectMapper.writeValueAsString(snapshot),
+            syncHash,
+        )
         return false
     }
 

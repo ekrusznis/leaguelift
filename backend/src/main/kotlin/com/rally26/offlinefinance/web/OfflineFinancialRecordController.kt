@@ -1,9 +1,11 @@
 package com.rally26.offlinefinance.web
 
+import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageResponse
 import com.rally26.offlinefinance.application.OfflineFinancialRecordService
 import com.rally26.offlinefinance.domain.OfflineFinancialRecordType
+import com.rally26.offlinefinance.domain.OfflinePaymentMethod
 import com.rally26.offlinefinance.domain.OfflineVerificationStatus
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -26,27 +28,41 @@ class OfflineFinancialRecordController(
     @GetMapping
     fun list(
         @PathVariable organizationId: UUID,
+        @RequestParam(required = false) q: String?,
         @RequestParam(required = false) verificationStatus: OfflineVerificationStatus?,
         @RequestParam(required = false) recordType: OfflineFinancialRecordType?,
+        @RequestParam(required = false) paymentMethod: OfflinePaymentMethod?,
+        @RequestParam(defaultValue = "newest") sort: String,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "25") size: Int,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<OfflineFinancialRecordResponse> {
         val safePage = page.coerceAtLeast(0)
         val safeSize = size.coerceIn(1, 100)
+        val ascending = parseAscending(sort)
         val items =
             service
-                .list(
+                .search(
                     organizationId,
+                    q,
                     verificationStatus,
                     recordType,
+                    paymentMethod,
+                    ascending,
                     safePage * safeSize,
                     safeSize,
                     currentUser,
                 ).map { it.toResponse() }
-        val total = service.count(organizationId, verificationStatus, recordType, currentUser)
+        val total = service.countSearch(organizationId, q, verificationStatus, recordType, paymentMethod, currentUser)
         return PageResponse(items, safePage, safeSize, total)
     }
+
+    private fun parseAscending(sort: String): Boolean =
+        when (sort.lowercase()) {
+            "newest" -> false
+            "oldest" -> true
+            else -> throw ValidationException("sort must be 'newest' or 'oldest'.")
+        }
 
     @GetMapping("/{recordId}")
     fun get(

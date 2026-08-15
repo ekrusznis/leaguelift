@@ -41,7 +41,12 @@ class SupportArticleService(
     fun listPublic(
         query: String?,
         category: String?,
-    ) = repository.listPublished(setOf(SupportAudience.PUBLIC), normalizeSearch(query), normalizeCategoryFilter(category)).map(::resolveAttachments)
+    ) = repository
+        .listPublished(
+            setOf(SupportAudience.PUBLIC),
+            normalizeSearch(query),
+            normalizeCategoryFilter(category),
+        ).map(::resolveAttachments)
 
     fun getPublic(slug: String): SupportArticle =
         resolveAttachments(
@@ -53,7 +58,12 @@ class SupportArticleService(
         currentUser: CurrentUser,
         query: String?,
         category: String?,
-    ) = repository.listPublished(audiencesFor(currentUser), normalizeSearch(query), normalizeCategoryFilter(category)).map(::resolveAttachments)
+    ) = repository
+        .listPublished(
+            audiencesFor(currentUser),
+            normalizeSearch(query),
+            normalizeCategoryFilter(category),
+        ).map(::resolveAttachments)
 
     fun getAuthenticated(
         currentUser: CurrentUser,
@@ -79,7 +89,11 @@ class SupportArticleService(
             ATTACHMENT_TOKEN.replace(article.bodyMarkdown) { match ->
                 val assignmentId = runCatching { UUID.fromString(match.groupValues[1]) }.getOrNull() ?: return@replace match.value
                 val assignment = mediaAssignmentRepository.findById(assignmentId, PlatformOrganization.ID) ?: return@replace match.value
-                if (assignment.entityType != MediaEntityType.SUPPORT_ARTICLE || assignment.entityId != article.id) return@replace match.value
+                if (assignment.entityType != MediaEntityType.SUPPORT_ARTICLE ||
+                    assignment.entityId != article.id
+                ) {
+                    return@replace match.value
+                }
                 mediaReadService.describe(assignment)?.url ?: match.value
             }
         return article.copy(bodyMarkdown = resolvedBody)

@@ -18,7 +18,6 @@ import { Brand, Spacing } from '@/constants/theme';
 import { formatMoneyMinorUnits } from '@/lib/money';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Parent Dashboard (Home tab) — real backend data (ADR-103), mirrors coach Dashboard's structure. */
 export default function ParentDashboardScreen() {
   const theme = useTheme();
   const household = useHouseholdCtx();
@@ -27,7 +26,6 @@ export default function ParentDashboardScreen() {
   const eventsQuery = useHouseholdEvents(household.organizationId, household.householdId);
   const announcementsQuery = useMyAnnouncements();
   const balanceQuery = useOutstandingBalance(household.organizationId, household.householdId);
-
   const upcomingEvents = useMemo(() => {
     if (!eventsQuery.data) return [];
     return eventsQuery.data
@@ -76,27 +74,29 @@ export default function ParentDashboardScreen() {
           <Ionicons name="person-circle" size={24} color={theme.text} />
         </Pressable>
       </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ThemedText type="smallBold" style={styles.sectionTitle}>
-          Your Athletes
-        </ThemedText>
+        <ThemedText type="smallBold" style={styles.sectionTitle}>Your Athletes</ThemedText>
         <View style={styles.athleteRow}>
           {household.athletes.map((athlete) => (
-            <Pressable
-              key={athlete.participantId}
-              onPress={() =>
-                router.push({
-                  pathname: '/eligibility',
-                  params: { participantId: athlete.participantId, participantName: athlete.name, householdId: household.householdId ?? '' },
-                })
-              }>
-              <ThemedView type="backgroundElement" style={styles.athleteCard}>
+            <ThemedView key={athlete.participantId} type="backgroundElement" style={styles.athleteCard}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`View eligibility for ${athlete.name}`}
+                onPress={() =>
+                  router.push({
+                    pathname: '/eligibility',
+                    params: {
+                      participantId: athlete.participantId,
+                      participantName: athlete.name,
+                      householdId: household.householdId ?? '',
+                    },
+                  })
+                }>
                 <ThemedView type="backgroundSelected" style={styles.athleteAvatar}>
                   <ThemedText type="smallBold">
                     {athlete.name
                       .split(' ')
-                      .map((p) => p[0])
+                      .map((part) => part[0])
                       .join('')
                       .slice(0, 2)
                       .toUpperCase()}
@@ -106,47 +106,54 @@ export default function ParentDashboardScreen() {
                 <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
                   {athlete.teamNames.join(', ') || 'No team yet'}
                 </ThemedText>
-              </ThemedView>
-            </Pressable>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`View coaches and staff for ${athlete.name}`}
+                onPress={() =>
+                  router.push({
+                    pathname: '/participant-teams',
+                    params: {
+                      organizationId: household.organizationId ?? '',
+                      participantId: athlete.participantId,
+                      participantName: athlete.name,
+                    },
+                  })
+                }
+                style={styles.coachesAction}>
+                <Ionicons name="people-outline" size={16} color={theme.textSecondary} />
+                <ThemedText type="small" themeColor="textSecondary">Coaches</ThemedText>
+              </Pressable>
+            </ThemedView>
           ))}
         </View>
 
         <View style={styles.sectionHeader}>
           <ThemedText type="smallBold">Upcoming</ThemedText>
           <Pressable onPress={() => router.push('/parent/(tabs)/calendar')}>
-            <ThemedText type="link" themeColor="textSecondary">
-              View All
-            </ThemedText>
+            <ThemedText type="link" themeColor="textSecondary">View All</ThemedText>
           </Pressable>
         </View>
         {eventsQuery.isLoading && <LoadingState label="Loading schedule…" />}
         {eventsQuery.isError && <ErrorState message="Could not load your family's schedule." onRetry={() => eventsQuery.refetch()} />}
         {eventsQuery.data && upcomingEvents.length === 0 && (
-          <ThemedText type="small" themeColor="textSecondary">
-            Nothing scheduled yet.
-          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">Nothing scheduled yet.</ThemedText>
         )}
         <View style={styles.list}>
-          {upcomingEvents.map((event) => (
-            <EventCard key={event.id} event={event} />
-          ))}
+          {upcomingEvents.map((event) => <EventCard key={event.id} event={event} />)}
         </View>
 
         <View style={styles.sectionHeader}>
           <ThemedText type="smallBold">Balance</ThemedText>
           <Pressable onPress={() => router.push('/parent/(tabs)/payments')}>
-            <ThemedText type="link" themeColor="textSecondary">
-              View All
-            </ThemedText>
+            <ThemedText type="link" themeColor="textSecondary">View All</ThemedText>
           </Pressable>
         </View>
         {balanceQuery.isLoading && <LoadingState label="Loading balance…" />}
         {balanceQuery.isError && <ErrorState message="Could not load your balance." onRetry={() => balanceQuery.refetch()} />}
         {balanceQuery.data && (
           <ThemedView type="backgroundElement" style={styles.balanceCard}>
-            <ThemedText type="small" themeColor="textSecondary">
-              Total outstanding
-            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">Total outstanding</ThemedText>
             <ThemedText type="title" style={styles.balanceAmount}>
               {formatMoneyMinorUnits(balanceQuery.data.totalOutstandingMinor, balanceQuery.data.currency)}
             </ThemedText>
@@ -156,16 +163,12 @@ export default function ParentDashboardScreen() {
         <View style={styles.sectionHeader}>
           <ThemedText type="smallBold">Recent Announcements</ThemedText>
           <Pressable onPress={() => router.push('/announcements')}>
-            <ThemedText type="link" themeColor="textSecondary">
-              View All
-            </ThemedText>
+            <ThemedText type="link" themeColor="textSecondary">View All</ThemedText>
           </Pressable>
         </View>
         {announcementsQuery.isLoading && <LoadingState label="Loading announcements…" />}
         {announcementsQuery.data && recentAnnouncements.length === 0 && (
-          <ThemedText type="small" themeColor="textSecondary">
-            No announcements yet.
-          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">No announcements yet.</ThemedText>
         )}
         <View style={styles.list}>
           {recentAnnouncements.map(({ announcement }) => (
@@ -186,9 +189,7 @@ export default function ParentDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -196,13 +197,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
   },
-  wordmark: {
-    fontSize: 20,
-    lineHeight: 24,
-  },
-  wordmarkAccent: {
-    color: Brand.championshipGold,
-  },
+  wordmark: { fontSize: 20, lineHeight: 24 },
+  wordmarkAccent: { color: Brand.championshipGold },
   scrollContent: {
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.six,
@@ -219,10 +215,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.two,
   },
   athleteCard: {
-    width: 140,
+    width: 152,
     borderRadius: Spacing.three,
     padding: Spacing.three,
-    gap: Spacing.one,
+    gap: Spacing.two,
   },
   athleteAvatar: {
     width: 36,
@@ -232,6 +228,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 2,
   },
+  coachesAction: {
+    minHeight: 34,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    marginTop: Spacing.one,
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -239,17 +242,13 @@ const styles = StyleSheet.create({
     marginTop: Spacing.three,
     marginBottom: Spacing.two,
   },
-  list: {
-    gap: Spacing.two,
-  },
+  list: { gap: Spacing.two },
   balanceCard: {
     borderRadius: Spacing.three,
     padding: Spacing.three,
     gap: 2,
   },
-  balanceAmount: {
-    fontSize: 28,
-  },
+  balanceAmount: { fontSize: 28 },
   announcementCard: {
     borderRadius: Spacing.three,
     padding: Spacing.three,

@@ -216,8 +216,11 @@ class OfflineFinancialRecordServiceTest {
             null,
             CampaignStatus.ACTIVE,
             Instant.parse("2026-07-01T00:00:00Z"),
+            null,
+            null,
             receivedAt,
             receivedAt,
+            approvedByUserId = UUID.randomUUID(),
         )
 
     private fun contribution() =

@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "../../components/Button";
+import { ListToolbar } from "../../components/lists/ListToolbar";
+import { Pagination } from "../../components/lists/Pagination";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
@@ -8,8 +10,9 @@ import { appPaths } from "../../routes/appPaths";
 import { EventTemplatePanel } from "./EventTemplatePanel";
 import { deriveTemplateTimes } from "./eventTemplateTiming";
 import { formatEventAllDayDate, formatEventDateTime } from "./formatEventDateTime";
-import { downloadEventCalendar, useCreateEvent, useEvents, useEventTemplates, useEventTimezoneDefault, type EventScope } from "./api";
-import type { CreateEventInput, EventTemplate, EventType, EventVisibility, Rally26Event } from "./types";
+import { downloadEventCalendar, useCreateEvent, useEventTemplates, useEventTimezoneDefault, type EventScope } from "./api";
+import { useEventSearch, type EventSearchSort } from "./searchApi";
+import type { CreateEventInput, EventStatus, EventTemplate, EventType, EventVisibility, Rally26Event } from "./types";
 
 function formatDateTime(value: string | null, timezone: string) {
 	if (!value) return "To be determined";
@@ -46,6 +49,26 @@ function saveBlob(blob: Blob, filename: string) {
 	URL.revokeObjectURL(url);
 }
 
+const EVENT_TYPE_OPTIONS: { value: EventType | ""; label: string }[] = [
+	{ value: "", label: "All event types" },
+	{ value: "COMPETITION", label: "Game / match" },
+	{ value: "PRACTICE", label: "Practice" },
+	{ value: "MEETING", label: "Meeting" },
+	{ value: "TOURNAMENT", label: "Tournament" },
+	{ value: "OTHER", label: "Other" },
+];
+
+const EVENT_STATUS_OPTIONS: { value: EventStatus | ""; label: string }[] = [
+	{ value: "", label: "All statuses" },
+	{ value: "DRAFT", label: "Draft" },
+	{ value: "TENTATIVE", label: "Tentative" },
+	{ value: "SCHEDULED", label: "Scheduled" },
+	{ value: "DELAYED", label: "Delayed" },
+	{ value: "POSTPONED", label: "Postponed" },
+	{ value: "CANCELLED", label: "Cancelled" },
+	{ value: "COMPLETED", label: "Completed" },
+];
+
 export function EventListPanel({
 	scope,
 	canManage = false,
@@ -58,21 +81,19 @@ export function EventListPanel({
 	participantId?: string;
 }) {
 	const location = useLocation();
-	const eventsQuery = useEvents(scope);
+	const [page, setPage] = useState(0);
+	const [size, setSize] = useState(25);
+	const [query, setQuery] = useState("");
+	const [eventType, setEventType] = useState<EventType | "">("");
+	const [status, setStatus] = useState<EventStatus | "">("");
+	const [fromDate, setFromDate] = useState("");
+	const [toDate, setToDate] = useState("");
+	const [sort, setSort] = useState<EventSearchSort>("DATE_ASC");
+	const eventsQuery = useEventSearch(scope, { page, size, q: query, eventType, status, fromDate, toDate, sort });
 	const createEvent = useCreateEvent(scope);
 	const [showCreate, setShowCreate] = useState(false);
 	const [showTemplates, setShowTemplates] = useState(false);
 	const [downloadError, setDownloadError] = useState<string | null>(null);
-
-	const events = useMemo(
-		() => [...(eventsQuery.data ?? [])].sort((left, right) => {
-			if (!left.startAt && !right.startAt) return left.displayTitle.localeCompare(right.displayTitle);
-			if (!left.startAt) return 1;
-			if (!right.startAt) return -1;
-			return left.startAt.localeCompare(right.startAt);
-		}),
-		[eventsQuery.data],
-	);
 
 	async function downloadCalendar(event: Rally26Event) {
 		setDownloadError(null);
@@ -85,34 +106,95 @@ export function EventListPanel({
 	}
 
 	if (eventsQuery.isLoading) return <LoadingState label="Loading events…" />;
-	if (eventsQuery.isError) return <ErrorState message="Could not load events." onRetry={() => eventsQuery.refetch()} />;
+	if (eventsQuery.isError || !eventsQuery.data) return <ErrorState message="Could not load events." onRetry={() => eventsQuery.refetch()} />;
 
 	const mutableScope = scope.type !== "household" && scope.type !== "participant";
+	const events = eventsQuery.data.items;
+	const hasFilters = !!eventType || !!status || !!fromDate || !!toDate;
+	const resetPage = () => setPage(0);
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="flex flex-wrap items-center justify-between gap-3">
-				<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
-					{events.length} event{events.length === 1 ? "" : "s"}
-				</p>
-				{canManage && mutableScope && (
-					<div className="flex flex-wrap gap-2">
-						{scope.type === "organization" && (
-							<Button type="button" variant="secondary" onClick={() => setShowTemplates((value) => !value)}>
-								{showTemplates ? "Hide templates" : "Manage templates"}
+			<ListToolbar
+				searchValue={query}
+				onSearchChange={(value) => { setQuery(value); resetPage(); }}
+				searchPlaceholder="Search title, opponent, venue, address, or notes"
+				resultCount={eventsQuery.data.totalElements}
+				sortValue={sort}
+				sortOptions={[
+					{ value: "DATE_ASC", label: "Date — soonest" },
+					{ value: "DATE_DESC", label: "Date — latest" },
+					{ value: "TITLE_ASC", label: "Title A–Z" },
+					{ value: "CREATED_DESC", label: "Recently created" },
+				]}
+				onSortChange={(value) => { setSort(value as EventSearchSort); resetPage(); }}
+				hasActiveFilters={hasFilters}
+				onClear={() => {
+					setQuery("");
+					setEventType("");
+					setStatus("");
+					setFromDate("");
+					setToDate("");
+					setSort("DATE_ASC");
+					resetPage();
+				}}
+				actions={
+					canManage && mutableScope ? (
+						<>
+							{scope.type === "organization" && (
+								<Button type="button" variant="secondary" onClick={() => setShowTemplates((value) => !value)}>
+									{showTemplates ? "Hide templates" : "Manage templates"}
+								</Button>
+							)}
+							<Button type="button" variant="secondary" onClick={() => setShowCreate((value) => !value)}>
+								{showCreate ? "Cancel" : "Create event"}
 							</Button>
-						)}
-						<Button type="button" variant="secondary" onClick={() => setShowCreate((value) => !value)}>
-							{showCreate ? "Cancel" : "Create event"}
-						</Button>
-					</div>
-				)}
-			</div>
+						</>
+					) : undefined
+				}
+				filters={
+					<>
+						<select
+							aria-label="Filter by event type"
+							value={eventType}
+							onChange={(event) => { setEventType(event.target.value as EventType | ""); resetPage(); }}
+							className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-navy dark:border-[#334155] dark:bg-[#0f172a] dark:text-[#f8fafc]"
+						>
+							{EVENT_TYPE_OPTIONS.map((option) => <option key={option.value || "ALL"} value={option.value}>{option.label}</option>)}
+						</select>
+						<select
+							aria-label="Filter by event status"
+							value={status}
+							onChange={(event) => { setStatus(event.target.value as EventStatus | ""); resetPage(); }}
+							className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-navy dark:border-[#334155] dark:bg-[#0f172a] dark:text-[#f8fafc]"
+						>
+							{EVENT_STATUS_OPTIONS.map((option) => <option key={option.value || "ALL"} value={option.value}>{option.label}</option>)}
+						</select>
+						<label className="flex flex-col gap-1 text-xs font-medium text-slate-gray dark:text-[#cbd5e1]">
+							From
+							<input
+								type="date"
+								value={fromDate}
+								onChange={(event) => { setFromDate(event.target.value); resetPage(); }}
+								className="min-h-11 rounded-lg border border-slate-300 bg-white px-2 text-sm text-navy dark:border-[#334155] dark:bg-[#0f172a] dark:text-[#f8fafc]"
+							/>
+						</label>
+						<label className="flex flex-col gap-1 text-xs font-medium text-slate-gray dark:text-[#cbd5e1]">
+							To
+							<input
+								type="date"
+								value={toDate}
+								onChange={(event) => { setToDate(event.target.value); resetPage(); }}
+								className="min-h-11 rounded-lg border border-slate-300 bg-white px-2 text-sm text-navy dark:border-[#334155] dark:bg-[#0f172a] dark:text-[#f8fafc]"
+							/>
+						</label>
+					</>
+				}
+			/>
 
 			{showTemplates && canManage && scope.type === "organization" && (
 				<EventTemplatePanel organizationId={scope.organizationId} />
 			)}
-
 			{showCreate && canManage && mutableScope && (
 				<CreateEventForm
 					scope={scope}
@@ -127,11 +209,16 @@ export function EventListPanel({
 			)}
 
 			{downloadError && <p role="alert" className="text-sm text-error-red">{downloadError}</p>}
-
 			{events.length === 0 ? (
 				<EmptyState
-					title="No events yet"
-					description={canManage ? "Create the first game, match, practice, meeting, or tournament event." : "Events will appear here when they are scheduled."}
+					title={query.trim() || hasFilters ? "No results found" : "No events yet"}
+					description={
+						query.trim() || hasFilters
+							? "Try changing your search, date range, or filters."
+							: canManage
+								? "Create the first game, match, practice, meeting, or tournament event."
+								: "Events will appear here when they are scheduled."
+					}
 				/>
 			) : (
 				<ul className="flex flex-col gap-3" aria-label="Events">
@@ -141,11 +228,11 @@ export function EventListPanel({
 						if (participantId) search.set("participantId", participantId);
 						search.set("returnTo", `${location.pathname}${location.search}`);
 						return (
-							<li key={event.id} className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-4">
+							<li key={event.id} className="rounded-xl border border-slate-gray/20 bg-pure-white p-4 dark:bg-[#111827]">
 								<div className="flex flex-wrap items-start justify-between gap-3">
 									<div className="min-w-0 flex-1">
 										<div className="flex flex-wrap items-center gap-2">
-											<Link to={appPaths.event(event.organizationId, event.id, search)} className="break-words font-heading font-semibold text-navy dark:text-[#f8fafc] hover:text-azure-blue hover:underline">
+											<Link to={appPaths.event(event.organizationId, event.id, search)} className="break-words font-heading font-semibold text-navy hover:text-azure-blue hover:underline dark:text-[#f8fafc]">
 												{event.displayTitle}
 											</Link>
 											<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusClasses(event.status)}`}>{event.status}</span>
@@ -168,7 +255,7 @@ export function EventListPanel({
 										<Button type="button" variant="secondary" onClick={() => downloadCalendar(event)}>Add to calendar</Button>
 										<Link
 											to={appPaths.event(event.organizationId, event.id, search)}
-											className="inline-flex min-h-11 items-center rounded-md border border-slate-gray/30 bg-pure-white dark:bg-[#111827] px-4 py-2 text-sm font-medium text-navy dark:text-[#f8fafc] hover:bg-ice-white hover:dark:bg-[#0f172a]"
+											className="inline-flex min-h-11 items-center rounded-md border border-slate-gray/30 bg-pure-white px-4 py-2 text-sm font-medium text-navy hover:bg-ice-white dark:bg-[#111827] dark:text-[#f8fafc] dark:hover:bg-[#0f172a]"
 										>
 											View details
 										</Link>
@@ -179,6 +266,14 @@ export function EventListPanel({
 					})}
 				</ul>
 			)}
+
+			<Pagination
+				page={page}
+				size={size}
+				totalElements={eventsQuery.data.totalElements}
+				onPageChange={setPage}
+				onSizeChange={(value) => { setSize(value); setPage(0); }}
+			/>
 		</div>
 	);
 }
@@ -232,14 +327,12 @@ function CreateEventForm({
 	const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York");
 	const [timezoneTouched, setTimezoneTouched] = useState(false);
 	const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? null;
-
-	// Browser Intl above is only the last-resort fallback (ADR-071) — the resolved override-chain default,
-	// once it loads, takes over as long as the user hasn't already typed something else.
 	const timezoneDefault = useEventTimezoneDefault(
 		scope.organizationId,
 		scope.type === "team" ? scope.teamId : undefined,
 		scope.type === "tournament" ? scope.tournamentId : undefined,
 	);
+
 	useEffect(() => {
 		if (!timezoneTouched && timezoneDefault.data?.timezone) {
 			setTimezone(timezoneDefault.data.timezone);
@@ -268,7 +361,7 @@ function CreateEventForm({
 
 	return (
 		<form
-			className="rounded-xl border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-4"
+			className="rounded-xl border border-slate-gray/20 bg-ice-white p-4 dark:bg-[#0f172a]"
 			onSubmit={async (event) => {
 				event.preventDefault();
 				const startInstant = isAllDay ? null : toInstant(startAt);
@@ -298,12 +391,7 @@ function CreateEventForm({
 			<div className="mt-4 grid gap-3 md:grid-cols-2">
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
 					Reusable template
-					<select
-						value={selectedTemplateId}
-						onChange={(event) => selectTemplate(event.target.value)}
-						disabled={templatesQuery.isLoading || templatesQuery.isError}
-						className="min-h-11 rounded-md border border-slate-gray/30 bg-white dark:bg-[#111827] px-3 py-2"
-					>
+					<select value={selectedTemplateId} onChange={(event) => selectTemplate(event.target.value)} disabled={templatesQuery.isLoading || templatesQuery.isError} className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2 dark:bg-[#111827]">
 						<option value="">Start without a template</option>
 						{templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
 					</select>
@@ -312,107 +400,37 @@ function CreateEventForm({
 				</label>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Event type
-					<select value={eventType} onChange={(event) => setEventType(event.target.value as EventType)} className="min-h-11 rounded-md border border-slate-gray/30 bg-white dark:bg-[#111827] px-3 py-2">
-						<option value="COMPETITION">Game / match / competition</option>
-						<option value="PRACTICE">Practice</option>
-						<option value="MEETING">Meeting</option>
-						<option value="TOURNAMENT">Tournament item</option>
-						<option value="OTHER">Other</option>
+					<select value={eventType} onChange={(event) => setEventType(event.target.value as EventType)} className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2 dark:bg-[#111827]">
+						<option value="COMPETITION">Game / match / competition</option><option value="PRACTICE">Practice</option><option value="MEETING">Meeting</option><option value="TOURNAMENT">Tournament item</option><option value="OTHER">Other</option>
 					</select>
 				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
-					Title
-					<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Optional custom title" maxLength={200} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
-					Description
-					<textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} rows={3} className="rounded-md border border-slate-gray/30 px-3 py-2" />
-				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
-					Opponent
-					<input value={opponentName} onChange={(event) => setOpponentName(event.target.value)} placeholder="External opponent name" maxLength={120} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
-					Timezone
-					<input
-						required
-						value={timezone}
-						onChange={(event) => {
-							setTimezone(event.target.value);
-							setTimezoneTouched(true);
-						}}
-						maxLength={100}
-						className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
-					/>
-				</label>
-				<label className="flex min-h-11 items-center gap-2 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
-					<input
-						type="checkbox"
-						checked={isAllDay}
-						onChange={(event) => setIsAllDay(event.target.checked)}
-						className="h-4 w-4"
-					/>
-					All-day event
-				</label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">Title<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Optional custom title" maxLength={200} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">Description<textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} rows={3} className="rounded-md border border-slate-gray/30 px-3 py-2" /></label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">Opponent<input value={opponentName} onChange={(event) => setOpponentName(event.target.value)} placeholder="External opponent name" maxLength={120} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">Timezone<input required value={timezone} onChange={(event) => { setTimezone(event.target.value); setTimezoneTouched(true); }} maxLength={100} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
+				<label className="flex min-h-11 items-center gap-2 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2"><input type="checkbox" checked={isAllDay} onChange={(event) => setIsAllDay(event.target.checked)} className="h-4 w-4" />All-day event</label>
 				{isAllDay ? (
-					<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
-						Date
-						<input type="date" value={allDayDate} onChange={(event) => setAllDayDate(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-					</label>
+					<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">Date<input type="date" value={allDayDate} onChange={(event) => setAllDayDate(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
 				) : (
 					<>
-						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
-							Start time
-							<input type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-						</label>
-						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
-							End time
-							<input type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-						</label>
-						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
-							Arrival time
-							<input type="datetime-local" value={arrivalAt} onChange={(event) => setArrivalAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-						</label>
-						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
-							Meeting time
-							<input type="datetime-local" value={meetingAt} onChange={(event) => setMeetingAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-						</label>
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">Start time<input type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">End time<input type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">Arrival time<input type="datetime-local" value={arrivalAt} onChange={(event) => setArrivalAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
+						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">Meeting time<input type="datetime-local" value={meetingAt} onChange={(event) => setMeetingAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
 					</>
 				)}
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
-					Venue
-					<input value={venueName} onChange={(event) => setVenueName(event.target.value)} maxLength={200} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
-					Field / court / area
-					<input value={area} onChange={(event) => setArea(event.target.value)} maxLength={120} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
-					Address
-					<input value={address} onChange={(event) => setAddress(event.target.value)} maxLength={300} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
-					Meeting point
-					<input value={meetingPoint} onChange={(event) => setMeetingPoint(event.target.value)} maxLength={300} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
-				</label>
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">
-					Directions notes
-					<textarea value={directionsNotes} onChange={(event) => setDirectionsNotes(event.target.value)} maxLength={1000} rows={3} className="rounded-md border border-slate-gray/30 px-3 py-2" />
-				</label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">Venue<input value={venueName} onChange={(event) => setVenueName(event.target.value)} maxLength={200} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">Field / court / area<input value={area} onChange={(event) => setArea(event.target.value)} maxLength={120} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">Address<input value={address} onChange={(event) => setAddress(event.target.value)} maxLength={300} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">Meeting point<input value={meetingPoint} onChange={(event) => setMeetingPoint(event.target.value)} maxLength={300} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">Directions notes<textarea value={directionsNotes} onChange={(event) => setDirectionsNotes(event.target.value)} maxLength={1000} rows={3} className="rounded-md border border-slate-gray/30 px-3 py-2" /></label>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Visibility
-					<select value={visibility} onChange={(event) => setVisibility(event.target.value as EventVisibility)} className="min-h-11 rounded-md border border-slate-gray/30 bg-white dark:bg-[#111827] px-3 py-2">
-						<option value="TEAM">Team</option>
-						<option value="ORGANIZATION">Organization</option>
-						<option value="PUBLIC">Public</option>
-					</select>
+					<select value={visibility} onChange={(event) => setVisibility(event.target.value as EventVisibility)} className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2 dark:bg-[#111827]"><option value="TEAM">Team</option><option value="ORGANIZATION">Organization</option><option value="PUBLIC">Public</option></select>
 				</label>
 			</div>
 			{error && <p role="alert" className="mt-3 text-sm text-error-red">{error}</p>}
-			<div className="mt-4 flex justify-end gap-2">
-				<Button type="button" variant="secondary" onClick={onCancel}>Cancel</Button>
-				<Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating…" : "Create event"}</Button>
-			</div>
+			<div className="mt-4 flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onCancel}>Cancel</Button><Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating…" : "Create event"}</Button></div>
 		</form>
 	);
 }

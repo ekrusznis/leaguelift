@@ -21,7 +21,8 @@ import kotlin.test.assertTrue
 class SubscriptionPaymentFailedEmailHandlerTest {
     private val emailProvider = mockk<EmailProvider>()
     private val objectMapper = jacksonObjectMapper()
-    private val handler = SubscriptionPaymentFailedEmailHandler(emailProvider, ResendTemplateProperties(), FrontendProperties(), objectMapper)
+    private val handler =
+        SubscriptionPaymentFailedEmailHandler(emailProvider, ResendTemplateProperties(), FrontendProperties(), objectMapper)
 
     private fun eventWithPayload(payload: OrganizationBillingLifecyclePayload): OutboxEvent {
         val now = Instant.now()

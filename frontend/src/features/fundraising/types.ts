@@ -11,7 +11,36 @@ export type CampaignType =
 	| "APPAREL_BASED"
 	| "SPONSOR_SUPPORTED";
 
-export type CampaignStatus = "DRAFT" | "ACTIVE" | "COMPLETED" | "ARCHIVED";
+export type CampaignStatus =
+	| "DRAFT"
+	| "PENDING_APPROVAL"
+	| "SCHEDULED"
+	| "ACTIVE"
+	| "ENDED"
+	| "CLOSED"
+	| "COMPLETED"
+	| "ARCHIVED";
+
+/** Starter/configuration style used to create the fundraiser. Legacy BOX_POOL remains readable but is no longer offered for new campaigns. */
+export type FundraiserTemplateKey =
+	| "GENERAL"
+	| "IN_PERSON_EVENT"
+	| "SPONSOR_MATCH"
+	| "MILESTONE_CHALLENGE"
+	| "FUNDRAISING_CHALLENGE"
+	| "BOX_POOL"
+	| "BAKE_SALE"
+	| "CAR_WASH";
+
+export interface CampaignPermissions {
+	canEdit: boolean;
+	canRequestActivation: boolean;
+	canApprove: boolean;
+	canReturnToDraft: boolean;
+	canClose: boolean;
+	canArchive: boolean;
+	canManageBoxPool: boolean;
+}
 
 export interface Campaign {
 	id: string;
@@ -25,22 +54,24 @@ export interface Campaign {
 	currency: string;
 	startDate: string | null;
 	endDate: string | null;
+	eventLocationName: string | null;
+	eventAddress: string | null;
 	status: CampaignStatus;
 	publishedAt: string | null;
+	createdByUserId: string | null;
+	templateKey: FundraiserTemplateKey | null;
+	submittedAt?: string | null;
+	approvedAt?: string | null;
+	approvedByUserId?: string | null;
+	permissions?: CampaignPermissions;
 	createdAt: string;
 	updatedAt: string;
-	/** Sum of CONFIRMED contributions — real data, not a demo placeholder. */
 	raisedMinor: number;
+	onlineContributionsEnabled?: boolean;
 }
 
-export interface CampaignPage {
-	items: Campaign[];
-	page: number;
-	size: number;
-	totalElements: number;
-}
+export interface CampaignPage { items: Campaign[]; page: number; size: number; totalElements: number; }
 
-/** Public-facing shape from GET /public/campaigns/{slug} — no createdAt/updatedAt. */
 export interface PublicCampaign {
 	id: string;
 	organizationId: string;
@@ -53,29 +84,31 @@ export interface PublicCampaign {
 	currency: string;
 	startDate: string | null;
 	endDate: string | null;
+	eventLocationName: string | null;
+	eventAddress: string | null;
 	status: CampaignStatus;
 	publishedAt: string | null;
 	raisedMinor: number;
+	logoUrl: string | null;
+	coverUrl: string | null;
+	primaryColor: string;
+	secondaryColor: string;
+	onlineContributionAllowed?: boolean;
+	onlineContributionUnavailableReason?: string | null;
 }
 
+export interface FundraisingSettings {
+	organizationId: string;
+	requireOwnerApproval: boolean;
+	updatedByUserId: string | null;
+	updatedAt: string | null;
+}
+
+export interface CampaignShareLink { url: string; qrCodeDataUri: string; }
 export type ContributionStatus = "PENDING" | "CONFIRMED" | "CANCELED" | "REFUNDED";
+export interface ContributionCheckout { contributionId: string; checkoutUrl: string; }
+export interface ContributionStatusResult { id: string; status: ContributionStatus; amountMinor: number; currency: string; confirmedAt: string | null; }
 
-/** Response from POST /public/campaigns/{slug}/contributions. */
-export interface ContributionCheckout {
-	contributionId: string;
-	checkoutUrl: string;
-}
-
-/** Response from GET /public/campaigns/{slug}/contributions/{contributionId} — used by the browser's return-page poll. */
-export interface ContributionStatusResult {
-	id: string;
-	status: ContributionStatus;
-	amountMinor: number;
-	currency: string;
-	confirmedAt: string | null;
-}
-
-/** Org-admin list shape from GET /organizations/{id}/campaigns/{campaignId}/contributions. */
 export interface Contribution {
 	id: string;
 	status: ContributionStatus;
@@ -89,10 +122,4 @@ export interface Contribution {
 	refundedAt: string | null;
 	createdAt: string;
 }
-
-export interface ContributionPage {
-	items: Contribution[];
-	page: number;
-	size: number;
-	totalElements: number;
-}
+export interface ContributionPage { items: Contribution[]; page: number; size: number; totalElements: number; }

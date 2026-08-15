@@ -29,7 +29,15 @@ class ContributionThankYouEmailHandlerTest {
         val now = Instant.now()
         val payload =
             objectMapper.writeValueAsString(
-                ContributionConfirmedPayload("supporter@example.test", "Jane Doe", 5_000L, "USD", "Fall Fundraiser", "fall-fundraiser", now.toString()),
+                ContributionConfirmedPayload(
+                    "supporter@example.test",
+                    "Jane Doe",
+                    5_000L,
+                    "USD",
+                    "Fall Fundraiser",
+                    "fall-fundraiser",
+                    now.toString(),
+                ),
             )
         val event =
             OutboxEvent(

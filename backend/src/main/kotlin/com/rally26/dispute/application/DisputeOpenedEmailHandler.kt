@@ -25,7 +25,8 @@ class DisputeOpenedEmailHandler(
     override fun handle(event: OutboxEvent) {
         val payload = objectMapper.readValue(event.payload, DisputeNotificationPayload::class.java)
         val amount = NumberFormat.getCurrencyInstance(Locale.US).format(payload.amountMinor / 100.0)
-        val actionUrl = event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/disputes" } ?: frontendProperties.baseUrl
+        val actionUrl =
+            event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/disputes" } ?: frontendProperties.baseUrl
         payload.ownerEmails.forEach { email ->
             emailProvider.send(
                 EmailMessage(
@@ -35,7 +36,8 @@ class DisputeOpenedEmailHandler(
                         "Hi there,\n\n" +
                             "A cardholder has disputed a $amount payment to ${payload.organizationName} (reason: ${payload.reason}). " +
                             "Rally26 is the merchant of record and will respond to Stripe directly. " +
-                            "The disputed amount has already been deducted from your organization's earnings, and this is reflected in your ledger.\n\n" +
+                            "The disputed amount has already been deducted from your organization's earnings, " +
+                            "and this is reflected in your ledger.\n\n" +
                             "You don't need to take any action, but reach out to Rally26 support if you have information relevant to the dispute.\n\n— Rally26",
                     template =
                         resendTemplateProperties.notificationId.takeIf { it.isNotBlank() }?.let { templateId ->

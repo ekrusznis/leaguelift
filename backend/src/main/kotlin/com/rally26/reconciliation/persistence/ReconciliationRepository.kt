@@ -113,6 +113,43 @@ class ReconciliationRepository(
             .query(Long::class.java)
             .single()
 
+    fun searchRuns(
+        organizationId: UUID,
+        status: ReconciliationRunStatus?,
+        ascending: Boolean,
+        offset: Int,
+        limit: Int,
+    ): List<ReconciliationRun> {
+        val sql =
+            buildString {
+                append("select $RUN_COLUMNS from reconciliation_run where organization_id = :organizationId")
+                if (status != null) append(" and status = :status")
+                append(" order by started_at ${if (ascending) "asc" else "desc"} offset :offset limit :limit")
+            }
+        var statement =
+            jdbcClient
+                .sql(sql)
+                .param("organizationId", organizationId)
+                .param("offset", offset)
+                .param("limit", limit)
+        if (status != null) statement = statement.param("status", status.name)
+        return statement.query(::mapRun).list()
+    }
+
+    fun countRunsFiltered(
+        organizationId: UUID,
+        status: ReconciliationRunStatus?,
+    ): Long {
+        val sql =
+            buildString {
+                append("select count(*) from reconciliation_run where organization_id = :organizationId")
+                if (status != null) append(" and status = :status")
+            }
+        var statement = jdbcClient.sql(sql).param("organizationId", organizationId)
+        if (status != null) statement = statement.param("status", status.name)
+        return statement.query(Long::class.java).single()
+    }
+
     fun insertIssue(
         runId: UUID,
         organizationId: UUID,
@@ -167,6 +204,78 @@ class ReconciliationRepository(
             .param("runId", runId)
             .query(::mapIssue)
             .list()
+
+    fun listIssuesPaged(
+        organizationId: UUID,
+        runId: UUID,
+        query: String?,
+        severity: ReconciliationSeverity?,
+        resourceType: String?,
+        ascending: Boolean,
+        offset: Int,
+        limit: Int,
+    ): List<ReconciliationIssue> {
+        val sql =
+            buildString {
+                append(
+                    "select $ISSUE_COLUMNS from reconciliation_issue" +
+                        " where organization_id = :organizationId and reconciliation_run_id = :runId",
+                )
+                if (query != null) {
+                    append(
+                        " and (lower(title) like :query or lower(detail) like :query" +
+                            " or lower(issue_type) like :query or lower(coalesce(cast(resource_id as text), '')) like :query)",
+                    )
+                }
+                if (severity != null) append(" and severity = :severity")
+                if (resourceType != null) append(" and resource_type = :resourceType")
+                append(" order by created_at ${if (ascending) "asc" else "desc"} offset :offset limit :limit")
+            }
+        var statement =
+            jdbcClient
+                .sql(sql)
+                .param("organizationId", organizationId)
+                .param("runId", runId)
+                .param("offset", offset)
+                .param("limit", limit)
+        if (query != null) statement = statement.param("query", "%${query.lowercase()}%")
+        if (severity != null) statement = statement.param("severity", severity.name)
+        if (resourceType != null) statement = statement.param("resourceType", resourceType)
+        return statement.query(::mapIssue).list()
+    }
+
+    fun countIssues(
+        organizationId: UUID,
+        runId: UUID,
+        query: String?,
+        severity: ReconciliationSeverity?,
+        resourceType: String?,
+    ): Long {
+        val sql =
+            buildString {
+                append(
+                    "select count(*) from reconciliation_issue" +
+                        " where organization_id = :organizationId and reconciliation_run_id = :runId",
+                )
+                if (query != null) {
+                    append(
+                        " and (lower(title) like :query or lower(detail) like :query" +
+                            " or lower(issue_type) like :query or lower(coalesce(cast(resource_id as text), '')) like :query)",
+                    )
+                }
+                if (severity != null) append(" and severity = :severity")
+                if (resourceType != null) append(" and resource_type = :resourceType")
+            }
+        var statement =
+            jdbcClient
+                .sql(sql)
+                .param("organizationId", organizationId)
+                .param("runId", runId)
+        if (query != null) statement = statement.param("query", "%${query.lowercase()}%")
+        if (severity != null) statement = statement.param("severity", severity.name)
+        if (resourceType != null) statement = statement.param("resourceType", resourceType)
+        return statement.query(Long::class.java).single()
+    }
 
     fun countLatestIssues(organizationId: UUID): Long =
         jdbcClient

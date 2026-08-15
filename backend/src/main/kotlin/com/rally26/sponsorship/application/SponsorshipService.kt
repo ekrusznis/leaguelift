@@ -173,7 +173,13 @@ class SponsorshipService(
         if (updated > 0) {
             auditService.record(null, sponsorship.organizationId, "sponsorship.confirmed", "sponsorship", sponsorship.id)
             ledgerService.recordConfirmedSponsorship(sponsorship.copy(status = SponsorshipStatus.CONFIRMED))
-            ledgerService.recordStripeProcessingFee(sponsorship.organizationId, LedgerSourceType.SPONSORSHIP, sponsorship.id, sponsorship.currency, stripePaymentIntentId)
+            ledgerService.recordStripeProcessingFee(
+                sponsorship.organizationId,
+                LedgerSourceType.SPONSORSHIP,
+                sponsorship.id,
+                sponsorship.currency,
+                stripePaymentIntentId,
+            )
         }
         return sponsorshipRepository.findById(sponsorship.id)
     }

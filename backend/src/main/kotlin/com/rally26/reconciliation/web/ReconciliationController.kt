@@ -1,8 +1,11 @@
 package com.rally26.reconciliation.web
 
+import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageResponse
 import com.rally26.reconciliation.application.ReconciliationService
+import com.rally26.reconciliation.domain.ReconciliationRunStatus
+import com.rally26.reconciliation.domain.ReconciliationSeverity
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -47,19 +50,64 @@ class ReconciliationController(
     @GetMapping
     fun list(
         @PathVariable organizationId: UUID,
+        @RequestParam(required = false) status: ReconciliationRunStatus?,
+        @RequestParam(defaultValue = "newest") sort: String,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): PageResponse<ReconciliationRunResponse> {
-        val normalizedSize = size.coerceIn(1, 100)
+        val safePage = page.coerceAtLeast(0)
+        val safeSize = size.coerceIn(1, 100)
+        val ascending = parseAscending(sort)
         val items =
             service
-                .list(
+                .searchRuns(
                     organizationId,
-                    page.coerceAtLeast(0) * normalizedSize,
-                    normalizedSize,
+                    status,
+                    ascending,
+                    safePage * safeSize,
+                    safeSize,
                     currentUser,
                 ).map { it.toResponse() }
-        return PageResponse(items, page.coerceAtLeast(0), normalizedSize, service.count(organizationId, currentUser))
+        return PageResponse(items, safePage, safeSize, service.countRunsFiltered(organizationId, status, currentUser))
     }
+
+    @GetMapping("/{runId}/issues")
+    fun listIssues(
+        @PathVariable organizationId: UUID,
+        @PathVariable runId: UUID,
+        @RequestParam(required = false) q: String?,
+        @RequestParam(required = false) severity: ReconciliationSeverity?,
+        @RequestParam(required = false) resourceType: String?,
+        @RequestParam(defaultValue = "newest") sort: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PageResponse<ReconciliationIssueResponse> {
+        val safePage = page.coerceAtLeast(0)
+        val safeSize = size.coerceIn(1, 100)
+        val ascending = parseAscending(sort)
+        val items =
+            service
+                .listIssues(
+                    organizationId,
+                    runId,
+                    q,
+                    severity,
+                    resourceType,
+                    ascending,
+                    safePage * safeSize,
+                    safeSize,
+                    currentUser,
+                ).map { it.toResponse() }
+        val total = service.countIssues(organizationId, runId, q, severity, resourceType, currentUser)
+        return PageResponse(items, safePage, safeSize, total)
+    }
+
+    private fun parseAscending(sort: String): Boolean =
+        when (sort.lowercase()) {
+            "newest" -> false
+            "oldest" -> true
+            else -> throw ValidationException("sort must be 'newest' or 'oldest'.")
+        }
 }

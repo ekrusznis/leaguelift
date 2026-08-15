@@ -3,6 +3,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { Button } from "../../components/Button";
+import { ListToolbar } from "../../components/lists/ListToolbar";
+import { Pagination } from "../../components/lists/Pagination";
 import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
@@ -23,6 +25,8 @@ const MODE_LABELS: Record<RequirementMode, string> = {
 	STAFF_REVIEWED_EXTERNAL: "Staff-reviewed external evidence",
 	INFORMATIONAL: "Informational only",
 };
+
+type RequirementSort = "EFFECTIVE_DESC" | "EFFECTIVE_ASC" | "TITLE_ASC" | "TITLE_DESC";
 
 function CreateRequirementForm({ organizationId, onDone }: { organizationId: string; onDone: () => void }) {
 	const { data: teams } = useTeams(organizationId);
@@ -79,9 +83,7 @@ function CreateRequirementForm({ organizationId, onDone }: { organizationId: str
 				<div className="flex flex-col gap-1">
 					<label htmlFor="req-mode" className="text-sm font-medium text-navy dark:text-[#f8fafc]">How guardians satisfy it</label>
 					<select id="req-mode" {...register("mode")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
-						{Object.entries(MODE_LABELS).map(([value, label]) => (
-							<option key={value} value={value}>{label}</option>
-						))}
+						{Object.entries(MODE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
 					</select>
 				</div>
 				<div className="flex flex-col gap-1">
@@ -97,9 +99,7 @@ function CreateRequirementForm({ organizationId, onDone }: { organizationId: str
 						<label htmlFor="req-team" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Team (optional)</label>
 						<select id="req-team" {...register("teamId")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
 							<option value="">Organization-wide</option>
-							{teams.items.map((team) => (
-								<option key={team.id} value={team.id}>{team.name}</option>
-							))}
+							{teams.items.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
 						</select>
 					</div>
 				)}
@@ -192,31 +192,112 @@ export function EligibilityRequirementList({ organizationId }: { organizationId:
 	const { data: teams } = useTeams(organizationId);
 	const [showForm, setShowForm] = useState(false);
 	const [versioningId, setVersioningId] = useState<string | null>(null);
+	const [query, setQuery] = useState("");
+	const [mode, setMode] = useState<RequirementMode | "">("");
+	const [sort, setSort] = useState<RequirementSort>("EFFECTIVE_DESC");
+	const [page, setPage] = useState(0);
+	const [size, setSize] = useState(25);
 
-	const activeRequirements = data?.filter((r) => r.status === "ACTIVE") ?? [];
+	const teamNameById = new Map((teams?.items ?? []).map((team) => [team.id, team.name]));
+	const needle = query.trim().toLowerCase();
+	const activeRequirements = (data ?? [])
+		.filter((requirement) => requirement.status === "ACTIVE")
+		.filter((requirement) => {
+			if (mode && requirement.mode !== mode) return false;
+			if (!needle) return true;
+			const teamName = requirement.teamId ? teamNameById.get(requirement.teamId) : "Organization-wide";
+			return [
+				requirement.title,
+				requirement.content,
+				requirement.sport,
+				requirement.season,
+				teamName,
+				MODE_LABELS[requirement.mode],
+			]
+				.filter(Boolean)
+				.some((value) => value!.toLowerCase().includes(needle));
+		})
+		.sort((left, right) => {
+			if (sort === "TITLE_ASC" || sort === "TITLE_DESC") {
+				const result = left.title.localeCompare(right.title);
+				return sort === "TITLE_ASC" ? result : -result;
+			}
+			const result = left.effectiveStart.localeCompare(right.effectiveStart) || left.title.localeCompare(right.title);
+			return sort === "EFFECTIVE_ASC" ? result : -result;
+		});
+
+	const totalElements = activeRequirements.length;
+	const safePage = Math.min(page, Math.max(0, Math.ceil(totalElements / size) - 1));
+	const visibleRequirements = activeRequirements.slice(safePage * size, safePage * size + size);
+	const hasFilters = !!mode;
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="flex items-center justify-between">
-				<span className="text-sm text-slate-gray dark:text-[#cbd5e1]">
-					{data ? `${activeRequirements.length} active requirement${activeRequirements.length !== 1 ? "s" : ""}` : ""}
-				</span>
-				<Button type="button" variant="secondary" onClick={() => setShowForm((v) => !v)}>
-					{showForm ? "Cancel" : "New requirement"}
-				</Button>
-			</div>
+			<ListToolbar
+				searchValue={query}
+				onSearchChange={(value) => {
+					setQuery(value);
+					setPage(0);
+				}}
+				searchPlaceholder="Search requirements by title, sport, season, team, or mode"
+				resultCount={totalElements}
+				sortValue={sort}
+				sortOptions={[
+					{ value: "EFFECTIVE_DESC", label: "Effective date — newest" },
+					{ value: "EFFECTIVE_ASC", label: "Effective date — oldest" },
+					{ value: "TITLE_ASC", label: "Title A–Z" },
+					{ value: "TITLE_DESC", label: "Title Z–A" },
+				]}
+				onSortChange={(value) => {
+					setSort(value as RequirementSort);
+					setPage(0);
+				}}
+				hasActiveFilters={hasFilters}
+				onClear={() => {
+					setQuery("");
+					setMode("");
+					setSort("EFFECTIVE_DESC");
+					setPage(0);
+				}}
+				filters={
+					<select
+						aria-label="Filter eligibility requirement mode"
+						value={mode}
+						onChange={(event) => {
+							setMode(event.target.value as RequirementMode | "");
+							setPage(0);
+						}}
+						className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-navy dark:border-[#334155] dark:bg-[#0f172a] dark:text-[#f8fafc]"
+					>
+						<option value="">All requirement modes</option>
+						{Object.entries(MODE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+					</select>
+				}
+				actions={
+					<Button type="button" variant="secondary" onClick={() => setShowForm((value) => !value)}>
+						{showForm ? "Cancel" : "New requirement"}
+					</Button>
+				}
+			/>
 
 			{showForm && <CreateRequirementForm organizationId={organizationId} onDone={() => setShowForm(false)} />}
 
 			{isLoading && <LoadingState label="Loading eligibility requirements…" />}
 			{isError && <ErrorState message="Could not load eligibility requirements." onRetry={() => refetch()} />}
-			{data && activeRequirements.length === 0 && !showForm && (
-				<EmptyState title="No eligibility requirements yet" description="Create a waiver or document requirement guardians must satisfy before their athlete is roster-eligible." />
+			{data && visibleRequirements.length === 0 && !showForm && (
+				<EmptyState
+					title={query.trim() || hasFilters ? "No results found" : "No eligibility requirements yet"}
+					description={
+						query.trim() || hasFilters
+							? "Try changing your search or filters."
+							: "Create a waiver or document requirement guardians must satisfy before their athlete is roster-eligible."
+					}
+				/>
 			)}
-			{activeRequirements.length > 0 && (
+			{visibleRequirements.length > 0 && (
 				<ul className="flex flex-col gap-2" aria-label="Eligibility requirements">
-					{activeRequirements.map((requirement) => {
-						const team = teams?.items.find((t) => t.id === requirement.teamId);
+					{visibleRequirements.map((requirement) => {
+						const team = teams?.items.find((item) => item.id === requirement.teamId);
 						return (
 							<li key={requirement.id} className="rounded-lg border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-3">
 								<div className="flex flex-wrap items-center justify-between gap-3">
@@ -249,6 +330,17 @@ export function EligibilityRequirementList({ organizationId }: { organizationId:
 					})}
 				</ul>
 			)}
+
+			<Pagination
+				page={safePage}
+				size={size}
+				totalElements={totalElements}
+				onPageChange={setPage}
+				onSizeChange={(nextSize) => {
+					setSize(nextSize);
+					setPage(0);
+				}}
+			/>
 		</div>
 	);
 }

@@ -37,6 +37,8 @@ import { PlatformHelpArticlesPage } from "../features/support/PlatformHelpArticl
 import { PlatformSupportCasesPage } from "../features/support/PlatformSupportCasesPage";
 import { SupportRequestPage } from "../features/support/SupportRequestPage";
 import { DashboardPage } from "../pages/DashboardPage";
+import { FundraisingPage } from "../pages/FundraisingPage";
+import { FundraiserFlyerPage } from "../pages/FundraiserFlyerPage";
 import { HouseholdDetailPage } from "../pages/HouseholdDetailPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { OrganizationDetailPage } from "../pages/OrganizationDetailPage";
@@ -54,7 +56,9 @@ import { VerifyEmailPage } from "../pages/auth/VerifyEmailPage";
 import { ContactRedirect } from "../pages/marketing/ContactRedirect";
 import { HomePage } from "../pages/marketing/HomePage";
 import { PublicAthleteStorefrontView } from "../pages/marketing/PublicAthleteStorefrontView";
+import { PublicBoxPoolView } from "../pages/marketing/PublicBoxPoolView";
 import { PublicCampaignView } from "../pages/marketing/PublicCampaignView";
+import { PublicFundraisingGameView } from "../pages/marketing/PublicFundraisingGameView";
 import { PublicSponsorshipView } from "../pages/marketing/PublicSponsorshipView";
 import { PublicStoreView } from "../pages/marketing/PublicStoreView";
 import { SecurityPage } from "../pages/marketing/SecurityPage";
@@ -87,6 +91,8 @@ export function AppRoutes() {
 				<Route path="terms" element={<TermsPage />} />
 				<Route path="accessibility" element={<AccessibilityPage />} />
 				<Route path="campaigns/:slug" element={<PublicCampaignView />} />
+				<Route path="campaigns/:slug/play" element={<PublicFundraisingGameView />} />
+				<Route path="pools/:slug" element={<PublicBoxPoolView />} />
 				<Route path="swag-shop/:slug" element={<PublicStoreView />} />
 				<Route path="swag-shop/athlete/:slug" element={<PublicAthleteStorefrontView />} />
 				<Route path="sponsors/:slug" element={<PublicSponsorshipView />} />
@@ -106,6 +112,7 @@ export function AppRoutes() {
 			<Route path="app" element={<ProtectedRoute />}>
 				<Route index element={<DashboardPage />} />
 				<Route path="onboarding/:step?" element={<OwnerOnboardingPage />} />
+				<Route path="organizations/:organizationId/fundraising/:campaignId/flyer" element={<FundraiserFlyerPage />} />
 				<Route element={<AppShell />}>
 					<Route path="action-center" element={<ActionCenterPage />} />
 					<Route path="announcements" element={<AnnouncementsPage />} />
@@ -129,6 +136,8 @@ export function AppRoutes() {
 					<Route path="organizations/:organizationId/participants/:participantId/events" element={<EventsPage scopeType="participant" />} />
 					<Route path="organizations/:organizationId/households/:householdId" element={<HouseholdDetailPage />} />
 					<Route path="organizations/:organizationId/households/:householdId/:section" element={<HouseholdDetailPage />} />
+					{/* More specific than the generic organization section route so Coach/Guardian can reach fundraising without org-management access. */}
+					<Route path="organizations/:organizationId/fundraising" element={<FundraisingPage />} />
 					<Route path="organizations/:organizationId/:section" element={<OrganizationDetailPage />} />
 				</Route>
 				<Route path="platform" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformAdminConsoleLayout />)}>
@@ -149,9 +158,7 @@ export function AppRoutes() {
 					<Route path="roster" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformRosterPage />)} />
 				</Route>
 			</Route>
-			<Route element={<MarketingLayout />}>
-				<Route path="*" element={<NotFoundPage />} />
-			</Route>
+			<Route element={<MarketingLayout />}><Route path="*" element={<NotFoundPage />} /></Route>
 		</Routes>
 	);
 }

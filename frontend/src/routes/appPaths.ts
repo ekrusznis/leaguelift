@@ -28,6 +28,7 @@ export const appPaths = {
 	collections: (organizationId: string) => `/app/organizations/${organizationId}/collections`,
 	disputes: (organizationId: string) => `/app/organizations/${organizationId}/disputes`,
 	swagShopOrder: (organizationId: string) => `/app/organizations/${organizationId}/swag-shop/order`,
+	boxPool: (slug: string) => `/pools/${slug}`,
 	household: (organizationId: string, householdId: string, section: HouseholdSection = "profile") =>
 		`/app/organizations/${organizationId}/households/${householdId}/${section}`,
 	organizationEvents: (organizationId: string) => `/app/organizations/${organizationId}/events`,

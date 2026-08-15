@@ -39,7 +39,8 @@ class EventRsvpChangeNotificationHandler(
         }
         val previous = payload.previousResponse ?: "no response"
         val actionUrl =
-            event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/events/${payload.eventId}" } ?: frontendProperties.baseUrl
+            event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/events/${payload.eventId}" }
+                ?: frontendProperties.baseUrl
         for (email in payload.staffEmails) {
             emailProvider.send(
                 EmailMessage(
@@ -55,7 +56,8 @@ class EventRsvpChangeNotificationHandler(
                                 variables =
                                     mapOf(
                                         "NOTIFICATION_TITLE" to "RSVP update: ${payload.displayTitle}",
-                                        "NOTIFICATION_DETAILS" to "${payload.participantName}'s RSVP changed from $previous to ${payload.newResponse}.",
+                                        "NOTIFICATION_DETAILS" to
+                                            "${payload.participantName}'s RSVP changed from $previous to ${payload.newResponse}.",
                                         "ACTION_URL" to actionUrl,
                                     ),
                             )

@@ -26,8 +26,12 @@ const draftCampaign: Campaign = {
 	currency: "USD",
 	startDate: null,
 	endDate: null,
+	eventLocationName: null,
+	eventAddress: null,
 	status: "DRAFT",
 	publishedAt: null,
+	createdByUserId: null,
+	templateKey: "GENERAL",
 	createdAt: new Date().toISOString(),
 	updatedAt: new Date().toISOString(),
 	raisedMinor: 0,
@@ -47,7 +51,7 @@ describe("CampaignList", () => {
 
 		renderWithProviders(<CampaignList organizationId={organizationId} />);
 
-		expect(await screen.findByText(/no campaigns yet/i)).toBeInTheDocument();
+		expect(await screen.findByText(/no fundraisers yet/i)).toBeInTheDocument();
 	});
 
 	it("creates a campaign from the form", async () => {
@@ -59,14 +63,14 @@ describe("CampaignList", () => {
 		vi.stubGlobal("fetch", fetchMock);
 		const user = userEvent.setup();
 
-		renderWithProviders(<CampaignList organizationId={organizationId} />);
-		await screen.findByText(/no campaigns yet/i);
+		renderWithProviders(<CampaignList organizationId={organizationId} canCreate={true} />);
+		await screen.findByText(/no fundraisers yet/i);
 
-		await user.click(screen.getByRole("button", { name: /add campaign/i }));
+		await user.click(screen.getByRole("button", { name: /create fundraiser/i }));
 		await user.type(screen.getByLabelText(/^name/i), "Spring Trip Fund");
 		await user.type(screen.getByLabelText(/public url slug/i), "spring-trip-fund");
-		await user.type(screen.getByLabelText(/goal \(cents\)/i), "400000");
-		await user.click(screen.getByRole("button", { name: /create campaign/i }));
+		await user.type(screen.getByLabelText(/fundraising goal/i), "400000");
+		await user.click(screen.getByRole("button", { name: /create fundraiser/i }));
 
 		await waitFor(() =>
 			expect(fetchMock).toHaveBeenCalledWith(
@@ -79,20 +83,20 @@ describe("CampaignList", () => {
 	it("publishes a draft campaign", async () => {
 		const fetchMock = vi.fn((url: string) => {
 			if (url.includes("/teams")) return Promise.resolve(jsonResponse(emptyTeams));
-			if (url.includes("/publish")) return Promise.resolve(jsonResponse({ ...draftCampaign, status: "ACTIVE" }));
+			if (url.includes("/request-activation")) return Promise.resolve(jsonResponse({ ...draftCampaign, status: "ACTIVE" }));
 			return Promise.resolve(jsonResponse({ items: [draftCampaign], page: 0, size: 20, totalElements: 1 }));
 		});
 		vi.stubGlobal("fetch", fetchMock);
 		const user = userEvent.setup();
 
-		renderWithProviders(<CampaignList organizationId={organizationId} />);
+		renderWithProviders(<CampaignList organizationId={organizationId} canManageOrganization={true} />);
 		await screen.findByText(/spring trip fund/i);
 
-		await user.click(screen.getByRole("button", { name: /publish/i }));
+		await user.click(screen.getByRole("button", { name: /submit for approval/i }));
 
 		await waitFor(() =>
 			expect(fetchMock).toHaveBeenCalledWith(
-				expect.stringContaining(`/campaigns/${draftCampaign.id}/publish`),
+				expect.stringContaining(`/campaigns/${draftCampaign.id}/request-activation`),
 				expect.objectContaining({ method: "POST" }),
 			),
 		);

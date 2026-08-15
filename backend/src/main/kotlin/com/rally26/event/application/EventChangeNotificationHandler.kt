@@ -48,7 +48,8 @@ class EventChangeNotificationHandler(
             return
         }
         val actionUrl =
-            event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/events/${payload.eventId}" } ?: frontendProperties.baseUrl
+            event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/events/${payload.eventId}" }
+                ?: frontendProperties.baseUrl
         for (recipient in payload.recipients) {
             recipient.email?.let {
                 emailProvider.send(

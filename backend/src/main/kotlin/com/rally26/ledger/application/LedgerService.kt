@@ -401,7 +401,9 @@ class LedgerService(
             sourceType = sourceType,
             sourceId = sourceId,
             externalReference = stripePaymentIntentId,
-            description = "Stripe's real processing fee for this charge, absorbed by Rally26 — internal margin visibility only, never billed to the organization",
+            description =
+                "Stripe's real processing fee for this charge, " +
+                    "absorbed by Rally26 — internal margin visibility only, never billed to the organization",
         )
     }
 

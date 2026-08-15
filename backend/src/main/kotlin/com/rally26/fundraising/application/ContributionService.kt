@@ -2,6 +2,7 @@ package com.rally26.fundraising.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
+import com.rally26.boxpool.persistence.BoxPoolBoxRepository
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.common.error.ValidationException
@@ -70,6 +71,7 @@ class ContributionService(
     private val objectMapper: ObjectMapper,
     private val householdAttributionService: HouseholdAttributionService,
     private val familyCreditService: FamilyCreditService,
+    private val boxPoolBoxRepository: BoxPoolBoxRepository,
 ) {
     @Transactional
     fun createCheckoutSession(
@@ -87,6 +89,12 @@ class ContributionService(
                 ?: throw NotFoundException("CAMPAIGN_NOT_FOUND", "The campaign could not be found.")
         if (campaign.status != CampaignStatus.ACTIVE) {
             throw ValidationException("This campaign isn't currently accepting contributions.")
+        }
+        if (!campaign.onlineContributionsEnabled) {
+            throw ValidationException(
+                "Online card contributions are unavailable for fundraisers that include a promotional game. " +
+                    "Game entry remains free and separate from any offline contribution.",
+            )
         }
         if (!ContributionLimits.isAmountAllowed(amountMinor)) {
             throw ValidationException(
@@ -152,7 +160,13 @@ class ContributionService(
         if (updated > 0) {
             auditService.record(null, contribution.organizationId, "contribution.confirmed", "contribution", contribution.id)
             ledgerService.recordConfirmedContribution(contribution.copy(status = ContributionStatus.CONFIRMED))
-            ledgerService.recordStripeProcessingFee(contribution.organizationId, LedgerSourceType.CONTRIBUTION, contribution.id, contribution.currency, stripePaymentIntentId)
+            ledgerService.recordStripeProcessingFee(
+                contribution.organizationId,
+                LedgerSourceType.CONTRIBUTION,
+                contribution.id,
+                contribution.currency,
+                stripePaymentIntentId,
+            )
             if (contribution.attributedHouseholdId != null) {
                 familyCreditService.grantForContribution(
                     contribution.organizationId,
@@ -162,6 +176,17 @@ class ContributionService(
                     contribution.currency,
                 )
             }
+            // Fundraising Templates (Phase 42): a box-pool purchase is an ordinary
+            // contribution with a box_pool_box.contribution_id link — this no-ops for
+            // every other contribution (findByContributionId returns null). Direct
+            // synchronous call, same pattern as familyCreditService above, not an
+            // outbox event: the outbox worker supports exactly one handler per event
+            // type (OutboxWorker.handlersByEventType is a 1:1 map), and
+            // ContributionThankYouEmailHandler already owns "contribution.confirmed" —
+            // a second listener for the same type would silently replace it. This also
+            // keeps the box-claim state change atomic with the confirmation itself,
+            // same reasoning as family-credit granting.
+            boxPoolBoxRepository.findByContributionId(contribution.id)?.let { boxPoolBoxRepository.claim(it.id) }
             if (contribution.supporterEmail != null) {
                 val campaign = campaignRepository.findById(contribution.campaignId, contribution.organizationId)
                 outboxWriter.write(

@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useMemo, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
+import { ListControls } from '@/components/list-controls';
+import { ListFooter } from '@/components/list-footer';
 import { LoadingState } from '@/components/loading-state';
 import { Modal } from '@/components/modal';
 import { PlatformStatusSpacer } from '@/components/platform-status-spacer';
@@ -12,36 +14,57 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useToast } from '@/components/toast';
 import { useDashboardContext } from '@/features/dashboard/api';
-import { useMembers, useRevokeMember, useUpdateMemberRole } from '@/features/membership/api';
+import { useRevokeMember, useUpdateMemberRole } from '@/features/membership/api';
 import type { MembershipResponse, MembershipRole } from '@/features/membership/types';
+import { flattenInfiniteItems, useInfiniteMemberSearch, type MemberSearchSort } from '@/features/people-search/api';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 const ASSIGNABLE_ROLES: MembershipRole[] = ['ADMINISTRATOR', 'VIEWER', 'TEAM_ADMINISTRATOR', 'TOURNAMENT_ADMINISTRATOR'];
 
-/**
- * Members list + role update/revoke (Members tab, ADR-105). Mutating actions aren't
- * hidden client-side for non-manager owners (VIEWER-tier) — a 403 from the backend
- * surfaces as a clear toast instead, matching how permission errors are already
- * handled elsewhere in the app (RSVP, messaging) rather than duplicating capability
- * checks client-side for a first slice.
- */
+const ROLE_LABELS: Record<string, string> = {
+  OWNER: 'Owner',
+  ADMINISTRATOR: 'Administrator',
+  VIEWER: 'Viewer',
+  TEAM_ADMINISTRATOR: 'Team administrator',
+  TOURNAMENT_ADMINISTRATOR: 'Tournament administrator',
+};
+
 export default function OwnerMembersScreen() {
   const theme = useTheme();
   const toast = useToast();
   const dashboardContext = useDashboardContext(true);
   const organizationId = dashboardContext.data?.organizationId ?? null;
-  const membersQuery = useMembers(organizationId);
   const updateRole = useUpdateMemberRole(organizationId);
   const revokeMember = useRevokeMember(organizationId);
 
+  const [query, setQuery] = useState('');
+  const [role, setRole] = useState('');
+  const [status, setStatus] = useState('ACTIVE');
+  const [sort, setSort] = useState<MemberSearchSort>('NAME_ASC');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
   const [roleTarget, setRoleTarget] = useState<MembershipResponse | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<MembershipResponse | null>(null);
 
-  function changeRole(role: MembershipRole) {
+  const membersQuery = useInfiniteMemberSearch(organizationId, { q: query, role, status, sort });
+  const members = useMemo(() => flattenInfiniteItems(membersQuery.data?.pages), [membersQuery.data?.pages]);
+  const total = membersQuery.data?.pages[0]?.totalElements ?? 0;
+  const activeFilters = [
+    ...(role ? [ROLE_LABELS[role] ?? role] : []),
+    ...(status && status !== 'ACTIVE' ? [status === 'REVOKED' ? 'Disabled' : status] : []),
+  ];
+  const sortLabel =
+    sort === 'NAME_ASC' ? 'Name A–Z'
+    : sort === 'NAME_DESC' ? 'Name Z–A'
+    : sort === 'ROLE_ASC' ? 'Role'
+    : sort === 'NEWEST' ? 'Newest'
+    : 'Oldest';
+
+  function changeRole(nextRole: MembershipRole) {
     if (!roleTarget) return;
     updateRole.mutate(
-      { memberId: roleTarget.id, role },
+      { memberId: roleTarget.id, role: nextRole },
       {
         onSuccess: () => toast.show('Member role updated.', 'success'),
         onError: () => toast.show("Could not update that member's role.", 'error'),
@@ -50,11 +73,11 @@ export default function OwnerMembersScreen() {
     setRoleTarget(null);
   }
 
-  function confirmRevoke() {
+  function confirmDisable() {
     if (!revokeTarget) return;
     revokeMember.mutate(revokeTarget.id, {
-      onSuccess: () => toast.show('Member removed.', 'success'),
-      onError: () => toast.show('Could not remove that member.', 'error'),
+      onSuccess: () => toast.show('Member access disabled.', 'success'),
+      onError: () => toast.show("Could not disable that member's access.", 'error'),
     });
     setRevokeTarget(null);
   }
@@ -63,57 +86,163 @@ export default function OwnerMembersScreen() {
     <ThemedView style={styles.container}>
       <PlatformStatusSpacer />
       <View style={styles.header}>
-        <ThemedText type="smallBold">Members</ThemedText>
+        <ThemedText type="smallBold">Members & Staff</ThemedText>
       </View>
 
       {membersQuery.isLoading && <LoadingState label="Loading members…" />}
       {membersQuery.isError && <ErrorState message="Could not load members." onRetry={() => membersQuery.refetch()} />}
-      {membersQuery.data && membersQuery.data.items.length === 0 && (
-        <EmptyState title="No members yet" description="Staff invited to this organization will show up here." />
+
+      {!membersQuery.isLoading && !membersQuery.isError && (
+        <FlatList
+          data={members}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          ListHeaderComponent={
+            <View style={styles.controls}>
+              <ListControls
+                query={query}
+                onChangeQuery={setQuery}
+                searchPlaceholder="Search members by name or email"
+                resultCount={total}
+                activeFilters={activeFilters}
+                onRemoveFilter={(index) => {
+                  if (role && index === 0) setRole('');
+                  else setStatus('ACTIVE');
+                }}
+                onClearFilters={() => {
+                  setQuery('');
+                  setRole('');
+                  setStatus('ACTIVE');
+                  setSort('NAME_ASC');
+                }}
+                onPressFilter={() => setFilterOpen(true)}
+                onPressSort={() => setSortOpen(true)}
+                sortLabel={sortLabel}
+              />
+            </View>
+          }
+          ListEmptyComponent={
+            <EmptyState
+              title={query.trim() || role || status !== 'ACTIVE' ? 'No results found' : 'No active members yet'}
+              description={
+                query.trim() || role || status !== 'ACTIVE'
+                  ? 'Try changing your search or filters.'
+                  : 'Accepted organization members will appear here.'
+              }
+            />
+          }
+          ListFooterComponent={
+            <ListFooter
+              loadedCount={members.length}
+              totalCount={total}
+              hasMore={!!membersQuery.hasNextPage}
+              loadingMore={membersQuery.isFetchingNextPage}
+              onLoadMore={() => membersQuery.fetchNextPage()}
+            />
+          }
+          renderItem={({ item }) => (
+            <ThemedView type="backgroundElement" style={styles.row}>
+              <View style={styles.rowBody}>
+                <ThemedText type="smallBold">{item.userDisplayName ?? item.userEmail ?? 'Organization member'}</ThemedText>
+                {item.userEmail ? (
+                  <ThemedText type="small" themeColor="textSecondary">{item.userEmail}</ThemedText>
+                ) : null}
+                <ThemedText type="small" themeColor="textSecondary">
+                  {ROLE_LABELS[item.role] ?? item.role} · {item.status === 'REVOKED' ? 'Disabled' : item.status}
+                </ThemedText>
+              </View>
+              {item.role !== 'OWNER' && item.status === 'ACTIVE' && (
+                <View style={styles.rowActions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Change role for ${item.userDisplayName ?? item.userEmail ?? 'member'}`}
+                    hitSlop={8}
+                    onPress={() => setRoleTarget(item)}>
+                    <Ionicons name="create-outline" size={20} color={theme.textSecondary} />
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Disable access for ${item.userDisplayName ?? item.userEmail ?? 'member'}`}
+                    hitSlop={8}
+                    onPress={() => setRevokeTarget(item)}>
+                    <Ionicons name="person-remove-outline" size={20} color={Brand.errorRed} />
+                  </Pressable>
+                </View>
+              )}
+            </ThemedView>
+          )}
+        />
       )}
 
-      <ScrollView contentContainerStyle={styles.list}>
-        {membersQuery.data?.items.map((member) => (
-          <ThemedView key={member.id} type="backgroundElement" style={styles.row}>
-            <View style={styles.rowBody}>
-              <ThemedText type="smallBold">{member.userDisplayName ?? member.userEmail ?? 'Unknown'}</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {member.role} · {member.status}
-              </ThemedText>
-            </View>
-            {member.role !== 'OWNER' && (
-              <View style={styles.rowActions}>
-                <Pressable hitSlop={8} onPress={() => setRoleTarget(member)}>
-                  <Ionicons name="create-outline" size={20} color={theme.textSecondary} />
-                </Pressable>
-                <Pressable hitSlop={8} onPress={() => setRevokeTarget(member)}>
-                  <Ionicons name="trash-outline" size={20} color={Brand.errorRed} />
-                </Pressable>
-              </View>
-            )}
-          </ThemedView>
+      <Modal visible={filterOpen} onClose={() => setFilterOpen(false)}>
+        <ThemedText type="smallBold" style={styles.modalTitle}>Filter members</ThemedText>
+        <ThemedText type="smallBold" style={styles.filterHeading}>Status</ThemedText>
+        {([
+          ['', 'All statuses'],
+          ['ACTIVE', 'Active'],
+          ['REVOKED', 'Disabled'],
+          ['INVITED', 'Invited'],
+        ] as const).map(([value, label]) => (
+          <Pressable key={value || 'ALL_STATUS'} onPress={() => setStatus(value)} style={styles.option}>
+            <ThemedText type={status === value ? 'smallBold' : 'default'}>{label}</ThemedText>
+            {status === value && <Ionicons name="checkmark" size={18} color={theme.text} />}
+          </Pressable>
         ))}
-      </ScrollView>
+        <ThemedText type="smallBold" style={styles.filterHeading}>Role</ThemedText>
+        {[['', 'All roles'], ...Object.entries(ROLE_LABELS)].map(([value, label]) => (
+          <Pressable key={value || 'ALL_ROLES'} onPress={() => setRole(value)} style={styles.option}>
+            <ThemedText type={role === value ? 'smallBold' : 'default'}>{label}</ThemedText>
+            {role === value && <Ionicons name="checkmark" size={18} color={theme.text} />}
+          </Pressable>
+        ))}
+        <Pressable onPress={() => setFilterOpen(false)} style={styles.doneButton}>
+          <ThemedText type="smallBold">Done</ThemedText>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={sortOpen} onClose={() => setSortOpen(false)}>
+        <ThemedText type="smallBold" style={styles.modalTitle}>Sort members</ThemedText>
+        {([
+          ['NAME_ASC', 'Name A–Z'],
+          ['NAME_DESC', 'Name Z–A'],
+          ['ROLE_ASC', 'Role'],
+          ['NEWEST', 'Newest'],
+          ['OLDEST', 'Oldest'],
+        ] as const).map(([value, label]) => (
+          <Pressable
+            key={value}
+            onPress={() => {
+              setSort(value);
+              setSortOpen(false);
+            }}
+            style={styles.option}>
+            <ThemedText type={sort === value ? 'smallBold' : 'default'}>{label}</ThemedText>
+            {sort === value && <Ionicons name="checkmark" size={18} color={theme.text} />}
+          </Pressable>
+        ))}
+      </Modal>
 
       <Modal visible={!!roleTarget} onClose={() => setRoleTarget(null)}>
         <ThemedText type="smallBold" style={styles.modalTitle}>
           Change role for {roleTarget?.userDisplayName ?? roleTarget?.userEmail}
         </ThemedText>
-        {ASSIGNABLE_ROLES.map((role) => (
-          <Pressable key={role} onPress={() => changeRole(role)} style={styles.roleOption}>
-            <ThemedText type={role === roleTarget?.role ? 'smallBold' : 'default'}>{role}</ThemedText>
-            {role === roleTarget?.role && <Ionicons name="checkmark" size={18} color={Brand.championshipGold} />}
+        {ASSIGNABLE_ROLES.map((nextRole) => (
+          <Pressable key={nextRole} onPress={() => changeRole(nextRole)} style={styles.option}>
+            <ThemedText type={nextRole === roleTarget?.role ? 'smallBold' : 'default'}>
+              {ROLE_LABELS[nextRole] ?? nextRole}
+            </ThemedText>
+            {nextRole === roleTarget?.role && <Ionicons name="checkmark" size={18} color={Brand.championshipGold} />}
           </Pressable>
         ))}
       </Modal>
 
       <ConfirmDialog
         visible={!!revokeTarget}
-        title="Remove member?"
-        message={`${revokeTarget?.userDisplayName ?? revokeTarget?.userEmail ?? 'This member'} will lose access to this organization.`}
-        confirmLabel="Remove"
+        title="Disable access?"
+        message={`${revokeTarget?.userDisplayName ?? revokeTarget?.userEmail ?? 'This member'} will no longer be able to access this organization. Historical activity and audit records will remain.`}
+        confirmLabel="Disable access"
         destructive
-        onConfirm={confirmRevoke}
+        onConfirm={confirmDisable}
         onCancel={() => setRevokeTarget(null)}
       />
     </ThemedView>
@@ -121,17 +250,15 @@ export default function OwnerMembersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   header: {
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
   },
+  controls: { paddingBottom: Spacing.three },
   list: {
     paddingHorizontal: Spacing.four,
     paddingBottom: Spacing.six,
-    gap: Spacing.two,
   },
   row: {
     flexDirection: 'row',
@@ -139,22 +266,23 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     borderRadius: Spacing.three,
     padding: Spacing.three,
+    marginBottom: Spacing.two,
   },
-  rowBody: {
-    flex: 1,
-    gap: 2,
-  },
-  rowActions: {
+  rowBody: { flex: 1, gap: 2 },
+  rowActions: { flexDirection: 'row', gap: Spacing.three },
+  modalTitle: { marginBottom: Spacing.three },
+  filterHeading: { marginTop: Spacing.two, marginBottom: Spacing.one },
+  option: {
+    minHeight: 46,
     flexDirection: 'row',
-    gap: Spacing.three,
-  },
-  modalTitle: {
-    marginBottom: Spacing.three,
-  },
-  roleOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Spacing.three,
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+  },
+  doneButton: {
+    minHeight: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.three,
   },
 });

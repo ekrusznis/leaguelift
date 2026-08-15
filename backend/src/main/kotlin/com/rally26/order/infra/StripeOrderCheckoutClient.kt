@@ -69,12 +69,13 @@ class StripeOrderCheckoutClient(
                             .setCurrency(item.currency.lowercase())
                             .setUnitAmount(item.unitPriceMinor)
                             .setProductData(
-                                StripeTaxSupport.applyTaxCode(
-                                    SessionCreateParams.LineItem.PriceData.ProductData
-                                        .builder()
-                                        .setName(item.name),
-                                    stripeTaxProperties.orderTaxCode,
-                                ).build(),
+                                StripeTaxSupport
+                                    .applyTaxCode(
+                                        SessionCreateParams.LineItem.PriceData.ProductData
+                                            .builder()
+                                            .setName(item.name),
+                                        stripeTaxProperties.orderTaxCode,
+                                    ).build(),
                             ).build(),
                     ).build(),
             )

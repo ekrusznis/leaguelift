@@ -221,9 +221,9 @@ function KpiCard({ label, value, icon, tone, detail, to }: { label: string; valu
 		purple: "bg-purple-500/12 text-purple-600",
 	};
 	const Wrapper = to ? Link : "section";
-	const wrapperProps = to ? { to } : {};
+	const wrapperProps = to ? ({ to, className: "block rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-4 shadow-[0_8px_24px_rgba(11,31,51,0.05)] hover:border-green-500" } as any) : { className: "block rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-4 shadow-[0_8px_24px_rgba(11,31,51,0.05)] hover:border-green-500" };
 	return (
-		<Wrapper {...wrapperProps} className="block rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-4 shadow-[0_8px_24px_rgba(11,31,51,0.05)] hover:border-green-500">
+		<Wrapper {...wrapperProps}>
 			<div className="flex items-start gap-3">
 				<span className={`flex size-10 shrink-0 items-center justify-center rounded-full ${tones[tone]}`}>{icon}</span>
 				<div className="min-w-0">

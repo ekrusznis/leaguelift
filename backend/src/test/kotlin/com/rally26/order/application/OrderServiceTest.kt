@@ -133,7 +133,8 @@ class OrderServiceTest {
 
     /** The default `product()`/`productVariant()` fixtures are always PRINTIFY-sourced with real blueprint/print-provider/variant ids — stub the catalog as still offering that exact combination unless a test needs otherwise. */
     private fun stubVariantStillAvailable() {
-        every { printifyCatalogClient.listVariants(12L, 5L) } returns listOf(PrintifyCatalogVariant(id = 100L, title = "M / Navy", options = null, placeholders = null))
+        every { printifyCatalogClient.listVariants(12L, 5L) } returns
+            listOf(PrintifyCatalogVariant(id = 100L, title = "M / Navy", options = null, placeholders = null))
     }
 
     @Test
@@ -829,7 +830,9 @@ class OrderServiceTest {
         stubVariantStillAvailable()
         every { orderRepository.insertPending(orgId, storeEntity.id, "USD", currentUser.displayName, currentUser.email) } returns
             pendingOrder(storeEntity)
-        every { orderItemRepository.insert(any(), variant.id, 1, variant.priceMinor, variant.costMinor, participant.id, null, null, null, null) } returns
+        every {
+            orderItemRepository.insert(any(), variant.id, 1, variant.priceMinor, variant.costMinor, participant.id, null, null, null, null)
+        } returns
             mockk(relaxed = true)
         every { stripeOrderCheckoutClient.createOrderCheckoutSession(any(), any(), any(), any()) } returns
             OrderCheckoutSession("cs_test_reorder", "https://checkout.stripe.com/test")
@@ -841,6 +844,7 @@ class OrderServiceTest {
         verify(exactly = 1) { printifyCatalogClient.listVariants(12L, 5L) }
     }
 
+    @Suppress("ktlint:standard:max-line-length")
     @Test
     fun `createSwagShopCheckoutSession rejects checkout when the vendor no longer carries this exact blueprint, print provider, and variant combination`() {
         val currentUser = CurrentUser(UUID.randomUUID(), "guardian@example.com", "Sarah Johnson")
@@ -1123,7 +1127,14 @@ class OrderServiceTest {
     }
 
     private fun householdContext(householdId: UUID) =
-        AuthorizationContext(ContextType.HOUSEHOLD, householdId, orgId, "My household", "GUARDIAN", setOf(Capabilities.HOUSEHOLD_ORDER_CREATE))
+        AuthorizationContext(
+            ContextType.HOUSEHOLD,
+            householdId,
+            orgId,
+            "My household",
+            "GUARDIAN",
+            setOf(Capabilities.HOUSEHOLD_ORDER_CREATE),
+        )
 
     private fun teamOrderContext(teamId: UUID) =
         AuthorizationContext(ContextType.TEAM, teamId, orgId, "My team", "COACH", setOf(Capabilities.TEAM_ORDER_CREATE))

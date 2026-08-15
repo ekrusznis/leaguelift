@@ -246,6 +246,7 @@ class LedgerServiceTest {
         assertEquals(9_500L, earningReversal.amountMinor) // 10,000 - 5% fee
     }
 
+    @Suppress("ktlint:standard:max-line-length")
     @Test
     fun `recordDisputeOpened writes a CHARGEBACK debit, an ORGANIZATION_EARNING debit net of the platform fee, and a CHARGEBACK_FEE debit with no matching earning debit`() {
         val sourceId = UUID.randomUUID()

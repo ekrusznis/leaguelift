@@ -24,8 +24,14 @@ object Capabilities {
     const val ORG_TOURNAMENT_MANAGE = "organization.tournament.manage"
     const val ORG_COMMUNICATION_MANAGE = "organization.communication.manage"
 
+    /** Owner-only authority for fundraiser approval/activation policy and approval decisions. */
+    const val ORG_FUNDRAISING_APPROVE = "organization.fundraising.approve"
+
     // Team (resource-scoped, see the Coach capability tiers in DESIGN-DOC.md section 4.4)
     const val TEAM_VIEW = "team.view"
+
+    /** Any assigned coach tier may create and maintain fundraisers they own. */
+    const val TEAM_FUNDRAISING_CREATE = "team.fundraising.create"
     const val TEAM_PAGE_EDIT = "team.page.edit"
     const val TEAM_FUNDRAISING_MANAGE = "team.fundraising.manage"
     const val TEAM_STORE_MANAGE = "team.store.manage"
@@ -60,6 +66,9 @@ object Capabilities {
     /** Swag Shop (DESIGN-DOC.md section 13): a guardian placing a personalized order for their own household's participant. Checked alongside AuthorizationService.hasGuardianRelationship, not the broader hasHouseholdCapability "any active org member" branch — see EventRsvpService.resolveSource for the same pattern. */
     const val HOUSEHOLD_ORDER_CREATE = "household.order.create"
     const val HOUSEHOLD_PROFILE_MANAGE = "household.profile.manage"
+
+    /** A guardian may create organization or eligible-team fundraisers; backend still scopes team access. */
+    const val HOUSEHOLD_FUNDRAISING_CREATE = "household.fundraising.create"
 
     // Athlete (self context — deny-by-default, deliberately excludes anything
     // financial per DESIGN-DOC.md section 10.2's Athlete Dashboard "Never" list)
@@ -161,6 +170,7 @@ object CapabilityRegistry {
                     Capabilities.ORG_EVENT_MANAGE,
                     Capabilities.EVENT_READ,
                     Capabilities.ORG_ELIGIBILITY_MANAGE,
+                    Capabilities.ORG_FUNDRAISING_APPROVE,
                 )
             }
 
@@ -190,13 +200,19 @@ object CapabilityRegistry {
     fun teamCapabilities(role: ResourceRole): Set<String> =
         when (role) {
             ResourceRole.COACH_READ -> {
-                setOf(Capabilities.TEAM_VIEW, Capabilities.EVENT_READ, Capabilities.TEAM_ELIGIBILITY_VIEW)
+                setOf(
+                    Capabilities.TEAM_VIEW,
+                    Capabilities.TEAM_FUNDRAISING_CREATE,
+                    Capabilities.EVENT_READ,
+                    Capabilities.TEAM_ELIGIBILITY_VIEW,
+                )
             }
 
             ResourceRole.TEAM_EDITOR -> {
                 setOf(
                     Capabilities.TEAM_VIEW,
                     Capabilities.TEAM_PAGE_EDIT,
+                    Capabilities.TEAM_FUNDRAISING_CREATE,
                     Capabilities.TEAM_FUNDRAISING_MANAGE,
                     Capabilities.TEAM_STORE_MANAGE,
                     Capabilities.TEAM_ORDER_CREATE,
@@ -215,6 +231,7 @@ object CapabilityRegistry {
                 setOf(
                     Capabilities.TEAM_VIEW,
                     Capabilities.TEAM_PAGE_EDIT,
+                    Capabilities.TEAM_FUNDRAISING_CREATE,
                     Capabilities.TEAM_FUNDRAISING_MANAGE,
                     Capabilities.TEAM_STORE_MANAGE,
                     Capabilities.TEAM_ORDER_CREATE,
@@ -303,6 +320,7 @@ object CapabilityRegistry {
             Capabilities.HOUSEHOLD_ORDER_VIEW,
             Capabilities.HOUSEHOLD_ORDER_CREATE,
             Capabilities.HOUSEHOLD_PROFILE_MANAGE,
+            Capabilities.HOUSEHOLD_FUNDRAISING_CREATE,
             Capabilities.EVENT_READ,
             Capabilities.EVENT_RSVP_GUARDIAN,
         )

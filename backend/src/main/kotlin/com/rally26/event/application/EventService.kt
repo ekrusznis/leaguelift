@@ -9,9 +9,9 @@ import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.event.domain.Event
+import com.rally26.event.domain.EventFieldChange
 import com.rally26.event.domain.EventStatus
 import com.rally26.event.domain.EventType
-import com.rally26.event.domain.EventFieldChange
 import com.rally26.event.domain.EventVisibility
 import com.rally26.event.domain.PendingSourceEventSnapshot
 import com.rally26.event.domain.displayTitle

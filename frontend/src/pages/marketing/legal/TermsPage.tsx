@@ -8,7 +8,6 @@ export function TermsPage() {
 				These terms govern access to and use of the Rally26 public site and application. By creating an
 				account or using Rally26 on behalf of an organization or household, you agree to these terms.
 			</p>
-
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Eligibility and accounts</h2>
 				<p className="mt-2">
@@ -18,29 +17,59 @@ export function TermsPage() {
 					credentials.
 				</p>
 			</section>
-
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Organization responsibilities</h2>
 				<p className="mt-2">
-					An organization is responsible for the accuracy of the public pages, fee assignments, and
-					fundraising campaigns it publishes, and for managing who on its staff has access to which parts
-					of its Rally26 account. Organization owners and administrators can assign and revoke staff
-					roles at any time.
+					An organization is responsible for the accuracy of the public pages, fee assignments, fundraising
+					campaigns, promotion descriptions, prizes, and official rules it publishes, and for managing who
+					on its staff has access to which parts of its Rally26 account. Organization owners and administrators
+					can assign and revoke staff roles at any time.
 				</p>
 			</section>
-
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Acceptable use</h2>
 				<p className="mt-2">Accounts may not be used to:</p>
 				<ul className="mt-3 flex list-disc flex-col gap-2 pl-5">
 					<li>Collect or store information about a child beyond what an adult explicitly enters on that child&rsquo;s behalf;</li>
-					<li>Misrepresent fees, fundraising contributions, or family credits to families or supporters;</li>
+					<li>Misrepresent fees, fundraising contributions, family credits, promotion entry requirements, or prize eligibility;</li>
 					<li>Publish false, misleading, or fraudulent content on a public page or campaign;</li>
+					<li>Use a donation, cash payment, check, transfer, or other payment method as a disguised entry fee for a Rally26 promotion designated as free to enter;</li>
 					<li>Attempt to access another organization&rsquo;s or household&rsquo;s data without authorization; or</li>
 					<li>Interfere with or disrupt the operation of the platform.</li>
 				</ul>
 			</section>
-
+			<section>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Fundraising and free-entry promotional games</h2>
+				<p className="mt-2">
+					Rally26 may allow an organization to attach a promotional game or challenge to a fundraiser. When
+					a Rally26 game is identified as <strong>free to enter</strong>, no donation, purchase, or payment is
+					required to enter or win. Making a donation may not increase a participant&rsquo;s odds, provide extra
+					entries, unlock a more favorable position, or otherwise improve prize eligibility. Fundraising
+					contributions and game participation are separate activities even when they appear on related pages.
+				</p>
+				<p className="mt-2">
+					Organizations may not present an optional donation as required for entry, award additional entries
+					based on donation amount, or use a free-entry Rally26 game as a disguised paid pool or raffle. The
+					organization running a promotion is responsible for any official rules, participant eligibility,
+					prize description, winner selection and notification, prize fulfillment, tax or reporting duties,
+					and compliance with laws that apply to that organization and promotion.
+				</p>
+			</section>
+			<section>
+				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Restricted raffles, wagering, and payment methods</h2>
+				<p className="mt-2">
+					Paid 50/50 raffles, paid sports pools, lottery-style ticket sales, wagering, or other regulated games
+					of chance may not be conducted through Rally26 unless Rally26 expressly enables that specific use
+					after any required legal, licensing, and payment-provider review. Selecting cash, check, Venmo, or
+					another payment method does not by itself make an otherwise restricted paid-entry activity permitted.
+				</p>
+				<p className="mt-2">
+					Rally26 may disable one or more online payment methods for a campaign or promotional game when needed
+					to preserve the separation between fundraising and free entry, comply with a payment provider&rsquo;s
+					terms, or address legal or operational risk. A manual or offline contribution record never grants a
+					free-game entry or improves a participant&rsquo;s odds.
+				</p>
+			</section>
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Fees, pricing, and payment</h2>
 				<p className="mt-2">
@@ -53,7 +82,6 @@ export function TermsPage() {
 					refund window described below.
 				</p>
 			</section>
-
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Refunds</h2>
 				<p className="mt-2">
@@ -63,7 +91,6 @@ export function TermsPage() {
 					(a chargeback), Rally26 handles that process with the payment processor as merchant of record.
 				</p>
 			</section>
-
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Electronic signatures and waivers</h2>
 				<p className="mt-2">
@@ -76,17 +103,15 @@ export function TermsPage() {
 					accessing the Rally26 application and a valid email address.
 				</p>
 			</section>
-
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Family credits</h2>
 				<p className="mt-2">
 					Where offered, family credits are organization-approved credits that may be applied only against
 					eligible fees within the issuing organization. Family credits are not cash, are not withdrawable,
 					are not presented as a stored-value or bank balance, and are not transferable between unrelated
-					families.
+					families except where an organization has expressly enabled a Rally26-supported transfer workflow.
 				</p>
 			</section>
-
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Content and public pages</h2>
 				<p className="mt-2">
@@ -95,16 +120,14 @@ export function TermsPage() {
 					service — including on the public pages the organization chooses to publish.
 				</p>
 			</section>
-
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Third-party services</h2>
 				<p className="mt-2">
 					Rally26 relies on third-party providers for functions such as identity/authentication, hosting,
-					and — once live — payment processing. Those providers&rsquo; own terms and privacy practices apply
-					to the parts of the service they provide.
+					and payment processing. Those providers&rsquo; own terms and privacy practices apply to the parts of
+					the service they provide.
 				</p>
 			</section>
-
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Disclaimers and limitation of liability</h2>
 				<p className="mt-2">
@@ -114,7 +137,6 @@ export function TermsPage() {
 					these terms.
 				</p>
 			</section>
-
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Termination</h2>
 				<p className="mt-2">
@@ -123,7 +145,6 @@ export function TermsPage() {
 					terms.
 				</p>
 			</section>
-
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Changes to these terms</h2>
 				<p className="mt-2">
@@ -131,12 +152,10 @@ export function TermsPage() {
 					page when we do, and will provide organizations with reasonable notice of material changes.
 				</p>
 			</section>
-
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Governing law</h2>
 				<p className="mt-2">To be finalized during legal review.</p>
 			</section>
-
 			<section>
 				<h2 className="font-heading text-lg font-bold text-navy-900 dark:text-[#f8fafc]">Questions</h2>
 				<p className="mt-2">

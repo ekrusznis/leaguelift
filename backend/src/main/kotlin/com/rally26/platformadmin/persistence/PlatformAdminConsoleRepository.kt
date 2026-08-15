@@ -445,7 +445,7 @@ class PlatformAdminConsoleRepository(
         if (!query.isNullOrBlank()) {
             where +=
                 "(lower(coalesce(payer_name, '')) like :query or lower(coalesce(payer_email, '')) like :query " +
-                    "or lower(organization_name) like :query or lower(coalesce(team_name, '')) like :query)"
+                "or lower(organization_name) like :query or lower(coalesce(team_name, '')) like :query)"
             params += "query" to "%${query.trim().lowercase()}%"
         }
         if (dateFrom != null) {
@@ -575,7 +575,8 @@ class PlatformAdminConsoleRepository(
             params += "householdId" to householdId
         }
         if (teamId != null) {
-            where += "exists (select 1 from participant_team pt2 where pt2.participant_id = p.id and pt2.team_id = :teamId and pt2.status = 'ACTIVE')"
+            where +=
+                "exists (select 1 from participant_team pt2 where pt2.participant_id = p.id and pt2.team_id = :teamId and pt2.status = 'ACTIVE')"
             params += "teamId" to teamId
         }
         if (!query.isNullOrBlank()) {

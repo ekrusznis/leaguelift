@@ -129,7 +129,19 @@ class HouseholdMediaServiceTest {
     fun `assign lets a guardian (not just a manager) add their own household's media`() {
         allowGuardian()
         every { householdRepository.findById(householdId, orgId) } returns
-            com.rally26.household.domain.Household(householdId, orgId, "Smith Family", null, null, null, false, false, com.rally26.household.domain.HouseholdStatus.ACTIVE, Instant.now(), Instant.now())
+            com.rally26.household.domain.Household(
+                householdId,
+                orgId,
+                "Smith Family",
+                null,
+                null,
+                null,
+                false,
+                false,
+                com.rally26.household.domain.HouseholdStatus.ACTIVE,
+                Instant.now(),
+                Instant.now(),
+            )
         val readyAsset = asset()
         every { mediaAssetRepository.findById(readyAsset.id, orgId) } returns readyAsset
         every {
@@ -148,14 +160,28 @@ class HouseholdMediaServiceTest {
         val result = service.assign(orgId, householdId, readyAsset.id, guardian)
 
         assertEquals(readyAsset.id, result.assetId)
-        verify(exactly = 1) { auditService.record(guardian.userId, orgId, "household_media.added", "media_assignment", result.id, householdId = householdId) }
+        verify(exactly = 1) {
+            auditService.record(guardian.userId, orgId, "household_media.added", "media_assignment", result.id, householdId = householdId)
+        }
     }
 
     @Test
     fun `assign rejects an asset that is not READY`() {
         allowGuardian()
         every { householdRepository.findById(householdId, orgId) } returns
-            com.rally26.household.domain.Household(householdId, orgId, "Smith Family", null, null, null, false, false, com.rally26.household.domain.HouseholdStatus.ACTIVE, Instant.now(), Instant.now())
+            com.rally26.household.domain.Household(
+                householdId,
+                orgId,
+                "Smith Family",
+                null,
+                null,
+                null,
+                false,
+                false,
+                com.rally26.household.domain.HouseholdStatus.ACTIVE,
+                Instant.now(),
+                Instant.now(),
+            )
         val pending = asset(status = MediaAssetStatus.PENDING_UPLOAD)
         every { mediaAssetRepository.findById(pending.id, orgId) } returns pending
 
@@ -168,7 +194,19 @@ class HouseholdMediaServiceTest {
     fun `assign rejects an asset uploaded for a different slot`() {
         allowGuardian()
         every { householdRepository.findById(householdId, orgId) } returns
-            com.rally26.household.domain.Household(householdId, orgId, "Smith Family", null, null, null, false, false, com.rally26.household.domain.HouseholdStatus.ACTIVE, Instant.now(), Instant.now())
+            com.rally26.household.domain.Household(
+                householdId,
+                orgId,
+                "Smith Family",
+                null,
+                null,
+                null,
+                false,
+                false,
+                com.rally26.household.domain.HouseholdStatus.ACTIVE,
+                Instant.now(),
+                Instant.now(),
+            )
         val documentAsset = asset(slot = MediaUsageSlot.DOCUMENT)
         every { mediaAssetRepository.findById(documentAsset.id, orgId) } returns documentAsset
 
@@ -215,8 +253,10 @@ class HouseholdMediaServiceTest {
         allowGuardian()
         val first = assignment()
         val second = assignment()
-        every { mediaAssignmentRepository.findById(first.id, orgId) } returns first andThen first.copy(visibility = Visibility.PUBLIC, publicationStatus = PublicationStatus.PUBLISHED)
-        every { mediaAssignmentRepository.findById(second.id, orgId) } returns second andThen second.copy(visibility = Visibility.PUBLIC, publicationStatus = PublicationStatus.PUBLISHED)
+        every { mediaAssignmentRepository.findById(first.id, orgId) } returns first andThen
+            first.copy(visibility = Visibility.PUBLIC, publicationStatus = PublicationStatus.PUBLISHED)
+        every { mediaAssignmentRepository.findById(second.id, orgId) } returns second andThen
+            second.copy(visibility = Visibility.PUBLIC, publicationStatus = PublicationStatus.PUBLISHED)
         every { mediaAssignmentRepository.publishPublicly(first.id, orgId) } returns 1
         every { mediaAssignmentRepository.publishPublicly(second.id, orgId) } returns 1
 
@@ -226,7 +266,16 @@ class HouseholdMediaServiceTest {
         verify(exactly = 1) { mediaAssignmentRepository.publishPublicly(first.id, orgId) }
         verify(exactly = 1) { mediaAssignmentRepository.publishPublicly(second.id, orgId) }
         verify(exactly = 2) { outboxWriter.write(any(), any(), any(), eq("media.assignment.published"), any()) }
-        verify(exactly = 2) { auditService.record(guardian.userId, orgId, "household_media.released_publicly", "media_assignment", any(), householdId = householdId) }
+        verify(exactly = 2) {
+            auditService.record(
+                guardian.userId,
+                orgId,
+                "household_media.released_publicly",
+                "media_assignment",
+                any(),
+                householdId = householdId,
+            )
+        }
     }
 
     @Test

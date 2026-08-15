@@ -85,7 +85,14 @@ class HouseholdMediaService(
                 visibility = Visibility.HOUSEHOLD_PRIVATE,
                 altText = null,
             )
-        auditService.record(currentUser.userId, organizationId, "household_media.added", "media_assignment", assignment.id, householdId = householdId)
+        auditService.record(
+            currentUser.userId,
+            organizationId,
+            "household_media.added",
+            "media_assignment",
+            assignment.id,
+            householdId = householdId,
+        )
         return assignment
     }
 
@@ -99,7 +106,14 @@ class HouseholdMediaService(
         requireHouseholdMediaAccess(organizationId, householdId, currentUser)
         val assignment = requireHouseholdMediaAssignment(organizationId, householdId, assignmentId)
         mediaAssignmentRepository.retire(assignment.id, organizationId)
-        auditService.record(currentUser.userId, organizationId, "household_media.removed", "media_assignment", assignment.id, householdId = householdId)
+        auditService.record(
+            currentUser.userId,
+            organizationId,
+            "household_media.removed",
+            "media_assignment",
+            assignment.id,
+            householdId = householdId,
+        )
     }
 
     /**

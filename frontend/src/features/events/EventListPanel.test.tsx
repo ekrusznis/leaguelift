@@ -38,6 +38,7 @@ function sampleEvent(overrides: Partial<Rally26Event> = {}): Rally26Event {
 		directionsNotes: null,
 		visibility: "TEAM",
 		sourceType: "MANUAL",
+		pendingSourceChanges: null,
 		createdAt: now,
 		updatedAt: now,
 		allDayDate: null,

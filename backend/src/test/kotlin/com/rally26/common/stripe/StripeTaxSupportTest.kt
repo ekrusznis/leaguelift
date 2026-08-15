@@ -30,7 +30,10 @@ class StripeTaxSupportTest {
 
     @Test
     fun `applyTaxCode sets the tax code when present`() {
-        val productData = SessionCreateParams.LineItem.PriceData.ProductData.builder().setName("Widget")
+        val productData =
+            SessionCreateParams.LineItem.PriceData.ProductData
+                .builder()
+                .setName("Widget")
 
         StripeTaxSupport.applyTaxCode(productData, "txcd_99999999")
 
@@ -39,8 +42,14 @@ class StripeTaxSupportTest {
 
     @Test
     fun `applyTaxCode leaves the tax code unset when null or blank`() {
-        val nullCode = SessionCreateParams.LineItem.PriceData.ProductData.builder().setName("Widget")
-        val blankCode = SessionCreateParams.LineItem.PriceData.ProductData.builder().setName("Widget")
+        val nullCode =
+            SessionCreateParams.LineItem.PriceData.ProductData
+                .builder()
+                .setName("Widget")
+        val blankCode =
+            SessionCreateParams.LineItem.PriceData.ProductData
+                .builder()
+                .setName("Widget")
 
         StripeTaxSupport.applyTaxCode(nullCode, null)
         StripeTaxSupport.applyTaxCode(blankCode, "  ")

@@ -37,6 +37,11 @@ info:
     worker's platform-admin dead-letter/failed inspection and reprocess
     endpoints — ADR-022; the outbox worker itself and the real Resend-backed
     EmailProvider have no endpoints of their own, they run in the background).
+    Phase 42 and its fundraising closeout add owner-controlled approval, coach/guardian
+    fundraiser creation, scheduled/ended lifecycle states, QR sharing, event-oriented
+    templates, native-mobile management, free-entry promotional games whose entries are
+    structurally separate from contributions, and payment-safety gating that disables
+    provider-hosted contribution checkout on campaigns carrying a promotional game.
     Phase 9 (org/household/platform reporting endpoints, plus an
     AnalyticsProvider seam with a logging-only implementation — no real
     analytics vendor chosen yet — ADR-025), Phase 10 slice 1 (event CRUD
@@ -118,6 +123,7 @@ tags:
 - name: participants
 - name: fees
 - name: fundraising
+- name: fundraising-games
 - name: media
 - name: payouts
 - name: webhooks
@@ -804,6 +810,7 @@ paths:
           content:
             application/json:
               schema:
+                type: object
                 allOf: [{$ref: "#/components/schemas/OrganizationSubscriptionResponse"}]
                 nullable: true
         "401": {$ref: "#/components/responses/Unauthorized"}
@@ -1335,7 +1342,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PayoutAccountResponse"
+                type: object
+                allOf: [{$ref: "#/components/schemas/PayoutAccountResponse"}]
                 nullable: true
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -3169,35 +3177,73 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  # --- Fundraising Campaigns (Phase 3 slice 11) ---
+  # --- Fundraising Campaigns + free-entry promotional games (Phase 42 / ADR-120) ---
+
+  /organizations/{organizationId}/fundraising/settings:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [fundraising]
+      summary: Get organization fundraising settings
+      description: Any active organization member may read the policy. The default requires owner approval.
+      operationId: getFundraisingSettings
+      responses:
+        "200":
+          description: Organization fundraising settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FundraisingSettingsResponse"
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    patch:
+      tags: [fundraising]
+      summary: Update organization fundraising settings
+      description: Owner-only. Controls whether a non-owner fundraiser creator needs owner approval before activation.
+      operationId: updateFundraisingSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFundraisingSettingsRequest"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FundraisingSettingsResponse"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
 
   /organizations/{organizationId}/campaigns:
     parameters:
     - $ref: "#/components/parameters/OrganizationIdParam"
     get:
       tags: [fundraising]
-      summary: List fundraising campaigns for an organization
+      summary: List fundraising campaigns visible to the current member
+      description: Returns per-campaign permissions so web/mobile clients do not infer authorization from role names.
       operationId: listCampaigns
       parameters:
       - $ref: "#/components/parameters/PageParam"
       - $ref: "#/components/parameters/SizeParam"
       responses:
         "200":
-          description: Paginated list of campaigns
+          description: Paginated campaign list
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CampaignPage"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
     post:
       tags: [fundraising]
-      summary: Create a fundraising campaign
+      summary: Create a fundraising campaign draft
       description: >
-        Campaigns are created in DRAFT status. They are not publicly visible
-        (via GET /public/campaigns/{slug}) until published.
+        Owners, permitted coaches, and eligible guardians may create fundraisers within their authorized scope.
+        Creation always produces DRAFT; activation is a separate approval/activation workflow.
       operationId: createCampaign
       requestBody:
         required: true
@@ -3207,25 +3253,42 @@ paths:
               $ref: "#/components/schemas/CreateCampaignRequest"
       responses:
         "201":
-          description: Campaign created
+          description: Campaign draft created
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CampaignResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
         "409":
           description: The requested slug is already in use
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+
+  /organizations/{organizationId}/campaigns/qr-code:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [fundraising]
+      summary: Build a campaign sharing QR code
+      operationId: getCampaignShareQrCode
+      parameters:
+      - name: url
+        in: query
+        required: true
+        schema: {type: string, format: uri}
+      responses:
+        "200":
+          description: Original URL plus PNG data URI QR code
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/CampaignShareLinkResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
 
   /organizations/{organizationId}/campaigns/{campaignId}:
     parameters:
@@ -3233,46 +3296,37 @@ paths:
     - $ref: "#/components/parameters/CampaignIdParam"
     get:
       tags: [fundraising]
-      summary: Get a campaign by ID
+      summary: Get a fundraising campaign
       operationId: getCampaign
       responses:
         "200":
-          description: Campaign
+          description: Campaign and caller permissions
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/CampaignResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
+              schema: {$ref: "#/components/schemas/CampaignResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
     patch:
       tags: [fundraising]
-      summary: Update a campaign
+      summary: Edit a fundraising campaign
+      description: Creator/owner permissions are enforced by the backend. Editing a pending fundraiser returns it to DRAFT for re-review.
       operationId: updateCampaign
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateCampaignRequest"
+            schema: {$ref: "#/components/schemas/UpdateCampaignRequest"}
       responses:
         "200":
           description: Updated campaign
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/CampaignResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
+              schema: {$ref: "#/components/schemas/CampaignResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
 
   /organizations/{organizationId}/campaigns/{campaignId}/publish:
     parameters:
@@ -3280,24 +3334,83 @@ paths:
     - $ref: "#/components/parameters/CampaignIdParam"
     post:
       tags: [fundraising]
-      summary: Publish a campaign's public page
-      description: Transitions a DRAFT campaign to ACTIVE and makes it visible via GET /public/campaigns/{slug}.
+      summary: Legacy campaign activation route
+      description: >
+        Compatibility alias for the approval-aware activation workflow. New web/mobile clients should use request-activation.
+        Depending on policy and start date, the result is PENDING_APPROVAL, SCHEDULED, or ACTIVE.
       operationId: publishCampaign
       responses:
         "200":
-          description: Published campaign
+          description: Campaign after activation request
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/CampaignResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
+              schema: {$ref: "#/components/schemas/CampaignResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /organizations/{organizationId}/campaigns/{campaignId}/request-activation:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/CampaignIdParam"
+    post:
+      tags: [fundraising]
+      summary: Request fundraiser activation
+      description: >
+        Preferred activation route. If owner approval is required for this actor the fundraiser becomes PENDING_APPROVAL.
+        Otherwise it becomes SCHEDULED when startDate is in the future, or ACTIVE when it may start now.
+      operationId: requestCampaignActivation
+      responses:
+        "200":
+          description: Campaign after activation request
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/CampaignResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /organizations/{organizationId}/campaigns/{campaignId}/approve:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/CampaignIdParam"
+    post:
+      tags: [fundraising]
+      summary: Approve a submitted fundraiser
+      description: Owner-only. A future start date becomes SCHEDULED; otherwise the fundraiser becomes ACTIVE.
+      operationId: approveCampaign
+      responses:
+        "200":
+          description: Approved campaign
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/CampaignResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /organizations/{organizationId}/campaigns/{campaignId}/reject-approval:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/CampaignIdParam"
+    post:
+      tags: [fundraising]
+      summary: Return a submitted fundraiser to draft
+      description: Owner-only. Returns a PENDING_APPROVAL fundraiser to DRAFT so its creator can edit and resubmit.
+      operationId: returnCampaignToDraft
+      responses:
+        "200":
+          description: Campaign returned to draft
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/CampaignResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
 
   /organizations/{organizationId}/campaigns/{campaignId}/status:
     parameters:
@@ -3305,30 +3418,167 @@ paths:
     - $ref: "#/components/parameters/CampaignIdParam"
     patch:
       tags: [fundraising]
-      summary: Update a campaign's status
-      description: For transitions other than the initial publish, e.g. marking a campaign COMPLETED or ARCHIVED.
+      summary: Close or archive a fundraiser
+      description: >
+        Owner-only closeout route. ACTIVE/ENDED may be CLOSED. DRAFT/ENDED/CLOSED/legacy COMPLETED may be ARCHIVED.
+        COMPLETED is accepted only for legacy clients and persists as CLOSED. Approval/activation states use dedicated workflow routes.
       operationId: updateCampaignStatus
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateCampaignStatusRequest"
+            schema: {$ref: "#/components/schemas/UpdateCampaignStatusRequest"}
       responses:
         "200":
-          description: Campaign with updated status
+          description: Campaign after closeout transition
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/CampaignResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /organizations/{organizationId}/campaigns/{campaignId}/game:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/CampaignIdParam"
+    get:
+      tags: [fundraising-games]
+      summary: Get the free-entry game attached to a fundraiser
+      description: Returns null when no game is attached.
+      operationId: getFundraisingGame
+      responses:
+        "200":
+          description: Game or null
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CampaignResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                type: object
+                allOf:
+                - $ref: "#/components/schemas/FundraisingGameResponse"
+                nullable: true
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      tags: [fundraising-games]
+      summary: Attach a free-entry promotional game
+      description: >
+        Creates a game whose entries are structurally independent of donations. Creating a game disables provider-hosted
+        contribution checkout on the campaign; game entry itself never initiates Stripe or any other payment flow.
+      operationId: createFundraisingGame
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/CreateFundraisingGameRequest"}
+      responses:
+        "201":
+          description: Game created
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FundraisingGameResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409":
+          description: A game is already attached to the fundraiser
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+    patch:
+      tags: [fundraising-games]
+      summary: Update attached free-entry game configuration
+      operationId: updateFundraisingGame
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/UpdateFundraisingGameRequest"}
+      responses:
+        "200":
+          description: Updated game
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FundraisingGameResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /organizations/{organizationId}/campaigns/{campaignId}/game/open:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/CampaignIdParam"
+    post:
+      tags: [fundraising-games]
+      summary: Open a free-entry game to public entries
+      operationId: openFundraisingGame
+      responses:
+        "200":
+          description: Open game
+          content: {application/json: {schema: {$ref: "#/components/schemas/FundraisingGameResponse"}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /organizations/{organizationId}/campaigns/{campaignId}/game/close:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/CampaignIdParam"
+    post:
+      tags: [fundraising-games]
+      summary: Close a free-entry game to new entries
+      operationId: closeFundraisingGame
+      responses:
+        "200":
+          description: Closed game
+          content: {application/json: {schema: {$ref: "#/components/schemas/FundraisingGameResponse"}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /organizations/{organizationId}/campaigns/{campaignId}/game/draw-winner:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/CampaignIdParam"
+    post:
+      tags: [fundraising-games]
+      summary: Randomly select the winner of an eligible free prize drawing
+      description: Owner-controlled winner selection. This does not transfer money or fulfill a prize.
+      operationId: drawFundraisingGameWinner
+      responses:
+        "200":
+          description: Selected winning entry
+          content: {application/json: {schema: {$ref: "#/components/schemas/FundraisingGameEntryResponse"}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /organizations/{organizationId}/campaigns/{campaignId}/game/entries:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - $ref: "#/components/parameters/CampaignIdParam"
+    get:
+      tags: [fundraising-games]
+      summary: List free-game entries for management
+      description: Authorized management view includes participant email; public game responses intentionally do not.
+      operationId: listFundraisingGameEntries
+      responses:
+        "200":
+          description: Game entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/FundraisingGameEntryResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
 
   /organizations/{organizationId}/campaigns/{campaignId}/contributions:
     parameters:
@@ -3336,24 +3586,20 @@ paths:
     - $ref: "#/components/parameters/CampaignIdParam"
     get:
       tags: [fundraising]
-      summary: List an organization's confirmed contributions to a campaign
+      summary: List confirmed contributions to a campaign
       operationId: listCampaignContributions
       parameters:
       - $ref: "#/components/parameters/PageParam"
       - $ref: "#/components/parameters/SizeParam"
       responses:
         "200":
-          description: Paginated list of confirmed contributions
+          description: Paginated confirmed contributions
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ContributionPage"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
+              schema: {$ref: "#/components/schemas/ContributionPage"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
 
   /organizations/{organizationId}/campaigns/{campaignId}/contributions/{contributionId}/refund:
     parameters:
@@ -3362,37 +3608,24 @@ paths:
     - name: contributionId
       in: path
       required: true
-      schema:
-        type: string
-        format: uuid
+      schema: {type: string, format: uuid}
     post:
       tags: [fundraising]
-      summary: Refund a confirmed contribution
+      summary: Refund a confirmed Stripe contribution
       description: >
-        Manager-role (OWNER/ADMINISTRATOR) only, within 14 days of confirmation
-        (ADR-017). Reverses the Stripe charge and records a REFUND ledger entry;
-        the organization's earning portion is reversed net of the platform fee,
-        which is not returned.
+        Manager-authorized refund within the configured refund window. Reverses the processor charge and records immutable
+        financial/audit history. Offline contribution corrections use the offline-finance workflow instead.
       operationId: refundContribution
       responses:
         "200":
-          description: The refunded contribution
+          description: Refunded contribution
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ContributionResponse"
-        "400":
-          description: Not confirmed, no payment on record, or outside the 14-day refund window
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
+              schema: {$ref: "#/components/schemas/ContributionResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
 
   # --- Media (organization/team/tournament branding + private profile photos — ADR-012/ADR-045) ---
 
@@ -3803,94 +4036,139 @@ paths:
   /public/campaigns/{slug}:
     get:
       tags: [fundraising]
-      summary: Get a published campaign's public page by slug
+      summary: Get a publicly visible campaign by slug
+      description: >
+        Returns branding, lifecycle state, raised amount, and whether provider-hosted online contributions are currently allowed.
+        SCHEDULED/ENDED/CLOSED campaigns may remain readable even when checkout is unavailable.
       operationId: getPublicCampaign
       parameters:
       - name: slug
         in: path
         required: true
-        schema:
-          type: string
+        schema: {type: string}
       responses:
         "200":
-          description: Published campaign
+          description: Public campaign
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/PublicCampaignResponse"
-        "404":
-          $ref: "#/components/responses/NotFound"
+              schema: {$ref: "#/components/schemas/PublicCampaignResponse"}
+        "404": {$ref: "#/components/responses/NotFound"}
 
   /public/campaigns/{slug}/contributions:
     parameters:
     - name: slug
       in: path
       required: true
-      schema:
-        type: string
+      schema: {type: string}
     post:
       tags: [fundraising]
-      summary: Start a one-time contribution checkout (test-mode Stripe Checkout)
+      summary: Start provider-hosted contribution checkout
       description: >
-        Public, unauthenticated. Creates a PENDING contribution and a Stripe
-        Checkout Session; the caller redirects the browser to the returned
-        checkoutUrl. Confirmation happens only via POST /webhooks/stripe, not this
-        response — see ContributionService.
+        Public, unauthenticated Stripe Checkout for an ACTIVE campaign only when online contribution checkout is enabled.
+        Campaigns carrying a Rally26 free-entry promotional game have this route disabled by backend and database safety gates.
+        A game entry is never created by this call and a contribution never increases free-game entry entitlement or odds.
+        Confirmation is authoritative only through the Stripe webhook.
       operationId: createContributionCheckout
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/CreateContributionCheckoutRequest"
+            schema: {$ref: "#/components/schemas/CreateContributionCheckoutRequest"}
       responses:
         "200":
           description: Checkout session created
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ContributionCheckoutResponse"
+              schema: {$ref: "#/components/schemas/ContributionCheckoutResponse"}
         "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "503":
-          description: The payments provider is unavailable (e.g. no Stripe test-mode key configured)
+          description: Campaign not active, checkout disabled, invalid amount, or invalid request
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "503":
+          description: Payment provider unavailable
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
 
   /public/campaigns/{slug}/contributions/{contributionId}:
     parameters:
     - name: slug
       in: path
       required: true
-      schema:
-        type: string
+      schema: {type: string}
     - name: contributionId
       in: path
       required: true
-      schema:
-        type: string
-        format: uuid
+      schema: {type: string, format: uuid}
     get:
       tags: [fundraising]
-      summary: Poll a contribution's status
-      description: >
-        Public, unauthenticated — used by the browser's Stripe Checkout return
-        page. Read-only: this never flips status itself, it only reflects what
-        the Stripe webhook has already recorded.
+      summary: Poll contribution status after checkout return
+      description: Read-only. Status reflects webhook-confirmed provider state; this endpoint never confirms a payment itself.
       operationId: getContributionStatus
       responses:
         "200":
           description: Contribution status
           content:
             application/json:
+              schema: {$ref: "#/components/schemas/ContributionStatusResponse"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /public/campaigns/{slug}/game:
+    parameters:
+    - name: slug
+      in: path
+      required: true
+      schema: {type: string}
+    get:
+      tags: [fundraising-games]
+      summary: Get a public free-entry promotional game
+      description: Returns null when the campaign has no publicly available game. Participant email is never exposed publicly.
+      operationId: getPublicFundraisingGame
+      responses:
+        "200":
+          description: Public game or null
+          content:
+            application/json:
               schema:
-                $ref: "#/components/schemas/ContributionStatusResponse"
-        "404":
-          $ref: "#/components/responses/NotFound"
+                type: object
+                allOf:
+                - $ref: "#/components/schemas/PublicFundraisingGameResponse"
+                nullable: true
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /public/campaigns/{slug}/game/entries:
+    parameters:
+    - name: slug
+      in: path
+      required: true
+      schema: {type: string}
+    post:
+      tags: [fundraising-games]
+      summary: Enter a Rally26 promotional game for free
+      description: >
+        No purchase or donation is required. This endpoint accepts no payment identifier or contribution amount and does not call
+        a payment provider. Donation history does not add entries, improve odds, change square assignment, or alter prize eligibility.
+      operationId: createFreeFundraisingGameEntry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/CreateFreeGameEntryRequest"}
+      responses:
+        "201":
+          description: Free game entry created
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/PublicFundraisingGameEntryResponse"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409":
+          description: Entry limit or selection conflict
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
 
   # --- Webhooks (DESIGN-DOC.md section 17) ---
 
@@ -4088,8 +4366,11 @@ paths:
       description: Manager-only. These records describe money received outside Rally26 and never fabricate payment-provider identifiers.
       operationId: listOfflineFinancialRecords
       parameters:
+      - {name: q, in: query, required: false, schema: {type: string, maxLength: 200}}
       - {name: verificationStatus, in: query, required: false, schema: {$ref: "#/components/schemas/OfflineVerificationStatus"}}
       - {name: recordType, in: query, required: false, schema: {$ref: "#/components/schemas/OfflineFinancialRecordType"}}
+      - {name: paymentMethod, in: query, required: false, schema: {$ref: "#/components/schemas/OfflinePaymentMethod"}}
+      - {name: sort, in: query, required: false, schema: {type: string, enum: [newest, oldest], default: newest}}
       - {name: page, in: query, required: false, schema: {type: integer, minimum: 0, default: 0}}
       - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
       responses:
@@ -6538,7 +6819,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TeamPageStatusItem"
+                type: object
+                allOf: [{$ref: "#/components/schemas/TeamPageStatusItem"}]
                 nullable: true
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -6566,7 +6848,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FundraisingProgress"
+                type: object
+                allOf: [{$ref: "#/components/schemas/FundraisingProgress"}]
                 nullable: true
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -8730,6 +9013,10 @@ paths:
       summary: List append-only refunds and offline reversals
       operationId: listFinancialCorrections
       parameters:
+      - {name: q, in: query, required: false, schema: {type: string, maxLength: 200}}
+      - {name: targetType, in: query, required: false, schema: {$ref: "#/components/schemas/FinancialCorrectionTargetType"}}
+      - {name: correctionType, in: query, required: false, schema: {$ref: "#/components/schemas/FinancialCorrectionType"}}
+      - {name: sort, in: query, required: false, schema: {type: string, enum: [newest, oldest], default: newest}}
       - {name: page, in: query, required: false, schema: {type: integer, minimum: 0, default: 0}}
       - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
       responses:
@@ -8775,6 +9062,44 @@ paths:
         "409": {$ref: "#/components/responses/Conflict"}
         "503": {description: Payment provider unavailable, content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}}
 
+  /organizations/{organizationId}/disputes:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [financial-operations]
+      summary: List read-only payment disputes
+      description: Manager-only visibility. Evidence submission remains outside Rally26.
+      operationId: listDisputes
+      responses:
+        "200":
+          description: Payment disputes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/DisputeResponse"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+
+  /organizations/{organizationId}/disputes/search:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    get:
+      tags: [financial-operations]
+      summary: Search and page read-only payment disputes
+      operationId: searchDisputes
+      parameters:
+      - {name: q, in: query, required: false, schema: {type: string, maxLength: 200}}
+      - {name: status, in: query, required: false, schema: {$ref: "#/components/schemas/DisputeStatus"}}
+      - {name: sourceType, in: query, required: false, schema: {$ref: "#/components/schemas/DisputeSourceType"}}
+      - {name: sort, in: query, required: false, schema: {type: string, enum: [newest, oldest], default: newest}}
+      - {name: page, in: query, required: false, schema: {type: integer, minimum: 0, default: 0}}
+      - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+      responses:
+        "200": {description: Payment disputes, content: {application/json: {schema: {$ref: "#/components/schemas/DisputePageResponse"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+
   /organizations/{organizationId}/reconciliation-runs:
     parameters:
     - $ref: "#/components/parameters/OrganizationIdParam"
@@ -8783,6 +9108,8 @@ paths:
       summary: List durable reconciliation-run history
       operationId: listReconciliationRuns
       parameters:
+      - {name: status, in: query, required: false, schema: {$ref: "#/components/schemas/ReconciliationRunStatus"}}
+      - {name: sort, in: query, required: false, schema: {type: string, enum: [newest, oldest], default: newest}}
       - {name: page, in: query, required: false, schema: {type: integer, minimum: 0, default: 0}}
       - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
       responses:
@@ -8821,6 +9148,27 @@ paths:
       operationId: getReconciliationRun
       responses:
         "200": {description: Reconciliation run and issues, content: {application/json: {schema: {$ref: "#/components/schemas/ReconciliationResultResponse"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+
+  /organizations/{organizationId}/reconciliation-runs/{runId}/issues:
+    parameters:
+    - $ref: "#/components/parameters/OrganizationIdParam"
+    - {name: runId, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      tags: [financial-operations]
+      summary: Search and page reconciliation issues for one durable run
+      operationId: listReconciliationIssues
+      parameters:
+      - {name: q, in: query, required: false, schema: {type: string, maxLength: 200}}
+      - {name: severity, in: query, required: false, schema: {$ref: "#/components/schemas/ReconciliationSeverity"}}
+      - {name: resourceType, in: query, required: false, schema: {type: string, maxLength: 120}}
+      - {name: sort, in: query, required: false, schema: {type: string, enum: [newest, oldest], default: newest}}
+      - {name: page, in: query, required: false, schema: {type: integer, minimum: 0, default: 0}}
+      - {name: size, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+      responses:
+        "200": {description: Reconciliation issues, content: {application/json: {schema: {$ref: "#/components/schemas/ReconciliationIssuePageResponse"}}}}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
@@ -10058,10 +10406,10 @@ paths:
             schema: {$ref: '#/components/schemas/ResolveDuplicateIdentityRequest'}
       responses:
         '200': {description: Completed or idempotently replayed resolution receipt, content: {application/json: {schema: {$ref: '#/components/schemas/IdentityResolutionReceiptResponse'}}}}
-        '400': {description: Invalid confirmation, reason, preview hash, or source/target pair}
+        '400': {description: "Invalid confirmation, reason, preview hash, or source/target pair"}
         '403': {description: Platform manage/support capability or active support-session scope required}
         '404': {description: Identity not found}
-        '409': {description: Preview stale, resolution blocked, source already resolved differently, or relationships changed during mutation}
+        '409': {description: "Preview stale, resolution blocked, source already resolved differently, or relationships changed during mutation"}
 
 components:
   securitySchemes:
@@ -10980,6 +11328,7 @@ components:
         id: {type: string, format: uuid}
         currentStep: {type: string, enum: [ORGANIZATION, PLAN, REVIEW, CHECKOUT, COMPLETE]}
         organization:
+          type: object
           allOf: [{$ref: "#/components/schemas/OnboardingOrganizationResponse"}]
           nullable: true
         selectedPlanCode: {type: string, nullable: true}
@@ -12466,68 +12815,56 @@ components:
           type: string
           format: uuid
           nullable: true
-          description: Optional team attribution. Omit for an organization-wide campaign.
-        name:
-          type: string
-          minLength: 1
-          maxLength: 120
+          description: Optional authorized team scope; omit for an organization-wide fundraiser.
+        name: {type: string, minLength: 1, maxLength: 120}
         slug:
           type: string
           minLength: 1
           maxLength: 63
-          description: Lowercase alphanumeric with optional hyphens. Globally unique.
-        description:
+          pattern: '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$'
+        description: {type: string, maxLength: 2000, nullable: true}
+        campaignType: {$ref: "#/components/schemas/CampaignType"}
+        goalAmountMinor: {type: integer, format: int64, minimum: 0}
+        currency: {type: string, minLength: 3, maxLength: 3, default: USD}
+        startDate: {type: string, format: date, nullable: true}
+        endDate: {type: string, format: date, nullable: true}
+        eventLocationName: {type: string, maxLength: 160, nullable: true}
+        eventAddress: {type: string, maxLength: 500, nullable: true}
+        templateKey:
           type: string
-          maxLength: 2000
-          nullable: true
-        campaignType:
-          $ref: "#/components/schemas/CampaignType"
-        goalAmountMinor:
-          type: integer
-          format: int64
-          minimum: 0
-          description: Goal amount in minor currency units (e.g. cents for USD)
-        currency:
-          type: string
-          minLength: 3
-          maxLength: 3
-          default: USD
-        startDate:
-          type: string
-          format: date
-          nullable: true
-        endDate:
-          type: string
-          format: date
+          allOf:
+          - $ref: "#/components/schemas/FundraiserTemplateKey"
           nullable: true
     UpdateCampaignRequest:
       type: object
       properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 120
-        description:
-          type: string
-          nullable: true
-        goalAmountMinor:
-          type: integer
-          format: int64
-          minimum: 0
-        startDate:
-          type: string
-          format: date
-          nullable: true
-        endDate:
-          type: string
-          format: date
-          nullable: true
+        name: {type: string, minLength: 1, maxLength: 120}
+        description: {type: string, maxLength: 2000, nullable: true}
+        goalAmountMinor: {type: integer, format: int64, minimum: 0}
+        startDate: {type: string, format: date, nullable: true}
+        endDate: {type: string, format: date, nullable: true}
+        eventLocationName: {type: string, maxLength: 160, nullable: true}
+        eventAddress: {type: string, maxLength: 500, nullable: true}
     UpdateCampaignStatusRequest:
       type: object
       required: [status]
       properties:
-        status:
-          $ref: "#/components/schemas/CampaignStatus"
+        status: {$ref: "#/components/schemas/CampaignStatus"}
+    UpdateFundraisingSettingsRequest:
+      type: object
+      required: [requireOwnerApproval]
+      properties:
+        requireOwnerApproval:
+          type: boolean
+          description: When true, non-owner fundraiser activation requests require owner approval.
+    FundraisingSettingsResponse:
+      type: object
+      required: [organizationId, requireOwnerApproval]
+      properties:
+        organizationId: {type: string, format: uuid}
+        requireOwnerApproval: {type: boolean}
+        updatedByUserId: {type: string, format: uuid, nullable: true}
+        updatedAt: {type: string, format: date-time, nullable: true}
     CampaignType:
       type: string
       enum:
@@ -12542,121 +12879,217 @@ components:
       - SPECIAL_EVENTS
       - APPAREL_BASED
       - SPONSOR_SUPPORTED
+    FundraiserTemplateKey:
+      type: string
+      description: Starter behavior/content selected when the fundraiser is created. BOX_POOL is legacy and is not offered for new paid-entry use.
+      enum: [GENERAL, IN_PERSON_EVENT, SPONSOR_MATCH, MILESTONE_CHALLENGE, FUNDRAISING_CHALLENGE, BOX_POOL, BAKE_SALE, CAR_WASH]
     CampaignStatus:
       type: string
-      enum: [DRAFT, ACTIVE, COMPLETED, ARCHIVED]
+      description: COMPLETED is a legacy closeout alias; new closeout persists CLOSED.
+      enum: [DRAFT, PENDING_APPROVAL, SCHEDULED, ACTIVE, ENDED, CLOSED, COMPLETED, ARCHIVED]
+    CampaignPermissionsResponse:
+      type: object
+      required: [canEdit, canRequestActivation, canApprove, canReturnToDraft, canClose, canArchive, canManageBoxPool]
+      properties:
+        canEdit: {type: boolean}
+        canRequestActivation: {type: boolean}
+        canApprove: {type: boolean}
+        canReturnToDraft: {type: boolean}
+        canClose: {type: boolean}
+        canArchive: {type: boolean}
+        canManageBoxPool: {type: boolean, description: Legacy box-pool management permission retained for existing records.}
+    CampaignShareLinkResponse:
+      type: object
+      required: [url, qrCodeDataUri]
+      properties:
+        url: {type: string, format: uri}
+        qrCodeDataUri: {type: string, description: PNG QR code as a data URI.}
     CampaignResponse:
       type: object
-      required: [id, organizationId, name, slug, campaignType, goalAmountMinor, currency, status, createdAt, updatedAt, raisedMinor]
+      required: [id, organizationId, name, slug, campaignType, goalAmountMinor, currency, status, permissions, createdAt, updatedAt, raisedMinor, onlineContributionsEnabled]
       properties:
-        id:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        teamId: {type: string, format: uuid, nullable: true}
+        name: {type: string}
+        slug: {type: string}
+        description: {type: string, nullable: true}
+        campaignType: {$ref: "#/components/schemas/CampaignType"}
+        goalAmountMinor: {type: integer, format: int64}
+        currency: {type: string}
+        startDate: {type: string, format: date, nullable: true}
+        endDate: {type: string, format: date, nullable: true}
+        eventLocationName: {type: string, nullable: true}
+        eventAddress: {type: string, nullable: true}
+        status: {$ref: "#/components/schemas/CampaignStatus"}
+        publishedAt: {type: string, format: date-time, nullable: true}
+        createdByUserId: {type: string, format: uuid, nullable: true}
+        templateKey:
           type: string
-          format: uuid
-        organizationId:
-          type: string
-          format: uuid
-        teamId:
-          type: string
-          format: uuid
+          allOf:
+          - $ref: "#/components/schemas/FundraiserTemplateKey"
           nullable: true
-        name:
-          type: string
-        slug:
-          type: string
-        description:
-          type: string
-          nullable: true
-        campaignType:
-          $ref: "#/components/schemas/CampaignType"
-        goalAmountMinor:
-          type: integer
-          format: int64
-        currency:
-          type: string
-        startDate:
-          type: string
-          format: date
-          nullable: true
-        endDate:
-          type: string
-          format: date
-          nullable: true
-        status:
-          $ref: "#/components/schemas/CampaignStatus"
-        publishedAt:
-          type: string
-          format: date-time
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
+        submittedAt: {type: string, format: date-time, nullable: true}
+        approvedAt: {type: string, format: date-time, nullable: true}
+        approvedByUserId: {type: string, format: uuid, nullable: true}
+        permissions: {$ref: "#/components/schemas/CampaignPermissionsResponse"}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
         raisedMinor:
           type: integer
           format: int64
-          description: Sum of CONFIRMED contributions (real data, not a demo placeholder).
+          description: Sum of CONFIRMED contributions.
+        onlineContributionsEnabled:
+          type: boolean
+          description: Persistent campaign-level provider-hosted contribution safety gate.
     CampaignPage:
       type: object
       required: [items, page, size, totalElements]
       properties:
         items:
           type: array
-          items:
-            $ref: "#/components/schemas/CampaignResponse"
-        page:
-          type: integer
-        size:
-          type: integer
-        totalElements:
-          type: integer
+          items: {$ref: "#/components/schemas/CampaignResponse"}
+        page: {type: integer}
+        size: {type: integer}
+        totalElements: {type: integer, format: int64}
     PublicCampaignResponse:
       type: object
-      required: [id, organizationId, name, slug, campaignType, goalAmountMinor, currency, status, raisedMinor]
+      required: [id, organizationId, name, slug, campaignType, goalAmountMinor, currency, status, raisedMinor, primaryColor, secondaryColor, onlineContributionAllowed]
       properties:
-        id:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        teamId: {type: string, format: uuid, nullable: true}
+        name: {type: string}
+        slug: {type: string}
+        description: {type: string, nullable: true}
+        campaignType: {$ref: "#/components/schemas/CampaignType"}
+        goalAmountMinor: {type: integer, format: int64}
+        currency: {type: string}
+        startDate: {type: string, format: date, nullable: true}
+        endDate: {type: string, format: date, nullable: true}
+        eventLocationName: {type: string, nullable: true}
+        eventAddress: {type: string, nullable: true}
+        status: {$ref: "#/components/schemas/CampaignStatus"}
+        publishedAt: {type: string, format: date-time, nullable: true}
+        raisedMinor: {type: integer, format: int64}
+        logoUrl: {type: string, format: uri, nullable: true}
+        coverUrl: {type: string, format: uri, nullable: true}
+        primaryColor: {type: string, example: '#0B1F33'}
+        secondaryColor: {type: string, example: '#20B26B'}
+        onlineContributionAllowed:
+          type: boolean
+          description: Computed public checkout availability; false outside ACTIVE or when the campaign payment-safety gate is disabled.
+        onlineContributionUnavailableReason: {type: string, nullable: true}
+    FundraisingGameType:
+      type: string
+      enum: [BIG_GAME_SQUARES, BRACKET_CHALLENGE, PREDICTION_CHALLENGE, FREE_PRIZE_DRAWING, TRIVIA_CHALLENGE]
+    FundraisingGameStatus:
+      type: string
+      enum: [DRAFT, OPEN, CLOSED]
+    CreateFundraisingGameRequest:
+      type: object
+      required: [gameType, title]
+      description: Free-entry game configuration; this request intentionally has no price, contribution, or payment fields.
+      properties:
+        gameType: {$ref: "#/components/schemas/FundraisingGameType"}
+        title: {type: string, minLength: 1, maxLength: 160}
+        instructions: {type: string, maxLength: 3000, nullable: true}
+        prizeDescription: {type: string, maxLength: 1000, nullable: true}
+        maxEntries: {type: integer, minimum: 1, maximum: 100000, nullable: true, description: Null means no configured global maximum.}
+        entriesPerPerson: {type: integer, minimum: 1, maximum: 20, default: 1}
+        rows: {type: integer, minimum: 1, maximum: 26, nullable: true}
+        cols: {type: integer, minimum: 1, maximum: 26, nullable: true}
+    UpdateFundraisingGameRequest:
+      type: object
+      required: [title]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 160}
+        instructions: {type: string, maxLength: 3000, nullable: true}
+        prizeDescription: {type: string, maxLength: 1000, nullable: true}
+        maxEntries: {type: integer, minimum: 1, maximum: 100000, nullable: true}
+        entriesPerPerson: {type: integer, minimum: 1, maximum: 20, default: 1}
+        rows: {type: integer, minimum: 1, maximum: 26, nullable: true}
+        cols: {type: integer, minimum: 1, maximum: 26, nullable: true}
+    CreateFreeGameEntryRequest:
+      type: object
+      required: [displayName, email]
+      description: Free participation only. No payment or contribution identifier is accepted.
+      properties:
+        displayName: {type: string, minLength: 1, maxLength: 120}
+        email: {type: string, format: email, minLength: 1, maxLength: 254}
+        selectionKey: {type: string, maxLength: 64, nullable: true}
+        selectionText: {type: string, maxLength: 1000, nullable: true}
+    FundraisingGamePermissionsResponse:
+      type: object
+      required: [canConfigure, canOpen, canClose, canDrawWinner]
+      properties:
+        canConfigure: {type: boolean}
+        canOpen: {type: boolean}
+        canClose: {type: boolean}
+        canDrawWinner: {type: boolean}
+    FundraisingGameResponse:
+      type: object
+      required: [id, organizationId, campaignId, gameType, title, entriesPerPerson, status, entryCount, permissions]
+      properties:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        campaignId: {type: string, format: uuid}
+        gameType: {$ref: "#/components/schemas/FundraisingGameType"}
+        title: {type: string}
+        instructions: {type: string, nullable: true}
+        prizeDescription: {type: string, nullable: true}
+        maxEntries: {type: integer, nullable: true}
+        entriesPerPerson: {type: integer}
+        rows: {type: integer, nullable: true}
+        cols: {type: integer, nullable: true}
+        status: {$ref: "#/components/schemas/FundraisingGameStatus"}
+        winnerEntryId: {type: string, format: uuid, nullable: true}
+        winnerSelectedAt: {type: string, format: date-time, nullable: true}
+        entryCount: {type: integer, format: int64}
+        permissions: {$ref: "#/components/schemas/FundraisingGamePermissionsResponse"}
+    FundraisingGameEntryResponse:
+      type: object
+      required: [id, displayName, email, isWinner, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        displayName: {type: string}
+        email: {type: string, format: email}
+        selectionKey: {type: string, nullable: true}
+        selectionText: {type: string, nullable: true}
+        isWinner: {type: boolean}
+        createdAt: {type: string, format: date-time}
+    PublicFundraisingGameEntryResponse:
+      type: object
+      required: [id, displayName, isWinner]
+      properties:
+        id: {type: string, format: uuid}
+        displayName: {type: string}
+        selectionKey: {type: string, nullable: true}
+        selectionText: {type: string, nullable: true}
+        isWinner: {type: boolean}
+    PublicFundraisingGameResponse:
+      type: object
+      required: [id, campaignSlug, gameType, title, entriesPerPerson, status, entryCount, entries, freeEntryDisclosure]
+      properties:
+        id: {type: string, format: uuid}
+        campaignSlug: {type: string}
+        gameType: {$ref: "#/components/schemas/FundraisingGameType"}
+        title: {type: string}
+        instructions: {type: string, nullable: true}
+        prizeDescription: {type: string, nullable: true}
+        maxEntries: {type: integer, nullable: true}
+        entriesPerPerson: {type: integer}
+        rows: {type: integer, nullable: true}
+        cols: {type: integer, nullable: true}
+        status: {$ref: "#/components/schemas/FundraisingGameStatus"}
+        entryCount: {type: integer, format: int64}
+        winnerDisplayName: {type: string, nullable: true}
+        entries:
+          type: array
+          items: {$ref: "#/components/schemas/PublicFundraisingGameEntryResponse"}
+        freeEntryDisclosure:
           type: string
-          format: uuid
-        organizationId:
-          type: string
-          format: uuid
-        teamId:
-          type: string
-          format: uuid
-          nullable: true
-        name:
-          type: string
-        slug:
-          type: string
-        description:
-          type: string
-          nullable: true
-        campaignType:
-          $ref: "#/components/schemas/CampaignType"
-        goalAmountMinor:
-          type: integer
-          format: int64
-        currency:
-          type: string
-        startDate:
-          type: string
-          format: date
-          nullable: true
-        endDate:
-          type: string
-          format: date
-          nullable: true
-        status:
-          $ref: "#/components/schemas/CampaignStatus"
-        publishedAt:
-          type: string
-          format: date-time
-          nullable: true
-        raisedMinor:
-          type: integer
-          format: int64
-          description: Sum of CONFIRMED contributions (real data, not a demo placeholder).
+          description: Server-owned disclosure that no purchase/donation is necessary and donations do not improve odds or entry count.
 
     ContributionStatus:
       type: string
@@ -13526,9 +13959,11 @@ components:
         personalizationName: {type: string, maxLength: 60, nullable: true}
         personalizationNumber: {type: string, maxLength: 20, nullable: true}
         personalizationPlacement:
+          type: string
           allOf: [{$ref: "#/components/schemas/PersonalizationPlacement"}]
           nullable: true
         personalizationLogoSize:
+          type: string
           allOf: [{$ref: "#/components/schemas/SwagLogoSize"}]
           nullable: true
 
@@ -13816,9 +14251,11 @@ components:
           maxLength: 20
           nullable: true
         personalizationPlacement:
+          type: string
           allOf: [{$ref: "#/components/schemas/PersonalizationPlacement"}]
           nullable: true
         personalizationLogoSize:
+          type: string
           allOf: [{$ref: "#/components/schemas/SwagLogoSize"}]
           nullable: true
         supporterName:
@@ -17000,6 +17437,35 @@ components:
         size: {type: integer}
         totalElements: {type: integer, format: int64}
 
+    DisputeSourceType:
+      type: string
+      enum: [CONTRIBUTION, ORDER, SPONSORSHIP, FEE_PAYMENT]
+    DisputeStatus:
+      type: string
+      enum: [NEEDS_RESPONSE, UNDER_REVIEW, WON, LOST]
+    DisputeResponse:
+      type: object
+      required: [id, sourceType, sourceId, amountMinor, currency, reason, status, openedAt]
+      properties:
+        id: {type: string, format: uuid}
+        sourceType: {$ref: "#/components/schemas/DisputeSourceType"}
+        sourceId: {type: string, format: uuid}
+        amountMinor: {type: integer, format: int64}
+        currency: {type: string}
+        reason: {type: string}
+        status: {$ref: "#/components/schemas/DisputeStatus"}
+        evidenceDueBy: {type: string, format: date-time, nullable: true}
+        openedAt: {type: string, format: date-time}
+        resolvedAt: {type: string, format: date-time, nullable: true}
+    DisputePageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items: {type: array, items: {$ref: "#/components/schemas/DisputeResponse"}}
+        page: {type: integer}
+        size: {type: integer}
+        totalElements: {type: integer, format: int64}
+
     ReconciliationRunStatus:
       type: string
       enum: [RUNNING, COMPLETED, FAILED]
@@ -17044,6 +17510,15 @@ components:
       required: [items, page, size, totalElements]
       properties:
         items: {type: array, items: {$ref: "#/components/schemas/ReconciliationRunResponse"}}
+        page: {type: integer}
+        size: {type: integer}
+        totalElements: {type: integer, format: int64}
+
+    ReconciliationIssuePageResponse:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items: {type: array, items: {$ref: "#/components/schemas/ReconciliationIssueResponse"}}
         page: {type: integer}
         size: {type: integer}
         totalElements: {type: integer, format: int64}
@@ -17730,7 +18205,7 @@ components:
         archivedAt: {type: string, format: date-time, nullable: true}
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}
-        safetyLockedAt: {type: string, format: date-time, nullable: true, description: When present, all new sends/replies are paused for safety review.}
+        safetyLockedAt: {type: string, format: date-time, nullable: true, description: "When present, all new sends/replies are paused for safety review."}
         safetyLockReason: {type: string, nullable: true}
     BroadcastMessageResponse:
       type: object

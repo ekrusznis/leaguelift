@@ -26,7 +26,8 @@ class SubscriptionCanceledEmailHandler(
 
     override fun handle(event: OutboxEvent) {
         val payload = objectMapper.readValue(event.payload, OrganizationBillingLifecyclePayload::class.java)
-        val actionUrl = event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/billing" } ?: frontendProperties.baseUrl
+        val actionUrl =
+            event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/billing" } ?: frontendProperties.baseUrl
         payload.ownerEmails.forEach { email ->
             emailProvider.send(
                 EmailMessage(
@@ -44,7 +45,8 @@ class SubscriptionCanceledEmailHandler(
                                 variables =
                                     mapOf(
                                         "NOTIFICATION_TITLE" to "Subscription ended",
-                                        "NOTIFICATION_DETAILS" to "${payload.organizationName}'s Rally26 subscription has been canceled and organization access is now suspended. Sign in to resubscribe if this wasn't intentional.",
+                                        "NOTIFICATION_DETAILS" to
+                                            "${payload.organizationName}'s Rally26 subscription has been canceled and organization access is now suspended. Sign in to resubscribe if this wasn't intentional.",
                                         "ACTION_URL" to actionUrl,
                                     ),
                             )

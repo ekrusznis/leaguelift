@@ -17,10 +17,8 @@ import {
 	useVerifyOfflineFinancialRecord,
 } from "./api";
 import type { OfflineFinancialRecordType, OfflinePaymentMethod, OfflineVerificationStatus } from "./types";
-
 type EntryMode = "CONTRIBUTION" | "SPONSORSHIP" | "ORDER";
 type OrderLineDraft = { key: string; productId: string; productVariantId: string; quantity: number };
-
 const PAYMENT_METHODS: Array<{ value: OfflinePaymentMethod; label: string }> = [
 	{ value: "CASH", label: "Cash" },
 	{ value: "CHECK", label: "Check" },
@@ -30,7 +28,6 @@ const PAYMENT_METHODS: Array<{ value: OfflinePaymentMethod; label: string }> = [
 	{ value: "ZELLE", label: "Zelle" },
 	{ value: "OTHER", label: "Other" },
 ];
-
 function localDateTimeNow() {
 	const date = new Date();
 	date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
@@ -40,7 +37,6 @@ function localDateTimeNow() {
 function newOrderLine(): OrderLineDraft {
 	return { key: crypto.randomUUID(), productId: "", productVariantId: "", quantity: 1 };
 }
-
 export function OfflineFinancialRecordsPanel({ organizationId }: { organizationId: string }) {
 	const [mode, setMode] = useState<EntryMode>("CONTRIBUTION");
 	const [paymentMethod, setPaymentMethod] = useState<OfflinePaymentMethod>("CHECK");
@@ -51,19 +47,16 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 	const [sendAcknowledgement, setSendAcknowledgement] = useState(false);
 	const [successMessage, setSuccessMessage] = useState("");
 	const [formError, setFormError] = useState("");
-
 	const [campaignId, setCampaignId] = useState("");
 	const [contributionAmount, setContributionAmount] = useState("");
 	const [contributorName, setContributorName] = useState("");
 	const [contributorEmail, setContributorEmail] = useState("");
 	const [anonymous, setAnonymous] = useState(false);
-
 	const [packageId, setPackageId] = useState("");
 	const [sponsorName, setSponsorName] = useState("");
 	const [sponsorEmail, setSponsorEmail] = useState("");
 	const [sponsorPhone, setSponsorPhone] = useState("");
 	const [sponsorCompany, setSponsorCompany] = useState("");
-
 	const [storeId, setStoreId] = useState("");
 	const [orderLines, setOrderLines] = useState<OrderLineDraft[]>([newOrderLine()]);
 	const [orderName, setOrderName] = useState("");
@@ -74,20 +67,28 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 	const [shippingState, setShippingState] = useState("");
 	const [shippingPostalCode, setShippingPostalCode] = useState("");
 	const [shippingCountry, setShippingCountry] = useState("US");
-
 	const [statusFilter, setStatusFilter] = useState<OfflineVerificationStatus | "">("");
 	const [typeFilter, setTypeFilter] = useState<OfflineFinancialRecordType | "">("");
-
+	const [paymentMethodFilter, setPaymentMethodFilter] = useState<OfflinePaymentMethod | "">("");
+	const [recordQuery, setRecordQuery] = useState("");
+	const [recordSort, setRecordSort] = useState<"newest" | "oldest">("newest");
+	const [recordPage, setRecordPage] = useState(0);
 	const campaigns = useCampaigns(organizationId);
 	const packages = useSponsorshipPackages(organizationId);
 	const stores = useStores(organizationId);
 	const products = useProducts(organizationId, storeId);
-	const records = useOfflineFinancialRecords(organizationId, statusFilter, typeFilter);
+	const records = useOfflineFinancialRecords(organizationId, statusFilter, typeFilter, {
+		query: recordQuery,
+		paymentMethod: paymentMethodFilter,
+		sort: recordSort,
+		page: recordPage,
+		size: 25,
+	});
 	const createContribution = useCreateOfflineContribution(organizationId);
 	const createSponsorship = useCreateOfflineSponsorship(organizationId);
 	const createOrder = useCreateOfflineOrder(organizationId);
 	const verifyRecord = useVerifyOfflineFinancialRecord(organizationId);
-
+	const recordPageCount = Math.max(1, Math.ceil((records.data?.totalElements ?? 0) / 25));
 	const manualProducts = useMemo(
 		() => (products.data?.items ?? []).filter((product) => product.catalogSource === "MANUAL" && product.status === "ACTIVE"),
 		[products.data],
@@ -96,7 +97,6 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 	const acknowledgementEmailAvailable = (
 		mode === "CONTRIBUTION" ? contributorEmail : mode === "SPONSORSHIP" ? sponsorEmail : orderEmail
 	).trim().length > 0;
-
 	function resetCommon() {
 		setPaymentReference("");
 		setReceivedAt(localDateTimeNow());
@@ -104,7 +104,6 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 		setMarkVerified(false);
 		setSendAcknowledgement(false);
 	}
-
 	function commonInput() {
 		return {
 			paymentMethod,
@@ -116,7 +115,6 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 			sendAcknowledgement: sendAcknowledgement && acknowledgementEmailAvailable,
 		};
 	}
-
 	async function submit(event: FormEvent) {
 		event.preventDefault();
 		setFormError("");
@@ -165,7 +163,6 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 			setFormError(error instanceof Error ? error.message : "The offline transaction could not be recorded.");
 		}
 	}
-
 	return (
 		<div className="flex flex-col gap-6">
 			<section className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950 p-4" aria-label="Offline payment boundary">
@@ -173,7 +170,6 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 				<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Use this workspace only after money was received through cash, check, bank transfer, an external terminal, or another outside method. Verification records balanced ledger activity but never creates Stripe IDs or payout-eligible Rally26 earnings.</p>
 				<Link className="mt-2 inline-flex text-sm font-medium text-info-blue underline-offset-2 hover:underline" to={appPaths.helpArticle("recording-and-verifying-offline-payments")}>Read the offline-payment how-to</Link>
 			</section>
-
 			<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5" aria-labelledby="offline-entry-heading">
 				<div>
 					<h3 id="offline-entry-heading" className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Record an offline transaction</h3>
@@ -186,7 +182,6 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 						</Button>
 					))}
 				</div>
-
 				<form onSubmit={submit} className="mt-5 grid gap-4" noValidate>
 					{mode === "CONTRIBUTION" && (
 						<div className="grid gap-3 sm:grid-cols-2">
@@ -197,7 +192,6 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 							<label className="flex items-center gap-2 text-sm text-navy dark:text-[#f8fafc] sm:col-span-2"><input type="checkbox" checked={anonymous} onChange={(event) => setAnonymous(event.target.checked)} /> Record publicly as anonymous</label>
 						</div>
 					)}
-
 					{mode === "SPONSORSHIP" && (
 						<div className="grid gap-3 sm:grid-cols-2">
 							<Field label="Sponsorship package" id="offline-package" required><select id="offline-package" value={packageId} onChange={(event) => setPackageId(event.target.value)} className={inputClass}><option value="">Select package</option>{packages.data?.items.filter((item) => item.status !== "ARCHIVED" && !item.soldOut).map((item) => <option key={item.id} value={item.id}>{item.name} — {formatMoney(item.priceMinor, item.currency)}</option>)}</select></Field>
@@ -207,7 +201,6 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 							<Field label="Company" id="offline-sponsor-company"><input id="offline-sponsor-company" value={sponsorCompany} onChange={(event) => setSponsorCompany(event.target.value)} className={inputClass} /></Field>
 						</div>
 					)}
-
 					{mode === "ORDER" && (
 						<div className="grid gap-4">
 							<Field label="Swag Shop" id="offline-store" required><select id="offline-store" value={storeId} onChange={(event) => { setStoreId(event.target.value); setOrderLines([newOrderLine()]); }} className={inputClass}><option value="">Select active Swag Shop</option>{stores.data?.items.filter((item) => item.status === "ACTIVE").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
@@ -227,7 +220,6 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 							</div>
 						</div>
 					)}
-
 					<div className="grid gap-3 border-t border-slate-gray/20 pt-4 sm:grid-cols-2">
 						<Field label="Payment method" id="offline-payment-method" required><select id="offline-payment-method" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as OfflinePaymentMethod)} className={inputClass}>{PAYMENT_METHODS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
 						<Field label="Reference or check number" id="offline-payment-reference"><input id="offline-payment-reference" value={paymentReference} onChange={(event) => setPaymentReference(event.target.value)} className={inputClass} /></Field>
@@ -243,31 +235,59 @@ export function OfflineFinancialRecordsPanel({ organizationId }: { organizationI
 					<Button type="submit" className="justify-self-start" disabled={isSubmitting}>{isSubmitting ? "Recording…" : markVerified ? "Record and verify" : "Record for verification"}</Button>
 				</form>
 			</section>
-
 			<section className="rounded-xl border border-slate-gray/20 bg-pure-white dark:bg-[#111827] p-5" aria-labelledby="offline-records-heading">
 				<div className="flex flex-wrap items-start justify-between gap-3">
 					<div><h3 id="offline-records-heading" className="font-heading text-lg font-semibold text-navy dark:text-[#f8fafc]">Offline financial records</h3><p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">Pending records do not affect confirmed totals until an authorized manager verifies them.</p></div>
-					<div className="flex flex-wrap gap-2">
-						<label className="sr-only" htmlFor="offline-status-filter">Verification status</label><select id="offline-status-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as OfflineVerificationStatus | "")} className={inputClass}><option value="">All statuses</option><option value="PENDING_VERIFICATION">Pending verification</option><option value="VERIFIED">Verified</option><option value="REVERSED">Reversed</option></select>
-						<label className="sr-only" htmlFor="offline-type-filter">Record type</label><select id="offline-type-filter" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as OfflineFinancialRecordType | "")} className={inputClass}><option value="">All types</option><option value="CONTRIBUTION">Contributions</option><option value="SPONSORSHIP">Sponsorships</option><option value="ORDER">Orders</option></select>
+					<div className="flex flex-wrap items-center gap-2">
+						<label className="sr-only" htmlFor="offline-record-search">Search records</label>
+						<input id="offline-record-search" type="search" value={recordQuery} onChange={(event) => { setRecordQuery(event.target.value); setRecordPage(0); }} className={inputClass} placeholder="Search payer, reference, details" />
+						<label className="sr-only" htmlFor="offline-status-filter">Verification status</label>
+						<select id="offline-status-filter" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value as OfflineVerificationStatus | ""); setRecordPage(0); }} className={inputClass}><option value="">All statuses</option><option value="PENDING_VERIFICATION">Pending verification</option><option value="VERIFIED">Verified</option><option value="REVERSED">Reversed</option></select>
+						<label className="sr-only" htmlFor="offline-type-filter">Record type</label>
+						<select id="offline-type-filter" value={typeFilter} onChange={(event) => { setTypeFilter(event.target.value as OfflineFinancialRecordType | ""); setRecordPage(0); }} className={inputClass}><option value="">All types</option><option value="CONTRIBUTION">Contributions</option><option value="SPONSORSHIP">Sponsorships</option><option value="ORDER">Orders</option></select>
+						<label className="sr-only" htmlFor="offline-payment-method-filter">Payment method</label>
+						<select id="offline-payment-method-filter" value={paymentMethodFilter} onChange={(event) => { setPaymentMethodFilter(event.target.value as OfflinePaymentMethod | ""); setRecordPage(0); }} className={inputClass}>
+							<option value="">All payment methods</option>
+							{PAYMENT_METHODS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+						</select>
+						<label className="sr-only" htmlFor="offline-record-sort">Sort records</label>
+						<select id="offline-record-sort" value={recordSort} onChange={(event) => { setRecordSort(event.target.value as "newest" | "oldest"); setRecordPage(0); }} className={inputClass}>
+							<option value="newest">Newest first</option>
+							<option value="oldest">Oldest first</option>
+						</select>
 					</div>
 				</div>
 				{records.isLoading && <LoadingState label="Loading offline financial records…" />}
 				{records.isError && <ErrorState message="Could not load offline financial records." onRetry={() => records.refetch()} />}
-				{records.data?.items.length === 0 && <EmptyState title="No offline financial records" description="Transactions recorded outside Rally26 will appear here." />}
+				{records.data?.items.length === 0 && (
+					<EmptyState
+						title="No offline financial records"
+						description={recordQuery || statusFilter || typeFilter || paymentMethodFilter ? "No records match the current search and filters." : "Transactions recorded outside Rally26 will appear here."}
+					/>
+				)}
 				{records.data && records.data.items.length > 0 && (
-					<div className="mt-4 overflow-x-auto">
-						<table className="min-w-full border-separate border-spacing-0 text-left text-sm">
-							<thead><tr className="text-slate-gray dark:text-[#cbd5e1]"><th className="border-b border-slate-gray/20 px-3 py-2">Received</th><th className="border-b border-slate-gray/20 px-3 py-2">Type</th><th className="border-b border-slate-gray/20 px-3 py-2">Details</th><th className="border-b border-slate-gray/20 px-3 py-2">Method</th><th className="border-b border-slate-gray/20 px-3 py-2">Amount</th><th className="border-b border-slate-gray/20 px-3 py-2">Status</th><th className="border-b border-slate-gray/20 px-3 py-2"><span className="sr-only">Actions</span></th></tr></thead>
-							<tbody>{records.data.items.map((record) => <tr key={record.id}><td className="border-b border-slate-gray/10 px-3 py-3 whitespace-nowrap">{new Date(record.receivedAt).toLocaleDateString()}</td><td className="border-b border-slate-gray/10 px-3 py-3">{humanize(record.recordType)}</td><td className="border-b border-slate-gray/10 px-3 py-3"><p className="font-medium text-navy dark:text-[#f8fafc]">{record.displayLabel}</p><p className="text-xs text-slate-gray dark:text-[#cbd5e1]">{record.payerName ?? "No payer name"}{record.paymentReference ? ` · ${record.paymentReference}` : ""}</p></td><td className="border-b border-slate-gray/10 px-3 py-3">{humanize(record.paymentMethod)}</td><td className="border-b border-slate-gray/10 px-3 py-3 whitespace-nowrap">{formatMoney(record.amountMinor, record.currency)}</td><td className="border-b border-slate-gray/10 px-3 py-3"><span className={`rounded-full px-2 py-1 text-xs font-medium ${record.verificationStatus === "VERIFIED" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>{humanize(record.verificationStatus)}</span></td><td className="border-b border-slate-gray/10 px-3 py-3">{record.verificationStatus === "PENDING_VERIFICATION" && <Button type="button" variant="secondary" disabled={verifyRecord.isPending} onClick={() => verifyRecord.mutate(record.id)}>Verify</Button>}</td></tr>)}</tbody>
-						</table>
+					<div className="mt-4">
+						<div className="overflow-x-auto">
+							<table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+								<thead><tr className="text-slate-gray dark:text-[#cbd5e1]"><th className="border-b border-slate-gray/20 px-3 py-2">Received</th><th className="border-b border-slate-gray/20 px-3 py-2">Type</th><th className="border-b border-slate-gray/20 px-3 py-2">Details</th><th className="border-b border-slate-gray/20 px-3 py-2">Method</th><th className="border-b border-slate-gray/20 px-3 py-2">Amount</th><th className="border-b border-slate-gray/20 px-3 py-2">Status</th><th className="border-b border-slate-gray/20 px-3 py-2"><span className="sr-only">Actions</span></th></tr></thead>
+								<tbody>{records.data.items.map((record) => <tr key={record.id}><td className="border-b border-slate-gray/10 px-3 py-3 whitespace-nowrap">{new Date(record.receivedAt).toLocaleDateString()}</td><td className="border-b border-slate-gray/10 px-3 py-3">{humanize(record.recordType)}</td><td className="border-b border-slate-gray/10 px-3 py-3"><p className="font-medium text-navy dark:text-[#f8fafc]">{record.displayLabel}</p><p className="text-xs text-slate-gray dark:text-[#cbd5e1]">{record.payerName ?? "No payer name"}{record.paymentReference ? ` · ${record.paymentReference}` : ""}</p></td><td className="border-b border-slate-gray/10 px-3 py-3">{humanize(record.paymentMethod)}</td><td className="border-b border-slate-gray/10 px-3 py-3 whitespace-nowrap">{formatMoney(record.amountMinor, record.currency)}</td><td className="border-b border-slate-gray/10 px-3 py-3"><span className={`rounded-full px-2 py-1 text-xs font-medium ${record.verificationStatus === "VERIFIED" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>{humanize(record.verificationStatus)}</span></td><td className="border-b border-slate-gray/10 px-3 py-3">{record.verificationStatus === "PENDING_VERIFICATION" && <Button type="button" variant="secondary" disabled={verifyRecord.isPending} onClick={() => verifyRecord.mutate(record.id)}>Verify</Button>}</td></tr>)}</tbody>
+							</table>
+						</div>
+						{records.data.totalElements > 25 && (
+							<div className="mt-4 flex items-center justify-between gap-3 text-sm text-slate-gray dark:text-[#cbd5e1]">
+								<span>Page {recordPage + 1} of {recordPageCount} · {records.data.totalElements} records</span>
+								<div className="flex gap-2">
+									<Button type="button" variant="secondary" disabled={recordPage === 0} onClick={() => setRecordPage((page) => Math.max(0, page - 1))}>Previous</Button>
+									<Button type="button" variant="secondary" disabled={recordPage + 1 >= recordPageCount} onClick={() => setRecordPage((page) => page + 1)}>Next</Button>
+								</div>
+							</div>
+						)}
 					</div>
 				)}
 			</section>
 		</div>
 	);
 }
-
 function OrderLineEditor({ organizationId, line, index, products, onChange, onRemove }: { organizationId: string; line: OrderLineDraft; index: number; products: Product[]; onChange: (line: OrderLineDraft) => void; onRemove?: () => void }) {
 	const variants = useVariants(organizationId, line.productId);
 	const manualVariants = variants.data?.filter((variant) => variant.catalogSource === "MANUAL" && variant.isActive) ?? [];
@@ -278,11 +298,9 @@ function OrderLineEditor({ organizationId, line, index, products, onChange, onRe
 		{onRemove && <Button type="button" variant="danger" className="self-end" onClick={onRemove}>Remove</Button>}
 	</div>;
 }
-
 function Field({ label, id, required = false, children }: { label: string; id: string; required?: boolean; children: ReactNode }) {
 	return <div className="flex flex-col gap-1"><label htmlFor={id} className="text-sm font-medium text-navy dark:text-[#f8fafc]">{label}{required && <span aria-hidden> *</span>}</label>{children}</div>;
 }
-
 const inputClass = "min-h-11 rounded-md border border-slate-gray/30 bg-pure-white dark:bg-[#111827] px-3 py-2 text-navy dark:text-[#f8fafc]";
 function formatMoney(amountMinor: number, currency: string) { return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amountMinor / 100); }
 function humanize(value: string) { return value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }

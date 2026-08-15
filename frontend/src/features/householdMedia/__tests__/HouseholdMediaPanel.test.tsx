@@ -97,7 +97,7 @@ describe("HouseholdMediaPanel", () => {
 		let released = false;
 		vi.stubGlobal(
 			"fetch",
-			vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+			vi.fn().mockImplementation((url: string) => {
 				if (url.includes("release-publicly")) {
 					released = true;
 					return Promise.resolve(jsonResponse({ items: [{ ...photoItem, visibility: "PUBLIC", publicationStatus: "PUBLISHED" }] }));

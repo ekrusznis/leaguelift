@@ -168,7 +168,8 @@ class PlatformAdminConsoleServiceTest {
     fun `listPayments maps repository rows through to the page response`() {
         val item = paymentItem()
         every { authorizationService.requirePlatformCapability(admin, Capabilities.PLATFORM_PAYMENTS_VIEW) } just runs
-        every { consoleRepository.listPayments("ORDER", "CONFIRMED", organizationId, null, "jane", null, null, PageRequest(0, 25)) } returns listOf(item)
+        every { consoleRepository.listPayments("ORDER", "CONFIRMED", organizationId, null, "jane", null, null, PageRequest(0, 25)) } returns
+            listOf(item)
         every { consoleRepository.countPayments("ORDER", "CONFIRMED", organizationId, null, "jane", null, null) } returns 1L
 
         val result = service.listPayments(admin, "order", "confirmed", organizationId, null, "jane", null, null, PageRequest(0, 25))
@@ -192,7 +193,17 @@ class PlatformAdminConsoleServiceTest {
         val item = athleteItem()
         val householdId = UUID.randomUUID()
         every { authorizationService.requirePlatformCapability(admin, Capabilities.PLATFORM_ORG_VIEW) } just runs
-        every { consoleRepository.listAthletes(organizationId, null, householdId, ClearanceStatus.INELIGIBLE, "jane", PageRequest(0, 25)) } returns listOf(item)
+        every {
+            consoleRepository.listAthletes(
+                organizationId,
+                null,
+                householdId,
+                ClearanceStatus.INELIGIBLE,
+                "jane",
+                PageRequest(0, 25),
+            )
+        } returns
+            listOf(item)
         every { consoleRepository.countAthletes(organizationId, null, householdId, ClearanceStatus.INELIGIBLE, "jane") } returns 1L
 
         val result = service.listAthletes(admin, organizationId, null, householdId, ClearanceStatus.INELIGIBLE, "jane", PageRequest(0, 25))

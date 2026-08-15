@@ -100,7 +100,15 @@ object UploadLimits {
                 }
             MediaUsageSlot.SPONSOR_LOGO -> if (contentType == "image/svg+xml") MAX_LOGO_SVG_BYTES else MAX_LOGO_RASTER_BYTES
             MediaUsageSlot.DOCUMENT -> MAX_DOCUMENT_BYTES
-            MediaUsageSlot.HOUSEHOLD_MEDIA -> if (isVideoContentType(contentType)) MAX_HOUSEHOLD_MEDIA_VIDEO_BYTES else MAX_HOUSEHOLD_MEDIA_IMAGE_BYTES
+            MediaUsageSlot.HOUSEHOLD_MEDIA ->
+                if (isVideoContentType(
+                        contentType,
+                    )
+                ) {
+                    MAX_HOUSEHOLD_MEDIA_VIDEO_BYTES
+                } else {
+                    MAX_HOUSEHOLD_MEDIA_IMAGE_BYTES
+                }
             MediaUsageSlot.ARTICLE_ATTACHMENT ->
                 when {
                     contentType == "application/pdf" -> MAX_DOCUMENT_BYTES

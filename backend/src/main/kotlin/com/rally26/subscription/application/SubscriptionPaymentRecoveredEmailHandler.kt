@@ -27,7 +27,8 @@ class SubscriptionPaymentRecoveredEmailHandler(
 
     override fun handle(event: OutboxEvent) {
         val payload = objectMapper.readValue(event.payload, OrganizationBillingLifecyclePayload::class.java)
-        val actionUrl = event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/billing" } ?: frontendProperties.baseUrl
+        val actionUrl =
+            event.organizationId?.let { "${frontendProperties.baseUrl}/app/organizations/$it/billing" } ?: frontendProperties.baseUrl
         payload.ownerEmails.forEach { email ->
             emailProvider.send(
                 EmailMessage(
@@ -44,7 +45,8 @@ class SubscriptionPaymentRecoveredEmailHandler(
                                 variables =
                                     mapOf(
                                         "NOTIFICATION_TITLE" to "Payment received",
-                                        "NOTIFICATION_DETAILS" to "${payload.organizationName}'s Rally26 subscription is now current. Thanks for taking care of it.",
+                                        "NOTIFICATION_DETAILS" to
+                                            "${payload.organizationName}'s Rally26 subscription is now current. Thanks for taking care of it.",
                                         "ACTION_URL" to actionUrl,
                                     ),
                             )
