@@ -116,5 +116,27 @@ class GlobalExceptionHandlerIntegrationTest : AbstractIntegrationTest() {
         assert(response.body().contains("\"currency\":\"USD\"")) { "expected the Kotlin default to be applied: ${response.body()}" }
     }
 
+    @Test
+    fun `a POST missing a required header returns 400 with the standard error envelope, not 500`() {
+        // Reproduces the real-world trigger: a malformed/probing POST to the Stripe
+        // webhook endpoint with no Stripe-Signature header at all fell through to
+        // handleUnexpected's opaque 500 (and a false-positive ERROR-level "unhandled
+        // exception" log) because there was no MissingRequestHeaderException handler —
+        // same class of bug as the missing-query-parameter case above, just for headers.
+        val request =
+            HttpRequest
+                .newBuilder()
+                .uri(URI.create("http://localhost:$port/api/v1/webhooks/stripe"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{}"))
+                .build()
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        assertEquals(400, response.statusCode())
+        val body = response.body()
+        assertNotEquals("INTERNAL_ERROR", extractCode(body), "must not fall through to the generic 500 handler")
+        assert(!body.contains("Exception")) { "error body must never leak an internal exception class name: $body" }
+    }
+
     private fun extractCode(body: String): String? = Regex("\"code\"\\s*:\\s*\"([^\"]+)\"").find(body)?.groupValues?.get(1)
 }
