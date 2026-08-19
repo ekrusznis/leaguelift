@@ -85,14 +85,28 @@ export function RegisterPage() {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<Seo title="Create Owner Account" description="Create your Rally26 organization owner account." noIndex />
+			<Seo
+				title={invitationToken ? "Create Account" : "Create Owner Account"}
+				description={
+					invitationToken
+						? "Create your Rally26 account to accept your invitation."
+						: "Create your Rally26 organization owner account."
+				}
+				noIndex
+			/>
 			<AuthTabs active="register" />
 
 			<div className="rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
 				{step === "form" && (
 					<>
-						<h1 className="font-heading text-2xl font-extrabold text-white">Create your owner account</h1>
-						<p className="mt-1 text-sm text-slate-300">Verify your email to continue with organization setup.</p>
+						<h1 className="font-heading text-2xl font-extrabold text-white">
+							{invitationToken ? "Create your account" : "Create your owner account"}
+						</h1>
+						<p className="mt-1 text-sm text-slate-300">
+							{invitationToken
+								? "Verify your email to continue accepting your invitation."
+								: "Verify your email to continue with organization setup."}
+						</p>
 						<form onSubmit={onAccountSubmit} noValidate className="mt-6 flex flex-col gap-5">
 							<div className="grid gap-5 sm:grid-cols-2">
 								<FormField
@@ -162,7 +176,7 @@ export function RegisterPage() {
 							{submitError && <InlineAlert tone="error" title={submitError} />}
 
 							<PrimaryButton type="submit" loading={accountForm.formState.isSubmitting} className="w-full justify-center">
-								Create Owner Account
+								{invitationToken ? "Create Account" : "Create Owner Account"}
 							</PrimaryButton>
 						</form>
 					</>
