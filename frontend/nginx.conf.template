@@ -21,5 +21,12 @@ server {
     # VITE_NEW_RELIC_BROWSER_LICENSE_KEY stay unset, but the CSP must already allow
     # them for the day those are configured, since a CSP violation is silent (no
     # visible error) rather than something a follow-up deploy would surface.
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://js-agent.newrelic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.rally26.com https://bam.nr-data.net https://bam-cell.nr-data.net; frame-ancestors 'none'; base-uri 'self'; object-src 'none'";
+    #
+    # connect-src uses ${API_ORIGIN} (envsubst'd from this file's .template name at
+    # container startup by nginx's built-in docker-entrypoint templating, not baked at
+    # image build time) so the same image works against the production API domain and
+    # against a local/staging backend without a rebuild. Default is set in Dockerfile;
+    # compose.yaml overrides it for local docker-compose. A CSP mismatch here silently
+    # blocks every browser API call with no server-side log line — see LR-005.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://js-agent.newrelic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ${API_ORIGIN} https://bam.nr-data.net https://bam-cell.nr-data.net; frame-ancestors 'none'; base-uri 'self'; object-src 'none'";
 }

@@ -55,7 +55,7 @@ export function useUpdateFundraisingGame(organizationId: string | null, campaign
   });
 }
 
-function actionHook(
+function useFundraisingGameAction(
   organizationId: string | null,
   campaignId: string | null,
   action: 'open' | 'close',
@@ -72,11 +72,11 @@ function actionHook(
 }
 
 export function useOpenFundraisingGame(organizationId: string | null, campaignId: string | null) {
-  return actionHook(organizationId, campaignId, 'open');
+  return useFundraisingGameAction(organizationId, campaignId, 'open');
 }
 
 export function useCloseFundraisingGame(organizationId: string | null, campaignId: string | null) {
-  return actionHook(organizationId, campaignId, 'close');
+  return useFundraisingGameAction(organizationId, campaignId, 'close');
 }
 
 export function useDrawFundraisingGameWinner(organizationId: string | null, campaignId: string | null) {

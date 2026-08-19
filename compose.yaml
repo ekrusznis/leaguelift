@@ -85,11 +85,20 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      # VITE_API_BASE_URL is baked into the built JS bundle at image-build time
+      # (import.meta.env), not read at container-run time, so it belongs under
+      # build.args, not environment: — a plain `environment:` entry here is a no-op
+      # for Vite. See frontend/Dockerfile's comment for the same gotcha.
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api/v1}
     restart: unless-stopped
     depends_on:
       - backend
     environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api/v1}
+      # Runtime-substituted into nginx's CSP connect-src (see frontend/nginx.conf.template)
+      # — must match the host/origin baked into VITE_API_BASE_URL above, or every browser
+      # API call is silently blocked by CSP with no server-side log line (see LR-005).
+      API_ORIGIN: ${API_ORIGIN:-http://localhost:8080}
     ports:
       - "5173:80"
 

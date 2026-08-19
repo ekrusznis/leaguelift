@@ -196,7 +196,7 @@ export default function FundraisingDetailScreen() {
               <ThemedView type="backgroundElement" style={styles.paymentNotice}>
                 <Ionicons name="shield-checkmark-outline" size={18} color={Brand.championshipGold} />
                 <ThemedText type="small" themeColor="textSecondary" style={styles.flexOne}>
-                  Online card contributions are disabled for this fundraiser's promotional-game safety policy.
+                  Online card contributions are disabled for this fundraiser&apos;s promotional-game safety policy.
                   Free game entry remains separate from recorded offline support.
                 </ThemedText>
               </ThemedView>
