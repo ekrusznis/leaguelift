@@ -36,6 +36,8 @@ data class PublicProductVariantResponse(
     val label: String,
     val priceMinor: Long,
     val currency: String,
+    /** Printify-supplied mockup image, if this variant is Printify-sourced; null for manual/local-vendor variants with no mockup. */
+    val mockupFrontUrl: String?,
 )
 
 data class PublicProductResponse(

@@ -55,12 +55,14 @@ function OrderReturnPanel({ slug, orderId }: { slug: string; orderId: string }) 
 }
 
 function ProductCard({ product, cart, onChangeQuantity }: { product: PublicProduct; cart: CartLine[]; onChangeQuantity: (variantId: string, quantity: number) => void }) {
+	// designUrl (a manually-uploaded design) takes priority; Printify-catalog products have no
+	// design upload, so fall back to the first variant's real Printify mockup instead — otherwise
+	// a Printify product would never show a picture of what's actually being sold (LR-031).
+	const headerImageUrl = product.designUrl ?? product.variants.find((variant) => variant.mockupFrontUrl)?.mockupFrontUrl ?? null;
 	return (
 		<div className="rounded-xl border border-white/10 bg-white/5 p-4">
 			<div className="flex gap-4">
-				{product.designUrl && (
-					<img src={product.designUrl} alt={product.name} className="h-20 w-20 shrink-0 rounded-md object-cover" />
-				)}
+				{headerImageUrl && <img src={headerImageUrl} alt={product.name} className="h-20 w-20 shrink-0 rounded-md object-cover" />}
 				<div className="flex-1">
 					<p className="font-heading text-lg font-bold text-white">{product.name}</p>
 					{product.description && <p className="mt-1 text-sm text-slate-300">{product.description}</p>}
@@ -71,6 +73,13 @@ function ProductCard({ product, cart, onChangeQuantity }: { product: PublicProdu
 					const quantity = cart.find((line) => line.productVariantId === variant.id)?.quantity ?? 0;
 					return (
 						<li key={variant.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-navy-900/40 px-3 py-2 text-sm text-white">
+							{variant.mockupFrontUrl && (
+								<img
+									src={variant.mockupFrontUrl}
+									alt={`${variant.label} — ${product.name}`}
+									className="h-10 w-10 shrink-0 rounded-md object-cover"
+								/>
+							)}
 							<span className="min-w-0 flex-1 break-words">
 								{variant.label} — {formatMoneyMinorUnits(variant.priceMinor, variant.currency)}
 							</span>
