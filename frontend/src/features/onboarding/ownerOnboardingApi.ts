@@ -103,3 +103,15 @@ export function createBillingPortal(organizationId: string) {
 		method: "POST",
 	});
 }
+
+/** Whether this onboarding's owner reserved a Founding Organization promo code at registration. */
+export function getFoundingPromoReserved() {
+	return apiFetch<{ reserved: boolean }>("/owner-onboarding/founding-promo-reserved");
+}
+
+/** Founding Organization pilot bypass of {@link selectOnboardingPlan}/{@link startSubscriptionCheckout} — no Stripe Checkout to wait on. */
+export function activateFoundingPromoPlan() {
+	return apiFetch<OwnerOnboarding>("/owner-onboarding/founding-activate", {
+		method: "POST",
+	});
+}

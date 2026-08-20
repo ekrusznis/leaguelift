@@ -33,6 +33,7 @@ import { SwagShopOrderFlow } from "../features/swagshop/SwagShopOrderFlow";
 import { TeamRosterPage } from "../features/teams/TeamRosterPage";
 import { HelpArticlePage } from "../features/support/HelpArticlePage";
 import { HelpCenterPage } from "../features/support/HelpCenterPage";
+import { PlatformFoundingPromoCodesPage } from "../features/platformAdmin/PlatformFoundingPromoCodesPage";
 import { PlatformHelpArticlesPage } from "../features/support/PlatformHelpArticlesPage";
 import { PlatformSupportCasesPage } from "../features/support/PlatformSupportCasesPage";
 import { SupportRequestPage } from "../features/support/SupportRequestPage";
@@ -54,6 +55,7 @@ import { ResetPasswordPage } from "../pages/auth/ResetPasswordPage";
 import { SignInPage } from "../pages/auth/SignInPage";
 import { VerifyEmailPage } from "../pages/auth/VerifyEmailPage";
 import { ContactRedirect } from "../pages/marketing/ContactRedirect";
+import { FoundingOrganizationJoinRedirect } from "../pages/marketing/FoundingOrganizationJoinRedirect";
 import { HomePage } from "../pages/marketing/HomePage";
 import { PublicAthleteStorefrontView } from "../pages/marketing/PublicAthleteStorefrontView";
 import { PublicBoxPoolView } from "../pages/marketing/PublicBoxPoolView";
@@ -82,6 +84,7 @@ export function AppRoutes() {
 				<Route path="solutions/:slug" element={<SolutionDetailPage />} />
 				<Route path="talk-to-sales" element={<TalkToSalesPage />} />
 				<Route path="founding-organizations" element={<FoundingOrganizationsPage />} />
+				<Route path="founding-organizations/join" element={<FoundingOrganizationJoinRedirect />} />
 				<Route path="founding-pilot" element={<Navigate to="/founding-organizations" replace />} />
 				<Route path="book-demo" element={<Navigate to="/talk-to-sales" replace />} />
 				<Route path="contact" element={<ContactRedirect />} />
@@ -158,6 +161,7 @@ export function AppRoutes() {
 					<Route path="subscriptions" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformSubscriptionsPage />)} />
 					<Route path="data-integrity/duplicates" element={platformGuard(Capabilities.PLATFORM_USER_VIEW, <PlatformDuplicateIdentitiesPage />)} />
 					<Route path="roster" element={platformGuard(Capabilities.PLATFORM_ORG_VIEW, <PlatformRosterPage />)} />
+					<Route path="founding-promo-codes" element={platformGuard(Capabilities.PLATFORM_FOUNDING_PROMO_MANAGE, <PlatformFoundingPromoCodesPage />)} />
 				</Route>
 			</Route>
 			<Route element={<MarketingLayout />}><Route path="*" element={<NotFoundPage />} /></Route>

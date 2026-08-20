@@ -6,7 +6,7 @@ import { heroImages } from "../../marketing/heroImages";
 import { track } from "../../marketing/analytics";
 
 const INCLUDED = [
-	"Full Club-tier access ($149/month value) for six months — $894 total value",
+	"Full Club-tier access ($149/month value) for three months — $447 total value",
 	"Normal transaction fees only — no markup, no hidden pilot pricing",
 	"Direct access to the Rally26 team, not a support queue",
 	"Guided setup for teams, dues, fundraising, apparel, and eligibility",
@@ -20,7 +20,7 @@ const EXPECTATIONS = [
 ];
 
 /**
- * Dedicated landing page for the 100-club Founding Organization outreach campaign
+ * Dedicated landing page for the 10-club Founding Organization outreach campaign
  * (LR-021) — replaces sending invited prospects straight into the generic
  * registration flow, which gave no context for what "Founding Organization" meant.
  * `/founding-pilot` continues to redirect here for continuity with any links already
@@ -45,7 +45,7 @@ export function FoundingOrganizationsPage() {
 							We're inviting 10 organizations to help shape Rally26.
 						</h1>
 						<p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-300">
-							A six-month pilot with full Club access, direct access to our team, and a real voice in
+							A three-month pilot with full Club access, direct access to our team, and a real voice in
 							what we build next — for organizations willing to run their season on Rally26 and tell us
 							what's working.
 						</p>
