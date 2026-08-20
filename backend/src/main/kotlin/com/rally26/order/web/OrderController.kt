@@ -2,8 +2,13 @@ package com.rally26.order.web
 
 import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageResponse
+import com.rally26.finance.domain.PaymentSource
 import com.rally26.order.application.FulfillmentOperationsService
 import com.rally26.order.application.OrderService
+import com.rally26.order.domain.FulfillmentStatus
+import com.rally26.order.domain.OrderSearchCriteria
+import com.rally26.order.domain.OrderSearchSort
+import com.rally26.order.domain.OrderStatus
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -61,6 +66,26 @@ class OrderController(
         val offset = page * size
         val items = orderService.listForStore(organizationId, storeId, currentUser, offset, size).map { it.toResponse() }
         val total = orderService.getConfirmedCount(organizationId, storeId, currentUser)
+        return PageResponse(items, page, size, total)
+    }
+
+    @GetMapping("/stores/{storeId}/orders/search")
+    fun searchOrders(
+        @PathVariable organizationId: UUID,
+        @PathVariable storeId: UUID,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "25") size: Int,
+        @RequestParam(required = false) q: String?,
+        @RequestParam(required = false) status: OrderStatus?,
+        @RequestParam(required = false) paymentSource: PaymentSource?,
+        @RequestParam(required = false) fulfillmentStatus: FulfillmentStatus?,
+        @RequestParam(defaultValue = "NEWEST") sort: OrderSearchSort,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PageResponse<OrderSearchItemResponse> {
+        val offset = page * size
+        val criteria = OrderSearchCriteria(q, status, paymentSource, fulfillmentStatus, sort)
+        val items = orderService.search(organizationId, storeId, criteria, currentUser, offset, size).map { it.toResponse() }
+        val total = orderService.countSearch(organizationId, storeId, criteria, currentUser)
         return PageResponse(items, page, size, total)
     }
 

@@ -7,6 +7,7 @@ import { featureFlags } from "../../lib/featureFlags";
 import { OrganizationSettingsDirectory } from "./OrganizationSettingsDirectory";
 import {
 	useNotificationPreferences,
+	useUpdateDefaultMediaVisibility,
 	useUpdateNotificationTopic,
 	useUpdateSmsConsent,
 	useUpdateUserPreferences,
@@ -14,6 +15,7 @@ import {
 } from "./api";
 import type {
 	AppearancePreference,
+	MediaVisibilityDefault,
 	NotificationPreferenceState,
 	NotificationTopic,
 	NotificationTopicPreference,
@@ -23,6 +25,11 @@ const APPEARANCE_OPTIONS: Array<{ value: AppearancePreference; title: string; de
 	{ value: "SYSTEM", title: "System", description: "Follow this device's light or dark appearance." },
 	{ value: "LIGHT", title: "Light", description: "Always use Rally26's light appearance." },
 	{ value: "DARK", title: "Dark", description: "Always use Rally26's dark appearance." },
+];
+
+const MEDIA_VISIBILITY_OPTIONS: Array<{ value: MediaVisibilityDefault; title: string; description: string }> = [
+	{ value: "PRIVATE", title: "Household only (default)", description: "New photos and videos you upload stay visible only to your household until you choose to release one." },
+	{ value: "PUBLIC", title: "Public", description: "New photos and videos you upload are immediately visible to the organization for social sharing or highlight content." },
 ];
 
 const TOPIC_LABELS: Record<NotificationTopic, { title: string; description: string }> = {
@@ -47,6 +54,7 @@ export function SettingsPage() {
 	const { user } = useAuth();
 	const preferences = useUserPreferences();
 	const update = useUpdateUserPreferences();
+	const updateMediaVisibility = useUpdateDefaultMediaVisibility();
 	const notifications = useNotificationPreferences();
 	const updateNotification = useUpdateNotificationTopic();
 	const updateSmsConsent = useUpdateSmsConsent();
@@ -56,6 +64,11 @@ export function SettingsPage() {
 	function selectAppearance(appearance: AppearancePreference) {
 		if (appearance === appearancePreferences?.appearance || update.isPending) return;
 		update.mutate({ appearance });
+	}
+
+	function selectDefaultMediaVisibility(defaultMediaVisibility: MediaVisibilityDefault) {
+		if (defaultMediaVisibility === appearancePreferences?.defaultMediaVisibility || updateMediaVisibility.isPending) return;
+		updateMediaVisibility.mutate({ defaultMediaVisibility });
 	}
 
 	function updateTopic(
@@ -120,6 +133,33 @@ export function SettingsPage() {
 				{update.isPending && <p role="status" className="mt-3 text-sm text-slate-600 dark:text-[#cbd5e1]">Saving appearance…</p>}
 				{update.isSuccess && <p role="status" className="mt-3 text-sm font-medium text-success-700 dark:text-success-400">Appearance saved.</p>}
 				{update.isError && <p role="alert" className="mt-3 text-sm font-medium text-rose-700">Could not save appearance. Your previous preference is unchanged.</p>}
+			</section>
+
+			<section className="rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-5" aria-labelledby="media-visibility-settings-heading">
+				<div>
+					<h2 id="media-visibility-settings-heading" className="font-heading text-xl font-semibold text-navy-900 dark:text-[#f8fafc]">Media sharing</h2>
+					<p className="mt-1 text-sm text-slate-600 dark:text-[#cbd5e1]">Choose the starting visibility for new photos and videos you upload to your household's media page. This only applies going forward — it never changes an item you already uploaded.</p>
+				</div>
+				{preferences.isPending && <div className="mt-4"><LoadingState label="Loading media sharing preference…" /></div>}
+				{preferences.isError && <div className="mt-4"><ErrorState message="Could not load your settings." onRetry={() => preferences.refetch()} /></div>}
+				{appearancePreferences && (
+					<fieldset className="mt-4 grid gap-3 sm:grid-cols-2" disabled={updateMediaVisibility.isPending}>
+						<legend className="sr-only">Default media visibility</legend>
+						{MEDIA_VISIBILITY_OPTIONS.map((option) => {
+							const selected = appearancePreferences.defaultMediaVisibility === option.value;
+							return (
+								<label key={option.value} className={`cursor-pointer rounded-xl border p-4 ${selected ? "border-victory-green bg-victory-green/5" : "border-slate-200 dark:border-[#334155] bg-ice-white dark:bg-[#0f172a]"}`}>
+									<input type="radio" name="defaultMediaVisibility" value={option.value} checked={selected} onChange={() => selectDefaultMediaVisibility(option.value)} className="mr-2" />
+									<span className="font-semibold text-navy-900 dark:text-[#f8fafc]">{option.title}</span>
+									<span className="mt-2 block text-sm text-slate-600 dark:text-[#cbd5e1]">{option.description}</span>
+								</label>
+							);
+						})}
+					</fieldset>
+				)}
+				{updateMediaVisibility.isPending && <p role="status" className="mt-3 text-sm text-slate-600 dark:text-[#cbd5e1]">Saving…</p>}
+				{updateMediaVisibility.isSuccess && <p role="status" className="mt-3 text-sm font-medium text-success-700 dark:text-success-400">Media sharing preference saved.</p>}
+				{updateMediaVisibility.isError && <p role="alert" className="mt-3 text-sm font-medium text-rose-700">Could not save this preference. Your previous setting is unchanged.</p>}
 			</section>
 
 			<section className="rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-5" aria-labelledby="notification-settings-heading">

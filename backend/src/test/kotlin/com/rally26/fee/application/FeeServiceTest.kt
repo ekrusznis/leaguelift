@@ -27,6 +27,7 @@ import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.outbox.application.OutboxWriter
+import com.rally26.subscription.application.PlanEntitlementService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -46,6 +47,10 @@ class FeeServiceTest {
     private val feePaymentPlanRepository = mockk<FeePaymentPlanRepository>()
     private val householdRepository = mockk<HouseholdRepository>()
     private val membershipService = mockk<MembershipService>()
+    private val planEntitlementService =
+        mockk<PlanEntitlementService> {
+            every { requireFeesAllowed(any()) } just runs
+        }
     private val auditService = mockk<AuditService>()
     private val authorizationService = mockk<AuthorizationService>()
     private val stripeFeePaymentCheckoutClient = mockk<StripeFeePaymentCheckoutClient>()
@@ -60,6 +65,7 @@ class FeeServiceTest {
             feePaymentPlanRepository,
             householdRepository,
             membershipService,
+            planEntitlementService,
             auditService,
             authorizationService,
             stripeFeePaymentCheckoutClient,

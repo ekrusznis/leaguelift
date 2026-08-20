@@ -341,7 +341,7 @@ export function CampaignList({
 					{campaigns.data.items.map((campaign) => {
 						const permissions = permissionsFor(campaign, canManageOrganization);
 						return (
-							<li key={campaign.id} className="rounded-xl border border-slate-gray/20 bg-pure-white p-4 dark:bg-[#111827]">
+							<li key={campaign.id} className="rounded-xl border border-slate-gray/20 p-4 odd:bg-pure-white even:bg-slate-50 dark:odd:bg-[#111827] dark:even:bg-[#1e293b]">
 								<div className="flex flex-wrap items-start justify-between gap-3">
 									<div className="min-w-0 flex-1">
 										<div className="flex flex-wrap items-center gap-2">

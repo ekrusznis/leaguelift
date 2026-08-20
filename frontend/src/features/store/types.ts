@@ -139,6 +139,8 @@ export interface PublicProductVariant {
 	label: string;
 	priceMinor: number;
 	currency: string;
+	/** Printify-supplied mockup image for this specific variant's color; null for manual/local-vendor variants. */
+	mockupFrontUrl: string | null;
 }
 
 export interface PublicProduct {

@@ -27,6 +27,8 @@ export interface RegisterParams {
 	invitationToken?: string;
 	agreeToTerms: boolean;
 	confirmAdult: boolean;
+	/** Set when registration was reached from a founding-organization join link (`/founding-organizations/join?code=`). */
+	foundingPromoCode?: string;
 }
 
 export interface RegistrationAcceptedResponse {

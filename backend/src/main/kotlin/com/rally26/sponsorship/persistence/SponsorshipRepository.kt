@@ -3,6 +3,9 @@ package com.rally26.sponsorship.persistence
 import com.rally26.finance.domain.PaymentSource
 import com.rally26.sponsorship.domain.Sponsorship
 import com.rally26.sponsorship.domain.SponsorshipReviewStatus
+import com.rally26.sponsorship.domain.SponsorshipSearchCriteria
+import com.rally26.sponsorship.domain.SponsorshipSearchRow
+import com.rally26.sponsorship.domain.SponsorshipSearchSort
 import com.rally26.sponsorship.domain.SponsorshipStatus
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
@@ -122,6 +125,124 @@ class SponsorshipRepository(
             ).param("organizationId", organizationId)
             .query(Long::class.java)
             .single()
+
+    /**
+     * `/sponsorships/search` — the "Review pending sponsorships" tab's underlying data
+     * source (`frontend/src/features/sponsorship/searchApi.ts`'s `useSponsorshipSearch`)
+     * had no backend mapping at all (LR-028, same class as LR-016/018/020/025/026/027).
+     * Same base CONFIRMED/REFUNDED restriction as [findConfirmedForOrganization], but
+     * `reviewStatus` is a real optional filter here rather than hardcoded, since this
+     * view needs to show every review state, not just one queue. Joins `sponsor` and
+     * `sponsorship_package` directly for the flat shape the frontend needs, rather than
+     * N+1'ing per row.
+     */
+    fun search(
+        organizationId: UUID,
+        criteria: SponsorshipSearchCriteria,
+        offset: Int,
+        limit: Int,
+    ): List<SponsorshipSearchRow> {
+        val built = buildSearchSql(organizationId, criteria, countOnly = false)
+        var statement = jdbcClient.sql("${built.first} offset :offset limit :limit").param("offset", offset).param("limit", limit)
+        built.second.forEach { (name, value) -> statement = statement.param(name, value) }
+        return statement.query(::mapSearchRow).list()
+    }
+
+    fun countSearch(
+        organizationId: UUID,
+        criteria: SponsorshipSearchCriteria,
+    ): Long {
+        val built = buildSearchSql(organizationId, criteria, countOnly = true)
+        var statement = jdbcClient.sql(built.first)
+        built.second.forEach { (name, value) -> statement = statement.param(name, value) }
+        return statement.query(Long::class.java).single()
+    }
+
+    private fun buildSearchSql(
+        organizationId: UUID,
+        criteria: SponsorshipSearchCriteria,
+        countOnly: Boolean,
+    ): Pair<String, Map<String, Any>> {
+        val sql =
+            StringBuilder(
+                if (countOnly) {
+                    """select count(*) from sponsorship sh
+                       join sponsor sp on sp.id = sh.sponsor_id
+                       join sponsorship_package pkg on pkg.id = sh.package_id"""
+                } else {
+                    """select sh.id, sh.package_id, pkg.name as package_name, sh.status, sh.payment_source, sh.amount_minor, sh.currency,
+                       sh.sponsor_id, sp.name as sponsor_name, sp.contact_email as sponsor_contact_email, sp.company_name as sponsor_company_name,
+                       sh.confirmed_at, sh.refunded_at, sh.review_status, sh.reviewed_at, sh.created_at
+                       from sponsorship sh
+                       join sponsor sp on sp.id = sh.sponsor_id
+                       join sponsorship_package pkg on pkg.id = sh.package_id"""
+                },
+            )
+        sql.append(" where sh.organization_id = :organizationId and sh.status in ('CONFIRMED', 'REFUNDED')")
+        val params = linkedMapOf<String, Any>("organizationId" to organizationId)
+
+        criteria.packageId?.let {
+            sql.append(" and sh.package_id = :packageId")
+            params["packageId"] = it
+        }
+        criteria.status?.let {
+            sql.append(" and sh.status = :status")
+            params["status"] = it.name
+        }
+        criteria.reviewStatus?.let {
+            sql.append(" and sh.review_status = :reviewStatus")
+            params["reviewStatus"] = it.name
+        }
+        criteria.paymentSource?.let {
+            sql.append(" and sh.payment_source = :paymentSource")
+            params["paymentSource"] = it.name
+        }
+        criteria.keyword?.trim()?.takeIf { it.isNotEmpty() }?.let { keyword ->
+            sql.append(
+                " and (lower(sp.name) like :keyword or lower(coalesce(sp.contact_email, '')) like :keyword" +
+                    " or lower(coalesce(sp.company_name, '')) like :keyword)",
+            )
+            params["keyword"] = "%${keyword.lowercase()}%"
+        }
+
+        if (!countOnly) {
+            sql.append(
+                when (criteria.sort) {
+                    SponsorshipSearchSort.NEWEST -> " order by sh.created_at desc"
+                    SponsorshipSearchSort.OLDEST -> " order by sh.created_at asc"
+                    SponsorshipSearchSort.SPONSOR_ASC -> " order by lower(sp.name) asc"
+                    SponsorshipSearchSort.AMOUNT_ASC -> " order by sh.amount_minor asc"
+                    SponsorshipSearchSort.AMOUNT_DESC -> " order by sh.amount_minor desc"
+                    SponsorshipSearchSort.PACKAGE_ASC -> " order by lower(pkg.name) asc"
+                    SponsorshipSearchSort.REVIEW_STATUS_ASC -> " order by sh.review_status asc, sh.created_at asc"
+                },
+            )
+        }
+        return sql.toString() to params
+    }
+
+    private fun mapSearchRow(
+        rs: java.sql.ResultSet,
+        rowNum: Int,
+    ): SponsorshipSearchRow =
+        SponsorshipSearchRow(
+            id = rs.getObject("id", UUID::class.java),
+            packageId = rs.getObject("package_id", UUID::class.java),
+            packageName = rs.getString("package_name"),
+            status = SponsorshipStatus.valueOf(rs.getString("status")),
+            paymentSource = PaymentSource.valueOf(rs.getString("payment_source")),
+            amountMinor = rs.getLong("amount_minor"),
+            currency = rs.getString("currency"),
+            sponsorId = rs.getObject("sponsor_id", UUID::class.java),
+            sponsorName = rs.getString("sponsor_name"),
+            sponsorContactEmail = rs.getString("sponsor_contact_email"),
+            sponsorCompanyName = rs.getString("sponsor_company_name"),
+            confirmedAt = rs.getTimestamp("confirmed_at")?.toInstant(),
+            refundedAt = rs.getTimestamp("refunded_at")?.toInstant(),
+            reviewStatus = SponsorshipReviewStatus.valueOf(rs.getString("review_status")),
+            reviewedAt = rs.getTimestamp("reviewed_at")?.toInstant(),
+            createdAt = rs.getTimestamp("created_at").toInstant(),
+        )
 
     /** Inserted before Stripe returns a checkout session id — see `attachStripeSession` (mirrors `ContributionRepository.insertPending`). */
     fun insertPending(

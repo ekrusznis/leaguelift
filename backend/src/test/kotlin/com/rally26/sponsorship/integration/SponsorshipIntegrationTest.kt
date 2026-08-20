@@ -58,6 +58,7 @@ class SponsorshipIntegrationTest : AbstractIntegrationTest() {
                 OrganizationType.RECREATIONAL_LEAGUE,
                 owner,
             )
+        activateClubPlan(organization.id)
         val sponsorshipPackage =
             sponsorshipPackageService.create(
                 organization.id,
@@ -124,6 +125,7 @@ class SponsorshipIntegrationTest : AbstractIntegrationTest() {
                 OrganizationType.RECREATIONAL_LEAGUE,
                 owner,
             )
+        activateClubPlan(organization.id)
         val sponsorshipPackage =
             sponsorshipPackageService.create(
                 organization.id,
@@ -175,6 +177,7 @@ class SponsorshipIntegrationTest : AbstractIntegrationTest() {
                 OrganizationType.RECREATIONAL_LEAGUE,
                 owner,
             )
+        activateClubPlan(organization.id)
         val sponsorshipPackage =
             sponsorshipPackageService.create(
                 organization.id,
@@ -229,6 +232,7 @@ class SponsorshipIntegrationTest : AbstractIntegrationTest() {
                 OrganizationType.RECREATIONAL_LEAGUE,
                 owner,
             )
+        activateClubPlan(organization.id)
         val exclusivePackage =
             sponsorshipPackageService.create(
                 organization.id,
@@ -274,6 +278,7 @@ class SponsorshipIntegrationTest : AbstractIntegrationTest() {
                 OrganizationType.RECREATIONAL_LEAGUE,
                 ownerA,
             )
+        activateClubPlan(organizationA.id)
         val packageA =
             sponsorshipPackageService.create(
                 organizationA.id,

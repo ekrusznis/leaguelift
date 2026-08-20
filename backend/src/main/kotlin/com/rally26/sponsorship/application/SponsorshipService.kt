@@ -21,6 +21,8 @@ import com.rally26.sponsorship.domain.Sponsorship
 import com.rally26.sponsorship.domain.SponsorshipPackage
 import com.rally26.sponsorship.domain.SponsorshipPackageStatus
 import com.rally26.sponsorship.domain.SponsorshipReviewStatus
+import com.rally26.sponsorship.domain.SponsorshipSearchCriteria
+import com.rally26.sponsorship.domain.SponsorshipSearchRow
 import com.rally26.sponsorship.domain.SponsorshipStatus
 import com.rally26.sponsorship.domain.effectiveMaxQuantity
 import com.rally26.sponsorship.infra.StripeSponsorshipCheckoutClient
@@ -229,6 +231,26 @@ class SponsorshipService(
     ): Long {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return sponsorshipRepository.countPendingReview(organizationId)
+    }
+
+    fun search(
+        organizationId: UUID,
+        criteria: SponsorshipSearchCriteria,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<SponsorshipSearchRow> {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        return sponsorshipRepository.search(organizationId, criteria, offset, limit)
+    }
+
+    fun countSearch(
+        organizationId: UUID,
+        criteria: SponsorshipSearchCriteria,
+        currentUser: CurrentUser,
+    ): Long {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        return sponsorshipRepository.countSearch(organizationId, criteria)
     }
 
     /** Public sponsor directory (DESIGN-DOC.md section 14.1 scope) — every confirmed AND approved sponsor for an organization, with logo if one has been assigned. */

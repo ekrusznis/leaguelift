@@ -3,7 +3,7 @@
  * Mirrors frontend/src/lib/money.ts. Domain/API money remains integer minor units.
  */
 export function currencyFractionDigits(currency: string): number {
-  return new Intl.NumberFormat(undefined, { style: 'currency', currency }).resolvedOptions().maximumFractionDigits;
+  return new Intl.NumberFormat(undefined, { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2;
 }
 
 export function formatMoneyMinorUnits(amountMinor: number, currency: string): string {

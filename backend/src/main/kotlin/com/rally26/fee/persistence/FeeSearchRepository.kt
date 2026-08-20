@@ -29,7 +29,7 @@ private const val ASSIGNMENT_SUMMARY_FROM = """
     left join (
         select fee_assignment_id, sum(amount_minor) as paid_minor
         from fee_payment
-        where voided_at is null
+        where voided_at is null and status = 'CONFIRMED'
         group by fee_assignment_id
     ) fp on fp.fee_assignment_id = fa.id
     left join (

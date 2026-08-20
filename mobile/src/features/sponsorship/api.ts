@@ -192,7 +192,7 @@ export function useArchiveSponsorshipPackage(organizationId: string | null) {
   });
 }
 
-function reviewMutation(
+function useReviewMutation(
   organizationId: string | null,
   action: 'approve' | 'reject',
 ) {
@@ -212,11 +212,11 @@ function reviewMutation(
 }
 
 export function useApproveSponsorship(organizationId: string | null) {
-  return reviewMutation(organizationId, 'approve');
+  return useReviewMutation(organizationId, 'approve');
 }
 
 export function useRejectSponsorship(organizationId: string | null) {
-  return reviewMutation(organizationId, 'reject');
+  return useReviewMutation(organizationId, 'reject');
 }
 
 export function flattenSponsorshipPages<T>(pages: PageResponse<T>[] | undefined): T[] {

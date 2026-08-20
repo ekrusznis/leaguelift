@@ -3,6 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { Button } from "../../components/Button";
+import { PlanUpgradeAlert } from "../../components/PlanUpgradeAlert";
 import { ListToolbar } from "../../components/lists/ListToolbar";
 import { Pagination } from "../../components/lists/Pagination";
 import { EmptyState } from "../../components/states/EmptyState";
@@ -178,9 +179,11 @@ export function FeeTemplateList({ organizationId }: { organizationId: string }) 
 					</div>
 
 					{createTemplate.isError && (
-						<p role="alert" className="text-sm text-error-red">
-							Could not create the fee template. Check the amount and try again.
-						</p>
+						<PlanUpgradeAlert
+							error={createTemplate.error}
+							organizationId={organizationId}
+							fallbackMessage="Could not create the fee template. Check the amount and try again."
+						/>
 					)}
 
 					<div className="flex justify-end gap-2">

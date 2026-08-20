@@ -52,4 +52,5 @@ export interface ParticipantTeamAssignment {
 	status: string;
 	joinedAt: string | null;
 	createdAt: string;
+	teamName: string | null;
 }

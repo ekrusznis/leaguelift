@@ -75,4 +75,5 @@ export const Capabilities = {
 	PLATFORM_SUPPORT_IMPERSONATE: "platform.support.impersonate",
 	PLATFORM_SWAG_SHOP_VIEW: "platform.swag_shop.view",
 	PLATFORM_PAYMENTS_VIEW: "platform.payments.view",
+	PLATFORM_FOUNDING_PROMO_MANAGE: "platform.founding_promo.manage",
 } as const;

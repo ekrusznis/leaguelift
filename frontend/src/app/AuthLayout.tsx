@@ -44,7 +44,7 @@ export function AuthLayout() {
 				<div className="relative">
 					<Logo tone="dark" />
 					<p className="mt-3 text-sm font-medium text-slate-300 lg:mt-4 lg:text-base">
-						More revenue. Lower fees. Stronger programs.
+						Run your club. Fund your season. Keep everyone connected.
 					</p>
 				</div>
 

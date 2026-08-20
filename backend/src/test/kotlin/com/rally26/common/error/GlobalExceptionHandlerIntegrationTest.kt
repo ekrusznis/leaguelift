@@ -116,5 +116,51 @@ class GlobalExceptionHandlerIntegrationTest : AbstractIntegrationTest() {
         assert(response.body().contains("\"currency\":\"USD\"")) { "expected the Kotlin default to be applied: ${response.body()}" }
     }
 
+    @Test
+    fun `a POST missing a required header returns 400 with the standard error envelope, not 500`() {
+        // Reproduces the real-world trigger: a malformed/probing POST to the Stripe
+        // webhook endpoint with no Stripe-Signature header at all fell through to
+        // handleUnexpected's opaque 500 (and a false-positive ERROR-level "unhandled
+        // exception" log) because there was no MissingRequestHeaderException handler —
+        // same class of bug as the missing-query-parameter case above, just for headers.
+        val request =
+            HttpRequest
+                .newBuilder()
+                .uri(URI.create("http://localhost:$port/api/v1/webhooks/stripe"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{}"))
+                .build()
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        assertEquals(400, response.statusCode())
+        val body = response.body()
+        assertNotEquals("INTERNAL_ERROR", extractCode(body), "must not fall through to the generic 500 handler")
+        assert(!body.contains("Exception")) { "error body must never leak an internal exception class name: $body" }
+    }
+
+    @Test
+    fun `a GET to a path no controller maps returns 404 with the standard error envelope, not 500`() {
+        // Reproduces LR-020: a frontend call to an endpoint the backend never
+        // implemented (GET .../teams/{teamId}/staff) fell through Spring's static
+        // resource handler, which throws NoResourceFoundException — and that fell
+        // through to handleUnexpected's opaque 500 (plus a false-positive ERROR log)
+        // because there was no handler for it, same class of bug as the missing-header
+        // and missing-parameter cases above.
+        val (token, organizationId) = authedOrg()
+        val request =
+            HttpRequest
+                .newBuilder()
+                .uri(URI.create("http://localhost:$port/api/v1/organizations/$organizationId/this-endpoint-does-not-exist"))
+                .header("Authorization", "Bearer $token")
+                .GET()
+                .build()
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        assertEquals(404, response.statusCode())
+        val body = response.body()
+        assertNotEquals("INTERNAL_ERROR", extractCode(body), "must not fall through to the generic 500 handler")
+        assert(!body.contains("Exception")) { "error body must never leak an internal exception class name: $body" }
+    }
+
     private fun extractCode(body: String): String? = Regex("\"code\"\\s*:\\s*\"([^\"]+)\"").find(body)?.groupValues?.get(1)
 }

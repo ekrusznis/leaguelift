@@ -41,6 +41,9 @@ class SecurityConfig(
                     .permitAll()
                     .requestMatchers("/api/v1/auth/**")
                     .permitAll()
+                    // Read-only code check before registration — no account exists yet to authenticate as.
+                    .requestMatchers("/api/v1/founding-promo-codes/*/validate")
+                    .permitAll()
                     // OAuth providers redirect without a Rally26 bearer token; callback authenticity
                     // comes from the hashed, expiring, single-use state record (ADR-054).
                     .requestMatchers("/api/v1/integrations/oauth/**")

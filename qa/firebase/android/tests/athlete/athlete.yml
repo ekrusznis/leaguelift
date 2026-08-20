@@ -1,0 +1,92 @@
+tests:
+  - displayName: "[SMOKE] Athlete - sign in and route correctly"
+    id: athlete-login
+    steps:
+      - goal: >-
+          Reach the Rally26 sign-in screen. If the first-launch walkthrough is shown,
+          complete it first.
+        finalScreenAssertion: The Rally26 sign-in form is visible and usable.
+      - goal: Sign in using the supplied athlete test credentials.
+        finalScreenAssertion: >-
+          The Athlete experience is visible with Home, Calendar, Messages, and More tabs,
+          and no Payments or organization-owner tab is present.
+
+  - displayName: "[SMOKE] Athlete - self dashboard"
+    id: athlete-dashboard
+    prerequisiteTestCaseId: athlete-login
+    steps:
+      - goal: Review the entire Athlete Home screen.
+        hint: Scroll through all visible sections.
+        finalScreenAssertion: >-
+          Athlete self information, own teams, and own upcoming schedule are readable
+          when available, with no teammate roster or financial information exposed.
+
+  - displayName: "[SMOKE] Athlete - calendar and self RSVP"
+    id: athlete-calendar-rsvp
+    prerequisiteTestCaseId: athlete-login
+    steps:
+      - goal: Open Calendar and inspect the athlete's schedule.
+        finalScreenAssertion: >-
+          The athlete calendar is readable and shows only events the signed-in athlete is
+          authorized to view.
+      - goal: Open one event if available and inspect RSVP controls.
+        finalScreenAssertion: >-
+          Event Details is readable and any RSVP control applies to the signed-in athlete,
+          not another participant.
+
+  - displayName: "Athlete - SafeSport messaging and new conversation"
+    id: athlete-messaging
+    prerequisiteTestCaseId: athlete-login
+    steps:
+      - goal: Open Messages and inspect existing threads.
+        finalScreenAssertion: Message threads or a clear empty state are visible.
+      - goal: Start New Conversation if the action is enabled.
+        hint: >-
+          Select an eligible team/contact only from choices offered by Rally26. Send
+          "QA Android athlete message - safe to delete" if the flow permits.
+        finalScreenAssertion: >-
+          The flow only offers eligible contacts under the youth-safety policy, and any
+          created conversation remains within the selected authorized context.
+
+  - displayName: "Athlete - guardians"
+    id: athlete-guardians
+    prerequisiteTestCaseId: athlete-login
+    steps:
+      - goal: From More, open My Guardians.
+        finalScreenAssertion: >-
+          The athlete's linked guardians are shown or a deliberate empty state is displayed.
+          No unrelated household guardians are visible.
+
+  - displayName: "Athlete - eligibility privacy"
+    id: athlete-eligibility
+    prerequisiteTestCaseId: athlete-login
+    steps:
+      - goal: From More, open Eligibility.
+        finalScreenAssertion: >-
+          The athlete can see their own eligibility/clearance status and requirement
+          information appropriate to the athlete view, without restricted guardian-uploaded
+          evidence contents being exposed.
+
+  - displayName: "Athlete - announcements, Action Center, Help, Settings"
+    id: athlete-supporting-features
+    prerequisiteTestCaseId: athlete-login
+    steps:
+      - goal: Open Announcements.
+        finalScreenAssertion: Announcements are readable or a clear empty state is shown.
+      - goal: Return and open Action Center.
+        finalScreenAssertion: Action Center is readable and scoped to the athlete.
+      - goal: Return and open Help Center.
+        finalScreenAssertion: Help content is readable and navigable.
+      - goal: Return and open Settings.
+        finalScreenAssertion: Settings is readable with no clipped or overlapping controls.
+
+  - displayName: "[SMOKE] Athlete - negative authority sweep"
+    id: athlete-negative-authority
+    prerequisiteTestCaseId: athlete-login
+    steps:
+      - goal: Review every Athlete tab and the full More menu.
+        hint: Scroll the More menu from top to bottom.
+        finalScreenAssertion: >-
+          The athlete is not offered organization billing, payouts, member management,
+          team roster management, parent payments, staff management, or platform-admin
+          functions.

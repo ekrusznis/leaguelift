@@ -65,30 +65,9 @@ const BENEFIT_CARDS = [
 
 const STATS = [
 	{
-		value: "23%",
-		label: "More revenue",
-		copy: "Organizations see an average revenue increase within their first year.",
-		icon: (
-			<svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
-				<path d="M4 16 10 10l4 4 6-7M14 9h6v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-			</svg>
-		),
-	},
-	{
-		value: "12+",
-		label: "Hours saved weekly",
-		copy: "Automate fee reminders, order tracking, and reporting busywork.",
-		icon: (
-			<svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
-				<circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.8" />
-				<path d="M12 7.5V12l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-			</svg>
-		),
-	},
-	{
-		value: "2x",
-		label: "Stronger communication",
-		copy: "Announcements and reminders that families actually see.",
+		value: "1",
+		label: "Mobile app, every role",
+		copy: "Owners, coaches, parents, and athletes each get a tailored experience in one app — not six separate logins.",
 		icon: (
 			<svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
 				<circle cx="8" cy="9" r="2.6" stroke="currentColor" strokeWidth="1.8" />
@@ -98,9 +77,31 @@ const STATS = [
 		),
 	},
 	{
-		value: "99.9%",
-		label: "Reliable & secure",
-		copy: "Built on the same infrastructure discipline as the payments it processes.",
+		value: "Real-time",
+		label: "RSVP & messaging",
+		copy: "Coaches and parents see responses and schedule changes the moment they happen.",
+		icon: (
+			<svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
+				<circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.8" />
+				<path d="M12 7.5V12l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+			</svg>
+		),
+	},
+	{
+		value: "0",
+		label: "Inventory required",
+		copy: "Swag Shop orders route straight to fulfillment — no upfront apparel purchase for your club.",
+		icon: (
+			<svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
+				<path d="M8 4h8l1.5 4h-11z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+				<path d="M6.5 8h11L19 20H5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+			</svg>
+		),
+	},
+	{
+		value: "6",
+		label: "Connected modules",
+		copy: "Teams, payments, fundraising, Swag Shop, sponsorships, and eligibility — one platform, not six.",
 		icon: (
 			<svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
 				<path d="M12 3.5 19 6.5v5.2c0 4.6-3 8-7 9.3-4-1.3-7-4.7-7-9.3V6.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
@@ -262,8 +263,8 @@ const ROLE_CARDS = [
 		icon: orgIcon(<path d="M5 19V9M12 19V5M19 19v-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />),
 	},
 	{
-		heading: "Team managers",
-		copy: "Publish a team page and point families to fundraising, apparel, and fee information.",
+		heading: "Coaches",
+		copy: "Schedule the season, message the team, manage RSVPs and rosters, and keep athletes organized through tournament weekends — right from your phone.",
 		icon: orgIcon(<><rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="1.6" /><path d="M8 9h8M8 13h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></>),
 	},
 	{
@@ -297,16 +298,46 @@ type PricingTier = {
 };
 
 /**
- * Three real tiers (Phase 26/§14.1I, DESIGN-DOC.md section 19.3 item 12, resolved
- * 2026-08-12) matching `subscription_plan` seed data exactly: STARTER/"Starter"
- * ($49/mo), FOUNDING_CLUB/"Club" ($149/mo), CONTACT_RALLY26/"League" (contact-only).
- * Names/prices/team-count claims here must stay in sync with V82's seed data and
- * `PlanEntitlementService`'s per-tier limits — this static list intentionally
- * mirrors the backend rather than fetching it, since the marketing site is
- * anonymous/public and there's no public plans endpoint (the authenticated
- * `/owner-onboarding/plans` the onboarding wizard uses isn't reachable here).
+ * Four cards, three real tiers. Starter/Club/League (Phase 26/§14.1I, DESIGN-DOC.md
+ * section 19.3 item 12, resolved 2026-08-12) match `subscription_plan` seed data
+ * exactly: STARTER/"Starter" ($49/mo), FOUNDING_CLUB/"Club" ($149/mo),
+ * CONTACT_RALLY26/"League" (contact-only). Names/prices/team-count claims here must
+ * stay in sync with V82's seed data and `PlanEntitlementService`'s per-tier limits —
+ * this static list intentionally mirrors the backend rather than fetching it, since
+ * the marketing site is anonymous/public and there's no public plans endpoint (the
+ * authenticated `/owner-onboarding/plans` the onboarding wizard uses isn't reachable
+ * here).
+ *
+ * Free is a real 4th tier (Phase 45/46, DESIGN-DOC.md §14.1T/§14.1U, shipped
+ * 2026-08-20) — a `FREE` row now exists in the backend `subscription_plan` catalog,
+ * self-serve registration bypasses Stripe Checkout entirely
+ * (`OwnerOnboardingService.activateFreePlan`), and every marketed FREE-tier limit
+ * (1 team, no dues/fee collection, no SMS, no gated integrations, 1 concurrent
+ * fundraising campaign, no sponsorships, no family credits, basic-only reporting) is
+ * enforced backend-authoritatively by `PlanEntitlementService`. Its CTA now routes to
+ * `/auth/register` like Starter/Club, not Talk to Sales.
  */
 const PRICING_TIERS: PricingTier[] = [
+	{
+		name: "Free",
+		tone: "light",
+		price: "$0",
+		cadence: "/mo",
+		description: "For a single team trying Rally26 for the first time.",
+		features: [
+			"1 active team",
+			"Roster & family management",
+			"Schedule & events",
+			"RSVP",
+			"Team messaging",
+			"Basic fundraising",
+			"Swag Shop (no inventory required)",
+			"Mobile app for every role",
+			"Basic reporting",
+		],
+		ctaLabel: "Get Started Free",
+		ctaTo: "/auth/register",
+	},
 	{
 		name: "Starter",
 		tone: "dark",
@@ -315,13 +346,15 @@ const PRICING_TIERS: PricingTier[] = [
 		description: "Perfect for a single team or small club just getting started.",
 		features: [
 			"Up to 3 teams",
+			"Rosters, scheduling & RSVP",
+			"Team messaging",
 			"Team & tournament pages",
 			"Dues & fee collection",
+			"Mobile app for every role",
 			"Basic reporting",
 			"Standard support",
-			"Feature feedback access",
 		],
-		ctaLabel: "Start Free",
+		ctaLabel: "Choose Starter",
 		ctaTo: "/auth/register",
 	},
 	{
@@ -334,16 +367,16 @@ const PRICING_TIERS: PricingTier[] = [
 		features: [
 			"Unlimited teams",
 			"Everything in Starter",
-			"SMS payment reminders",
-			"SportsEngine & TeamSnap sync",
-			"QuickBooks export",
-			"Fundraising campaigns",
-			"Team Swag Shop",
+			"Eligibility & waiver workflows",
+			"Fundraising campaigns & sponsorships",
+			"Team Swag Shop (no inventory required)",
 			"Family credits",
+			"SportsEngine/TeamSnap migration assistance",
+			"QuickBooks export",
 			"Priority support",
 			"Advanced reporting",
 		],
-		ctaLabel: "Start Free",
+		ctaLabel: "Choose Club",
 		ctaTo: "/auth/register",
 	},
 	{
@@ -354,13 +387,13 @@ const PRICING_TIERS: PricingTier[] = [
 		features: [
 			"Unlimited teams",
 			"Everything in Club",
-			"Sponsorship management",
-			"Custom onboarding",
+			"Custom onboarding & migration assistance",
+			"Volume transaction pricing",
 			"Dedicated support",
 			"Custom reporting",
 		],
-		ctaLabel: "Contact Us",
-		ctaTo: "/contact",
+		ctaLabel: "Talk to Sales",
+		ctaTo: "/talk-to-sales",
 	},
 ];
 
@@ -409,8 +442,8 @@ export function HomePage() {
 	return (
 		<div className="flex min-h-screen flex-col bg-ice-50 dark:bg-[#0f172a]">
 			<Seo
-				title="Rally26 | Revenue Tools for Youth Sports Organizations"
-				description="Rally26 helps youth sports leagues, clubs, teams, and tournaments create public pages, run fundraisers, sell apparel, manage dues, and apply approved family fee credits."
+				title="Rally26 | The Platform for Youth Sports Clubs"
+				description="Rally26 brings teams, schedules, messaging, payments, fundraising, apparel, sponsorships, eligibility, and a mobile app for every role into one platform for youth sports organizations."
 			/>
 
 			<AnnouncementBar />
@@ -430,16 +463,16 @@ export function HomePage() {
 								Built for youth sports organizations
 							</p>
 							<h1 className="mt-5 text-balance font-heading text-4xl font-extrabold leading-[1.08] text-white sm:text-5xl lg:text-[64px]">
-								More revenue.
+								Run your club.
 								<br />
-								Lower fees.
+								Fund your season.
 								<br />
-								<span className="text-orange-400">Stronger programs.</span>
+								<span className="text-orange-400">Keep everyone connected.</span>
 							</h1>
 							<p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-300">
-								Rally26 helps youth sports organizations create public team and tournament pages, run
-								fundraisers, sell apparel, manage dues, and apply approved sales-based credits to family
-								fees.
+								Rally26 brings teams, schedules, messaging, payments, fundraising, apparel, and
+								sponsorships into one platform built for clubs, coaches, and families — with a mobile
+								app for every role.
 							</p>
 							<div className="mt-8 flex flex-wrap items-center gap-4">
 								<PrimaryButton to="/auth/register" icon="arrow" onClick={() => track("hero_cta_clicked")}>
@@ -587,7 +620,7 @@ export function HomePage() {
 					<PageContainer className="flex flex-col gap-12">
 						<SectionHeading heading="Simple pricing. Real transparency." copy="Rally26 combines organization subscriptions with clearly disclosed transaction fees and optional implementation services." />
 
-						<div className="grid gap-8 pt-3 lg:grid-cols-3 lg:items-start">
+						<div className="grid gap-8 pt-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-start">
 							{PRICING_TIERS.map((tier) => (
 								<div
 									key={tier.name}
@@ -632,7 +665,10 @@ export function HomePage() {
 						</div>
 
 						<p className="mx-auto max-w-2xl text-center text-sm font-medium text-slate-700 dark:text-[#f8fafc]">
-							Flat monthly price + a flat 5% fee on dues &amp; fees, fundraising, sponsorships, and Swag Shop sales — nothing else nickel-and-dimed. Rally26 absorbs card payment-processing costs itself.
+							Your monthly plan price, plus a flat 5% fee only on money that moves through Rally26 —
+							dues &amp; fees, fundraising, sponsorships, and Swag Shop sales. For example, a $100 fee
+							payment nets your organization $95. Rally26 absorbs card payment-processing costs itself,
+							so that 5% is the only transaction fee you'll ever see.
 						</p>
 						<p className="mx-auto max-w-2xl text-center text-sm text-slate-500 dark:text-[#cbd5e1]">
 							Fulfillment and optional service fees are disclosed before launch and are never bundled into the base subscription price.

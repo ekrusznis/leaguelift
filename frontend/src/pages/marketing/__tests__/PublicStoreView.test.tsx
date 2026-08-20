@@ -19,7 +19,7 @@ const store: PublicStore = {
 			description: "Warm and cozy.",
 			designUrl: null,
 			variants: [
-				{ id: "44444444-4444-4444-4444-444444444444", label: "M / Navy", priceMinor: 2500, currency: "USD" },
+				{ id: "44444444-4444-4444-4444-444444444444", label: "M / Navy", priceMinor: 2500, currency: "USD", mockupFrontUrl: null },
 			],
 		},
 	],
@@ -51,6 +51,34 @@ describe("PublicStoreView", () => {
 		expect(await screen.findByRole("heading", { level: 1, name: /spring store/i })).toBeInTheDocument();
 		expect(screen.getByText(/team hoodie/i)).toBeInTheDocument();
 		expect(screen.getByText(/M \/ Navy — \$25\.00/)).toBeInTheDocument();
+	});
+
+	it("falls back to a variant's Printify mockup image when the product has no uploaded design (LR-031)", async () => {
+		const printifyStore: PublicStore = {
+			...store,
+			products: [
+				{
+					...store.products[0],
+					designUrl: null,
+					variants: [
+						{
+							id: "44444444-4444-4444-4444-444444444444",
+							label: "M / Navy",
+							priceMinor: 2500,
+							currency: "USD",
+							mockupFrontUrl: "https://images.example.com/navy-hoodie-front.png",
+						},
+					],
+				},
+			],
+		};
+		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(printifyStore)));
+
+		renderAt("/stores/spring-store");
+
+		expect(await screen.findByRole("heading", { level: 1, name: /spring store/i })).toBeInTheDocument();
+		const images = screen.getAllByRole("img", { name: /team hoodie|M \/ Navy/i });
+		expect(images.some((img) => img.getAttribute("src") === "https://images.example.com/navy-hoodie-front.png")).toBe(true);
 	});
 
 	it("shows an error state for an unpublished or unknown slug", async () => {

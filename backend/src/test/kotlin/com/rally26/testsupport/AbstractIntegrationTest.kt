@@ -1,10 +1,13 @@
 package com.rally26.testsupport
 
+import com.rally26.subscription.persistence.OrganizationSubscriptionRepository
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.PostgreSQLContainer
+import java.util.UUID
 
 /**
  * Base class for tests that need a real PostgreSQL instance (repository/integration
@@ -21,6 +24,21 @@ import org.testcontainers.containers.PostgreSQLContainer
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 abstract class AbstractIntegrationTest {
+    @Autowired
+    private lateinit var organizationSubscriptionRepository: OrganizationSubscriptionRepository
+
+    /**
+     * An organization with no `organization_subscription` row resolves to STARTER
+     * (deny-by-default, see `PlanEntitlementService`), which since Phase 46 no longer
+     * has every entitlement a test fixture might assume (sponsorships, family credits,
+     * unlimited campaigns, advanced reporting are Club+ only). Call this in any test
+     * that exercises one of those Club-gated features but isn't itself testing plan
+     * entitlements, so the test's premise (not the plan tier) is what's under test.
+     */
+    protected fun activateClubPlan(organizationId: UUID) {
+        organizationSubscriptionRepository.insertActive(organizationId, "FOUNDING_CLUB")
+    }
+
     companion object {
         @JvmStatic
         val postgres: PostgreSQLContainer<*> =

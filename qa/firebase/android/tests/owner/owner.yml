@@ -1,0 +1,161 @@
+tests:
+  - displayName: "[SMOKE] Owner - sign in and unlock only active organization"
+    id: owner-login
+    steps:
+      - goal: >-
+          Reach the Rally26 sign-in screen. If the first-launch walkthrough is shown,
+          complete it first.
+        finalScreenAssertion: The Rally26 sign-in form is visible and usable.
+      - goal: Sign in using the supplied active OWNER test credentials.
+        hint: Wait for dashboard-context and owner-onboarding checks to finish.
+        finalScreenAssertion: >-
+          The native Owner experience is visible with Home, Teams, Members, and More.
+          The owner is not trapped in setup and no unexpected error is shown.
+
+  - displayName: "[SMOKE] Owner - dashboard full visual sweep"
+    id: owner-dashboard
+    prerequisiteTestCaseId: owner-login
+    steps:
+      - goal: Review the Owner Home screen from top to bottom.
+        hint: Scroll through every dashboard card and section.
+        finalScreenAssertion: >-
+          Organization name, financial summary, team performance, upcoming events,
+          report snapshot, and recent activity are readable when data exists, or use
+          intentional empty states. Cards do not overlap or clip values.
+
+  - displayName: "[SMOKE] Owner - teams and team detail"
+    id: owner-teams
+    prerequisiteTestCaseId: owner-login
+    steps:
+      - goal: Open Teams and inspect the organization-wide team list.
+        finalScreenAssertion: >-
+          Team rows are readable or a deliberate empty state is shown, with no team from
+          another organization visible.
+      - goal: Open one team if available.
+        finalScreenAssertion: >-
+          Team Detail presents sport/season/age/level/status information cleanly and
+          provides a usable way back.
+
+  - displayName: "Owner - members and role controls"
+    id: owner-members
+    prerequisiteTestCaseId: owner-login
+    steps:
+      - goal: Open Members and inspect member rows and available role actions.
+        finalScreenAssertion: >-
+          Member identity and role information are readable and management controls are
+          clearly distinguishable from destructive revoke actions.
+      - goal: Open a role-change or member action control for a disposable QA member, then cancel without saving.
+        finalScreenAssertion: >-
+          The role/action UI is understandable, cancellable, and does not mutate the
+          member after cancellation.
+
+  - displayName: "Owner - reports"
+    id: owner-reports
+    prerequisiteTestCaseId: owner-login
+    steps:
+      - goal: From More, open Reports and inspect every visible metric.
+        finalScreenAssertion: >-
+          Report metrics are readable, money values are formatted consistently, and an
+          empty report is represented intentionally rather than as a broken screen.
+
+  - displayName: "Owner - fees and collections"
+    id: owner-fees
+    prerequisiteTestCaseId: owner-login
+    steps:
+      - goal: From More, open Fees & Collections and review filters, lists, totals, and actions.
+        hint: Do not submit a real payment or destructive correction.
+        finalScreenAssertion: >-
+          Fee/collection information is readable, filters and controls fit the phone
+          screen, and no raw API error is visible.
+
+  - displayName: "Owner - financial operations"
+    id: owner-financial-operations
+    prerequisiteTestCaseId: owner-login
+    steps:
+      - goal: Open Financial Operations and inspect each major section without executing a money mutation.
+        hint: Scroll through the entire screen and open/close non-destructive detail controls.
+        finalScreenAssertion: >-
+          Financial Operations is navigable on a phone, labels and monetary values are
+          readable, and dangerous actions are clearly differentiated from read-only data.
+
+  - displayName: "Owner - payout account"
+    id: owner-payout
+    prerequisiteTestCaseId: owner-login
+    steps:
+      - goal: Open Payout Account and inspect account status and balance information.
+        hint: Do not initiate a transfer.
+        finalScreenAssertion: >-
+          Stripe Connect/payout status is clearly communicated with readable balances
+          or a deliberate not-configured state.
+
+  - displayName: "Owner - announcements and broadcasts"
+    id: owner-comms
+    prerequisiteTestCaseId: owner-login
+    steps:
+      - goal: Open Announcements management and inspect the list and compose entry.
+        finalScreenAssertion: >-
+          Announcement management is readable and clearly distinguishes draft/published
+          state where present.
+      - goal: Return to More and open Broadcasts management.
+        finalScreenAssertion: >-
+          Broadcast threads or a deliberate empty state are readable and the New Broadcast
+          entry is clearly identified.
+
+  - displayName: "Owner - fundraising"
+    id: owner-fundraising
+    prerequisiteTestCaseId: owner-login
+    steps:
+      - goal: Open Fundraising and inspect campaign/fundraiser list and controls.
+        finalScreenAssertion: >-
+          Fundraising management is readable and organization-owner approval/management
+          controls are clearly labeled where available.
+      - goal: Open one fundraiser if available and return without destructive changes.
+        finalScreenAssertion: >-
+          Fundraiser detail is readable on phone width and does not expose another
+          organization's campaign.
+
+  - displayName: "Owner - Swag Orders, Swag Shop, Sponsorships"
+    id: owner-commerce
+    prerequisiteTestCaseId: owner-login
+    steps:
+      - goal: Open Swag Orders and inspect the order list.
+        finalScreenAssertion: Swag Orders is readable or has a deliberate empty state.
+      - goal: Return and open Swag Shop.
+        hint: Do not publish destructive catalog changes or complete payment.
+        finalScreenAssertion: >-
+          The authenticated organization-management Swag Shop loads inside Rally26
+          without a session-expired error.
+      - goal: Return and open Sponsorships.
+        finalScreenAssertion: >-
+          Sponsorship management loads in the owner context without exposing another
+          organization's data.
+
+  - displayName: "Owner - management web surfaces"
+    id: owner-management-web
+    prerequisiteTestCaseId: owner-login
+    steps:
+      - goal: Open Team Management from More and inspect the web surface.
+        finalScreenAssertion: >-
+          Team Management loads authenticated and remains usable at mobile width.
+      - goal: Return and open Tournament Management.
+        finalScreenAssertion: >-
+          Tournament Management loads authenticated and is usable at mobile width.
+      - goal: Return and open Households & Media.
+        finalScreenAssertion: >-
+          Households & Media loads authenticated and is usable at mobile width.
+      - goal: Return and open Organization Settings.
+        finalScreenAssertion: >-
+          Organization Settings loads authenticated and is usable at mobile width.
+
+  - displayName: "Owner - documents, Action Center, Help, Settings"
+    id: owner-supporting-features
+    prerequisiteTestCaseId: owner-login
+    steps:
+      - goal: Open Documents.
+        finalScreenAssertion: Owner document management is readable or has a clear empty state.
+      - goal: Return and open Action Center.
+        finalScreenAssertion: Action Center is readable and organization-scoped.
+      - goal: Return and open Help Center.
+        finalScreenAssertion: Help Center loads readable support content.
+      - goal: Return and open My Settings.
+        finalScreenAssertion: Settings is usable with no clipped or overlapping controls.

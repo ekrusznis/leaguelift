@@ -1,0 +1,10 @@
+tests:
+  - displayName: "[SMOKE] Subscription state - Checkout pending"
+    id: subscription-checkout-pending
+    steps:
+      - goal: >-
+          Complete the first-launch walkthrough if needed and sign in with the supplied
+          owner account pre-provisioned specifically in the checkout pending state.
+        hint: Do not change the account's subscription state during this test.
+        finalScreenAssertion: >-
+          The owner remains in Review/Checkout or a clear pending state and cannot enter the native Owner workspace before webhook-backed activation.

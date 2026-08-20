@@ -3,6 +3,7 @@ package com.rally26.team.application
 import com.rally26.audit.application.AuditService
 import com.rally26.common.error.ConflictException
 import com.rally26.common.error.FieldError
+import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
@@ -135,9 +136,10 @@ class TeamServiceTest {
     fun `create rejects a new team once the organization's plan-tier entitlement denies capacity`() {
         every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
         every { teamRepository.countAll(orgId) } returns 3
-        every { planEntitlementService.requireTeamCapacity(orgId, 3) } throws ValidationException("Your plan allows up to 3 teams.")
+        every { planEntitlementService.requireTeamCapacity(orgId, 3) } throws
+            ForbiddenException("PLAN_UPGRADE_REQUIRED", "Your plan allows up to 3 teams.")
 
-        assertFailsWith<ValidationException> {
+        assertFailsWith<ForbiddenException> {
             service.create(orgId, "Team A", "Soccer", null, null, null, null, null, currentUser)
         }
         verify(exactly = 0) { teamRepository.insert(any(), any(), any(), any(), any(), any(), any(), any()) }

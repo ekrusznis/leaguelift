@@ -8,6 +8,7 @@ import com.rally26.sponsorship.domain.Sponsor
 import com.rally26.sponsorship.domain.Sponsorship
 import com.rally26.sponsorship.domain.SponsorshipPackage
 import com.rally26.sponsorship.domain.SponsorshipPackageStatus
+import com.rally26.sponsorship.domain.SponsorshipSearchRow
 import com.rally26.sponsorship.domain.effectiveMaxQuantity
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.Min
@@ -176,6 +177,46 @@ fun SponsorshipWithSponsor.toResponse() =
         sponsorship.reviewStatus.name,
         sponsorship.reviewedAt,
         sponsorship.createdAt,
+    )
+
+/** `/sponsorships/search`'s flat result shape — the "Review pending sponsorships" tab needs the package name/id alongside the sponsor, unlike [SponsorshipResponse]. */
+data class SponsorshipSearchItemResponse(
+    val id: UUID,
+    val packageId: UUID,
+    val packageName: String,
+    val status: String,
+    val paymentSource: String,
+    val amountMinor: Long,
+    val currency: String,
+    val sponsorId: UUID,
+    val sponsorName: String,
+    val sponsorContactEmail: String?,
+    val sponsorCompanyName: String?,
+    val confirmedAt: Instant?,
+    val refundedAt: Instant?,
+    val reviewStatus: String,
+    val reviewedAt: Instant?,
+    val createdAt: Instant,
+)
+
+fun SponsorshipSearchRow.toResponse() =
+    SponsorshipSearchItemResponse(
+        id,
+        packageId,
+        packageName,
+        status.name,
+        paymentSource.name,
+        amountMinor,
+        currency,
+        sponsorId,
+        sponsorName,
+        sponsorContactEmail,
+        sponsorCompanyName,
+        confirmedAt,
+        refundedAt,
+        reviewStatus.name,
+        reviewedAt,
+        createdAt,
     )
 
 /** Sponsor-contact CRM shape (Phase 6 remainder, ADR-019). */

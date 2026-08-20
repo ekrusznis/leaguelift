@@ -66,7 +66,11 @@ export function VerifyEmailPage() {
 		<div className="flex flex-col items-center gap-4 rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 text-center shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
 			<Seo title="Verify Email" description="Verify your Rally26 account email address." noIndex />
 			<h1 className="font-heading text-2xl font-extrabold text-white">Verify your email</h1>
-			<p className="max-w-sm text-sm text-slate-300">Finish owner account setup by verifying your email address.</p>
+			<p className="max-w-sm text-sm text-slate-300">
+				{next
+					? "Verify your email address to continue accepting your invitation."
+					: "Finish owner account setup by verifying your email address."}
+			</p>
 			{error && <InlineAlert tone="error" title={error} />}
 			{status === "verified" && (
 				<InlineAlert tone="success" title="Email verified">

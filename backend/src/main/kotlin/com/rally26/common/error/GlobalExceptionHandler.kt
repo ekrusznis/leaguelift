@@ -6,9 +6,11 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.MissingRequestHeaderException
 import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.servlet.resource.NoResourceFoundException
 
 /**
  * Translates exceptions into the standard error envelope (DESIGN-DOC.md section
@@ -78,6 +80,38 @@ class GlobalExceptionHandler(
                 requestId = requestIdProvider.currentRequestId(),
             )
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body)
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException::class)
+    fun handleMissingHeader(ex: MissingRequestHeaderException): ResponseEntity<ErrorResponse> {
+        // Same class of bug as handleMissingParameter, same fix: a missing required
+        // header (e.g. Stripe-Signature on a malformed/probing webhook POST) is a
+        // client-input problem, not a server error — without this handler it fell
+        // through to handleUnexpected's opaque 500 and logged a false-positive
+        // ERROR-level "unhandled exception" for routine malformed requests.
+        val body =
+            ErrorResponse(
+                code = "MISSING_REQUEST_HEADER",
+                message = "Required header '${ex.headerName}' is missing.",
+                requestId = requestIdProvider.currentRequestId(),
+            )
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body)
+    }
+
+    @ExceptionHandler(NoResourceFoundException::class)
+    fun handleNoResourceFound(): ResponseEntity<ErrorResponse> {
+        // A request to a path no controller (and no static resource) matches — a typo'd
+        // API call, a since-removed endpoint, or a probe — is a routine 404, not a
+        // server error. Same class of gap as handleMissingHeader/handleMissingParameter:
+        // without this it fell through to handleUnexpected's opaque 500 and fired a
+        // false-positive ERROR log (and New Relic alert) for every one (LR-020).
+        val body =
+            ErrorResponse(
+                code = "NOT_FOUND",
+                message = "The requested resource could not be found.",
+                requestId = requestIdProvider.currentRequestId(),
+            )
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body)
     }
 
     @ExceptionHandler(Exception::class)

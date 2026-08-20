@@ -20,6 +20,7 @@ import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.outbox.application.OutboxWriter
 import com.rally26.sponsorship.infra.QrCodeGenerator
+import com.rally26.subscription.application.PlanEntitlementService
 import com.rally26.team.persistence.TeamRepository
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.stereotype.Service
@@ -44,6 +45,7 @@ class CampaignService(
     private val membershipService: MembershipService,
     private val authorizationService: AuthorizationService,
     private val fundraisingSettingsService: FundraisingSettingsService,
+    private val planEntitlementService: PlanEntitlementService,
     private val auditService: AuditService,
     private val qrCodeGenerator: QrCodeGenerator,
     private val outboxWriter: OutboxWriter? = null,
@@ -167,6 +169,7 @@ class CampaignService(
         eventAddress: String? = null,
     ): Campaign {
         requireCreatorAccess(organizationId, teamId, currentUser)
+        planEntitlementService.requireCampaignCapacity(organizationId, campaignRepository.countActive(organizationId))
         validateSlug(slug)
         validateDateRange(startDate, endDate)
         validateEventLocation(templateKey, eventLocationName, eventAddress)

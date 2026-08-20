@@ -6,6 +6,7 @@ import com.rally26.common.error.FieldError
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
+import com.rally26.foundingorg.persistence.FoundingOrgPromoCodeRepository
 import com.rally26.membership.application.MembershipService
 import com.rally26.onboarding.owner.domain.OwnerOnboarding
 import com.rally26.onboarding.owner.persistence.OwnerOnboardingRepository
@@ -41,6 +42,7 @@ class OwnerOnboardingService(
     private val timeZoneService: TimeZoneService,
     private val timezoneSuggestionService: TimezoneSuggestionService,
     private val auditService: AuditService,
+    private val foundingOrgPromoCodeRepository: FoundingOrgPromoCodeRepository? = null,
 ) {
     fun get(currentUser: CurrentUser): OwnerOnboardingSnapshot {
         val onboarding =
@@ -171,6 +173,9 @@ class OwnerOnboardingService(
         if (plan.contactOnly) {
             throw ValidationException("Contact Rally26 plans are not selected through self-service checkout.")
         }
+        if (!plan.requiresCheckout) {
+            throw ValidationException("This plan does not use Stripe Checkout. Use the free-plan activation endpoint instead.")
+        }
         if (billingFrequency.trim().uppercase() != "MONTHLY" || plan.billingInterval != "MONTHLY") {
             throw ValidationException("Only monthly billing is available for this plan.")
         }
@@ -182,6 +187,69 @@ class OwnerOnboardingService(
             "owner_onboarding",
             onboarding.id,
             "{\"planCode\":\"${plan.code}\"}",
+        )
+        return snapshot(onboardingRepository.findByOwnerUserId(currentUser.userId)!!)
+    }
+
+    /** FREE-tier bypass of [selectPlan]/[startCheckout] — collapses plan-selection and activation into one step since there's no Stripe Checkout to wait on. */
+    @Transactional
+    fun activateFreePlan(currentUser: CurrentUser): OwnerOnboardingSnapshot {
+        val onboarding =
+            onboardingRepository.findByOwnerUserIdForUpdate(currentUser.userId)
+                ?: throw NotFoundException("OWNER_ONBOARDING_NOT_FOUND", "No owner onboarding record exists for this account.")
+        val organizationId =
+            onboarding.organizationId
+                ?: throw ConflictException("ONBOARDING_ORGANIZATION_REQUIRED", "Complete the organization step before selecting a plan.")
+        val plan = subscriptionService.getPlan("FREE")
+        if (plan.requiresCheckout || plan.contactOnly) {
+            throw ValidationException("The Free plan is not available for self-service activation.")
+        }
+        onboardingRepository.activateFreeOnboarding(onboarding.id, plan.code)
+        subscriptionService.activateFreeSubscription(organizationId, currentUser)
+        auditService.record(
+            currentUser.userId,
+            organizationId,
+            "owner_onboarding.free_plan_activated",
+            "owner_onboarding",
+            onboarding.id,
+        )
+        return snapshot(onboardingRepository.findByOwnerUserId(currentUser.userId)!!)
+    }
+
+    /** Whether this onboarding's owner reserved a founding-organization promo code at registration — drives the frontend plan-step branch to the founding-activate screen instead of the normal plan picker. */
+    fun hasReservedFoundingPromoCode(currentUser: CurrentUser): Boolean =
+        foundingOrgPromoCodeRepository?.findByReservedUserId(currentUser.userId) != null
+
+    /**
+     * Founding Organization pilot bypass (founder-directed, 2026-08-20) of [selectPlan]/
+     * [startCheckout] — mirrors [activateFreePlan] exactly, but also finalizes the promo
+     * code redemption (`organization_id`/`pilot_ends_at`) now that the organization exists.
+     */
+    @Transactional
+    fun activateFoundingPromoPlan(currentUser: CurrentUser): OwnerOnboardingSnapshot {
+        val repository =
+            foundingOrgPromoCodeRepository
+                ?: throw NotFoundException("FOUNDING_PROMO_CODE_NOT_FOUND", "No founding organization code was reserved for this account.")
+        val onboarding =
+            onboardingRepository.findByOwnerUserIdForUpdate(currentUser.userId)
+                ?: throw NotFoundException("OWNER_ONBOARDING_NOT_FOUND", "No owner onboarding record exists for this account.")
+        val organizationId =
+            onboarding.organizationId
+                ?: throw ConflictException("ONBOARDING_ORGANIZATION_REQUIRED", "Complete the organization step before selecting a plan.")
+        val reservedCode =
+            repository.findByReservedUserId(currentUser.userId)
+                ?: throw NotFoundException("FOUNDING_PROMO_CODE_NOT_FOUND", "No founding organization code was reserved for this account.")
+
+        onboardingRepository.activateFreeOnboarding(onboarding.id, "FOUNDING_CLUB")
+        subscriptionService.activateFoundingPromoSubscription(organizationId, currentUser)
+        repository.activate(reservedCode.id, organizationId)
+        auditService.record(
+            currentUser.userId,
+            organizationId,
+            "owner_onboarding.founding_promo_activated",
+            "owner_onboarding",
+            onboarding.id,
+            "{\"code\":\"${reservedCode.code}\"}",
         )
         return snapshot(onboardingRepository.findByOwnerUserId(currentUser.userId)!!)
     }

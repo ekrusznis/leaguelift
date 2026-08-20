@@ -32,13 +32,24 @@ class SearchServiceTest {
     }
 
     @Test
-    fun `searchOrganization requires active membership before querying`() {
-        every { membershipService.requireActiveMembership(orgId, currentUser) } throws ForbiddenException("DENIED", "no")
+    fun `searchOrganization requires manager role before querying`() {
+        every { membershipService.requireManagerRole(orgId, currentUser) } throws ForbiddenException("DENIED", "no")
         every { searchRepository.searchTeams(any(), any(), any()) } returns emptyList()
 
         assertFailsWith<ForbiddenException> {
             service.searchOrganization(orgId, "smith", currentUser)
         }
+    }
+
+    @Test
+    fun `searchOrganization denies a non-manager org member, such as a Viewer`() {
+        every { membershipService.requireManagerRole(orgId, currentUser) } throws
+            ForbiddenException("MEMBERSHIP_MANAGEMENT_DENIED", "Only organization owners and administrators can manage members.")
+
+        assertFailsWith<ForbiddenException> {
+            service.searchOrganization(orgId, "smith", currentUser)
+        }
+        verify(exactly = 0) { searchRepository.searchTeams(any(), any(), any()) }
     }
 
     @Test

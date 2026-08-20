@@ -44,6 +44,7 @@ export type NavDestination =
 	| { type: "platform-payments" }
 	| { type: "platform-subscriptions" }
 	| { type: "platform-roster" }
+	| { type: "platform-founding-promo-codes" }
 	| { type: "organization-billing" }
 	| { type: "organization"; section: OrganizationSection }
 	| { type: "household"; section: HouseholdSection }
@@ -163,6 +164,7 @@ export const NAV_REGISTRY: NavRegistryItem[] = [
 	{ id: "platform.swag-shop", label: "Swag Shop", icon: <ShirtIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_SWAG_SHOP_VIEW], destination: { type: "platform-swag-shop" } },
 	{ id: "platform.payments", label: "Payments", icon: <DollarIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_PAYMENTS_VIEW], destination: { type: "platform-payments" } },
 	{ id: "platform.roster", label: "Athletes & Coaches", icon: <UsersIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_ORG_VIEW], destination: { type: "platform-roster" } },
+	{ id: "platform.founding-promo-codes", label: "Founding Org Codes", icon: <TrophyIcon className="size-5" />, contextTypes: ["PLATFORM_ADMIN"], requiredCapabilities: [Capabilities.PLATFORM_FOUNDING_PROMO_MANAGE], destination: { type: "platform-founding-promo-codes" } },
 ];
 
 function resolveDestination(destination: NavDestination, context: NavRouteContext): string | null {
@@ -180,6 +182,7 @@ function resolveDestination(destination: NavDestination, context: NavRouteContex
 		case "platform-audit": return appPaths.platformAudit();
 		case "platform-support-sessions": return appPaths.platformSupportSessions();
 		case "platform-help-articles": return appPaths.platformHelpArticles();
+		case "platform-founding-promo-codes": return appPaths.platformFoundingPromoCodes();
 		case "platform-support-cases": return appPaths.platformSupportCases();
 		case "platform-swag-shop": return appPaths.platformSwagShop();
 		case "platform-payments": return appPaths.platformPayments();

@@ -14,10 +14,13 @@ import com.rally26.membership.application.MembershipService
 import com.rally26.organization.persistence.OrganizationRepository
 import com.rally26.sponsorship.domain.Sponsor
 import com.rally26.sponsorship.domain.SponsorshipPackage
+import com.rally26.sponsorship.domain.SponsorshipPackageSearchCriteria
+import com.rally26.sponsorship.domain.SponsorshipPackageSearchRow
 import com.rally26.sponsorship.domain.SponsorshipPackageStatus
 import com.rally26.sponsorship.infra.QrCodeGenerator
 import com.rally26.sponsorship.persistence.SponsorRepository
 import com.rally26.sponsorship.persistence.SponsorshipPackageRepository
+import com.rally26.subscription.application.PlanEntitlementService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -42,6 +45,7 @@ class SponsorshipPackageService(
     private val sponsorRepository: SponsorRepository,
     private val organizationRepository: OrganizationRepository,
     private val membershipService: MembershipService,
+    private val planEntitlementService: PlanEntitlementService,
     private val auditService: AuditService,
     private val mediaAssignmentService: MediaAssignmentService,
     private val qrCodeGenerator: QrCodeGenerator,
@@ -65,6 +69,26 @@ class SponsorshipPackageService(
     ): Long {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return sponsorshipPackageRepository.countAll(organizationId)
+    }
+
+    fun search(
+        organizationId: UUID,
+        criteria: SponsorshipPackageSearchCriteria,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<SponsorshipPackageSearchRow> {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        return sponsorshipPackageRepository.search(organizationId, criteria, offset, limit)
+    }
+
+    fun countSearch(
+        organizationId: UUID,
+        criteria: SponsorshipPackageSearchCriteria,
+        currentUser: CurrentUser,
+    ): Long {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        return sponsorshipPackageRepository.countSearch(organizationId, criteria)
     }
 
     fun get(
@@ -98,6 +122,7 @@ class SponsorshipPackageService(
         currentUser: CurrentUser,
     ): SponsorshipPackage {
         membershipService.requireManagerRole(organizationId, currentUser)
+        planEntitlementService.requireSponsorshipsAllowed(organizationId)
         validateMaxQuantity(maxQuantity)
         validateDateRange(placementStartDate, placementEndDate)
         val sponsorshipPackage =

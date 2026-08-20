@@ -319,7 +319,7 @@ class ReportingRepository(
                 select fp.id as fee_payment_id, fp.household_id, h.display_name as household_name, fp.amount_minor, fp.paid_at
                 from fee_payment fp
                 join household h on h.id = fp.household_id
-                where fp.organization_id = :organizationId and fp.voided_at is null
+                where fp.organization_id = :organizationId and fp.voided_at is null and fp.status = 'CONFIRMED'
                   and fp.paid_at >= :from and fp.paid_at <= :to
                   and (:householdId::uuid is null or fp.household_id = :householdId)
                 order by fp.paid_at desc

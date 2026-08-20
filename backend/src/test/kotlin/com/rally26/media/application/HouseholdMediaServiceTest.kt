@@ -18,6 +18,8 @@ import com.rally26.media.persistence.MediaAssetRepository
 import com.rally26.media.persistence.MediaAssignmentRepository
 import com.rally26.membership.application.MembershipService
 import com.rally26.outbox.application.OutboxWriter
+import com.rally26.settings.application.UserPreferenceService
+import com.rally26.settings.domain.MediaVisibilityDefault
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -35,6 +37,10 @@ class HouseholdMediaServiceTest {
     private val householdRepository = mockk<HouseholdRepository>()
     private val auditService = mockk<AuditService>(relaxed = true)
     private val outboxWriter = mockk<OutboxWriter>(relaxed = true)
+    private val userPreferenceService =
+        mockk<UserPreferenceService> {
+            every { defaultMediaVisibility(any()) } returns MediaVisibilityDefault.PRIVATE
+        }
 
     private val service =
         HouseholdMediaService(
@@ -45,6 +51,7 @@ class HouseholdMediaServiceTest {
             householdRepository,
             auditService,
             outboxWriter,
+            userPreferenceService,
         )
 
     private val orgId = UUID.randomUUID()
@@ -163,6 +170,55 @@ class HouseholdMediaServiceTest {
         verify(exactly = 1) {
             auditService.record(guardian.userId, orgId, "household_media.added", "media_assignment", result.id, householdId = householdId)
         }
+    }
+
+    @Test
+    fun `assign starts an item Public when the uploader's saved default is Public, and audits it like an explicit release`() {
+        allowGuardian()
+        every { userPreferenceService.defaultMediaVisibility(guardian.userId) } returns MediaVisibilityDefault.PUBLIC
+        every { householdRepository.findById(householdId, orgId) } returns
+            com.rally26.household.domain.Household(
+                householdId,
+                orgId,
+                "Smith Family",
+                null,
+                null,
+                null,
+                false,
+                false,
+                com.rally26.household.domain.HouseholdStatus.ACTIVE,
+                Instant.now(),
+                Instant.now(),
+            )
+        val readyAsset = asset()
+        every { mediaAssetRepository.findById(readyAsset.id, orgId) } returns readyAsset
+        every {
+            mediaAssignmentRepository.insert(
+                organizationId = orgId,
+                assetId = readyAsset.id,
+                entityType = MediaEntityType.HOUSEHOLD,
+                entityId = householdId,
+                usageSlot = MediaUsageSlot.HOUSEHOLD_MEDIA,
+                publicationStatus = PublicationStatus.APPROVED,
+                visibility = Visibility.PUBLIC,
+                altText = null,
+            )
+        } returns assignment(assetId = readyAsset.id, visibility = Visibility.PUBLIC)
+
+        val result = service.assign(orgId, householdId, readyAsset.id, guardian)
+
+        assertEquals(Visibility.PUBLIC, result.visibility)
+        verify(exactly = 1) {
+            auditService.record(
+                guardian.userId,
+                orgId,
+                "household_media.released_publicly",
+                "media_assignment",
+                result.id,
+                householdId = householdId,
+            )
+        }
+        verify(exactly = 1) { outboxWriter.write(any(), any(), any(), eq("media.assignment.published"), any()) }
     }
 
     @Test

@@ -1,7 +1,6 @@
 package com.rally26.subscription.application
 
 import com.rally26.common.error.ForbiddenException
-import com.rally26.common.error.ValidationException
 import com.rally26.integration.core.domain.IntegrationProvider
 import com.rally26.subscription.domain.OrganizationSubscription
 import com.rally26.subscription.domain.OrganizationSubscriptionStatus
@@ -42,7 +41,7 @@ class PlanEntitlementServiceTest {
         )
 
     @Test
-    fun `an organization with no subscription row resolves to the most restrictive tier`() {
+    fun `an organization with no subscription row resolves to the most restrictive paid tier, not free`() {
         stubPlan(null)
 
         assertEquals("STARTER", service.planCodeFor(orgId))
@@ -57,8 +56,47 @@ class PlanEntitlementServiceTest {
         assertEquals(3, service.maxTeams(orgId))
         assertFalse(service.smsAllowed(orgId))
         assertFalse(service.integrationAllowed(orgId, IntegrationProvider.SPORTSENGINE))
-        assertFailsWith<ValidationException> { service.requireTeamCapacity(orgId, 3) }
+        assertFailsWith<ForbiddenException> { service.requireTeamCapacity(orgId, 3) }
         assertFailsWith<ForbiddenException> { service.requireIntegrationAllowed(orgId, IntegrationProvider.TEAMSNAP) }
+    }
+
+    @Test
+    fun `free caps team count at 1 and blocks fees, sms, integrations, sponsorships, family credits, and advanced reporting`() {
+        stubPlan("FREE")
+
+        assertEquals(1, service.maxTeams(orgId))
+        assertFalse(service.feesAllowed(orgId))
+        assertFalse(service.smsAllowed(orgId))
+        assertFalse(service.integrationAllowed(orgId, IntegrationProvider.QUICKBOOKS_ONLINE))
+        assertFalse(service.sponsorshipsAllowed(orgId))
+        assertFalse(service.familyCreditsAllowed(orgId))
+        assertFalse(service.advancedReportingAllowed(orgId))
+        assertEquals(1, service.maxConcurrentCampaigns(orgId))
+        assertFailsWith<ForbiddenException> { service.requireTeamCapacity(orgId, 1) }
+        assertFailsWith<ForbiddenException> { service.requireFeesAllowed(orgId) }
+        assertFailsWith<ForbiddenException> { service.requireSponsorshipsAllowed(orgId) }
+        assertFailsWith<ForbiddenException> { service.requireAdvancedReportingAllowed(orgId) }
+        assertFailsWith<ForbiddenException> { service.requireCampaignCapacity(orgId, 1) }
+    }
+
+    @Test
+    fun `free still allows dropping to zero family credits and creating the first team or campaign`() {
+        stubPlan("FREE")
+
+        service.requireTeamCapacity(orgId, 0)
+        service.requireCampaignCapacity(orgId, 0)
+        service.requireFamilyCreditsAllowed(orgId, 0)
+    }
+
+    @Test
+    fun `starter allows fees but still blocks sponsorships, family credits, and advanced reporting`() {
+        stubPlan("STARTER")
+
+        assertTrue(service.feesAllowed(orgId))
+        assertFalse(service.sponsorshipsAllowed(orgId))
+        assertFalse(service.familyCreditsAllowed(orgId))
+        assertFalse(service.advancedReportingAllowed(orgId))
+        assertEquals(1, service.maxConcurrentCampaigns(orgId))
     }
 
     @Test
@@ -69,14 +107,24 @@ class PlanEntitlementServiceTest {
     }
 
     @Test
-    fun `club and league have unlimited teams and allow SMS and gated integrations`() {
+    fun `club and league have unlimited teams and campaigns and allow every gate`() {
         for (planCode in listOf("FOUNDING_CLUB", "CONTACT_RALLY26")) {
             stubPlan(planCode)
 
             assertEquals(null, service.maxTeams(orgId))
+            assertEquals(null, service.maxConcurrentCampaigns(orgId))
             assertTrue(service.smsAllowed(orgId))
+            assertTrue(service.feesAllowed(orgId))
+            assertTrue(service.sponsorshipsAllowed(orgId))
+            assertTrue(service.familyCreditsAllowed(orgId))
+            assertTrue(service.advancedReportingAllowed(orgId))
             assertTrue(service.integrationAllowed(orgId, IntegrationProvider.QUICKBOOKS_ONLINE))
             service.requireTeamCapacity(orgId, 500)
+            service.requireCampaignCapacity(orgId, 500)
+            service.requireFeesAllowed(orgId)
+            service.requireSponsorshipsAllowed(orgId)
+            service.requireFamilyCreditsAllowed(orgId, 100)
+            service.requireAdvancedReportingAllowed(orgId)
             service.requireIntegrationAllowed(orgId, IntegrationProvider.SPORTSENGINE)
         }
     }

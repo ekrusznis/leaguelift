@@ -22,6 +22,7 @@ import com.rally26.credit.persistence.FamilyCreditTransferRepository
 import com.rally26.credit.persistence.OrganizationCreditSettingsRepository
 import com.rally26.fee.application.FeeService
 import com.rally26.household.persistence.HouseholdRepository
+import com.rally26.subscription.application.PlanEntitlementService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
@@ -46,6 +47,7 @@ class FamilyCreditService(
     private val feeService: FeeService,
     private val authorizationService: AuthorizationService,
     private val membershipService: com.rally26.membership.application.MembershipService,
+    private val planEntitlementService: PlanEntitlementService,
     private val auditService: AuditService,
 ) {
     fun getSettings(
@@ -66,6 +68,7 @@ class FamilyCreditService(
         currentUser: CurrentUser,
     ): OrganizationCreditSettings {
         membershipService.requireManagerRole(organizationId, currentUser)
+        planEntitlementService.requireFamilyCreditsAllowed(organizationId, defaultCreditPercent)
         if (expirationPolicy == CreditExpirationPolicy.EXPIRES && (expirationMonths == null || expirationMonths <= 0)) {
             throw ValidationException("An expiration window in months is required when the expiration policy is EXPIRES.")
         }

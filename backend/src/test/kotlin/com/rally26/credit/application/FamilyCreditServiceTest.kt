@@ -24,6 +24,7 @@ import com.rally26.household.domain.Household
 import com.rally26.household.domain.HouseholdStatus
 import com.rally26.household.persistence.HouseholdRepository
 import com.rally26.membership.application.MembershipService
+import com.rally26.subscription.application.PlanEntitlementService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -44,6 +45,7 @@ class FamilyCreditServiceTest {
     private val feeService = mockk<FeeService>()
     private val authorizationService = mockk<AuthorizationService>()
     private val membershipService = mockk<MembershipService>()
+    private val planEntitlementService = mockk<PlanEntitlementService>()
     private val auditService = mockk<AuditService>()
     private val service =
         FamilyCreditService(
@@ -55,6 +57,7 @@ class FamilyCreditServiceTest {
             feeService,
             authorizationService,
             membershipService,
+            planEntitlementService,
             auditService,
         )
 

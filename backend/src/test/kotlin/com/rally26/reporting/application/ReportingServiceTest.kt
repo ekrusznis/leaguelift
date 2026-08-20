@@ -24,10 +24,13 @@ import com.rally26.reporting.persistence.FeeCollectionRow
 import com.rally26.reporting.persistence.ReportingRepository
 import com.rally26.reporting.persistence.SourceTypeRevenueRow
 import com.rally26.reporting.persistence.TeamRevenueRow
+import com.rally26.subscription.application.PlanEntitlementService
 import com.rally26.webhook.domain.WebhookProcessingStatus
 import com.rally26.webhook.persistence.WebhookEventRepository
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -47,6 +50,10 @@ class ReportingServiceTest {
     private val outboxEventRepository = mockk<OutboxEventRepository>()
     private val membershipService = mockk<MembershipService>()
     private val authorizationService = mockk<AuthorizationService>()
+    private val planEntitlementService =
+        mockk<PlanEntitlementService> {
+            every { requireAdvancedReportingAllowed(any()) } just runs
+        }
     private val service =
         ReportingService(
             reportingRepository,
@@ -59,6 +66,7 @@ class ReportingServiceTest {
             outboxEventRepository,
             membershipService,
             authorizationService,
+            planEntitlementService,
         )
 
     private val orgId = UUID.randomUUID()

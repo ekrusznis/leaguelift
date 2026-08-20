@@ -22,10 +22,46 @@ export interface OrganizationSubscription {
 	lastPaymentSuccessAt: string | null;
 	billingPortalAvailable: boolean;
 	cancelAtPeriodEnd: boolean;
+	/** Set only while a downgrade to this plan is scheduled to take effect at the end of the current billing period. */
+	downgradeToPlanCode: string | null;
+	currentPeriodEnd: string | null;
 }
 
 export interface BillingPortalResponse {
 	url: string;
+}
+
+export interface SubscriptionPlanOption {
+	code: string;
+	name: string;
+	description: string;
+	amountMinor: number | null;
+	currency: string | null;
+	billingInterval: string | null;
+}
+
+export type PlanChangeDirection = "UPGRADE" | "DOWNGRADE";
+
+export interface PlanChangeViolation {
+	code: string;
+	message: string;
+	actionLink: string | null;
+}
+
+export interface PlanChangePreview {
+	currentPlanCode: string;
+	targetPlanCode: string;
+	direction: PlanChangeDirection;
+	violations: PlanChangeViolation[];
+}
+
+export type PlanChangeOutcome = "BLOCKED" | "CHECKOUT_REQUIRED" | "APPLIED" | "SCHEDULED_DOWNGRADE";
+
+export interface PlanChangeResult {
+	outcome: PlanChangeOutcome;
+	violations: PlanChangeViolation[] | null;
+	checkoutUrl: string | null;
+	effectiveAt: string | null;
 }
 
 export interface PlatformOrganizationSubscription {

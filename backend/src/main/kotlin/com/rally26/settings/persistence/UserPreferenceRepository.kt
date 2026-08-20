@@ -1,6 +1,7 @@
 package com.rally26.settings.persistence
 
 import com.rally26.settings.domain.AppearancePreference
+import com.rally26.settings.domain.MediaVisibilityDefault
 import com.rally26.settings.domain.UserPreference
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
@@ -14,7 +15,7 @@ class UserPreferenceRepository(
         jdbcClient
             .sql(
                 """
-                select user_id, appearance, created_at, updated_at
+                select user_id, appearance, default_media_visibility, created_at, updated_at
                 from user_preference
                 where user_id = :userId
                 """.trimIndent(),
@@ -23,6 +24,7 @@ class UserPreferenceRepository(
                 UserPreference(
                     userId = rs.getObject("user_id", UUID::class.java),
                     appearance = AppearancePreference.valueOf(rs.getString("appearance")),
+                    defaultMediaVisibility = MediaVisibilityDefault.valueOf(rs.getString("default_media_visibility")),
                     createdAt = rs.getTimestamp("created_at").toInstant(),
                     updatedAt = rs.getTimestamp("updated_at").toInstant(),
                 )
@@ -45,6 +47,29 @@ class UserPreferenceRepository(
                 """.trimIndent(),
             ).param("userId", userId)
             .param("appearance", appearance.name)
+            .update()
+
+        return requireNotNull(findByUserId(userId)) {
+            "User preference row was not available after upsert."
+        }
+    }
+
+    fun upsertDefaultMediaVisibility(
+        userId: UUID,
+        defaultMediaVisibility: MediaVisibilityDefault,
+    ): UserPreference {
+        jdbcClient
+            .sql(
+                """
+                insert into user_preference (user_id, default_media_visibility)
+                values (:userId, :defaultMediaVisibility)
+                on conflict (user_id)
+                do update set
+                    default_media_visibility = excluded.default_media_visibility,
+                    updated_at = now()
+                """.trimIndent(),
+            ).param("userId", userId)
+            .param("defaultMediaVisibility", defaultMediaVisibility.name)
             .update()
 
         return requireNotNull(findByUserId(userId)) {

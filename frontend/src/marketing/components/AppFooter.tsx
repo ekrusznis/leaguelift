@@ -13,7 +13,7 @@ export function AppFooter({ className = "", authenticated = true }: { className?
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex items-center gap-4">
 						<Logo tone="dark" to={authenticated ? "/app" : "/"} />
-						<p className="hidden text-sm text-slate-400 md:block">More revenue. Lower fees. Stronger programs.</p>
+						<p className="hidden text-sm text-slate-400 md:block">Run your club. Fund your season. Keep everyone connected.</p>
 					</div>
 					<nav aria-label="Support and legal" className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
 						<Link to={helpBase} className="hover:text-white">Help Center</Link>

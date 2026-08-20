@@ -65,6 +65,12 @@ data class OrganizationSubscription(
     // Appended with a default so older positional test fixtures remain source-compatible.
     val lastPaymentSuccessAt: Instant? = null,
     val cancelAtPeriodEnd: Boolean = false,
+    // Phase 45/46 additions (FREE tier + in-app upgrade/downgrade) — defaulted so
+    // older positional test fixtures remain source-compatible.
+    val planChangeGeneration: Int = 0,
+    /** Set only while a downgrade-to-this-plan is scheduled to take effect when the current Stripe period ends (owner-initiated, via [com.rally26.subscription.application.OrganizationPlanChangeService]) — distinct from a genuine full cancellation through the Stripe Billing Portal, which never sets this. */
+    val downgradeToPlanCode: String? = null,
+    val currentPeriodEnd: Instant? = null,
 )
 
 data class SubscriptionPlan(
@@ -78,6 +84,10 @@ data class SubscriptionPlan(
     val active: Boolean,
     val stripeProductId: String?,
     val stripePriceId: String?,
+    // Appended with a default so older positional test fixtures remain source-compatible.
+    // The stable, non-price identifier for "does this plan need Stripe Checkout" — see
+    // V94__free_subscription_tier.sql. Never infer this from amount_minor == 0.
+    val requiresCheckout: Boolean = true,
 )
 
 data class PlatformOrganizationSubscription(

@@ -11,6 +11,7 @@ import { Seo } from "../../marketing/components/Seo";
 import { PrimaryButton } from "../../marketing/components/buttons";
 import { track } from "../../marketing/analytics";
 import { useAuth } from "../../auth/AuthContext";
+import { useValidateFoundingPromoCode } from "../../features/foundingOrg/api";
 import { registerAccountSchema, type RegisterAccountFormValues } from "./schema";
 
 /** Reads the invitation token out of a `next=/auth/invitation?token=...` destination, if that's where `next` points. */
@@ -44,6 +45,8 @@ export function RegisterPage() {
 	const [searchParams] = useSearchParams();
 	const next = searchParams.get("next");
 	const invitationToken = invitationTokenFromNext(next);
+	const foundingPromoCode = searchParams.get("code")?.trim().toUpperCase() || undefined;
+	const foundingPromoValidation = useValidateFoundingPromoCode(foundingPromoCode ?? null);
 	const { register: registerAccount } = useAuth();
 	const [step, setStep] = useState<"form" | "confirmation">("form");
 	const [submitError, setSubmitError] = useState<string | null>(null);
@@ -73,6 +76,7 @@ export function RegisterPage() {
 			invitationToken,
 			agreeToTerms: values.agreeToTerms,
 			confirmAdult: values.confirmAdult,
+			foundingPromoCode,
 		});
 		if (result.success) {
 			track("registration_succeeded");
@@ -85,14 +89,39 @@ export function RegisterPage() {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<Seo title="Create Owner Account" description="Create your Rally26 organization owner account." noIndex />
+			<Seo
+				title={invitationToken ? "Create Account" : "Create Owner Account"}
+				description={
+					invitationToken
+						? "Create your Rally26 account to accept your invitation."
+						: "Create your Rally26 organization owner account."
+				}
+				noIndex
+			/>
 			<AuthTabs active="register" />
 
 			<div className="rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
 				{step === "form" && (
 					<>
-						<h1 className="font-heading text-2xl font-extrabold text-white">Create your owner account</h1>
-						<p className="mt-1 text-sm text-slate-300">Verify your email to continue with organization setup.</p>
+						<h1 className="font-heading text-2xl font-extrabold text-white">
+							{foundingPromoCode
+								? "Join as a Founding Organization"
+								: invitationToken
+									? "Create your account"
+									: "Create your owner account"}
+						</h1>
+						<p className="mt-1 text-sm text-slate-300">
+							{foundingPromoCode
+								? "Verify your email to set up your organization with free Founding Organization access."
+								: invitationToken
+									? "Verify your email to continue accepting your invitation."
+									: "Verify your email to continue with organization setup."}
+						</p>
+						{foundingPromoCode && foundingPromoValidation.data && !foundingPromoValidation.data.valid && (
+							<div className="mt-4">
+								<InlineAlert tone="error" title={foundingPromoValidation.data.reason ?? "This founding organization code cannot be used."} />
+							</div>
+						)}
 						<form onSubmit={onAccountSubmit} noValidate className="mt-6 flex flex-col gap-5">
 							<div className="grid gap-5 sm:grid-cols-2">
 								<FormField
@@ -161,8 +190,13 @@ export function RegisterPage() {
 
 							{submitError && <InlineAlert tone="error" title={submitError} />}
 
-							<PrimaryButton type="submit" loading={accountForm.formState.isSubmitting} className="w-full justify-center">
-								Create Owner Account
+							<PrimaryButton
+								type="submit"
+								loading={accountForm.formState.isSubmitting}
+								disabled={!!foundingPromoCode && foundingPromoValidation.data?.valid === false}
+								className="w-full justify-center"
+							>
+								{foundingPromoCode ? "Join Founding Organizations" : invitationToken ? "Create Account" : "Create Owner Account"}
 							</PrimaryButton>
 						</form>
 					</>

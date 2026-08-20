@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import {
+	activateFoundingPromoPlan,
+	activateFreeOnboardingPlan,
 	createBillingPortal,
+	getFoundingPromoReserved,
 	getOwnerOnboarding,
 	listOnboardingPlans,
 	saveOnboardingOrganization,
@@ -58,6 +61,7 @@ export function OwnerOnboardingPage() {
 	const [loading, setLoading] = useState(true);
 	const [plansLoading, setPlansLoading] = useState(true);
 	const [plansError, setPlansError] = useState<string | null>(null);
+	const [foundingPromoReserved, setFoundingPromoReserved] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [slugTouched, setSlugTouched] = useState(false);
@@ -109,6 +113,7 @@ export function OwnerOnboardingPage() {
 		loadOnboarding().catch((err) => setError(err instanceof ApiError ? err.message : "Could not load onboarding."))
 			.finally(() => setLoading(false));
 		void loadPlans();
+		getFoundingPromoReserved().then((result) => setFoundingPromoReserved(result.reserved)).catch(() => setFoundingPromoReserved(false));
 	}, []);
 	useEffect(() => {
 		if (!onboarding || isRouteStep(routeStepParam)) return;
@@ -141,9 +146,22 @@ export function OwnerOnboardingPage() {
 	}
 	async function choosePlan(plan: SubscriptionPlan) {
 		if (plan.contactOnly) return;
+		if (!plan.requiresCheckout) return choosePlanFree();
 		setSaving(true); setError(null);
 		try { applyOnboarding(await selectOnboardingPlan(plan.code)); navigate("/app/onboarding/review"); }
 		catch (err) { setError(err instanceof ApiError ? err.message : "Could not select this plan."); }
+		finally { setSaving(false); }
+	}
+	async function choosePlanFree() {
+		setSaving(true); setError(null);
+		try { applyOnboarding(await activateFreeOnboardingPlan()); navigate("/app"); }
+		catch (err) { setError(err instanceof ApiError ? err.message : "Could not activate the Free plan."); }
+		finally { setSaving(false); }
+	}
+	async function activateFoundingPromo() {
+		setSaving(true); setError(null);
+		try { applyOnboarding(await activateFoundingPromoPlan()); navigate("/app"); }
+		catch (err) { setError(err instanceof ApiError ? err.message : "Could not activate your Founding Organization pilot."); }
 		finally { setSaving(false); }
 	}
 	async function checkout() {
@@ -196,10 +214,18 @@ export function OwnerOnboardingPage() {
 		</section>}
 
 		{routeStep === "plan" && <section className="rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-6 shadow-sm">
-			<h2 className="text-lg font-bold text-navy-900 dark:text-[#f8fafc]">3. Plan</h2><p className="mt-1 text-sm text-slate-600 dark:text-[#cbd5e1]">Pricing comes from Rally26&rsquo;s backend plan catalog. Monthly billing is the only self-service frequency currently offered.</p>
-			{plansLoading && <p role="status" className="mt-5 text-sm text-slate-600 dark:text-[#cbd5e1]">Loading plans…</p>}
-			{!plansLoading && (plansError || plans.length === 0) && <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950 p-4"><p className="font-semibold text-amber-900">Unable to load plans</p><p className="mt-1 text-sm text-amber-800">{plansError && plansError !== "Unable to load plans." ? plansError : "The pricing catalog is temporarily unavailable."}</p><button type="button" onClick={() => void loadPlans()} className="mt-3 rounded-lg border border-amber-400 bg-white px-4 py-2 text-sm font-bold text-amber-900">Retry</button></div>}
-			{!plansLoading && !plansError && plans.length > 0 && <div className="mt-5 grid gap-4 md:grid-cols-3">{plans.map((plan) => <div key={plan.code} className={`rounded-xl border p-5 ${onboarding?.selectedPlanCode === plan.code ? "border-green-500 ring-2 ring-green-100" : "border-slate-200 dark:border-[#334155]"}`}><div className="flex items-start justify-between gap-3"><div><h3 className="font-bold text-navy-900 dark:text-[#f8fafc]">{plan.name}</h3><p className="mt-1 text-sm text-slate-600 dark:text-[#cbd5e1]">{plan.description}</p></div>{onboarding?.selectedPlanCode === plan.code && <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-bold text-green-800">Selected</span>}</div><p className="mt-4 text-2xl font-extrabold text-navy-900 dark:text-[#f8fafc]">{money(plan)}{!plan.contactOnly && <span className="text-sm font-medium text-slate-500 dark:text-[#cbd5e1]"> / month</span>}</p>{plan.contactOnly ? <Link to="/talk-to-sales" className="mt-4 inline-block text-sm font-bold text-green-700 hover:underline">Contact Rally26</Link> : <button type="button" disabled={saving || !onboarding?.organization || isActive} onClick={() => choosePlan(plan)} className="mt-4 rounded-lg border border-navy-900 px-4 py-2 text-sm font-bold text-navy-900 dark:text-[#f8fafc] disabled:opacity-50">Choose monthly</button>}</div>)}</div>}
+			<h2 className="text-lg font-bold text-navy-900 dark:text-[#f8fafc]">3. Plan</h2>
+			{foundingPromoReserved ? <>
+				<p className="mt-1 text-sm text-slate-600 dark:text-[#cbd5e1]">Your organization qualifies for a 90-day Founding Organization pilot — full Club-tier access, no billing required until the pilot ends.</p>
+				<div className="mt-5 rounded-xl border border-green-300 bg-green-50 dark:bg-green-950 p-5">
+					<h3 className="font-bold text-green-900">Founding Organization pilot ready</h3>
+					<p className="mt-1 text-sm text-green-800">Activating grants full Club-tier access immediately, free for 90 days. We&rsquo;ll check in along the way, and you can add billing to continue at any time.</p>
+					<button type="button" disabled={saving || !onboarding?.organization} onClick={activateFoundingPromo} className="mt-4 rounded-lg bg-green-700 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">Activate my pilot</button>
+				</div>
+			</> : <p className="mt-1 text-sm text-slate-600 dark:text-[#cbd5e1]">Pricing comes from Rally26&rsquo;s backend plan catalog. Monthly billing is the only self-service frequency currently offered.</p>}
+			{!foundingPromoReserved && plansLoading && <p role="status" className="mt-5 text-sm text-slate-600 dark:text-[#cbd5e1]">Loading plans…</p>}
+			{!foundingPromoReserved && !plansLoading && (plansError || plans.length === 0) && <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950 p-4"><p className="font-semibold text-amber-900">Unable to load plans</p><p className="mt-1 text-sm text-amber-800">{plansError && plansError !== "Unable to load plans." ? plansError : "The pricing catalog is temporarily unavailable."}</p><button type="button" onClick={() => void loadPlans()} className="mt-3 rounded-lg border border-amber-400 bg-white px-4 py-2 text-sm font-bold text-amber-900">Retry</button></div>}
+			{!foundingPromoReserved && !plansLoading && !plansError && plans.length > 0 && <div className="mt-5 grid gap-4 md:grid-cols-3">{plans.map((plan) => <div key={plan.code} className={`rounded-xl border p-5 ${onboarding?.selectedPlanCode === plan.code ? "border-green-500 ring-2 ring-green-100" : "border-slate-200 dark:border-[#334155]"}`}><div className="flex items-start justify-between gap-3"><div><h3 className="font-bold text-navy-900 dark:text-[#f8fafc]">{plan.name}</h3><p className="mt-1 text-sm text-slate-600 dark:text-[#cbd5e1]">{plan.description}</p></div>{onboarding?.selectedPlanCode === plan.code && <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-bold text-green-800">Selected</span>}</div><p className="mt-4 text-2xl font-extrabold text-navy-900 dark:text-[#f8fafc]">{money(plan)}{!plan.contactOnly && <span className="text-sm font-medium text-slate-500 dark:text-[#cbd5e1]"> / month</span>}</p>{plan.contactOnly ? <Link to="/talk-to-sales" className="mt-4 inline-block text-sm font-bold text-green-700 hover:underline">Contact Rally26</Link> : <button type="button" disabled={saving || !onboarding?.organization || isActive} onClick={() => choosePlan(plan)} className="mt-4 rounded-lg border border-navy-900 px-4 py-2 text-sm font-bold text-navy-900 dark:text-[#f8fafc] disabled:opacity-50">{plan.requiresCheckout ? "Choose monthly" : "Get started free"}</button>}</div>)}</div>}
 		</section>}
 
 		{routeStep === "review" && <section className="rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-6 shadow-sm">

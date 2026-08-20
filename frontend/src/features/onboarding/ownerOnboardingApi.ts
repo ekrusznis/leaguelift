@@ -37,6 +37,7 @@ export interface SubscriptionPlan {
 	currency: string | null;
 	billingInterval: string | null;
 	contactOnly: boolean;
+	requiresCheckout: boolean;
 }
 
 export interface SaveOrganizationInput {
@@ -90,8 +91,27 @@ export function startSubscriptionCheckout() {
 	});
 }
 
+/** FREE-tier bypass of {@link selectOnboardingPlan}/{@link startSubscriptionCheckout} — no Stripe Checkout to wait on. */
+export function activateFreeOnboardingPlan() {
+	return apiFetch<OwnerOnboarding>("/owner-onboarding/free-activate", {
+		method: "POST",
+	});
+}
+
 export function createBillingPortal(organizationId: string) {
 	return apiFetch<{ url: string }>(`/organizations/${organizationId}/subscription/portal`, {
+		method: "POST",
+	});
+}
+
+/** Whether this onboarding's owner reserved a Founding Organization promo code at registration. */
+export function getFoundingPromoReserved() {
+	return apiFetch<{ reserved: boolean }>("/owner-onboarding/founding-promo-reserved");
+}
+
+/** Founding Organization pilot bypass of {@link selectOnboardingPlan}/{@link startSubscriptionCheckout} — no Stripe Checkout to wait on. */
+export function activateFoundingPromoPlan() {
+	return apiFetch<OwnerOnboarding>("/owner-onboarding/founding-activate", {
 		method: "POST",
 	});
 }

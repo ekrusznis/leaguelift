@@ -1,0 +1,33 @@
+tests:
+  - displayName: "[SMOKE] Shared - first launch walkthrough"
+    id: shared-first-launch
+    steps:
+      - goal: Launch Rally26 on a fresh app install and inspect the first-launch experience.
+        finalScreenAssertion: >-
+          The first-launch walkthrough is readable at phone width, has a clear way to move
+          forward, and has no clipped text, overlapping controls, or unexpected error.
+      - goal: Complete the walkthrough.
+        finalScreenAssertion: The Rally26 sign-in screen is visible.
+
+  - displayName: "[SMOKE] Shared - login validation"
+    id: shared-login-validation
+    prerequisiteTestCaseId: shared-first-launch
+    steps:
+      - goal: Tap Sign In with both Email and Password empty.
+        finalScreenAssertion: >-
+          An understandable validation message asks for email and password and the form
+          remains usable.
+      - goal: Enter a clearly invalid email-like value and a dummy password, then submit.
+        hint: Use "not-an-account@example.invalid" and "WrongPassword123!".
+        finalScreenAssertion: >-
+          Rally26 shows a user-friendly sign-in failure and does not expose raw JSON,
+          stack traces, request IDs as primary copy, or a broken screen.
+
+  - displayName: "Shared - Google sign-in not-configured behavior on Android"
+    id: shared-google
+    prerequisiteTestCaseId: shared-first-launch
+    steps:
+      - goal: Tap Continue with Google.
+        finalScreenAssertion: >-
+          Google sign-in either starts a valid configured flow or clearly says it is
+          coming soon/not configured. The app remains responsive.

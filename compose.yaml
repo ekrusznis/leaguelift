@@ -67,6 +67,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-rally26}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rally26_local_password}
       SPACES_ENDPOINT: http://minio:9000
+      # Browser-facing endpoint baked into presigned upload/download URLs (see LR-029) —
+      # must be reachable from the host browser, unlike SPACES_ENDPOINT above which only
+      # needs to resolve inside the Docker network. MinIO's port is host-mapped (9000:9000).
+      SPACES_PUBLIC_ENDPOINT: ${SPACES_PUBLIC_ENDPOINT:-http://localhost:9000}
       SPACES_ACCESS_KEY: ${SPACES_ACCESS_KEY:-rally26}
       SPACES_SECRET_KEY: ${SPACES_SECRET_KEY:-rally26_local_password}
       SPACES_BUCKET: ${SPACES_BUCKET:-rally26-local}
@@ -85,11 +89,24 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      # VITE_API_BASE_URL is baked into the built JS bundle at image-build time
+      # (import.meta.env), not read at container-run time, so it belongs under
+      # build.args, not environment: — a plain `environment:` entry here is a no-op
+      # for Vite. See frontend/Dockerfile's comment for the same gotcha.
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api/v1}
     restart: unless-stopped
     depends_on:
       - backend
     environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api/v1}
+      # Runtime-substituted into nginx's CSP connect-src (see frontend/nginx.conf.template)
+      # — must match the host/origin baked into VITE_API_BASE_URL above, or every browser
+      # API call is silently blocked by CSP with no server-side log line (see LR-005).
+      API_ORIGIN: ${API_ORIGIN:-http://localhost:8080}
+      # Same reasoning, for direct-to-storage browser uploads (LR-029) — must match
+      # SPACES_PUBLIC_ENDPOINT above (MinIO's host-mapped port), not the internal
+      # SPACES_ENDPOINT the backend server uses.
+      STORAGE_ORIGIN: ${STORAGE_ORIGIN:-http://localhost:9000}
     ports:
       - "5173:80"
 

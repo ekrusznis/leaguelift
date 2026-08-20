@@ -1,0 +1,31 @@
+tests:
+  - displayName: "[SMOKE] Platform Admin - current mobile boundary"
+    id: platform-admin-login
+    steps:
+      - goal: >-
+          Reach the Rally26 sign-in screen. If the first-launch walkthrough is shown,
+          complete it first.
+        finalScreenAssertion: The Rally26 sign-in form is visible.
+      - goal: Sign in using the supplied Platform Administrator credentials.
+        finalScreenAssertion: >-
+          Rally26 does not route the Platform Administrator into a Coach, Parent,
+          Athlete, or customer Owner workspace. A clear role-not-available boundary is shown.
+
+  - displayName: "[SMOKE] Platform Admin - boundary copy is accurate"
+    id: platform-admin-copy
+    prerequisiteTestCaseId: platform-admin-login
+    steps:
+      - goal: Read the complete role-not-available message and inspect its controls.
+        finalScreenAssertion: >-
+          The message accurately says the Platform Administrator mobile experience is
+          unavailable without incorrectly claiming the entire Rally26 mobile app is
+          coach-only. Sign Out is visible and usable.
+
+  - displayName: "Platform Admin - sign out"
+    id: platform-admin-signout
+    prerequisiteTestCaseId: platform-admin-login
+    steps:
+      - goal: Sign out.
+        finalScreenAssertion: >-
+          The Rally26 sign-in screen is visible and no customer organization data remains
+          on screen.

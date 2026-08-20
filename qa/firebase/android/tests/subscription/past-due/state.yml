@@ -1,0 +1,10 @@
+tests:
+  - displayName: "[SMOKE] Subscription state - Past due subscription"
+    id: subscription-past-due
+    steps:
+      - goal: >-
+          Complete the first-launch walkthrough if needed and sign in with the supplied
+          owner account pre-provisioned specifically in the past due subscription state.
+        hint: Do not change the account's subscription state during this test.
+        finalScreenAssertion: >-
+          The owner can still reach the native Owner workspace while billing recovery is required; Rally26 does not incorrectly force fresh onboarding.

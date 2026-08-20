@@ -1,0 +1,27 @@
+tests:
+  - displayName: "[SMOKE] Owner Viewer - sign in"
+    id: owner-viewer-login
+    steps:
+      - goal: Complete first-launch walkthrough if needed and sign in with the supplied VIEWER credentials.
+        finalScreenAssertion: >-
+          The account reaches the owner-style organization experience only for data the
+          VIEWER is authorized to read; no other persona is selected.
+
+  - displayName: "[SMOKE] Owner Viewer - management actions are not usable"
+    id: owner-viewer-boundary
+    prerequisiteTestCaseId: owner-viewer-login
+    steps:
+      - goal: Review Teams, Members, and the entire More menu.
+        finalScreenAssertion: >-
+          A VIEWER is not presented with normal usable controls for member mutation,
+          organization settings mutation, payout management, owner announcement/broadcast
+          management, or other manager-only actions. Read-only reporting remains reachable.
+
+  - displayName: "Owner Viewer - reports remain readable"
+    id: owner-viewer-reports
+    prerequisiteTestCaseId: owner-viewer-login
+    steps:
+      - goal: Open Reports.
+        finalScreenAssertion: >-
+          Reports load as read-only organization information without presenting a
+          destructive or manager-only mutation.

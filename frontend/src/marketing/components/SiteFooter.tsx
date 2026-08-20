@@ -13,9 +13,9 @@ export function SiteFooter() {
 			<PageContainer className="grid gap-10 py-16 sm:grid-cols-2 lg:grid-cols-5">
 				<div className="sm:col-span-2 lg:col-span-1">
 					<Logo tone="dark" />
-					<p className="mt-4 text-sm font-medium text-slate-200">More revenue. Lower fees. Stronger programs.</p>
+					<p className="mt-4 text-sm font-medium text-slate-200">Run your club. Fund your season. Keep everyone connected.</p>
 					<p className="mt-2 max-w-xs text-sm text-slate-300">
-						A revenue and payment-management platform for youth sports organizations.
+						The platform for youth sports clubs — teams, payments, fundraising, and a mobile app for every role.
 					</p>
 				</div>
 

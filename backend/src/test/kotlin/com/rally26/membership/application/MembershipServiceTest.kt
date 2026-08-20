@@ -8,6 +8,10 @@ import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.membership.persistence.MembershipRepository
+import com.rally26.organization.domain.Organization
+import com.rally26.organization.domain.OrganizationStatus
+import com.rally26.organization.domain.OrganizationType
+import com.rally26.organization.persistence.OrganizationRepository
 import com.rally26.outbox.application.OutboxWriter
 import io.mockk.every
 import io.mockk.just
@@ -126,6 +130,66 @@ class MembershipServiceTest {
 
         val platformAdmin = CurrentUser(UUID.randomUUID(), "platform-check@example.com", "Platform", platformAdministrator = true)
         assertEquals(true, service.hasManagerRole(organizationId, platformAdmin))
+    }
+
+    @Test
+    fun `requireActiveMembership rejects a SUSPENDED organization`() {
+        val organizationId = UUID.randomUUID()
+        val organizationRepository = mockk<OrganizationRepository>()
+        val serviceWithOrgs = MembershipService(membershipRepository, outboxWriter, organizationRepository)
+        val owner = CurrentUser(UUID.randomUUID(), "suspended-owner@example.com", "Suspended Owner")
+        every { membershipRepository.findActiveMembership(organizationId, owner.userId) } returns
+            membership(organizationId, owner.userId, MembershipRole.OWNER)
+        every { organizationRepository.findById(organizationId) } returns organization(organizationId, OrganizationStatus.SUSPENDED)
+
+        val error =
+            assertFailsWith<ForbiddenException> {
+                serviceWithOrgs.requireActiveMembership(organizationId, owner)
+            }
+        assertEquals("ORGANIZATION_SUSPENDED", error.code)
+    }
+
+    @Test
+    fun `hasManagerRole returns false for a SUSPENDED organization even for the owner`() {
+        val organizationId = UUID.randomUUID()
+        val organizationRepository = mockk<OrganizationRepository>()
+        val serviceWithOrgs = MembershipService(membershipRepository, outboxWriter, organizationRepository)
+        val owner = CurrentUser(UUID.randomUUID(), "suspended-owner2@example.com", "Suspended Owner 2")
+        every { membershipRepository.findActiveMembership(organizationId, owner.userId) } returns
+            membership(organizationId, owner.userId, MembershipRole.OWNER)
+        every { organizationRepository.findById(organizationId) } returns organization(organizationId, OrganizationStatus.SUSPENDED)
+
+        assertEquals(false, serviceWithOrgs.hasManagerRole(organizationId, owner))
+    }
+
+    @Test
+    fun `requireOwnerRoleForBilling still allows the owner of a SUSPENDED organization`() {
+        val organizationId = UUID.randomUUID()
+        val organizationRepository = mockk<OrganizationRepository>()
+        val serviceWithOrgs = MembershipService(membershipRepository, outboxWriter, organizationRepository)
+        val owner = CurrentUser(UUID.randomUUID(), "billing-owner@example.com", "Billing Owner")
+        every { membershipRepository.findActiveMembership(organizationId, owner.userId) } returns
+            membership(organizationId, owner.userId, MembershipRole.OWNER)
+        every { organizationRepository.findById(organizationId) } returns organization(organizationId, OrganizationStatus.SUSPENDED)
+
+        val result = serviceWithOrgs.requireOwnerRoleForBilling(organizationId, owner)
+
+        assertEquals(MembershipRole.OWNER, result.role)
+    }
+
+    @Test
+    fun `requireOwnerRoleForBilling still rejects a non-owner of a SUSPENDED organization`() {
+        val organizationId = UUID.randomUUID()
+        val organizationRepository = mockk<OrganizationRepository>()
+        val serviceWithOrgs = MembershipService(membershipRepository, outboxWriter, organizationRepository)
+        val admin = CurrentUser(UUID.randomUUID(), "billing-admin@example.com", "Billing Admin")
+        every { membershipRepository.findActiveMembership(organizationId, admin.userId) } returns
+            membership(organizationId, admin.userId, MembershipRole.ADMINISTRATOR)
+        every { organizationRepository.findById(organizationId) } returns organization(organizationId, OrganizationStatus.SUSPENDED)
+
+        assertFailsWith<ForbiddenException> {
+            serviceWithOrgs.requireOwnerRoleForBilling(organizationId, admin)
+        }
     }
 
     @Test
@@ -257,6 +321,22 @@ class MembershipServiceTest {
 
         verify(exactly = 1) { outboxWriter.write("organization_membership", created.id, organizationId, "membership.first_granted", any()) }
     }
+
+    private fun organization(
+        organizationId: UUID,
+        status: OrganizationStatus,
+    ) = Organization(
+        id = organizationId,
+        name = "Test Org",
+        slug = "test-org",
+        organizationType = OrganizationType.RECREATIONAL_LEAGUE,
+        status = status,
+        sports = emptyList(),
+        contactEmail = null,
+        contactPhone = null,
+        createdAt = Instant.now(),
+        updatedAt = Instant.now(),
+    )
 
     private fun membership(
         organizationId: UUID,

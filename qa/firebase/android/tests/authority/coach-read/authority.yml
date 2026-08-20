@@ -1,0 +1,17 @@
+tests:
+  - displayName: "[SMOKE] Coach Read - sign in and read team"
+    id: coach-read-login
+    steps:
+      - goal: Complete first-launch walkthrough if needed and sign in with COACH_READ credentials.
+        finalScreenAssertion: >-
+          Coach Home, Calendar, Teams, Messages, and More are visible for the assigned team.
+
+  - displayName: "[SMOKE] Coach Read - read-only capability boundary"
+    id: coach-read-boundary
+    prerequisiteTestCaseId: coach-read-login
+    steps:
+      - goal: Inspect roster, eligibility status, event details, messages, and More.
+        finalScreenAssertion: >-
+          COACH_READ can view team/event/eligibility information allowed by the backend but
+          is not offered usable event-create, roster/staff-management, broadcast-management,
+          or other edit controls.

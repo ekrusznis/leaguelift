@@ -1,45 +1,55 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../../test/testUtils";
 import { TalkToSalesPage } from "../TalkToSalesPage";
 
+function jsonResponse(body: unknown, status = 200) {
+	return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+}
+
 describe("TalkToSalesPage", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
 	it("blocks submission with validation errors when required fields are missing", async () => {
 		const user = userEvent.setup();
 		renderWithProviders(<TalkToSalesPage />);
 
 		await user.click(screen.getByRole("button", { name: /submit request/i }));
 
-		expect(await screen.findByText(/first name is required/i)).toBeInTheDocument();
-		expect(screen.getByText(/select at least one area of interest/i)).toBeInTheDocument();
-		expect(screen.queryByText(/^reference:/i)).not.toBeInTheDocument();
+		expect(await screen.findByText(/name must be at least 2 characters/i)).toBeInTheDocument();
+		expect(screen.getByText(/organization name is required/i)).toBeInTheDocument();
 	});
 
-	// 13 real user-event interactions on one form; under full-suite CPU contention this
-	// reliably exceeds the default 5s test timeout even though it's not actually hanging.
-	it("shows a success confirmation once all required fields are valid", async () => {
+	it("submits through the real public support-case endpoint and shows a success confirmation", async () => {
+		const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+			if (init?.method === "POST" && url.includes("/public/support-cases")) {
+				return Promise.resolve(jsonResponse({ id: "case-1", status: "OPEN" }));
+			}
+			return Promise.resolve(jsonResponse({}));
+		});
+		vi.stubGlobal("fetch", fetchMock);
 		const user = userEvent.setup();
+
 		renderWithProviders(<TalkToSalesPage />);
 
-		await user.type(screen.getByLabelText(/first name/i), "Jamie");
-		await user.type(screen.getByLabelText(/last name/i), "Rivera");
+		await user.type(screen.getByLabelText(/your name/i), "Jamie Rivera");
 		await user.type(screen.getByLabelText(/work email/i), "jamie@example.com");
-		await user.type(screen.getByLabelText(/phone number/i), "555-0100");
-		await user.selectOptions(screen.getByLabelText(/your role/i), "ORGANIZATION_OWNER");
 		await user.type(screen.getByLabelText(/organization name/i), "Riverside Soccer Club");
-		await user.selectOptions(screen.getByLabelText(/organization type/i), "RECREATIONAL_LEAGUE");
-		await user.type(screen.getByLabelText(/^city/i), "Riverside");
-		await user.type(screen.getByLabelText(/^state/i), "CA");
-		await user.type(screen.getByLabelText(/sport or sports/i), "Soccer");
-		await user.click(screen.getByRole("checkbox", { name: /team pages/i }));
-		await user.click(screen.getByRole("checkbox", { name: /i consent to be contacted/i }));
-		await user.click(screen.getByRole("checkbox", { name: /at least 18 years old/i }));
-		await user.click(screen.getByRole("checkbox", { name: /agree to the privacy policy/i }));
-
+		await user.type(screen.getByLabelText(/what are you looking for/i), "About 6 teams, currently using spreadsheets for dues.");
 		await user.click(screen.getByRole("button", { name: /submit request/i }));
 
-		expect(await screen.findByText(/thank you, riverside soccer club/i)).toBeInTheDocument();
-		expect(screen.getByText(/^reference:/i)).toBeInTheDocument();
-	}, 15000);
+		await waitFor(() =>
+			expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/public/support-cases"), expect.objectContaining({ method: "POST" })),
+		);
+		const call = fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === "POST");
+		expect(call).toBeDefined();
+		const body = JSON.parse((call![1] as RequestInit).body as string);
+		expect(body.requesterEmail).toBe("jamie@example.com");
+		expect(body.subject).toContain("Riverside Soccer Club");
+
+		expect(await screen.findByText(/your request has been received/i)).toBeInTheDocument();
+	});
 });

@@ -26,5 +26,18 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# nginx.conf.template lives in /etc/nginx/templates/ so the official image's
+# docker-entrypoint envsubst step renders it to conf.d/default.conf at container
+# *startup*, substituting API_ORIGIN into the CSP connect-src directive from whatever
+# the container's actual runtime environment is — this is what lets one built image
+# serve both production (default below) and a local docker-compose backend (compose.yaml
+# overrides API_ORIGIN) without a rebuild. Must match VITE_API_BASE_URL's origin, or
+# every browser API call is silently blocked by CSP with no server-side log line.
+ENV API_ORIGIN=https://api.rally26.com
+# CSP connect-src for direct-to-storage browser uploads (LR-029) — DigitalOcean Spaces
+# domains are always *.digitaloceanspaces.com regardless of bucket/region, so a wildcard
+# covers production without needing the exact bucket subdomain baked in here.
+# compose.yaml overrides this to MinIO's host-mapped port for local docker-compose.
+ENV STORAGE_ORIGIN=https://*.digitaloceanspaces.com
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 EXPOSE 80

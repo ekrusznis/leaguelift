@@ -87,6 +87,19 @@ class CampaignRepository(
             .query(Long::class.java)
             .single()
 
+    /** Non-terminal campaigns only (DRAFT/PENDING_APPROVAL/SCHEDULED/ACTIVE) — used by the FREE/Starter "1 concurrent campaign" plan cap, unlike [countAll]'s all-time count. */
+    fun countActive(organizationId: UUID): Long =
+        jdbcClient
+            .sql(
+                """
+                select count(*) from campaign
+                where organization_id = :organizationId
+                  and status in ('DRAFT', 'PENDING_APPROVAL', 'SCHEDULED', 'ACTIVE')
+                """.trimIndent(),
+            ).param("organizationId", organizationId)
+            .query(Long::class.java)
+            .single()
+
     fun insert(
         organizationId: UUID,
         teamId: UUID?,

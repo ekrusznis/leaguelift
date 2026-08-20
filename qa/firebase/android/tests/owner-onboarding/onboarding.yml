@@ -1,0 +1,55 @@
+tests:
+  - displayName: "[SMOKE] Owner onboarding - incomplete owner is globally gated"
+    id: onboarding-login
+    steps:
+      - goal: >-
+          Reach sign-in, completing the first-launch walkthrough if needed, then sign in
+          with the supplied incomplete owner credentials.
+        hint: Wait for both dashboard-context and owner-onboarding state checks.
+        finalScreenAssertion: >-
+          Rally26 opens Finish Rally26 setup instead of the native Owner dashboard. Owner
+          tabs and owner management data are not usable before setup is complete.
+
+  - displayName: "[SMOKE] Owner onboarding - organization form UX"
+    id: onboarding-organization
+    prerequisiteTestCaseId: onboarding-login
+    steps:
+      - goal: Navigate to the Organization step if it is the current saved step and inspect every field.
+        hint: Scroll from top to bottom without changing persisted values unless the account is resettable.
+        finalScreenAssertion: >-
+          Organization name, Organization URL, organization type, sports, contact/address,
+          and timezone controls are visible and usable at mobile width with no erroneous
+          red error banner.
+
+  - displayName: "[SMOKE] Owner onboarding - plans are visible"
+    id: onboarding-plans
+    prerequisiteTestCaseId: onboarding-login
+    steps:
+      - goal: Navigate to the Plan step using the saved setup progress or Save & continue.
+        finalScreenAssertion: >-
+          The Plan step shows Starter at $49 per month, Club at $149 per month, and a
+          League/contact option. The plan area is not empty and no unexpected error is shown.
+
+  - displayName: "Owner onboarding - review and Stripe checkout entry"
+    id: onboarding-review
+    prerequisiteTestCaseId: onboarding-login
+    steps:
+      - goal: Select a purchasable monthly QA plan if none is selected, then continue to Review & Checkout.
+        hint: Use a disposable/resettable onboarding account because this changes saved setup state.
+        finalScreenAssertion: >-
+          Review & Checkout clearly summarizes owner, organization, and selected plan and
+          shows a Continue to Stripe Checkout action while the subscription is inactive.
+      - goal: Tap Continue to Stripe Checkout and verify the Stripe-hosted page opens, then go back/cancel without completing payment.
+        hint: Do not submit a live card. Use Back or Stripe's cancel path.
+        finalScreenAssertion: >-
+          Rally26 returns to saved onboarding/review state after cancellation and the
+          native Owner dashboard remains locked.
+
+  - displayName: "Owner onboarding - no dashboard bypass after saved draft"
+    id: onboarding-no-bypass
+    prerequisiteTestCaseId: onboarding-login
+    steps:
+      - goal: Attempt to navigate back toward the app after an organization draft exists but before successful subscription activation.
+        finalScreenAssertion: >-
+          Rally26 keeps the owner in Finish Rally26 setup and does not expose Home, Teams,
+          Members, Reports, Payouts, or other Owner workspace features.

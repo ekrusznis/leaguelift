@@ -9,6 +9,7 @@ import { Button } from "../components/Button";
 import { EmptyState } from "../components/states/EmptyState";
 import { ErrorState } from "../components/states/ErrorState";
 import { LoadingState } from "../components/states/LoadingState";
+import { ApiError } from "../lib/apiError";
 import {
 	useAddAdult,
 	useAdults,
@@ -222,16 +223,16 @@ function ParticipantTeamRow({ organizationId, participant, canManage }: { organi
 			{assignments && assignments.length > 0 && (
 				<ul className="flex flex-wrap gap-2 mb-2">
 					{assignments.map((a) => {
-						const team = teams?.items.find((t) => t.id === a.teamId);
+						const teamLabel = a.teamName ?? teams?.items.find((t) => t.id === a.teamId)?.name ?? a.teamId;
 						return (
 							<li key={a.id} className="flex items-center gap-1 rounded-full bg-navy/10 px-3 py-1 text-xs text-navy dark:text-[#f8fafc]">
-								{team?.name ?? a.teamId}
+								{teamLabel}
 								{canManage && (
 									<button
 										type="button"
 										onClick={() => removeFromTeam.mutate(a.teamId)}
 										className="ml-1 text-slate-gray dark:text-[#cbd5e1] hover:text-error-red"
-										aria-label={`Remove from ${team?.name ?? "team"}`}
+										aria-label={`Remove from ${teamLabel}`}
 									>
 										×
 									</button>
@@ -426,6 +427,7 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 
 function RecordPaymentForm({ organizationId, householdId, assignmentId, onDone }: { organizationId: string; householdId: string; assignmentId: string; onDone: () => void }) {
 	const recordPayment = useRecordPayment(organizationId, householdId, assignmentId);
+	const [submitError, setSubmitError] = useState<string | null>(null);
 	const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<
 		z.input<typeof recordPaymentSchema>,
 		unknown,
@@ -436,9 +438,14 @@ function RecordPaymentForm({ organizationId, householdId, assignmentId, onDone }
 	});
 
 	const onSubmit = handleSubmit(async (values) => {
-		await recordPayment.mutateAsync(values);
-		reset();
-		onDone();
+		setSubmitError(null);
+		try {
+			await recordPayment.mutateAsync(values);
+			reset();
+			onDone();
+		} catch (error) {
+			setSubmitError(error instanceof ApiError ? error.message : "Could not record this payment. Please try again.");
+		}
 	});
 
 	return (
@@ -468,6 +475,7 @@ function RecordPaymentForm({ organizationId, householdId, assignmentId, onDone }
 					<input id={`payment-note-${assignmentId}`} type="text" {...register("note")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</div>
 			</div>
+			{submitError && <p role="alert" className="text-sm text-error-red">{submitError}</p>}
 			<div className="flex justify-end gap-2">
 				<Button type="button" variant="secondary" onClick={onDone}>Cancel</Button>
 				<Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Recording…" : "Record payment"}</Button>
@@ -478,6 +486,7 @@ function RecordPaymentForm({ organizationId, householdId, assignmentId, onDone }
 
 function ApplyAdjustmentForm({ organizationId, householdId, assignmentId, onDone }: { organizationId: string; householdId: string; assignmentId: string; onDone: () => void }) {
 	const applyAdjustment = useApplyAdjustment(organizationId, householdId, assignmentId);
+	const [submitError, setSubmitError] = useState<string | null>(null);
 	const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<
 		z.input<typeof applyAdjustmentSchema>,
 		unknown,
@@ -488,9 +497,14 @@ function ApplyAdjustmentForm({ organizationId, householdId, assignmentId, onDone
 	});
 
 	const onSubmit = handleSubmit(async (values) => {
-		await applyAdjustment.mutateAsync(values);
-		reset();
-		onDone();
+		setSubmitError(null);
+		try {
+			await applyAdjustment.mutateAsync(values);
+			reset();
+			onDone();
+		} catch (error) {
+			setSubmitError(error instanceof ApiError ? error.message : "Could not apply this adjustment. Please try again.");
+		}
 	});
 
 	return (
@@ -514,6 +528,7 @@ function ApplyAdjustmentForm({ organizationId, householdId, assignmentId, onDone
 					<input id={`adj-reason-${assignmentId}`} type="text" {...register("reason")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 				</div>
 			</div>
+			{submitError && <p role="alert" className="text-sm text-error-red">{submitError}</p>}
 			<div className="flex justify-end gap-2">
 				<Button type="button" variant="secondary" onClick={onDone}>Cancel</Button>
 				<Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Applying…" : "Apply"}</Button>
@@ -653,6 +668,7 @@ function AddFeeAssignmentForm({
 	const { data: templates } = useFeeTemplates(organizationId);
 	const { data: participants } = useParticipants(organizationId, householdId);
 	const createAssignment = useCreateFeeAssignment(organizationId, householdId);
+	const [submitError, setSubmitError] = useState<string | null>(null);
 
 	const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<
 		z.input<typeof createFeeAssignmentSchema>,
@@ -664,9 +680,14 @@ function AddFeeAssignmentForm({
 	});
 
 	const onSubmit = handleSubmit(async (values) => {
-		await createAssignment.mutateAsync(values);
-		reset();
-		onDone();
+		setSubmitError(null);
+		try {
+			await createAssignment.mutateAsync(values);
+			reset();
+			onDone();
+		} catch (error) {
+			setSubmitError(error instanceof ApiError ? error.message : "Could not assign this fee. Please try again.");
+		}
 	});
 
 	return (
@@ -721,6 +742,7 @@ function AddFeeAssignmentForm({
 					</div>
 				)}
 			</div>
+			{submitError && <p role="alert" className="text-sm text-error-red">{submitError}</p>}
 			<div className="flex justify-end gap-2">
 				<Button type="button" variant="secondary" onClick={() => { reset(); onDone(); }}>Cancel</Button>
 				<Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Adding…" : "Add fee"}</Button>

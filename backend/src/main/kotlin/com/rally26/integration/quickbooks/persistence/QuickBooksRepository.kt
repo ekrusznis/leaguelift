@@ -184,7 +184,7 @@ class QuickBooksRepository(
                     (select count(*) from contribution where organization_id = :organizationId and status = 'CONFIRMED' and confirmed_at::date between :start and :end) as contributions,
                     (select count(*) from sponsorship where organization_id = :organizationId and status in ('CONFIRMED','REFUNDED') and coalesce(confirmed_at, created_at)::date between :start and :end) as sponsorships,
                     (select count(*) from "order" where organization_id = :organizationId and status = 'CONFIRMED' and confirmed_at::date between :start and :end) as orders,
-                    (select count(*) from fee_payment where organization_id = :organizationId and paid_at between :start and :end) as fee_payments,
+                    (select count(*) from fee_payment where organization_id = :organizationId and status = 'CONFIRMED' and voided_at is null and paid_at between :start and :end) as fee_payments,
                     (select count(*) from financial_correction where organization_id = :organizationId and created_at::date between :start and :end) as corrections
                 """.trimIndent(),
             ).param("organizationId", organizationId)

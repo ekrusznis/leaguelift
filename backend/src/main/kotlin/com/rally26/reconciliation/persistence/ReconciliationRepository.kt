@@ -469,7 +469,7 @@ class ReconciliationRepository(
                 """
                 select plan.id, plan.household_id, plan.total_minor,
                        greatest(0, fa.original_amount_minor
-                         - coalesce((select sum(p.amount_minor) from fee_payment p where p.fee_assignment_id = fa.id and p.voided_at is null), 0)
+                         - coalesce((select sum(p.amount_minor) from fee_payment p where p.fee_assignment_id = fa.id and p.voided_at is null and p.status = 'CONFIRMED'), 0)
                          - coalesce((select sum(a.amount_minor) from fee_adjustment a where a.fee_assignment_id = fa.id and a.voided_at is null), 0)) current_balance,
                        greatest(0, plan.total_minor
                          - coalesce((select sum(a.amount_minor) from fee_payment_installment_allocation a join fee_payment p on p.id = a.fee_payment_id and p.voided_at is null where a.payment_plan_id = plan.id), 0)) plan_remaining
@@ -477,7 +477,7 @@ class ReconciliationRepository(
                 join fee_assignment fa on fa.id = plan.fee_assignment_id
                 where plan.organization_id = :organizationId and plan.status = 'ACTIVE'
                   and greatest(0, fa.original_amount_minor
-                         - coalesce((select sum(p.amount_minor) from fee_payment p where p.fee_assignment_id = fa.id and p.voided_at is null), 0)
+                         - coalesce((select sum(p.amount_minor) from fee_payment p where p.fee_assignment_id = fa.id and p.voided_at is null and p.status = 'CONFIRMED'), 0)
                          - coalesce((select sum(a.amount_minor) from fee_adjustment a where a.fee_assignment_id = fa.id and a.voided_at is null), 0))
                       <> greatest(0, plan.total_minor
                          - coalesce((select sum(a.amount_minor) from fee_payment_installment_allocation a join fee_payment p on p.id = a.fee_payment_id and p.voided_at is null where a.payment_plan_id = plan.id), 0))

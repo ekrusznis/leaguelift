@@ -139,12 +139,36 @@ class ParticipantServiceTest {
 
     @Test
     fun `listTeams throws NotFoundException when participant does not exist`() {
-        every { membershipService.requireActiveMembership(orgId, currentUser) } returns managerMembership()
         every { participantRepository.findById(any(), orgId) } returns null
 
         assertFailsWith<NotFoundException> {
             service.listTeams(orgId, UUID.randomUUID(), currentUser)
         }
+    }
+
+    @Test
+    fun `listTeams allows a guardian with household view capability without requiring org membership`() {
+        val participant = sampleParticipant()
+        every { participantRepository.findById(participant.id, orgId) } returns participant
+        every { authorizationService.hasHouseholdCapability(orgId, householdId, currentUser, Capabilities.HOUSEHOLD_VIEW) } returns true
+        every { participantRepository.listTeamAssignments(participant.id, orgId) } returns emptyList()
+
+        service.listTeams(orgId, participant.id, currentUser)
+
+        verify(exactly = 0) { membershipService.requireActiveMembership(any(), any()) }
+    }
+
+    @Test
+    fun `listTeams falls back to org membership when caller lacks household capability`() {
+        val participant = sampleParticipant()
+        every { participantRepository.findById(participant.id, orgId) } returns participant
+        every { authorizationService.hasHouseholdCapability(orgId, householdId, currentUser, Capabilities.HOUSEHOLD_VIEW) } returns false
+        every { membershipService.requireActiveMembership(orgId, currentUser) } returns managerMembership()
+        every { participantRepository.listTeamAssignments(participant.id, orgId) } returns emptyList()
+
+        service.listTeams(orgId, participant.id, currentUser)
+
+        verify(exactly = 1) { membershipService.requireActiveMembership(orgId, currentUser) }
     }
 
     @Test

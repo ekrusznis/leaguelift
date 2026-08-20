@@ -23,7 +23,8 @@ export interface CsvImportRowError {
 
 export interface CsvImportResult {
 	createdCount: number;
-	updatedCount: number;
+	/** A detected change against an existing imported event, staged for a staff member to review and apply — not yet written to the live event. */
+	stagedCount: number;
 	unchangedCount: number;
 	errors: CsvImportRowError[];
 }

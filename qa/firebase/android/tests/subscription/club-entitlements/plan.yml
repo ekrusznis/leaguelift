@@ -1,0 +1,10 @@
+tests:
+  - displayName: "[SMOKE] Club - paid entitlements available"
+    id: club-entitlements
+    steps:
+      - goal: Sign in with the supplied active Club-plan OWNER test account.
+        finalScreenAssertion: The native Owner workspace is visible.
+      - goal: Inspect team capacity and gated integration/communication settings without committing destructive changes.
+        finalScreenAssertion: >-
+          Club does not show Starter-only restrictions for team capacity, SMS, or
+          SportsEngine/TeamSnap/QuickBooks connection entry points.

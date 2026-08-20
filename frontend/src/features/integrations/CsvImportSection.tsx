@@ -132,7 +132,7 @@ export function CsvImportSection({ organizationId, readOnly = false }: { organiz
 					{result && (
 						<div className="rounded-md bg-pure-white dark:bg-[#111827] p-3 text-sm">
 							<p className="font-medium text-navy dark:text-[#f8fafc]">
-								Created {result.createdCount}, updated {result.updatedCount}, unchanged {result.unchangedCount}
+								Created {result.createdCount}, staged {result.stagedCount} for review, unchanged {result.unchangedCount}
 								{result.errors.length > 0 ? `, ${result.errors.length} row error${result.errors.length !== 1 ? "s" : ""}` : ""}.
 							</p>
 							{result.errors.length > 0 && (

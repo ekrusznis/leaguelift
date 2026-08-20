@@ -1,0 +1,129 @@
+tests:
+  - displayName: "[SMOKE] Coach - sign in and route correctly"
+    id: coach-login
+    steps:
+      - goal: >-
+          Reach the Rally26 sign-in screen. If the first-launch walkthrough is shown,
+          complete the walkthrough first.
+        finalScreenAssertion: >-
+          The Rally26 sign-in screen is visible with Email, Password, and Sign In controls,
+          with no clipped or overlapping content.
+      - goal: Sign in using the test credentials supplied to the App Testing agent.
+        hint: >-
+          Use the supplied automatic-login username and password. Wait for role routing
+          to finish after sign-in.
+        finalScreenAssertion: >-
+          The Coach home experience is visible and the bottom navigation shows Home,
+          Calendar, Teams, Messages, and More. No owner-only dashboard is shown.
+
+  - displayName: "[SMOKE] Coach - dashboard visual and data sweep"
+    id: coach-dashboard
+    prerequisiteTestCaseId: coach-login
+    steps:
+      - goal: Review the entire Coach Home screen from top to bottom.
+        hint: >-
+          Scroll through the screen. Open and close a team selector if one is available.
+          Do not create or delete data.
+        finalScreenAssertion: >-
+          The Coach dashboard is readable, uses the available screen width correctly,
+          has no overlapping cards or clipped text, and shows either real team content
+          or an intentional empty state without an unexpected error.
+
+  - displayName: "[SMOKE] Coach - calendar and event details"
+    id: coach-calendar-event
+    prerequisiteTestCaseId: coach-login
+    steps:
+      - goal: Open Calendar and inspect the current month.
+        finalScreenAssertion: >-
+          A usable calendar or agenda is visible, dates and event rows are readable,
+          and the bottom navigation remains usable.
+      - goal: Open a visible event if one exists; otherwise inspect the calendar empty state.
+        hint: Scroll if needed.
+        finalScreenAssertion: >-
+          Either Event Details is visible with readable date/time/location information,
+          or the calendar clearly communicates that no event is available. No raw API
+          error or broken screen is visible.
+
+  - displayName: "Coach - roster search, filter, eligibility, and staff"
+    id: coach-roster
+    prerequisiteTestCaseId: coach-login
+    steps:
+      - goal: Open Teams and review the Team Roster.
+        finalScreenAssertion: >-
+          Team Roster is visible with athlete rows or a clear empty state. Search/filter/
+          sort controls do not overlap the roster.
+      - goal: Exercise roster search and open the filter or sort control.
+        hint: >-
+          Search for part of a visible athlete name if data exists, then clear the search.
+          Open and close one filter or sort sheet.
+        finalScreenAssertion: >-
+          Search/filter/sort interaction remains usable and the roster returns to a stable
+          readable state.
+      - goal: Open Staff for the selected team and return.
+        finalScreenAssertion: >-
+          The team staff screen either shows scoped staff or a deliberate empty state,
+          with a working way back to Team Roster.
+
+  - displayName: "Coach - messages read and reply"
+    id: coach-messages
+    prerequisiteTestCaseId: coach-login
+    steps:
+      - goal: Open Messages and inspect the thread list.
+        finalScreenAssertion: >-
+          Message threads or a deliberate empty state are visible. No thread from an
+          unrelated organization is visible.
+      - goal: Open one thread if available and send a short QA reply only when the UI says replying is allowed.
+        hint: Use the message "QA Android coach reply - safe to delete".
+        finalScreenAssertion: >-
+          The message thread remains readable and, when replying was allowed, the QA
+          message appears in the thread without an unexpected error.
+
+  - displayName: "Coach - announcements, Action Center, Help, Settings"
+    id: coach-supporting-features
+    prerequisiteTestCaseId: coach-login
+    steps:
+      - goal: From More, open Announcements or My Announcements and inspect the list.
+        finalScreenAssertion: >-
+          Announcements display readable titles/body previews or a clear empty state.
+      - goal: Return and open Action Center.
+        finalScreenAssertion: >-
+          Action Center is readable and shows actionable items or a clear no-actions state.
+      - goal: Return and open Help Center, then open one help article if available.
+        finalScreenAssertion: >-
+          Help content is readable and navigation back is available.
+      - goal: Return and open Settings without changing destructive account options.
+        finalScreenAssertion: >-
+          Settings is readable and account/appearance/notification controls are laid out
+          without clipping or overlap.
+
+  - displayName: "[SMOKE] Coach - More menu authority boundary"
+    id: coach-more-authority
+    prerequisiteTestCaseId: coach-login
+    steps:
+      - goal: Open the Coach More tab and review every visible menu item.
+        hint: Scroll through the entire menu.
+        finalScreenAssertion: >-
+          The Coach More menu does not present organization-owner management destinations
+          such as organization Reports, Payout Account, organization-wide Fees &
+          Collections, owner Announcements management, or owner Broadcast management as
+          normal coach actions. Coach-appropriate destinations remain available.
+
+  - displayName: "Coach - Swag Shop buyer flow entry"
+    id: coach-swag-shop
+    prerequisiteTestCaseId: coach-login
+    steps:
+      - goal: Open the Coach More tab and enter Swag Shop if that buyer option is available.
+        hint: Do not submit a real order or payment.
+        finalScreenAssertion: >-
+          If Swag Shop is available to this coach, the buyer/order experience loads inside
+          Rally26 with authenticated content and no session-expired or authorization error.
+          If the role is not allowed, Rally26 explains that access is unavailable.
+
+  - displayName: "Coach - fundraising scoped access"
+    id: coach-fundraising
+    prerequisiteTestCaseId: coach-login
+    steps:
+      - goal: Open Fundraising if it is available to the coach.
+        finalScreenAssertion: >-
+          The fundraising experience is scoped to teams the coach is allowed to access and
+          does not expose organization-owner approval controls to the coach.

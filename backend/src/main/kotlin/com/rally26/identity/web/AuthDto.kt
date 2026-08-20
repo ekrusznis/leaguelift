@@ -34,6 +34,14 @@ data class RegisterRequest(
     val agreeToTerms: Boolean = false,
     @field:AssertTrue(message = "You must confirm that you are at least 18 years old.")
     val confirmAdult: Boolean = false,
+    /**
+     * Set when registration was reached from a founding-organization join link
+     * (`/founding-organizations/join?code=...`) — see
+     * [com.rally26.foundingorg.application.FoundingPromoCodeService]. Kept trailing with a
+     * default so existing positional construction in tests/callers remains source-compatible.
+     */
+    @field:Size(max = 40)
+    val foundingPromoCode: String? = null,
 )
 
 data class RegistrationAcceptedResponse(

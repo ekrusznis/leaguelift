@@ -36,7 +36,7 @@ class StorePublicController(
                     designUrl = productService.getPublicDesignUrl(product.id),
                     variants =
                         productService.listPublicVariants(product.id).map {
-                            PublicProductVariantResponse(it.id, it.label, it.priceMinor, it.currency)
+                            PublicProductVariantResponse(it.id, it.label, it.priceMinor, it.currency, it.mockupFrontUrl)
                         },
                 )
             }

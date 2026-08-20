@@ -36,7 +36,7 @@ describe("CsvImportSection", () => {
 			if (typeof url === "string" && url.includes("csv-import")) {
 				return Promise.resolve(
 					new Response(
-						JSON.stringify({ createdCount: 2, updatedCount: 0, unchangedCount: 0, errors: [] }),
+						JSON.stringify({ createdCount: 2, stagedCount: 0, unchangedCount: 0, errors: [] }),
 						{ status: 200, headers: { "content-type": "application/json" } },
 					),
 				);
@@ -58,6 +58,6 @@ describe("CsvImportSection", () => {
 		await user.upload(screen.getByLabelText(/csv file/i), file);
 		await user.click(screen.getByRole("button", { name: /^import$/i }));
 
-		await waitFor(() => expect(screen.getByText(/created 2, updated 0, unchanged 0/i)).toBeInTheDocument());
+		await waitFor(() => expect(screen.getByText(/created 2, staged 0 for review, unchanged 0/i)).toBeInTheDocument());
 	});
 });

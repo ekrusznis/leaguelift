@@ -1,6 +1,7 @@
 package com.rally26.settings.application
 
 import com.rally26.settings.domain.AppearancePreference
+import com.rally26.settings.domain.MediaVisibilityDefault
 import com.rally26.settings.domain.UserPreference
 import com.rally26.settings.persistence.UserPreferenceRepository
 import io.mockk.every
@@ -16,14 +17,44 @@ class UserPreferenceServiceTest {
     private val service = UserPreferenceService(repository)
 
     @Test
-    fun `missing row uses system appearance without writing a default row`() {
+    fun `missing row uses system appearance and Private media default without writing a default row`() {
         val userId = UUID.randomUUID()
         every { repository.findByUserId(userId) } returns null
 
         val preferences = service.get(userId)
 
         assertEquals(AppearancePreference.SYSTEM, preferences.appearance)
+        assertEquals(MediaVisibilityDefault.PRIVATE, preferences.defaultMediaVisibility)
         verify(exactly = 1) { repository.findByUserId(userId) }
+    }
+
+    @Test
+    fun `default media visibility update returns persisted typed preference`() {
+        val userId = UUID.randomUUID()
+        val now = Instant.parse("2026-08-20T20:00:00Z")
+        every {
+            repository.upsertDefaultMediaVisibility(userId, MediaVisibilityDefault.PUBLIC)
+        } returns
+            UserPreference(
+                userId = userId,
+                appearance = AppearancePreference.SYSTEM,
+                defaultMediaVisibility = MediaVisibilityDefault.PUBLIC,
+                createdAt = now,
+                updatedAt = now,
+            )
+
+        val preferences = service.updateDefaultMediaVisibility(userId, MediaVisibilityDefault.PUBLIC)
+
+        assertEquals(MediaVisibilityDefault.PUBLIC, preferences.defaultMediaVisibility)
+        verify(exactly = 1) { repository.upsertDefaultMediaVisibility(userId, MediaVisibilityDefault.PUBLIC) }
+    }
+
+    @Test
+    fun `defaultMediaVisibility convenience accessor reads through get`() {
+        val userId = UUID.randomUUID()
+        every { repository.findByUserId(userId) } returns null
+
+        assertEquals(MediaVisibilityDefault.PRIVATE, service.defaultMediaVisibility(userId))
     }
 
     @Test
