@@ -26,9 +26,12 @@ import {
 } from "../icons";
 
 /**
- * Athlete dashboard, wired to real per-card API calls, all of which are entirely demo
- * data — there is no product-sanctioned participant-login concept yet (DESIGN-DOC.md
- * section 4.6), so there's no real record to query. See AthleteDashboardService.
+ * Athlete dashboard, wired to real per-card API calls against the caller's own
+ * participant record (real teams, guardians, next event, and this-week schedule) —
+ * resolved through a role_assignment(PARTICIPANT, ATHLETE_SELF) self-link, which is
+ * still a manual/seed-only step rather than general participant login (DESIGN-DOC.md
+ * section 4.6). Recent History and Orders are honestly empty stubs, not fake data — see
+ * AthleteDashboardService for exactly which cards are real vs. intentionally unbuilt.
  */
 export function AthleteDashboard() {
 	const { user } = useAuth();
