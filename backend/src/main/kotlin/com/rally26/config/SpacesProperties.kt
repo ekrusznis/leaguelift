@@ -15,4 +15,12 @@ data class SpacesProperties(
     val secretKey: String,
     val bucket: String,
     val region: String,
+    /**
+     * Endpoint embedded in presigned URLs handed to the browser. Defaults to [endpoint].
+     * Only needs to differ when [endpoint] is a server-internal address the browser can't
+     * resolve (e.g. Docker Compose's `http://minio:9000` locally, vs `http://localhost:9000`
+     * for the browser) — production's real Spaces endpoint is already publicly reachable,
+     * so both stay equal there.
+     */
+    val publicEndpoint: String? = null,
 )

@@ -25,6 +25,11 @@ rally26:
   # compose.yaml's minio/minio-init services.
   spaces:
     endpoint: ${SPACES_ENDPOINT:http://localhost:9000}
+    # Browser-facing endpoint baked into presigned upload/download URLs — see LR-029.
+    # In compose.yaml, `endpoint` is the container-internal `http://minio:9000` (only
+    # resolvable inside the Docker network), but the browser runs on the host, so
+    # presigned URLs must use MinIO's host-mapped port instead.
+    public-endpoint: ${SPACES_PUBLIC_ENDPOINT:http://localhost:9000}
     access-key: ${SPACES_ACCESS_KEY:rally26}
     secret-key: ${SPACES_SECRET_KEY:rally26_local_password}
     bucket: ${SPACES_BUCKET:rally26-local}

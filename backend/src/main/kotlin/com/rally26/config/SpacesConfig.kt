@@ -39,7 +39,7 @@ class SpacesConfig(
     fun s3Presigner(): S3Presigner =
         S3Presigner
             .builder()
-            .endpointOverride(URI.create(spacesProperties.endpoint))
+            .endpointOverride(URI.create(spacesProperties.publicEndpoint ?: spacesProperties.endpoint))
             .region(Region.of(spacesProperties.region))
             .credentialsProvider(credentialsProvider())
             // S3Presigner.Builder has no forcePathStyle() shortcut (unlike S3Client.Builder) —

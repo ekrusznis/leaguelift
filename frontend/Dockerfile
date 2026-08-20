@@ -34,5 +34,10 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # overrides API_ORIGIN) without a rebuild. Must match VITE_API_BASE_URL's origin, or
 # every browser API call is silently blocked by CSP with no server-side log line.
 ENV API_ORIGIN=https://api.rally26.com
+# CSP connect-src for direct-to-storage browser uploads (LR-029) — DigitalOcean Spaces
+# domains are always *.digitaloceanspaces.com regardless of bucket/region, so a wildcard
+# covers production without needing the exact bucket subdomain baked in here.
+# compose.yaml overrides this to MinIO's host-mapped port for local docker-compose.
+ENV STORAGE_ORIGIN=https://*.digitaloceanspaces.com
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 EXPOSE 80
