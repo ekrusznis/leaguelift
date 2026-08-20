@@ -72,7 +72,7 @@ class ReminderSourceRepository(
                 """
                 select fa.id, fa.organization_id, fa.household_id, fa.description, fa.due_date, fa.currency,
                        greatest(0, fa.original_amount_minor
-                            - coalesce((select sum(fp.amount_minor) from fee_payment fp where fp.fee_assignment_id = fa.id and fp.voided_at is null), 0)
+                            - coalesce((select sum(fp.amount_minor) from fee_payment fp where fp.fee_assignment_id = fa.id and fp.voided_at is null and fp.status = 'CONFIRMED'), 0)
                             - coalesce((select sum(adj.amount_minor) from fee_adjustment adj where adj.fee_assignment_id = fa.id and adj.voided_at is null), 0)) as balance_minor,
                        fa.status
                 from fee_assignment fa where fa.id = :id and fa.organization_id = :organizationId

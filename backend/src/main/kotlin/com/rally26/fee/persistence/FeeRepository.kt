@@ -299,7 +299,7 @@ class FeeRepository(
         from fee_assignment fa
         join household h on h.id = fa.household_id
         left join participant p on p.id = fa.participant_id
-        left join (select fee_assignment_id, sum(amount_minor) as paid_minor from fee_payment where voided_at is null group by fee_assignment_id) fp
+        left join (select fee_assignment_id, sum(amount_minor) as paid_minor from fee_payment where voided_at is null and status = 'CONFIRMED' group by fee_assignment_id) fp
             on fp.fee_assignment_id = fa.id
         left join (select fee_assignment_id, sum(amount_minor) as adjusted_minor from fee_adjustment where voided_at is null group by fee_assignment_id) fadj
             on fadj.fee_assignment_id = fa.id
@@ -348,7 +348,7 @@ class FeeRepository(
                     coalesce(sum(coalesce(fp.paid_minor, 0)), 0) as fees_collected_minor,
                     coalesce(sum(greatest(0, fa.original_amount_minor - coalesce(fp.paid_minor, 0) - coalesce(fadj.adjusted_minor, 0))), 0) as outstanding_minor
                 from fee_assignment fa
-                left join (select fee_assignment_id, sum(amount_minor) as paid_minor from fee_payment where voided_at is null group by fee_assignment_id) fp
+                left join (select fee_assignment_id, sum(amount_minor) as paid_minor from fee_payment where voided_at is null and status = 'CONFIRMED' group by fee_assignment_id) fp
                     on fp.fee_assignment_id = fa.id
                 left join (select fee_assignment_id, sum(amount_minor) as adjusted_minor from fee_adjustment where voided_at is null group by fee_assignment_id) fadj
                     on fadj.fee_assignment_id = fa.id
@@ -384,7 +384,7 @@ class FeeRepository(
                 from fee_assignment fa
                 join household h on h.id = fa.household_id
                 left join participant p on p.id = fa.participant_id
-                left join (select fee_assignment_id, sum(amount_minor) as paid_minor from fee_payment where voided_at is null group by fee_assignment_id) fp
+                left join (select fee_assignment_id, sum(amount_minor) as paid_minor from fee_payment where voided_at is null and status = 'CONFIRMED' group by fee_assignment_id) fp
                     on fp.fee_assignment_id = fa.id
                 left join (select fee_assignment_id, sum(amount_minor) as adjusted_minor from fee_adjustment where voided_at is null group by fee_assignment_id) fadj
                     on fadj.fee_assignment_id = fa.id
