@@ -40,6 +40,7 @@ data class SubscriptionPlanResponse(
     val currency: String?,
     val billingInterval: String?,
     val contactOnly: Boolean,
+    val requiresCheckout: Boolean,
 )
 
 data class OwnerOnboardingResponse(
@@ -80,7 +81,8 @@ data class SubscriptionCheckoutResponse(
     val checkoutUrl: String,
 )
 
-fun SubscriptionPlan.toResponse() = SubscriptionPlanResponse(code, name, description, amountMinor, currency, billingInterval, contactOnly)
+fun SubscriptionPlan.toResponse() =
+    SubscriptionPlanResponse(code, name, description, amountMinor, currency, billingInterval, contactOnly, requiresCheckout)
 
 fun OwnerOnboardingSnapshot.toResponse(): OwnerOnboardingResponse =
     OwnerOnboardingResponse(

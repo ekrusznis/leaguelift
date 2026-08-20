@@ -12,7 +12,7 @@ class SubscriptionPlanRepository(
         jdbcClient
             .sql(
                 """
-                select code, name, description, amount_minor, currency, billing_interval, contact_only, active,
+                select code, name, description, amount_minor, currency, billing_interval, contact_only, requires_checkout, active,
                        stripe_product_id, stripe_price_id
                 from subscription_plan
                 where active = true
@@ -51,7 +51,7 @@ class SubscriptionPlanRepository(
         return jdbcClient
             .sql(
                 """
-                select code, name, description, amount_minor, currency, billing_interval, contact_only, active,
+                select code, name, description, amount_minor, currency, billing_interval, contact_only, requires_checkout, active,
                        stripe_product_id, stripe_price_id
                 from subscription_plan
                 where code = :code$suffix
@@ -74,6 +74,7 @@ class SubscriptionPlanRepository(
             currency = rs.getString("currency"),
             billingInterval = rs.getString("billing_interval"),
             contactOnly = rs.getBoolean("contact_only"),
+            requiresCheckout = rs.getBoolean("requires_checkout"),
             active = rs.getBoolean("active"),
             stripeProductId = rs.getString("stripe_product_id"),
             stripePriceId = rs.getString("stripe_price_id"),

@@ -210,6 +210,162 @@ class OrganizationSubscriptionService(
         }
     }
 
+    /**
+     * FREE-tier registration bypass (Phase 45, DESIGN-DOC.md §14.1T) — the only other
+     * caller of [com.rally26.onboarding.owner.persistence.OwnerOnboardingRepository.activateOrganization]
+     * besides the Stripe webhook path in [applyOrganizationAccess]. Deliberately mirrors
+     * [createCheckout]'s guard shape but never touches Stripe: the resulting
+     * `organization_subscription` row has `status = ACTIVE` with both Stripe identifier
+     * columns left null, which is exactly what [com.rally26.subscription.application.PlanEntitlementService]
+     * needs to resolve FREE's real entitlements instead of falling back to its
+     * deny-by-default STARTER default.
+     */
+    @Transactional
+    fun activateFreeSubscription(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): OrganizationSubscription {
+        requireOnboardingOwner(organizationId, currentUser)
+        val organization =
+            organizationRepository.findById(organizationId)
+                ?: throw NotFoundException("ORGANIZATION_NOT_FOUND", "The organization could not be found.")
+        if (organization.status == OrganizationStatus.ARCHIVED) {
+            throw ConflictException("ORGANIZATION_ARCHIVED", "An archived organization cannot activate a subscription.")
+        }
+
+        val plan =
+            planRepository
+                .findByCodeForUpdate("FREE")
+                ?.takeIf { it.active }
+                ?: throw NotFoundException("SUBSCRIPTION_PLAN_NOT_FOUND", "The Free plan could not be found.")
+        if (plan.requiresCheckout || plan.contactOnly) {
+            throw ConflictException("SUBSCRIPTION_PLAN_NOT_FREE", "The Free plan catalog entry is misconfigured.")
+        }
+
+        val existing = subscriptionRepository.findByOrganizationIdForUpdate(organizationId)
+        if (existing != null &&
+            existing.status in
+            setOf(
+                OrganizationSubscriptionStatus.ACTIVE,
+                OrganizationSubscriptionStatus.TRIALING,
+                OrganizationSubscriptionStatus.PAST_DUE,
+            )
+        ) {
+            throw ConflictException(
+                "SUBSCRIPTION_ALREADY_ACTIVE",
+                "This organization already has an active or recoverable subscription.",
+            )
+        }
+
+        val subscription = subscriptionRepository.insertActive(organizationId, plan.code)
+        onboardingRepository.activateOrganization(organizationId)
+        onboardingRepository.markCompleteForOrganization(organizationId)
+        auditService.record(
+            actorUserId = currentUser.userId,
+            organizationId = organizationId,
+            action = "organization_subscription.free_activated",
+            entityType = "organization_subscription",
+            entityId = subscription.id,
+        )
+        return subscription
+    }
+
+    /**
+     * FREE->paid upgrade (`OrganizationPlanChangeService`) — a FREE organization has no
+     * existing Stripe subscription, so unlike a Starter&lt;-&gt;Club change this genuinely
+     * needs a new Checkout session. Deliberately does **not** write `plan_code` eagerly
+     * unlike [createCheckout]'s reused-row branch: the organization is already ACTIVE and
+     * entitlement-gated on `plan_code` today, so writing paid-tier access before payment
+     * confirms would grant it for free on an abandoned checkout. The target plan travels
+     * only in Stripe metadata; [handleSubscriptionChanged] applies it once payment
+     * actually confirms. Uses [com.rally26.membership.application.MembershipService.requireOwnerRole]
+     * rather than [requireOnboardingOwner] — this is a live-org billing action available
+     * to any current OWNER, not onboarding-flow-scoped like [createCheckout].
+     */
+    @Transactional
+    fun startUpgradeCheckout(
+        organizationId: UUID,
+        targetPlanCode: String,
+        currentUser: CurrentUser,
+    ): StripeSubscriptionCheckout {
+        membershipService.requireOwnerRole(organizationId, currentUser)
+        val organization =
+            organizationRepository.findById(organizationId)
+                ?: throw NotFoundException("ORGANIZATION_NOT_FOUND", "The organization could not be found.")
+        if (organization.status == OrganizationStatus.ARCHIVED) {
+            throw ConflictException("ORGANIZATION_ARCHIVED", "An archived organization cannot start subscription checkout.")
+        }
+        val plan =
+            planRepository
+                .findByCodeForUpdate(targetPlanCode)
+                ?.takeIf { it.active }
+                ?: throw NotFoundException("SUBSCRIPTION_PLAN_NOT_FOUND", "The subscription plan could not be found.")
+        if (plan.contactOnly || !plan.requiresCheckout) {
+            throw ValidationException("This plan cannot be purchased through Checkout.")
+        }
+
+        val local =
+            subscriptionRepository.findByOrganizationIdForUpdate(organizationId)
+                ?: throw NotFoundException("SUBSCRIPTION_NOT_FOUND", "No organization subscription exists yet.")
+        if (local.planCode != "FREE") {
+            throw ConflictException(
+                "SUBSCRIPTION_ALREADY_ACTIVE",
+                "Use the plan-change flow for an existing paid subscription instead of starting a new checkout.",
+            )
+        }
+
+        try {
+            val assets = stripeBillingClient.ensurePlanAssets(plan)
+            if (plan.stripeProductId != assets.productId || plan.stripePriceId != assets.priceId) {
+                planRepository.saveStripeIds(plan.code, assets.productId, assets.priceId)
+            }
+
+            local.stripeCheckoutSessionId?.let { existingSessionId ->
+                stripeBillingClient.retrieveOpenCheckout(existingSessionId)?.let { return it }
+            }
+
+            val customerId =
+                local.stripeCustomerId ?: run {
+                    val owner =
+                        appUserRepository.findById(currentUser.userId)
+                            ?: throw NotFoundException("USER_NOT_FOUND", "The owner account could not be found.")
+                    val created = stripeBillingClient.createCustomer(organizationId, organization.name, owner.email)
+                    subscriptionRepository.saveCustomerId(local.id, created)
+                    created
+                }
+            val generation = local.checkoutGeneration + 1
+            val checkout =
+                stripeBillingClient.createSubscriptionCheckout(
+                    localSubscriptionId = local.id,
+                    organizationId = organizationId,
+                    customerId = customerId,
+                    priceId = assets.priceId,
+                    planCode = plan.code,
+                    successUrl =
+                        "${frontendProperties.baseUrl}/app/organizations/$organizationId/billing" +
+                            "?checkout=success&session_id={CHECKOUT_SESSION_ID}",
+                    cancelUrl = "${frontendProperties.baseUrl}/app/organizations/$organizationId/billing?checkout=cancelled",
+                    generation = generation,
+                )
+            subscriptionRepository.saveCheckoutSession(local.id, checkout.sessionId, generation)
+            auditService.record(
+                actorUserId = currentUser.userId,
+                organizationId = organizationId,
+                action = "organization_subscription.upgrade_checkout_started",
+                entityType = "organization_subscription",
+                entityId = local.id,
+                metadataJson = "{\"planCode\":\"${plan.code}\"}",
+            )
+            return checkout
+        } catch (e: StripeException) {
+            log.warn("Stripe upgrade checkout failed for organization {}: {}", organizationId, e.message, e)
+            throw ServiceUnavailableException(
+                "SUBSCRIPTION_PROVIDER_UNAVAILABLE",
+                "Payments provider is not available right now. If this is local/staging, confirm STRIPE_SECRET_KEY is set.",
+            )
+        }
+    }
+
     @Transactional
     fun createBillingPortal(
         organizationId: UUID,
@@ -262,6 +418,38 @@ class OrganizationSubscriptionService(
                 ?: return null
         val previousStatus = local.status
         val mapped = stripeSubscriptionStatus(subscription.status)
+
+        // A downgrade-to-FREE scheduled by OrganizationPlanChangeService completing now
+        // that Stripe's current billing period has actually ended: this cancellation was
+        // owner-initiated through the plan-change flow, not a genuine full cancellation
+        // through the Stripe Billing Portal, so the organization switches to FREE and
+        // stays ACTIVE instead of being suspended like a real cancellation.
+        if (mapped == OrganizationSubscriptionStatus.CANCELED && local.downgradeToPlanCode != null) {
+            val targetPlanCode = local.downgradeToPlanCode
+            subscriptionRepository.downgradeToFree(local.id)
+            auditService.record(
+                actorUserId = null,
+                organizationId = local.organizationId,
+                action = "organization_subscription.downgrade_completed",
+                entityType = "organization_subscription",
+                entityId = local.id,
+                metadataJson = "{\"planCode\":\"$targetPlanCode\"}",
+            )
+            enqueueLifecycleEmail(local.organizationId, local.id, "organization_subscription.downgrade_completed")
+            return local.id
+        }
+
+        // A FREE->paid upgrade (OrganizationPlanChangeService.startUpgradeCheckout)
+        // completing: plan_code is deliberately never written before Checkout completes
+        // (writing it eagerly would grant paid-tier entitlements on an abandoned
+        // checkout), so this is the only place it's applied — read back from Stripe
+        // metadata rather than trusting local state.
+        subscription.metadata?.get("planCode")?.let { metadataPlanCode ->
+            if (metadataPlanCode != local.planCode) {
+                subscriptionRepository.updatePlan(local.id, metadataPlanCode)
+            }
+        }
+
         subscriptionRepository.syncExternalState(
             local.id,
             mapped,
@@ -398,7 +586,8 @@ class OrganizationSubscriptionService(
             .listActiveManagers(organizationId)
             .mapNotNull { appUserRepository.findById(it.userId)?.email }
 
-    private fun enqueueLifecycleEmail(
+    /** Internal, not private — reused by `OrganizationPlanChangeService` (same package) for plan-change lifecycle emails. */
+    internal fun enqueueLifecycleEmail(
         organizationId: UUID,
         subscriptionId: UUID,
         eventType: String,

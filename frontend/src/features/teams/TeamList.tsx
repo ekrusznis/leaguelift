@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Button } from "../../components/Button";
+import { PlanUpgradeAlert } from "../../components/PlanUpgradeAlert";
 import { ListToolbar } from "../../components/lists/ListToolbar";
 import { Pagination } from "../../components/lists/Pagination";
 import { appPaths } from "../../routes/appPaths";
@@ -59,7 +60,11 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 	});
 
 	const onSubmit = handleSubmit(async (values) => {
-		await createTeam.mutateAsync(values);
+		try {
+			await createTeam.mutateAsync(values);
+		} catch {
+			return;
+		}
 		reset();
 		setShowForm(false);
 		await refetch();
@@ -165,6 +170,7 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 							<input id="team-level" type="text" placeholder="e.g. A, Varsity" {...register("level")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
 						</div>
 					</div>
+					{createTeam.isError && <PlanUpgradeAlert error={createTeam.error} organizationId={organizationId} fallbackMessage="Could not create the team. Please try again." />}
 					<div className="flex justify-end gap-2">
 						<Button type="button" variant="secondary" onClick={() => { reset(); setShowForm(false); }}>Cancel</Button>
 						<Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating…" : "Create team"}</Button>

@@ -308,13 +308,14 @@ type PricingTier = {
  * authenticated `/owner-onboarding/plans` the onboarding wizard uses isn't reachable
  * here).
  *
- * Free is a visual-only 4th card (LR-021, DESIGN-DOC.md §14.1T Phase 45 — Design
- * Target, founder decision 2026-08-19) — there is no FREE plan in the backend catalog
- * yet, so unlike the other three its CTA deliberately routes to Talk to Sales instead
- * of live self-serve registration, and it carries its own "by request" note. Do not
- * wire it to `/auth/register` until Phase 45/46's catalog and entitlement-gating work
- * ships — that would either break signup or silently give away paid features with no
- * enforcement.
+ * Free is a real 4th tier (Phase 45/46, DESIGN-DOC.md §14.1T/§14.1U, shipped
+ * 2026-08-20) — a `FREE` row now exists in the backend `subscription_plan` catalog,
+ * self-serve registration bypasses Stripe Checkout entirely
+ * (`OwnerOnboardingService.activateFreePlan`), and every marketed FREE-tier limit
+ * (1 team, no dues/fee collection, no SMS, no gated integrations, 1 concurrent
+ * fundraising campaign, no sponsorships, no family credits, basic-only reporting) is
+ * enforced backend-authoritatively by `PlanEntitlementService`. Its CTA now routes to
+ * `/auth/register` like Starter/Club, not Talk to Sales.
  */
 const PRICING_TIERS: PricingTier[] = [
 	{
@@ -322,7 +323,6 @@ const PRICING_TIERS: PricingTier[] = [
 		tone: "light",
 		price: "$0",
 		cadence: "/mo",
-		billingNote: "Currently by request — full self-serve signup is coming soon.",
 		description: "For a single team trying Rally26 for the first time.",
 		features: [
 			"1 active team",
@@ -335,8 +335,8 @@ const PRICING_TIERS: PricingTier[] = [
 			"Mobile app for every role",
 			"Basic reporting",
 		],
-		ctaLabel: "Join the Waitlist",
-		ctaTo: "/talk-to-sales",
+		ctaLabel: "Get Started Free",
+		ctaTo: "/auth/register",
 	},
 	{
 		name: "Starter",

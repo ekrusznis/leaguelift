@@ -37,6 +37,7 @@ export interface SubscriptionPlan {
 	currency: string | null;
 	billingInterval: string | null;
 	contactOnly: boolean;
+	requiresCheckout: boolean;
 }
 
 export interface SaveOrganizationInput {
@@ -86,6 +87,13 @@ export function selectOnboardingPlan(planCode: string, billingFrequency = "MONTH
 
 export function startSubscriptionCheckout() {
 	return apiFetch<{ sessionId: string; checkoutUrl: string }>("/owner-onboarding/checkout", {
+		method: "POST",
+	});
+}
+
+/** FREE-tier bypass of {@link selectOnboardingPlan}/{@link startSubscriptionCheckout} — no Stripe Checkout to wait on. */
+export function activateFreeOnboardingPlan() {
+	return apiFetch<OwnerOnboarding>("/owner-onboarding/free-activate", {
 		method: "POST",
 	});
 }

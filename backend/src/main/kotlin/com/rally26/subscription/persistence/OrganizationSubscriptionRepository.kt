@@ -12,7 +12,7 @@ import java.util.UUID
 private const val SUBSCRIPTION_COLUMNS =
     "id, organization_id, plan_code, status, stripe_customer_id, stripe_subscription_id, " +
         "stripe_checkout_session_id, checkout_generation, last_payment_failure_at, last_payment_success_at, " +
-        "cancel_at_period_end, created_at, updated_at"
+        "cancel_at_period_end, plan_change_generation, downgrade_to_plan_code, current_period_end, created_at, updated_at"
 
 @Repository
 class OrganizationSubscriptionRepository(
@@ -66,13 +66,56 @@ class OrganizationSubscriptionRepository(
         )
     }
 
+    /** FREE-tier activation only (`OrganizationSubscriptionService.activateFreeSubscription`) — no Stripe columns are ever populated for this row. */
+    fun insertActive(
+        organizationId: UUID,
+        planCode: String,
+    ): OrganizationSubscription {
+        val id = UUID.randomUUID()
+        val now = Instant.now()
+        jdbcClient
+            .sql(
+                """
+                insert into organization_subscription
+                    (id, organization_id, plan_code, status, created_at, updated_at)
+                values
+                    (:id, :organizationId, :planCode, 'ACTIVE', :now, :now)
+                """.trimIndent(),
+            ).param("id", id)
+            .param("organizationId", organizationId)
+            .param("planCode", planCode)
+            .param("now", Timestamp.from(now))
+            .update()
+        return OrganizationSubscription(
+            id = id,
+            organizationId = organizationId,
+            planCode = planCode,
+            status = OrganizationSubscriptionStatus.ACTIVE,
+            stripeCustomerId = null,
+            stripeSubscriptionId = null,
+            stripeCheckoutSessionId = null,
+            checkoutGeneration = 0,
+            lastPaymentFailureAt = null,
+            createdAt = now,
+            updatedAt = now,
+            lastPaymentSuccessAt = null,
+            cancelAtPeriodEnd = false,
+        )
+    }
+
+    /** Also clears any pending [OrganizationSubscription.downgradeToPlanCode] — a real plan change (upgrade completing, or a synchronous paid&lt;-&gt;paid switch) always supersedes a stale scheduled downgrade. */
     fun updatePlan(
         id: UUID,
         planCode: String,
     ) {
         jdbcClient
-            .sql("update organization_subscription set plan_code = :planCode, updated_at = now() where id = :id")
-            .param("planCode", planCode)
+            .sql(
+                """
+                update organization_subscription
+                set plan_code = :planCode, downgrade_to_plan_code = null, updated_at = now()
+                where id = :id
+                """.trimIndent(),
+            ).param("planCode", planCode)
             .param("id", id)
             .update()
     }
@@ -130,6 +173,61 @@ class OrganizationSubscriptionRepository(
             .param("subscriptionId", subscriptionId)
             .param("cancelAtPeriodEnd", cancelAtPeriodEnd)
             .param("id", id)
+            .update()
+    }
+
+    /** Bumps the Stripe idempotency-key suffix for the new subscription update/cancel calls, mirroring [saveCheckoutSession]'s checkout_generation increment. Returns the new generation for the caller to pass straight to the Stripe client. */
+    fun nextPlanChangeGeneration(id: UUID): Int =
+        jdbcClient
+            .sql(
+                """
+                update organization_subscription
+                set plan_change_generation = plan_change_generation + 1, updated_at = now()
+                where id = :id
+                returning plan_change_generation
+                """.trimIndent(),
+            ).param("id", id)
+            .query(Int::class.java)
+            .single()
+
+    /** A downgrade to `targetPlanCode` is scheduled to complete when Stripe's current billing period ends — plan_code/status are deliberately untouched until then; see `OrganizationSubscriptionService.handleSubscriptionChanged`'s downgrade-completion branch. */
+    fun markPendingDowngrade(
+        id: UUID,
+        targetPlanCode: String,
+        effectiveAt: Instant,
+    ) {
+        jdbcClient
+            .sql(
+                """
+                update organization_subscription
+                set downgrade_to_plan_code = :targetPlanCode,
+                    cancel_at_period_end = true,
+                    current_period_end = :effectiveAt,
+                    updated_at = now()
+                where id = :id
+                """.trimIndent(),
+            ).param("targetPlanCode", targetPlanCode)
+            .param("effectiveAt", Timestamp.from(effectiveAt))
+            .param("id", id)
+            .update()
+    }
+
+    /** Completes a scheduled downgrade to FREE once Stripe confirms the subscription actually canceled at period end. Deliberately keeps stripe_customer_id so a future FREE-&gt;paid re-upgrade reuses the same Stripe customer. */
+    fun downgradeToFree(id: UUID) {
+        jdbcClient
+            .sql(
+                """
+                update organization_subscription
+                set plan_code = 'FREE',
+                    status = 'ACTIVE',
+                    stripe_subscription_id = null,
+                    downgrade_to_plan_code = null,
+                    cancel_at_period_end = false,
+                    current_period_end = null,
+                    updated_at = now()
+                where id = :id
+                """.trimIndent(),
+            ).param("id", id)
             .update()
     }
 
@@ -250,6 +348,9 @@ class OrganizationSubscriptionRepository(
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
             lastPaymentSuccessAt = rs.getTimestamp("last_payment_success_at")?.toInstant(),
             cancelAtPeriodEnd = rs.getBoolean("cancel_at_period_end"),
+            planChangeGeneration = rs.getInt("plan_change_generation"),
+            downgradeToPlanCode = rs.getString("downgrade_to_plan_code"),
+            currentPeriodEnd = rs.getTimestamp("current_period_end")?.toInstant(),
         )
 
     private fun mapPlatformRow(

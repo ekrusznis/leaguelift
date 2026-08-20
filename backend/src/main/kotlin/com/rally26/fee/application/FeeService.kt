@@ -31,6 +31,7 @@ import com.rally26.ledger.application.LedgerService
 import com.rally26.ledger.domain.LedgerSourceType
 import com.rally26.membership.application.MembershipService
 import com.rally26.outbox.application.OutboxWriter
+import com.rally26.subscription.application.PlanEntitlementService
 import com.stripe.exception.StripeException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -68,6 +69,7 @@ class FeeService(
     private val feePaymentPlanRepository: FeePaymentPlanRepository,
     private val householdRepository: HouseholdRepository,
     private val membershipService: MembershipService,
+    private val planEntitlementService: PlanEntitlementService,
     private val auditService: AuditService,
     private val authorizationService: AuthorizationService,
     private val stripeFeePaymentCheckoutClient: StripeFeePaymentCheckoutClient,
@@ -115,6 +117,7 @@ class FeeService(
         currentUser: CurrentUser,
     ): FeeTemplate {
         membershipService.requireManagerRole(organizationId, currentUser)
+        planEntitlementService.requireFeesAllowed(organizationId)
         val template = feeRepository.insertTemplate(organizationId, name, description, amountMinor, currency)
         auditService.record(currentUser.userId, organizationId, "fee_template.created", "fee_template", template.id)
         return template
@@ -206,6 +209,7 @@ class FeeService(
         currentUser: CurrentUser,
     ): FeeAssignmentWithBalance {
         membershipService.requireManagerRole(organizationId, currentUser)
+        planEntitlementService.requireFeesAllowed(organizationId)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
         val assignment =

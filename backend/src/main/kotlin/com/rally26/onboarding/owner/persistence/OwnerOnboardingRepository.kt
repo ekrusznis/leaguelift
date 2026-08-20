@@ -157,6 +157,27 @@ class OwnerOnboardingRepository(
             .update()
     }
 
+    /** FREE-tier only — collapses PLAN/REVIEW/CHECKOUT into one hop straight to COMPLETE, since a FREE plan never goes through Stripe Checkout at all. */
+    fun activateFreeOnboarding(
+        onboardingId: UUID,
+        planCode: String,
+    ) {
+        jdbcClient
+            .sql(
+                """
+                update owner_onboarding
+                set selected_plan_code = :planCode,
+                    selected_billing_frequency = null,
+                    current_step = 'COMPLETE',
+                    completed_at = coalesce(completed_at, now()),
+                    updated_at = now()
+                where id = :onboardingId
+                """.trimIndent(),
+            ).param("planCode", planCode)
+            .param("onboardingId", onboardingId)
+            .update()
+    }
+
     fun markCheckout(
         onboardingId: UUID,
         checkoutSessionId: String,

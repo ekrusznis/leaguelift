@@ -21,6 +21,7 @@ import com.rally26.reporting.persistence.RefundRow
 import com.rally26.reporting.persistence.ReportingRepository
 import com.rally26.reporting.persistence.SourceTypeRevenueRow
 import com.rally26.reporting.persistence.TeamRevenueRow
+import com.rally26.subscription.application.PlanEntitlementService
 import com.rally26.webhook.domain.WebhookProcessingStatus
 import com.rally26.webhook.persistence.WebhookEventRepository
 import org.springframework.stereotype.Service
@@ -114,6 +115,7 @@ class ReportingService(
     private val outboxEventRepository: OutboxEventRepository,
     private val membershipService: MembershipService,
     private val authorizationService: AuthorizationService,
+    private val planEntitlementService: PlanEntitlementService,
 ) {
     fun getRevenueReport(
         organizationId: UUID,
@@ -138,6 +140,7 @@ class ReportingService(
         to: LocalDate?,
         currentUser: CurrentUser,
     ): String {
+        planEntitlementService.requireAdvancedReportingAllowed(organizationId)
         val report = getRevenueReport(organizationId, from, to, currentUser)
         val lines = mutableListOf(listOf("Source Type", "Team", "Amount").joinToString(",") { CsvUtil.escape(it) })
         for (row in report.bySourceType) {
@@ -161,6 +164,7 @@ class ReportingService(
         currentUser: CurrentUser,
     ): List<CampaignRevenueRow> {
         membershipService.requireReportingRole(organizationId, currentUser)
+        planEntitlementService.requireAdvancedReportingAllowed(organizationId)
         val (resolvedFrom, resolvedTo) = resolveRange(from, to)
         val (fromInstant, toInstant) = toInstantRange(resolvedFrom, resolvedTo)
         return reportingRepository.revenueByCampaign(organizationId, fromInstant, toInstant)
@@ -173,6 +177,7 @@ class ReportingService(
         currentUser: CurrentUser,
     ): List<ProductPerformanceRow> {
         membershipService.requireReportingRole(organizationId, currentUser)
+        planEntitlementService.requireAdvancedReportingAllowed(organizationId)
         val (resolvedFrom, resolvedTo) = resolveRange(from, to)
         val (fromInstant, toInstant) = toInstantRange(resolvedFrom, resolvedTo)
         return reportingRepository.productPerformance(organizationId, fromInstant, toInstant)
@@ -185,6 +190,7 @@ class ReportingService(
         currentUser: CurrentUser,
     ): RefundsReport {
         membershipService.requireReportingRole(organizationId, currentUser)
+        planEntitlementService.requireAdvancedReportingAllowed(organizationId)
         val (resolvedFrom, resolvedTo) = resolveRange(from, to)
         val (fromInstant, toInstant) = toInstantRange(resolvedFrom, resolvedTo)
         return RefundsReport(resolvedFrom, resolvedTo, reportingRepository.refunds(organizationId, fromInstant, toInstant))
@@ -220,6 +226,7 @@ class ReportingService(
         currentUser: CurrentUser,
     ): FeeCollectionsReport {
         membershipService.requireActiveMembership(organizationId, currentUser)
+        planEntitlementService.requireAdvancedReportingAllowed(organizationId)
         householdRepository.findById(householdId, organizationId)
             ?: throw NotFoundException("HOUSEHOLD_NOT_FOUND", "The household could not be found.")
         val (resolvedFrom, resolvedTo) = resolveRange(from, to)

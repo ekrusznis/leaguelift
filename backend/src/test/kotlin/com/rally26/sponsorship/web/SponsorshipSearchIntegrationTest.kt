@@ -74,6 +74,7 @@ class SponsorshipSearchIntegrationTest : AbstractIntegrationTest() {
                 OrganizationType.RECREATIONAL_LEAGUE,
                 currentUser,
             )
+        activateClubPlan(organization.id)
         return AuthedOrg(token.accessToken, organization.id, currentUser)
     }
 

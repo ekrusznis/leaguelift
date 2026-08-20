@@ -171,6 +171,9 @@ class OwnerOnboardingService(
         if (plan.contactOnly) {
             throw ValidationException("Contact Rally26 plans are not selected through self-service checkout.")
         }
+        if (!plan.requiresCheckout) {
+            throw ValidationException("This plan does not use Stripe Checkout. Use the free-plan activation endpoint instead.")
+        }
         if (billingFrequency.trim().uppercase() != "MONTHLY" || plan.billingInterval != "MONTHLY") {
             throw ValidationException("Only monthly billing is available for this plan.")
         }
@@ -182,6 +185,31 @@ class OwnerOnboardingService(
             "owner_onboarding",
             onboarding.id,
             "{\"planCode\":\"${plan.code}\"}",
+        )
+        return snapshot(onboardingRepository.findByOwnerUserId(currentUser.userId)!!)
+    }
+
+    /** FREE-tier bypass of [selectPlan]/[startCheckout] — collapses plan-selection and activation into one step since there's no Stripe Checkout to wait on. */
+    @Transactional
+    fun activateFreePlan(currentUser: CurrentUser): OwnerOnboardingSnapshot {
+        val onboarding =
+            onboardingRepository.findByOwnerUserIdForUpdate(currentUser.userId)
+                ?: throw NotFoundException("OWNER_ONBOARDING_NOT_FOUND", "No owner onboarding record exists for this account.")
+        val organizationId =
+            onboarding.organizationId
+                ?: throw ConflictException("ONBOARDING_ORGANIZATION_REQUIRED", "Complete the organization step before selecting a plan.")
+        val plan = subscriptionService.getPlan("FREE")
+        if (plan.requiresCheckout || plan.contactOnly) {
+            throw ValidationException("The Free plan is not available for self-service activation.")
+        }
+        onboardingRepository.activateFreeOnboarding(onboarding.id, plan.code)
+        subscriptionService.activateFreeSubscription(organizationId, currentUser)
+        auditService.record(
+            currentUser.userId,
+            organizationId,
+            "owner_onboarding.free_plan_activated",
+            "owner_onboarding",
+            onboarding.id,
         )
         return snapshot(onboardingRepository.findByOwnerUserId(currentUser.userId)!!)
     }

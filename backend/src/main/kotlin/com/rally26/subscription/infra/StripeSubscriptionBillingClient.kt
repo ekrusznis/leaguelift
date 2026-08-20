@@ -2,12 +2,15 @@ package com.rally26.subscription.infra
 
 import com.rally26.subscription.domain.SubscriptionPlan
 import com.stripe.StripeClient
+import com.stripe.model.Subscription
 import com.stripe.net.RequestOptions
 import com.stripe.param.CustomerCreateParams
 import com.stripe.param.PriceCreateParams
 import com.stripe.param.ProductCreateParams
+import com.stripe.param.SubscriptionUpdateParams
 import com.stripe.param.checkout.SessionCreateParams
 import org.springframework.stereotype.Component
+import java.time.Instant
 import java.util.UUID
 
 data class StripePlanAssets(
@@ -18,6 +21,12 @@ data class StripePlanAssets(
 data class StripeSubscriptionCheckout(
     val sessionId: String,
     val checkoutUrl: String,
+)
+
+data class StripeSubscriptionUpdateResult(
+    val subscriptionId: String,
+    val status: String,
+    val currentPeriodEnd: Instant?,
 )
 
 @Component
@@ -148,6 +157,79 @@ class StripeSubscriptionBillingClient(
                 )
         return StripeSubscriptionCheckout(sessionId = session.id, checkoutUrl = session.url)
     }
+
+    /** Real-time paid-tier price change (e.g. Starter&lt;-&gt;Club), prorated immediately — no new Checkout session, unlike [createSubscriptionCheckout]. Single-line-item subscriptions only, matching [createSubscriptionCheckout]'s `addLineItem(quantity=1)`. */
+    fun updateSubscriptionPrice(
+        subscriptionId: String,
+        newPriceId: String,
+        planCode: String,
+        generation: Int,
+    ): StripeSubscriptionUpdateResult {
+        val existing = stripeClient.subscriptions().retrieve(subscriptionId)
+        val itemId =
+            existing.items.data
+                .first()
+                .id
+        val updated =
+            stripeClient
+                .subscriptions()
+                .update(
+                    subscriptionId,
+                    SubscriptionUpdateParams
+                        .builder()
+                        .addItem(
+                            SubscriptionUpdateParams.Item
+                                .builder()
+                                .setId(itemId)
+                                .setPrice(newPriceId)
+                                .build(),
+                        ).setProrationBehavior(SubscriptionUpdateParams.ProrationBehavior.CREATE_PRORATIONS)
+                        .putMetadata("planCode", planCode)
+                        .build(),
+                    RequestOptions
+                        .builder()
+                        .setIdempotencyKey("rally26-subscription-planchange-$subscriptionId-$generation")
+                        .build(),
+                )
+        return updated.toResult()
+    }
+
+    /** Downgrade-to-FREE completes when Stripe's current billing period actually ends, not immediately — the owner keeps paid-tier access through what they already paid for. Not an immediate [cancelSubscription]. */
+    fun scheduleCancelAtPeriodEnd(
+        subscriptionId: String,
+        generation: Int,
+    ): StripeSubscriptionUpdateResult {
+        val updated =
+            stripeClient
+                .subscriptions()
+                .update(
+                    subscriptionId,
+                    SubscriptionUpdateParams
+                        .builder()
+                        .setCancelAtPeriodEnd(true)
+                        .build(),
+                    RequestOptions
+                        .builder()
+                        .setIdempotencyKey("rally26-subscription-scheduledowngrade-$subscriptionId-$generation")
+                        .build(),
+                )
+        return updated.toResult()
+    }
+
+    /** Real immediate cancel — kept for completeness/future use (e.g. a platform-admin override); not called by the downgrade-to-FREE path, which uses [scheduleCancelAtPeriodEnd] instead. */
+    fun cancelSubscription(subscriptionId: String): StripeSubscriptionUpdateResult =
+        stripeClient.subscriptions().cancel(subscriptionId).toResult()
+
+    private fun Subscription.toResult() =
+        StripeSubscriptionUpdateResult(
+            subscriptionId = id,
+            status = status,
+            currentPeriodEnd =
+                items.data
+                    .firstOrNull()
+                    ?.currentPeriodEnd
+                    ?.let(Instant::ofEpochSecond),
+        )
 
     fun createBillingPortalSession(
         customerId: String,

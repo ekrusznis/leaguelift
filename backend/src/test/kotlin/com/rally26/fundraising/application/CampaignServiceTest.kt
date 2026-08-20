@@ -17,9 +17,12 @@ import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.sponsorship.infra.QrCodeGenerator
+import com.rally26.subscription.application.PlanEntitlementService
 import com.rally26.team.persistence.TeamRepository
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
 import io.mockk.verify
 import java.time.Instant
 import java.time.LocalDate
@@ -29,11 +32,18 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class CampaignServiceTest {
-    private val campaignRepository = mockk<CampaignRepository>()
+    private val campaignRepository =
+        mockk<CampaignRepository> {
+            every { countActive(any()) } returns 0
+        }
     private val teamRepository = mockk<TeamRepository>()
     private val membershipService = mockk<MembershipService>()
     private val authorizationService = mockk<AuthorizationService>()
     private val settingsService = mockk<FundraisingSettingsService>()
+    private val planEntitlementService =
+        mockk<PlanEntitlementService> {
+            every { requireCampaignCapacity(any(), any()) } just runs
+        }
     private val auditService = mockk<AuditService>(relaxed = true)
     private val qrCodeGenerator = mockk<QrCodeGenerator>()
     private val service =
@@ -43,6 +53,7 @@ class CampaignServiceTest {
             membershipService,
             authorizationService,
             settingsService,
+            planEntitlementService,
             auditService,
             qrCodeGenerator,
         )

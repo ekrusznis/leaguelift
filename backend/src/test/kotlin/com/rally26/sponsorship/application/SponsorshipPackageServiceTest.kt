@@ -20,6 +20,7 @@ import com.rally26.sponsorship.domain.effectiveMaxQuantity
 import com.rally26.sponsorship.infra.QrCodeGenerator
 import com.rally26.sponsorship.persistence.SponsorRepository
 import com.rally26.sponsorship.persistence.SponsorshipPackageRepository
+import com.rally26.subscription.application.PlanEntitlementService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -39,6 +40,10 @@ class SponsorshipPackageServiceTest {
     private val sponsorRepository = mockk<SponsorRepository>()
     private val organizationRepository = mockk<OrganizationRepository>()
     private val membershipService = mockk<MembershipService>()
+    private val planEntitlementService =
+        mockk<PlanEntitlementService> {
+            every { requireSponsorshipsAllowed(any()) } just runs
+        }
     private val auditService = mockk<AuditService>()
     private val mediaAssignmentService = mockk<MediaAssignmentService>()
     private val qrCodeGenerator = mockk<QrCodeGenerator>()
@@ -48,6 +53,7 @@ class SponsorshipPackageServiceTest {
             sponsorRepository,
             organizationRepository,
             membershipService,
+            planEntitlementService,
             auditService,
             mediaAssignmentService,
             qrCodeGenerator,

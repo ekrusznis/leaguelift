@@ -76,4 +76,9 @@ class OwnerOnboardingController(
         val checkout = ownerOnboardingService.startCheckout(currentUser)
         return SubscriptionCheckoutResponse(checkout.sessionId, checkout.checkoutUrl)
     }
+
+    @PostMapping("/free-activate")
+    fun activateFreePlan(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): OwnerOnboardingResponse = ownerOnboardingService.activateFreePlan(currentUser).toResponse()
 }
