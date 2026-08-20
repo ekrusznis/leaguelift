@@ -100,7 +100,8 @@ class MembershipService(
         currentUser: CurrentUser,
     ): Boolean {
         if (currentUser.platformAdministrator) return true
-        if (organizationRepository?.findById(organizationId)?.status == OrganizationStatus.DRAFT) return false
+        val status = organizationRepository?.findById(organizationId)?.status
+        if (status == OrganizationStatus.DRAFT || status == OrganizationStatus.SUSPENDED) return false
         val membership = membershipRepository.findActiveMembership(organizationId, currentUser.userId) ?: return false
         return membership.role == MembershipRole.OWNER || membership.role == MembershipRole.ADMINISTRATOR
     }
@@ -203,10 +204,61 @@ class MembershipService(
                     code = "ORGANIZATION_ACCESS_DENIED",
                     message = "You do not have access to this organization.",
                 )
+        val status = organizationRepository?.findById(organizationId)?.status
+        if (status == OrganizationStatus.DRAFT) {
+            throw ForbiddenException(
+                code = "ORGANIZATION_ONBOARDING_INCOMPLETE",
+                message = "Complete organization onboarding before using the organization workspace.",
+            )
+        }
+        if (status == OrganizationStatus.SUSPENDED) {
+            throw ForbiddenException(
+                code = "ORGANIZATION_SUSPENDED",
+                message = "This organization's access is paused. An owner must add billing to restore access.",
+            )
+        }
+        return membership
+    }
+
+    /**
+     * Owner-only, deliberately independent of the SUSPENDED gate in [requireActiveMembership]
+     * — used only by the subscription/billing module so a SUSPENDED organization's owner can
+     * still reach billing to restore access. Still blocks DRAFT (onboarding uses its own
+     * separate [check][com.rally26.subscription.application.OrganizationSubscriptionService]
+     * for that bootstrapping phase) and still requires the OWNER role.
+     */
+    fun requireOwnerRoleForBilling(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): OrganizationMembership {
+        if (currentUser.platformAdministrator) {
+            return membershipRepository.findActiveMembership(organizationId, currentUser.userId)
+                ?: OrganizationMembership(
+                    id = UUID(0, 0),
+                    organizationId = organizationId,
+                    userId = currentUser.userId,
+                    role = MembershipRole.OWNER,
+                    status = com.rally26.membership.domain.MembershipStatus.ACTIVE,
+                    createdAt = java.time.Instant.EPOCH,
+                    updatedAt = java.time.Instant.EPOCH,
+                )
+        }
+        val membership =
+            membershipRepository.findActiveMembership(organizationId, currentUser.userId)
+                ?: throw ForbiddenException(
+                    code = "ORGANIZATION_ACCESS_DENIED",
+                    message = "You do not have access to this organization.",
+                )
         if (organizationRepository?.findById(organizationId)?.status == OrganizationStatus.DRAFT) {
             throw ForbiddenException(
                 code = "ORGANIZATION_ONBOARDING_INCOMPLETE",
                 message = "Complete organization onboarding before using the organization workspace.",
+            )
+        }
+        if (membership.role != MembershipRole.OWNER) {
+            throw ForbiddenException(
+                code = "OWNER_ACTION_DENIED",
+                message = "Only the organization owner can perform this action.",
             )
         }
         return membership

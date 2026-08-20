@@ -88,7 +88,7 @@ class OrganizationPlanChangeService(
         targetPlanCode: String,
         currentUser: CurrentUser,
     ): PlanChangePreview {
-        membershipService.requireOwnerRole(organizationId, currentUser)
+        membershipService.requireOwnerRoleForBilling(organizationId, currentUser)
         val local = requireSubscription(organizationId)
         val direction = directionFor(local.planCode, targetPlanCode)
         val violations =
@@ -108,7 +108,7 @@ class OrganizationPlanChangeService(
         targetPlanCode: String,
         currentUser: CurrentUser,
     ): PlanChangeResult {
-        membershipService.requireOwnerRole(organizationId, currentUser)
+        membershipService.requireOwnerRoleForBilling(organizationId, currentUser)
         val local = requireSubscription(organizationId)
         val targetPlan =
             planRepository

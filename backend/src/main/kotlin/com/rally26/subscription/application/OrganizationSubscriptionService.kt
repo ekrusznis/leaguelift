@@ -90,7 +90,7 @@ class OrganizationSubscriptionService(
         organizationId: UUID,
         currentUser: CurrentUser,
     ): OrganizationSubscription? {
-        membershipService.requireOwnerRole(organizationId, currentUser)
+        membershipService.requireOwnerRoleForBilling(organizationId, currentUser)
         return subscriptionRepository.findByOrganizationId(organizationId)
     }
 
@@ -98,7 +98,7 @@ class OrganizationSubscriptionService(
         organizationId: UUID,
         currentUser: CurrentUser,
     ): OrganizationBillingOverview? {
-        membershipService.requireOwnerRole(organizationId, currentUser)
+        membershipService.requireOwnerRoleForBilling(organizationId, currentUser)
         val subscription = subscriptionRepository.findByOrganizationId(organizationId) ?: return null
         return OrganizationBillingOverview(
             subscription = subscription,
@@ -278,9 +278,11 @@ class OrganizationSubscriptionService(
      * entitlement-gated on `plan_code` today, so writing paid-tier access before payment
      * confirms would grant it for free on an abandoned checkout. The target plan travels
      * only in Stripe metadata; [handleSubscriptionChanged] applies it once payment
-     * actually confirms. Uses [com.rally26.membership.application.MembershipService.requireOwnerRole]
+     * actually confirms. Uses
+     * [com.rally26.membership.application.MembershipService.requireOwnerRoleForBilling]
      * rather than [requireOnboardingOwner] — this is a live-org billing action available
-     * to any current OWNER, not onboarding-flow-scoped like [createCheckout].
+     * to any current OWNER, not onboarding-flow-scoped like [createCheckout], and must stay
+     * reachable even for a SUSPENDED organization so its owner can restore access.
      */
     @Transactional
     fun startUpgradeCheckout(
@@ -288,7 +290,7 @@ class OrganizationSubscriptionService(
         targetPlanCode: String,
         currentUser: CurrentUser,
     ): StripeSubscriptionCheckout {
-        membershipService.requireOwnerRole(organizationId, currentUser)
+        membershipService.requireOwnerRoleForBilling(organizationId, currentUser)
         val organization =
             organizationRepository.findById(organizationId)
                 ?: throw NotFoundException("ORGANIZATION_NOT_FOUND", "The organization could not be found.")
@@ -371,7 +373,7 @@ class OrganizationSubscriptionService(
         organizationId: UUID,
         currentUser: CurrentUser,
     ): String {
-        membershipService.requireOwnerRole(organizationId, currentUser)
+        membershipService.requireOwnerRoleForBilling(organizationId, currentUser)
         val subscription =
             subscriptionRepository.findByOrganizationId(organizationId)
                 ?: throw NotFoundException("SUBSCRIPTION_NOT_FOUND", "No organization subscription exists yet.")
