@@ -4,6 +4,10 @@ import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageResponse
 import com.rally26.identity.persistence.AppUserRepository
 import com.rally26.membership.application.MembershipService
+import com.rally26.membership.domain.MembershipRole
+import com.rally26.membership.domain.MembershipSearchCriteria
+import com.rally26.membership.domain.MembershipSearchSort
+import com.rally26.membership.domain.MembershipStatus
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -41,6 +45,27 @@ class MembershipController(
                 member.toResponse(userEmail = user?.email, userDisplayName = user?.displayName)
             }
         val total = membershipService.countMembers(organizationId)
+        return PageResponse(items, page, size, total)
+    }
+
+    @GetMapping("/search")
+    fun search(
+        @PathVariable organizationId: UUID,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "25") size: Int,
+        @RequestParam(required = false) q: String?,
+        @RequestParam(required = false) role: MembershipRole?,
+        @RequestParam(required = false) status: MembershipStatus?,
+        @RequestParam(defaultValue = "NAME_ASC") sort: MembershipSearchSort,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PageResponse<MembershipResponse> {
+        val offset = page * size
+        val criteria = MembershipSearchCriteria(q, role, status, sort)
+        val items =
+            membershipService
+                .searchMembers(organizationId, criteria, currentUser, offset, size)
+                .map { it.membership.toResponse(it.userEmail, it.userDisplayName) }
+        val total = membershipService.countSearchMembers(organizationId, criteria, currentUser)
         return PageResponse(items, page, size, total)
     }
 

@@ -1,6 +1,9 @@
 package com.rally26.membership.persistence
 
 import com.rally26.membership.domain.MembershipRole
+import com.rally26.membership.domain.MembershipSearchCriteria
+import com.rally26.membership.domain.MembershipSearchRow
+import com.rally26.membership.domain.MembershipSearchSort
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
 import org.springframework.jdbc.core.simple.JdbcClient
@@ -56,6 +59,90 @@ class MembershipRepository(
             .param("organizationId", organizationId)
             .query(Long::class.java)
             .single()
+
+    /**
+     * `/members/search` — the frontend's Members list has always called this endpoint
+     * (`frontend/src/features/members/searchApi.ts`), but no backend mapping for it ever
+     * existed (LR-027, same class as LR-016/018/020/025/026). Joins `app_user` directly
+     * (rather than the N+1-per-row lookup [MembershipController.list] does) since a
+     * keyword search against email/display name needs that join anyway.
+     */
+    fun search(
+        organizationId: UUID,
+        criteria: MembershipSearchCriteria,
+        offset: Int,
+        limit: Int,
+    ): List<MembershipSearchRow> {
+        val built = buildSearchSql(organizationId, criteria, countOnly = false)
+        var statement = jdbcClient.sql("${built.first} offset :offset limit :limit").param("offset", offset).param("limit", limit)
+        built.second.forEach { (name, value) -> statement = statement.param(name, value) }
+        return statement.query(::mapSearchRow).list()
+    }
+
+    fun countSearch(
+        organizationId: UUID,
+        criteria: MembershipSearchCriteria,
+    ): Long {
+        val built = buildSearchSql(organizationId, criteria, countOnly = true)
+        var statement = jdbcClient.sql(built.first)
+        built.second.forEach { (name, value) -> statement = statement.param(name, value) }
+        return statement.query(Long::class.java).single()
+    }
+
+    private fun buildSearchSql(
+        organizationId: UUID,
+        criteria: MembershipSearchCriteria,
+        countOnly: Boolean,
+    ): Pair<String, Map<String, Any>> {
+        val sql =
+            StringBuilder(
+                if (countOnly) {
+                    "select count(*) from organization_membership om join app_user u on u.id = om.user_id"
+                } else {
+                    """select om.id, om.organization_id, om.user_id, om.role, om.status, om.created_at, om.updated_at,
+                       u.email as user_email, u.display_name as user_display_name
+                       from organization_membership om join app_user u on u.id = om.user_id"""
+                },
+            )
+        sql.append(" where om.organization_id = :organizationId")
+        val params = linkedMapOf<String, Any>("organizationId" to organizationId)
+
+        criteria.role?.let {
+            sql.append(" and om.role = :role")
+            params["role"] = it.name
+        }
+        criteria.status?.let {
+            sql.append(" and om.status = :status")
+            params["status"] = it.name
+        }
+        criteria.keyword?.trim()?.takeIf { it.isNotEmpty() }?.let { keyword ->
+            sql.append(" and (lower(coalesce(u.display_name, '')) like :keyword or lower(coalesce(u.email, '')) like :keyword)")
+            params["keyword"] = "%${keyword.lowercase()}%"
+        }
+
+        if (!countOnly) {
+            sql.append(
+                when (criteria.sort) {
+                    MembershipSearchSort.NAME_ASC -> " order by lower(coalesce(u.display_name, '')) asc, om.created_at asc"
+                    MembershipSearchSort.NAME_DESC -> " order by lower(coalesce(u.display_name, '')) desc, om.created_at desc"
+                    MembershipSearchSort.ROLE_ASC -> " order by om.role asc, lower(coalesce(u.display_name, '')) asc"
+                    MembershipSearchSort.NEWEST -> " order by om.created_at desc"
+                    MembershipSearchSort.OLDEST -> " order by om.created_at asc"
+                },
+            )
+        }
+        return sql.toString() to params
+    }
+
+    private fun mapSearchRow(
+        rs: java.sql.ResultSet,
+        rowNum: Int,
+    ): MembershipSearchRow =
+        MembershipSearchRow(
+            membership = mapRow(rs, rowNum),
+            userEmail = rs.getString("user_email"),
+            userDisplayName = rs.getString("user_display_name"),
+        )
 
     /**
      * Every active OWNER/ADMINISTRATOR in this organization, unpaginated — used by

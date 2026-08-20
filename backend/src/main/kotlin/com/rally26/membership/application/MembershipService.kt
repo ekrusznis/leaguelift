@@ -5,6 +5,8 @@ import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.membership.domain.MembershipRole
+import com.rally26.membership.domain.MembershipSearchCriteria
+import com.rally26.membership.domain.MembershipSearchRow
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.membership.persistence.MembershipRepository
 import com.rally26.organization.domain.OrganizationStatus
@@ -217,6 +219,26 @@ class MembershipService(
     ) = membershipRepository.listForOrganization(organizationId, offset, limit)
 
     fun countMembers(organizationId: UUID) = membershipRepository.countForOrganization(organizationId)
+
+    fun searchMembers(
+        organizationId: UUID,
+        criteria: MembershipSearchCriteria,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<MembershipSearchRow> {
+        requireActiveMembership(organizationId, currentUser)
+        return membershipRepository.search(organizationId, criteria, offset, limit)
+    }
+
+    fun countSearchMembers(
+        organizationId: UUID,
+        criteria: MembershipSearchCriteria,
+        currentUser: CurrentUser,
+    ): Long {
+        requireActiveMembership(organizationId, currentUser)
+        return membershipRepository.countSearch(organizationId, criteria)
+    }
 
     private companion object {
         val REPORTING_ROLES =

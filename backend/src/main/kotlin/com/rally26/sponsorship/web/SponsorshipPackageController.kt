@@ -2,6 +2,7 @@ package com.rally26.sponsorship.web
 
 import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageResponse
+import com.rally26.finance.domain.PaymentSource
 import com.rally26.media.application.MediaReadService
 import com.rally26.media.web.MediaAssignmentResponse
 import com.rally26.media.web.toResponse
@@ -11,6 +12,10 @@ import com.rally26.sponsorship.application.SponsorshipWithSponsor
 import com.rally26.sponsorship.domain.SponsorshipPackageSearchCriteria
 import com.rally26.sponsorship.domain.SponsorshipPackageSearchSort
 import com.rally26.sponsorship.domain.SponsorshipPackageStatus
+import com.rally26.sponsorship.domain.SponsorshipReviewStatus
+import com.rally26.sponsorship.domain.SponsorshipSearchCriteria
+import com.rally26.sponsorship.domain.SponsorshipSearchSort
+import com.rally26.sponsorship.domain.SponsorshipStatus
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -216,6 +221,26 @@ class SponsorshipPackageController(
             ).toResponse()
 
     // ---- Approval workflow, refunds, invoices (Phase 6 remainder, ADR-019) ----
+
+    @GetMapping("/sponsorships/search")
+    fun searchSponsorships(
+        @PathVariable organizationId: UUID,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "25") size: Int,
+        @RequestParam(required = false) q: String?,
+        @RequestParam(required = false) packageId: UUID?,
+        @RequestParam(required = false) status: SponsorshipStatus?,
+        @RequestParam(required = false) reviewStatus: SponsorshipReviewStatus?,
+        @RequestParam(required = false) paymentSource: PaymentSource?,
+        @RequestParam(defaultValue = "NEWEST") sort: SponsorshipSearchSort,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): PageResponse<SponsorshipSearchItemResponse> {
+        val offset = page * size
+        val criteria = SponsorshipSearchCriteria(q, packageId, status, reviewStatus, paymentSource, sort)
+        val items = sponsorshipService.search(organizationId, criteria, currentUser, offset, size).map { it.toResponse() }
+        val total = sponsorshipService.countSearch(organizationId, criteria, currentUser)
+        return PageResponse(items, page, size, total)
+    }
 
     @GetMapping("/sponsorships/pending-review")
     fun listPendingReview(
