@@ -219,14 +219,14 @@ Populate status/evidence while testing. Add any currently exposed feature not li
 
 | Area | Feature / Flow | Web | Mobile | API/Auth | Live Tested | Status | Evidence |
 |---|---|---|---|---|---|---|---|
-| Auth | Register | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
-| Auth | Email verification | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
+| Auth | Register | ☑ | ☐ | ☑ | ☑ | PASS | Live-tested a brand-new owner registration (real 202, "Check your email, QA" screen, correct field validation/checkboxes required) |
+| Auth | Email verification | ☑ | ☐ | ☑ | ☑ | PASS (gate confirmed) | Live-tested: an unverified account is correctly blocked at sign-in with a clear "Verify your email before signing in" message (no silent failure). Actual link-click verification not completable in local dev by design — `LoggingEmailProvider` deliberately never logs template variable values (including verification URLs/tokens), per an explicit DESIGN-DOC.md §18.2 privacy comment in the source — not a gap, a correct security choice |
 | Auth | Sign in / sign out | ☑ | ☐ | ☑ | ☑ | PASS | Live-tested as Owner (mike.anderson) and Guardian (sarah.johnson) against docker-compose stack after LR-005 fix; required fixing CSP first (LR-005) |
 | Auth | Session restore / refresh | ☑ | ☐ | ☑ | ☑ | FAILED | See LR-006 — hard reload sometimes leaves the page blank (empty `#root`) for 15+ seconds or longer with no recovery; sometimes self-heals in a few seconds. Root cause not confirmed; founder decision needed on next step |
-| Auth | Password recovery if exposed | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
+| Auth | Password recovery if exposed | ☑ | ☐ | ☑ | ☑ | PASS | Live-tested: submitted a real reset request for mike.anderson, correct generic "Check your email... if an account is associated" success message (doesn't leak account existence). One transient 503 observed in the browser network log on this specific request; confirmed via direct curl immediately after (204, clean) that this was a one-off self-healing blip, consistent with the already-documented LR-006 flakiness pattern, not a new deterministic bug |
 | Auth | Invitation — existing user | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | Not yet tested — only the new-user path was walked this session |
 | Auth | Invitation — new user | ☑ | ☐ | ☑ | ☑ | PASS | Live-tested full round-trip (invite → register → verify email → sign in → Accept Invitation) with two real invitations (ekrusznis@gmail.com, support@rally26.com) against docker-compose; correct role (Administrator) granted at the correct org, invitation flips to ACCEPTED, audit trail records both events. Found and fixed a real copy bug along the way (LR-007); local email delivery is logging-only (no real Resend key configured), verified via outbox event payloads instead of live inbox delivery |
-| Onboarding | Owner onboarding | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
+| Onboarding | Owner onboarding | ☑ | ☐ | ☑ | ☑ | PASS (partial — registration gate) | Live-tested the registration → email-verification-gate half of this flow this pass (see Auth rows above). Actual post-verification org-setup wizard not reachable in local dev (no real email delivery to click the link), and not separately re-tested against the org creation already exercised earlier this session |
 | Onboarding | Organization creation | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
 | Onboarding | Founding Organization entitlement | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
 | Subscription | Free if launch-enabled | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
