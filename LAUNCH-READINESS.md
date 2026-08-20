@@ -281,8 +281,8 @@ Populate status/evidence while testing. Add any currently exposed feature not li
 | Action Center | Role-appropriate surfaces | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
 | Reporting | Reports / analytics | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
 | Notifications | In-app / email / push / SMS if enabled | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
-| Help | Help Center | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
-| Support | Submit / status / admin response | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
+| Help | Help Center | ☑ | ☐ | ☑ | ☑ | PASS | Live-tested as Owner: real role/access-filtered article list, live search-as-you-type filtering (e.g. "fundraiser" correctly narrows to fundraising articles), category filter present |
+| Support | Submit / status / admin response | ☑ | ☐ | ☑ | ☑ | PASS (submit + status) | Live-tested as Owner: submitted a real support case (real 200, real case id, confirmation banner), immediately appeared in "My recent cases" as OPEN alongside a real pre-existing case ("Public page creation doesn't submit," IN PROGRESS). Admin-side response/resolution flow not yet tested from the platform-admin side |
 | Platform Admin | Overview / orgs / payments / support / audit | ☐ | — | ☑ | ☑ | IN TEST | Isolation direction confirmed: an Owner (mike.anderson) hitting `/app/platform` gets a clean "You don't have access to this page," and `/api/v1/platform/dashboard/summary` + `/organizations` both 403 at the API layer for a non-platform-admin token. Platform admin's own console UI/features not yet walked |
 | Integrations | QuickBooks / TeamSnap / SportsEngine | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
 | Integrations | GameChanger / MaxPreps if exposed | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
