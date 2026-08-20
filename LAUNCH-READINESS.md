@@ -278,7 +278,7 @@ Populate status/evidence while testing. Add any currently exposed feature not li
 | Dashboards | Parent | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
 | Dashboards | Athlete | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
 | Search | Global / feature search | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
-| Action Center | Role-appropriate surfaces | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
+| Action Center | Role-appropriate surfaces | ☑ | ☐ | ☑ | ☑ | PASS | Live-tested as Owner: real work queue (4 open items — Resolve fulfillment exceptions, Follow up on overdue fees, Close ended fundraisers, Review unpublished events), each with a working "Open" link that routes to the correct real page. "Follow up on overdue fees" correctly shows exactly 1 (a fourth independent confirmation of the LR-030 fix — this count would have shown 0 pre-fix, silently hiding the real overdue fee from the Owner's work queue) |
 | Reporting | Reports / analytics | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
 | Notifications | In-app / email / push / SMS if enabled | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
 | Help | Help Center | ☑ | ☐ | ☑ | ☑ | PASS | Live-tested as Owner: real role/access-filtered article list, live search-as-you-type filtering (e.g. "fundraiser" correctly narrows to fundraising articles), category filter present |
