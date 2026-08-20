@@ -208,8 +208,8 @@ class MessageSafetyRepository(
                 update message_safety_report
                    set status = :status,
                        assigned_to_user_id = :assignedToUserId,
-                       resolution_note = case when :resolved then :resolutionNote else resolution_note end,
-                       resolved_at = case when :resolved then :now else null end,
+                       resolution_note = case when :resolved then cast(:resolutionNote as text) else resolution_note end,
+                       resolved_at = case when :resolved then cast(:now as timestamptz) else null end,
                        updated_at = :now
                  where id = :reportId and organization_id = :organizationId
                 """.trimIndent(),
