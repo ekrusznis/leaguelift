@@ -8,6 +8,13 @@ import com.rally26.membership.application.MembershipService
 import org.springframework.stereotype.Service
 import java.util.UUID
 
+/**
+ * Backs the org-manager-only "Households & Athletes" page (`Capabilities.ORG_MANAGE`,
+ * OWNER/ADMINISTRATOR only in the frontend). Security review (2026-08): previously only
+ * required [MembershipService.requireActiveMembership] — any active member of any role
+ * could pull every household in the org via direct API call. See [com.rally26.search.application.SearchService]'s
+ * doc comment for the same finding on the global search feature.
+ */
 @Service
 class HouseholdSearchService(
     private val repository: HouseholdSearchRepository,
@@ -20,7 +27,7 @@ class HouseholdSearchService(
         offset: Int,
         limit: Int,
     ): List<Household> {
-        membershipService.requireActiveMembership(organizationId, currentUser)
+        membershipService.requireManagerRole(organizationId, currentUser)
         return repository.search(organizationId, criteria, offset, limit)
     }
 
@@ -29,7 +36,7 @@ class HouseholdSearchService(
         criteria: HouseholdSearchCriteria,
         currentUser: CurrentUser,
     ): Long {
-        membershipService.requireActiveMembership(organizationId, currentUser)
+        membershipService.requireManagerRole(organizationId, currentUser)
         return repository.count(organizationId, criteria)
     }
 }

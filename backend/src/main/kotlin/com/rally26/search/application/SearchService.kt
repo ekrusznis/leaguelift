@@ -19,6 +19,14 @@ private const val RESULTS_PER_CATEGORY = 8
  * household-privacy boundary DESIGN-DOC.md section 1/10.2 draws for a guardian
  * ("cannot view unrelated households"); this is scoped to the same audience that
  * already sees every team/household in the org via the organization detail page.
+ *
+ * Security review (2026-08): this previously only called [MembershipService.requireActiveMembership],
+ * which any active member of any role passes — a VIEWER or a team-scoped
+ * TEAM_ADMINISTRATOR/TOURNAMENT_ADMINISTRATOR could pull every household/team/participant in
+ * the org via direct API call, bypassing the frontend's own `canManageOrganization` gate
+ * (`OwnerDashboard.tsx`'s `showSearch={canManageOrganization}`). Now requires the same
+ * OWNER/ADMINISTRATOR-only manager role the "Households & Athletes"/"Teams" pages
+ * (`Capabilities.ORG_MANAGE`/`ORG_TEAM_MANAGE`) already require in the frontend.
  */
 @Service
 class SearchService(
@@ -30,7 +38,7 @@ class SearchService(
         query: String,
         currentUser: CurrentUser,
     ): List<SearchHit> {
-        membershipService.requireActiveMembership(organizationId, currentUser)
+        membershipService.requireManagerRole(organizationId, currentUser)
         if (query.trim().length < MIN_QUERY_LENGTH) return emptyList()
         return searchRepository.searchTeams(organizationId, query, RESULTS_PER_CATEGORY) +
             searchRepository.searchParticipants(organizationId, query, RESULTS_PER_CATEGORY) +
