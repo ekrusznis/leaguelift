@@ -28,4 +28,5 @@ data class ParticipantTeamAssignment(
     val joinedAt: LocalDate?,
     val createdAt: Instant,
     val updatedAt: Instant,
+    val teamName: String? = null,
 )

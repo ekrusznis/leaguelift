@@ -14,9 +14,6 @@ import java.util.UUID
 private const val P_COLS =
     "id, household_id, organization_id, first_name, last_name, date_of_birth, notes, status, created_at, updated_at"
 
-private const val PT_COLS =
-    "id, participant_id, team_id, organization_id, status, joined_at, created_at, updated_at"
-
 @Repository
 class ParticipantRepository(
     private val jdbcClient: JdbcClient,
@@ -176,6 +173,12 @@ class ParticipantRepository(
             .update()
     }
 
+    /**
+     * Joins the team name in directly (LR-019) rather than making callers resolve it
+     * via a second `/teams` list call — that endpoint is org-staff-only, but this one
+     * is guardian-accessible (see `ParticipantService.listTeams`, LR-018), so a
+     * client-side join would have silently shown a raw team UUID to guardians.
+     */
     fun listTeamAssignments(
         participantId: UUID,
         organizationId: UUID,
@@ -183,8 +186,11 @@ class ParticipantRepository(
         jdbcClient
             .sql(
                 """
-                select $PT_COLS from participant_team
-                where participant_id = :participantId and organization_id = :organizationId and status = 'ACTIVE'
+                select pt.id, pt.participant_id, pt.team_id, pt.organization_id, pt.status, pt.joined_at, pt.created_at, pt.updated_at,
+                       t.name as team_name
+                from participant_team pt
+                join team t on t.id = pt.team_id and t.organization_id = pt.organization_id
+                where pt.participant_id = :participantId and pt.organization_id = :organizationId and pt.status = 'ACTIVE'
                 """.trimIndent(),
             ).param("participantId", participantId)
             .param("organizationId", organizationId)
@@ -318,5 +324,6 @@ class ParticipantRepository(
         joinedAt = rs.getDate("joined_at")?.toLocalDate(),
         createdAt = rs.getTimestamp("created_at").toInstant(),
         updatedAt = rs.getTimestamp("updated_at").toInstant(),
+        teamName = rs.getString("team_name"),
     )
 }

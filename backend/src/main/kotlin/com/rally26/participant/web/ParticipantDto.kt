@@ -48,6 +48,7 @@ data class ParticipantTeamResponse(
     val status: String,
     val joinedAt: LocalDate?,
     val createdAt: Instant,
+    val teamName: String?,
 )
 
 fun Participant.toResponse() =
@@ -72,6 +73,7 @@ fun ParticipantTeamAssignment.toResponse() =
         status,
         joinedAt,
         createdAt,
+        teamName,
     )
 
 typealias ParticipantPageResponse = PageResponse<ParticipantResponse>

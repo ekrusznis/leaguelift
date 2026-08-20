@@ -223,16 +223,16 @@ function ParticipantTeamRow({ organizationId, participant, canManage }: { organi
 			{assignments && assignments.length > 0 && (
 				<ul className="flex flex-wrap gap-2 mb-2">
 					{assignments.map((a) => {
-						const team = teams?.items.find((t) => t.id === a.teamId);
+						const teamLabel = a.teamName ?? teams?.items.find((t) => t.id === a.teamId)?.name ?? a.teamId;
 						return (
 							<li key={a.id} className="flex items-center gap-1 rounded-full bg-navy/10 px-3 py-1 text-xs text-navy dark:text-[#f8fafc]">
-								{team?.name ?? a.teamId}
+								{teamLabel}
 								{canManage && (
 									<button
 										type="button"
 										onClick={() => removeFromTeam.mutate(a.teamId)}
 										className="ml-1 text-slate-gray dark:text-[#cbd5e1] hover:text-error-red"
-										aria-label={`Remove from ${team?.name ?? "team"}`}
+										aria-label={`Remove from ${teamLabel}`}
 									>
 										×
 									</button>
