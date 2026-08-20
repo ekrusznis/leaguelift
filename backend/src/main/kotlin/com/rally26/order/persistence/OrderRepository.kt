@@ -2,7 +2,11 @@ package com.rally26.order.persistence
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.finance.domain.PaymentSource
+import com.rally26.order.domain.FulfillmentStatus
 import com.rally26.order.domain.Order
+import com.rally26.order.domain.OrderSearchCriteria
+import com.rally26.order.domain.OrderSearchRow
+import com.rally26.order.domain.OrderSearchSort
 import com.rally26.order.domain.OrderStatus
 import com.rally26.order.domain.ShippingAddress
 import org.springframework.jdbc.core.simple.JdbcClient
@@ -15,6 +19,12 @@ private const val COLUMNS = """
     id, organization_id, store_id, status, currency, supporter_name, supporter_email,
     shipping_address, stripe_checkout_session_id, stripe_payment_intent_id, confirmed_at,
     refunded_at, created_at, payment_source, attributed_household_id
+"""
+
+private const val SEARCH_COLUMNS = """
+    o.id, o.organization_id, o.store_id, o.status, o.currency, o.supporter_name, o.supporter_email,
+    o.shipping_address, o.stripe_checkout_session_id, o.stripe_payment_intent_id, o.confirmed_at,
+    o.refunded_at, o.created_at, o.payment_source, o.attributed_household_id
 """
 
 @Repository
@@ -100,6 +110,94 @@ class OrderRepository(
             .query { rs, _ -> rs.getString("status") to rs.getLong("cnt") }
             .list()
             .toMap()
+
+    /**
+     * `/stores/{storeId}/orders/search` — the frontend's order list has always called
+     * this endpoint (`frontend/src/features/store/searchApi.ts`), but no backend
+     * mapping for it ever existed (LR-025, same class as LR-016/018/020). Same base
+     * CONFIRMED/REFUNDED restriction as [findByStore]; `fulfillmentStatus` needs a
+     * LEFT JOIN since `fulfillment` is a separate 1:1 table an order may not have a
+     * row in yet.
+     */
+    fun search(
+        storeId: UUID,
+        criteria: OrderSearchCriteria,
+        offset: Int,
+        limit: Int,
+    ): List<OrderSearchRow> {
+        val built = buildSearchSql(storeId, criteria, countOnly = false)
+        var statement = jdbcClient.sql("${built.first} offset :offset limit :limit").param("offset", offset).param("limit", limit)
+        built.second.forEach { (name, value) -> statement = statement.param(name, value) }
+        return statement.query(::mapSearchRow).list()
+    }
+
+    fun countSearch(
+        storeId: UUID,
+        criteria: OrderSearchCriteria,
+    ): Long {
+        val built = buildSearchSql(storeId, criteria, countOnly = true)
+        var statement = jdbcClient.sql(built.first)
+        built.second.forEach { (name, value) -> statement = statement.param(name, value) }
+        return statement.query(Long::class.java).single()
+    }
+
+    private fun buildSearchSql(
+        storeId: UUID,
+        criteria: OrderSearchCriteria,
+        countOnly: Boolean,
+    ): Pair<String, Map<String, Any>> {
+        val sql =
+            StringBuilder(
+                if (countOnly) {
+                    """select count(*) from "order" o left join fulfillment f on f.order_id = o.id"""
+                } else {
+                    """select $SEARCH_COLUMNS, f.status as fulfillment_status from "order" o left join fulfillment f on f.order_id = o.id"""
+                },
+            )
+        sql.append(" where o.store_id = :storeId and o.status in ('CONFIRMED', 'REFUNDED')")
+        val params = linkedMapOf<String, Any>("storeId" to storeId)
+
+        criteria.status?.let {
+            sql.append(" and o.status = :status")
+            params["status"] = it.name
+        }
+        criteria.paymentSource?.let {
+            sql.append(" and o.payment_source = :paymentSource")
+            params["paymentSource"] = it.name
+        }
+        criteria.fulfillmentStatus?.let {
+            sql.append(" and f.status = :fulfillmentStatus")
+            params["fulfillmentStatus"] = it.name
+        }
+        criteria.keyword?.trim()?.takeIf { it.isNotEmpty() }?.let { keyword ->
+            sql.append(
+                " and (lower(coalesce(o.supporter_name, '')) like :keyword or lower(coalesce(o.supporter_email, '')) like :keyword)",
+            )
+            params["keyword"] = "%${keyword.lowercase()}%"
+        }
+
+        if (!countOnly) {
+            sql.append(
+                when (criteria.sort) {
+                    OrderSearchSort.NEWEST -> " order by o.confirmed_at desc"
+                    OrderSearchSort.OLDEST -> " order by o.confirmed_at asc"
+                    OrderSearchSort.SUPPORTER_ASC -> " order by lower(coalesce(o.supporter_name, '')) asc, o.confirmed_at desc"
+                    OrderSearchSort.STATUS_ASC -> " order by o.status asc, o.confirmed_at desc"
+                    OrderSearchSort.FULFILLMENT_ASC -> " order by f.status asc nulls first, o.confirmed_at desc"
+                },
+            )
+        }
+        return sql.toString() to params
+    }
+
+    private fun mapSearchRow(
+        rs: java.sql.ResultSet,
+        rowNum: Int,
+    ): OrderSearchRow =
+        OrderSearchRow(
+            order = mapRow(rs, rowNum),
+            fulfillmentStatus = rs.getString("fulfillment_status")?.let(FulfillmentStatus::valueOf),
+        )
 
     fun countConfirmedByStore(storeId: UUID): Long =
         jdbcClient

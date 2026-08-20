@@ -29,6 +29,8 @@ import com.rally26.order.domain.Fulfillment
 import com.rally26.order.domain.FulfillmentSource
 import com.rally26.order.domain.FulfillmentStatus
 import com.rally26.order.domain.Order
+import com.rally26.order.domain.OrderSearchCriteria
+import com.rally26.order.domain.OrderSearchRow
 import com.rally26.order.domain.OrderStatus
 import com.rally26.order.domain.PersonalizationPlacement
 import com.rally26.order.domain.ShippingAddress
@@ -660,6 +662,29 @@ class OrderService(
     ): Long {
         membershipService.requireManagerRole(organizationId, currentUser)
         return orderRepository.countConfirmedByStore(storeId)
+    }
+
+    fun search(
+        organizationId: UUID,
+        storeId: UUID,
+        criteria: OrderSearchCriteria,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<OrderSearchRow> {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        storeRepository.findById(storeId, organizationId) ?: throw NotFoundException("STORE_NOT_FOUND", "The store could not be found.")
+        return orderRepository.search(storeId, criteria, offset, limit)
+    }
+
+    fun countSearch(
+        organizationId: UUID,
+        storeId: UUID,
+        criteria: OrderSearchCriteria,
+        currentUser: CurrentUser,
+    ): Long {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        return orderRepository.countSearch(storeId, criteria)
     }
 
     fun getFulfillment(

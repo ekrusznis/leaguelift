@@ -9,6 +9,7 @@ import com.rally26.order.domain.FulfillmentReprint
 import com.rally26.order.domain.FulfillmentReprintStatus
 import com.rally26.order.domain.FulfillmentStatus
 import com.rally26.order.domain.Order
+import com.rally26.order.domain.OrderSearchRow
 import com.rally26.order.domain.PersonalizationPlacement
 import com.rally26.order.domain.ShippingAddress
 import com.rally26.order.domain.SwagLogoSize
@@ -114,6 +115,37 @@ fun Order.toResponse() =
         confirmedAt,
         refundedAt,
         createdAt,
+    )
+
+data class OrderSearchItemResponse(
+    val id: UUID,
+    val storeId: UUID,
+    val status: String,
+    val paymentSource: String,
+    val currency: String,
+    val supporterName: String?,
+    val supporterEmail: String?,
+    val shippingAddress: ShippingAddressResponse?,
+    val confirmedAt: Instant?,
+    val refundedAt: Instant?,
+    val createdAt: Instant,
+    val fulfillmentStatus: String?,
+)
+
+fun OrderSearchRow.toResponse() =
+    OrderSearchItemResponse(
+        order.id,
+        order.storeId,
+        order.status.name,
+        order.paymentSource.name,
+        order.currency,
+        order.supporterName,
+        order.supporterEmail,
+        order.shippingAddress?.toResponse(),
+        order.confirmedAt,
+        order.refundedAt,
+        order.createdAt,
+        fulfillmentStatus?.name,
     )
 
 data class SwagShopOrderHistoryItemDto(
