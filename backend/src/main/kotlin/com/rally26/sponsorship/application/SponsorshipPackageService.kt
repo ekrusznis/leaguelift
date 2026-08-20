@@ -14,6 +14,8 @@ import com.rally26.membership.application.MembershipService
 import com.rally26.organization.persistence.OrganizationRepository
 import com.rally26.sponsorship.domain.Sponsor
 import com.rally26.sponsorship.domain.SponsorshipPackage
+import com.rally26.sponsorship.domain.SponsorshipPackageSearchCriteria
+import com.rally26.sponsorship.domain.SponsorshipPackageSearchRow
 import com.rally26.sponsorship.domain.SponsorshipPackageStatus
 import com.rally26.sponsorship.infra.QrCodeGenerator
 import com.rally26.sponsorship.persistence.SponsorRepository
@@ -65,6 +67,26 @@ class SponsorshipPackageService(
     ): Long {
         membershipService.requireActiveMembership(organizationId, currentUser)
         return sponsorshipPackageRepository.countAll(organizationId)
+    }
+
+    fun search(
+        organizationId: UUID,
+        criteria: SponsorshipPackageSearchCriteria,
+        currentUser: CurrentUser,
+        offset: Int,
+        limit: Int,
+    ): List<SponsorshipPackageSearchRow> {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        return sponsorshipPackageRepository.search(organizationId, criteria, offset, limit)
+    }
+
+    fun countSearch(
+        organizationId: UUID,
+        criteria: SponsorshipPackageSearchCriteria,
+        currentUser: CurrentUser,
+    ): Long {
+        membershipService.requireActiveMembership(organizationId, currentUser)
+        return sponsorshipPackageRepository.countSearch(organizationId, criteria)
     }
 
     fun get(
