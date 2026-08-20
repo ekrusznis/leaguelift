@@ -1231,3 +1231,263 @@ The end state is:
 The soft launch exists to learn from real organizations.
 
 It must not be used to discover defects that disciplined launch-readiness testing should have found first.
+
+---
+
+## 38. Role Workflows Wiki (Internal)
+
+**Status:** Initial draft, 2026-08-20, built during this launch-readiness pass.
+**Purpose:** Two audiences, one section. (1) **QA** — a real, navigable script per role to follow
+when testing, so coverage is repeatable instead of ad hoc. (2) **Sales/demo** — what to actually
+click through to show a prospect what each role's day-to-day looks like.
+**How this was built:** Every workflow below marked "Verified" was walked live in-browser against
+the docker-compose stack this session, using the real seeded accounts (`db/seed/V9000__dev_seed_dashboard_role_users.sql`,
+password `DevPassword123!` for all four). Workflows marked "Documented, not live-walked this pass"
+are accurate to the code/routes but weren't clicked through step-by-step this session — treat them
+as a starting script, not a guarantee. Nothing here is invented; where depth is thin, it says so.
+
+See also: `docs/qa/README.md` (demo data CSV for standing up a fresh org), `docs/ux-review.md`
+(page-by-page UX inventory).
+
+### The five roles
+
+| Role | Real seeded account (local/dev) | Where they live |
+|---|---|---|
+| Owner / org administrator | `mike.anderson@riversideyouthsports.example` | Web (`/app`) |
+| Coach / team staff | `jordan.ellis@riversideyouthsports.example` | Web (`/app`), mobile |
+| Guardian / parent | `sarah.johnson@riversideyouthsports.example` | Web (`/app`), mobile |
+| Athlete | *(mobile-only account — see Athlete section)* | Mobile only |
+| Platform admin (Rally26 staff) | *(no seeded account — see Platform Admin section)* | Web (`/app/platform`) |
+
+All four seeded web accounts share the dev-only password `DevPassword123!`. Do not reuse this
+pattern outside local/dev — see `docs/BACKUP-RESTORE-RUNBOOK.md` and the compliance docs for
+prod credential handling.
+
+### 38.1 Owner / org administrator
+
+**Mental model:** Runs the club day-to-day. Owns the money (fees, fundraising, swag, sponsorships),
+the roster (teams, households, athletes), and the org's identity (branding, settings, staff roles).
+The heaviest-permissioned role short of platform admin.
+
+**Primary goals:** Get paid (fees/fundraising/swag/sponsorships), keep rosters and eligibility
+current, communicate with families, and not have to think about any of it more than necessary.
+
+#### Core workflow: org home base (Verified)
+
+1. Sign in → lands on `/app`, the personal dashboard (org-agnostic if the user has multiple orgs).
+2. Click **"Open organization"** (or the org card) → org Overview (`/app/organizations/{id}/overview`).
+   This is the real nerve center: Organization Summary (active teams/participants/households/
+   tournaments), Financial Overview (fees assigned/collected, fundraising, apparel sales, pending
+   payout), Team Performance, Upcoming Events, Recent Activity feed, Reports Snapshot.
+3. The org has its own left sidebar once inside (`Overview, Action Center, Announcements, Messages,
+   My Integrations, Organization, Billing, Teams, Tournaments, Households & Athletes, Events, Fees
+   & Payments, Fundraising, Swag Shop, Sponsorships, Reports, Documents, Members, Integrations,
+   Settings`) — this is the real map of everything an Owner can touch.
+
+**Known flakiness (LR-006/LR-024):** Deep-linking directly to a `:section` URL (e.g. pasting
+`/app/organizations/{id}/documents`) can intermittently redirect to Overview with the nav
+collapsed to just "Overview" — a transient `/me/contexts` fetch issue, not a real permission
+problem. If this happens: click through client-side instead (Dashboard → "Open organization" →
+the section link) rather than re-navigating the same URL. Reliable workaround, not yet a real fix.
+
+#### Workflow: fundraising campaign lifecycle (Verified)
+
+1. Fundraising → **Create** a campaign ("General fundraiser" or a themed type). Client-side slug
+   validation catches invalid slugs before submit.
+2. Submit for approval — **owner-created campaigns skip the approval gate** and auto-activate
+   (approval is only required for non-owner creators; this is intentional policy, confirmed against
+   the actual gate logic, not a bug).
+3. Campaign goes live, accepts contributions (supporter-facing payment flow not exercised this pass).
+4. **Close** the campaign when done, then **Archive** it. Both are real state transitions with
+   real audit trail entries ("Campaign closed", "Campaign archived" show in Recent Activity).
+
+#### Workflow: Swag Shop (Verified — store/catalog; Documented — checkout)
+
+1. Swag Shop → real store (test org's is "Riverside Team Store"), brand asset library, Printify-linked
+   product catalog, athlete-specific storefronts (published, with real slug + QR code for sharing).
+2. **Orders and fulfillment** panel: searchable/filterable order list (keyword, status, payment
+   source, fulfillment status) — this was broken (404) until fixed this session, LR-025.
+3. Checkout/order/receipt flow from the supporter side is not yet walked this pass — next QA
+   priority for this area.
+
+#### Workflow: Sponsorships (Verified — package list + review search; Documented — publish/QR/payment)
+
+1. Sponsorships → package list (create/edit packages, price, exclusivity, placement dates).
+2. **Review pending sponsorships** sub-view — separate search/filter view from the package list,
+   for triaging sponsorships by review status. Both this and the package list 500'd/404'd on every
+   request until fixed this session (LR-026, LR-028) — now real.
+3. Publish/QR-share/payment confirmation flow not yet walked live this pass.
+
+#### Workflow: Documents (Verified)
+
+1. Documents → **Add document**: title + PDF upload (15MB max, PDF-only, enforced client- and
+   server-side).
+2. Real presigned-upload flow: browser requests an upload URL from the API, PUTs the file bytes
+   directly to object storage (never through the Rally26 API — see `DESIGN-DOC.md` §11.3), then
+   confirms. This entire flow was silently broken in local/staging until fixed this session
+   (LR-029) — worth a smoke-test after any docker-compose rebuild, since the failure mode is
+   silent (no console error, no visible network entry for the failed PUT).
+3. **Send to every household** broadcast button exists but not yet exercised this pass.
+4. Search/sort/remove all work as expected (client-side filtered from the full list).
+
+#### Workflow: branding (Verified)
+
+1. Settings tab (far right of the org sub-nav — scroll right to reach it) → **Branding**: Logo and
+   Cover image, both real presigned uploads (same pipeline/fix as Documents above).
+2. Organization Profile: name, type, sports offered (multi-select chips) below branding.
+
+#### Workflow: Members (Verified — search; Documented — role editing/invitations)
+
+1. Members → real active-member roster with role/status, now searchable (was 404 until fixed this
+   session, LR-027).
+2. Role changes / invitation flow itself not yet walked step-by-step this pass.
+
+#### Known gaps an Owner will hit today
+
+- **No account/data deletion flow anywhere** (cross-cutting compliance gap, not Owner-specific).
+- Guardian **invitation/linking has no real code path** (`GuardianRelationshipRepository.insert()`
+  is never called outside seed data) — an Owner cannot actually get a new parent logged in today.
+  This blocks demoing the full "invite a family" loop with a *new* (non-seeded) household.
+- Athlete self-signup has no exposed endpoint either (see Athlete section) — same blocker, different persona.
+
+### 38.2 Coach / team staff
+
+**Mental model:** Runs one or more teams day-to-day — roster, events, family communication,
+safety moderation. Narrower permission scope than Owner (team-level, not org-level), with role
+variants (`TEAM_MANAGER`/`TEAM_EDITOR`/read-only "Coach") controlling exactly what they can edit
+vs. only view.
+
+**Primary goals:** Know who's coming to practice/games, talk to families, keep the roster's
+eligibility status visible, and moderate messaging safety concerns without needing an Owner.
+
+#### Core workflow: team roster + staff (Verified)
+
+1. Sign in as coach → team detail page.
+2. **"Coaches & Staff"** panel — shows real team-role assignments (e.g. "Jordan Ellis / Team
+   Manager"). This 500'd for every team until fixed this session (LR-020).
+3. Athletes list with a working **"Eligibility" filter** (All athletes / Ineligible only) — this
+   depended on a query that failed 100% of the time until fixed this session (LR-022); if this
+   filter silently breaks again, check `EligibilityClearanceRepository` for the same
+   untyped-null-parameter pattern before assuming it's a flakiness blip.
+
+#### Workflow: family messaging (Verified)
+
+1. Messages → **start a new family conversation**: pick a team, pick recipients (multi-athlete/
+   guardian picker — one of only two real multi-select UI patterns in the whole product).
+2. New thread appears both in the coach's own "Your message threads" and the manager-level
+   "Threads" list, with correct member list and first-message body.
+3. Broadcast creation UI exists (team-wide, not 1:1) but not exercised this pass.
+
+#### Workflow: safety review (Verified)
+
+1. A reported message shows up in the Safety review panel.
+2. **"Start review"** (moves to `IN_REVIEW`) — this 500'd on every attempt until fixed this session
+   (LR-023, same untyped-null-parameter bug class as LR-022 above, worth remembering as a pattern
+   to watch for in any future "optional filter" SQL).
+3. Resolve/dismiss to a terminal status — verified via the same fix's regression test, not
+   separately walked live.
+
+#### Known gaps a Coach will hit today
+
+- Event Details **Edit** is a known dead-end on mobile (logged, not yet fixed) — a pre-existing
+  violation of the "never a dead-end control" rule (see the Finding Log above).
+- Same guardian-linking/athlete-self-signup gaps as above limit demoing with a genuinely new roster.
+
+### 38.3 Guardian / parent
+
+**Mental model:** Manages one household — one or more athletes, possibly across multiple teams.
+Everything is scoped to "my family," never the org at large. The most permission-constrained of
+the three "logged-in adult" roles, and historically the one where scoping bugs hid best (several
+of this session's worst bugs were guardian-only 403s that silently hid UI instead of erroring).
+
+**Primary goals:** See my kid's schedule, RSVP, talk to the team, keep eligibility/waivers current,
+control who can message my athlete.
+
+#### Core workflow: family overview (Verified — pre-linked guardian only)
+
+1. Sign in → Family Overview: real household data, athlete list, team assignments.
+2. Cross-household access correctly 403s (verified: a guardian cannot see another family's data).
+3. **This only covers an already-linked guardian.** There is currently no product path to link a
+   *new* guardian to a household — see Owner section. Demoing "parent onboarding" requires using
+   one of the pre-seeded guardian accounts, not a fresh signup.
+
+#### Workflow: RSVP (Verified — after LR-018 fix)
+
+1. Athlete detail (or event detail) → RSVP controls (Yes/No/Maybe) for events the athlete's team
+   is on.
+2. **This was completely broken for every guardian on every event until fixed this session
+   (LR-018)** — a silent 403 that looked exactly like "athlete isn't on this team," with no error
+   shown. If RSVP controls are ever missing again for a guardian who *should* see them, check the
+   network tab for a 403 on `.../participants/{id}/teams` before assuming a real team mismatch.
+3. Submitting a real RSVP correctly moves the aggregate count in real time (e.g. "1 Attending → 1
+   Maybe").
+
+#### Workflow: eligibility / waiver acknowledgment (Verified)
+
+1. Athletes page → expand an athlete → **Eligibility** section → a real pending requirement (e.g.
+   "Season Liability Waiver") in "Action needed" state.
+2. Two-step acknowledge flow: "I acknowledge" → confirm. Status moves to "Submitted · Complete"
+   with today's date, persists across reload, and the summary pill flips to "Cleared."
+
+#### Workflow: messaging + safety controls (Verified)
+
+1. Existing team/broadcast conversation threads render with real message history; replies send
+   and appear instantly.
+2. `/app/messages` → **communication restriction controls**: a guardian can record a "Stop staff →
+   athlete messages" restriction (status ACTIVE, kept as permanent safety history, never deleted),
+   then **lift** it later (status LIFTED, history preserved). Gated athlete peer-messaging exists
+   but not exercised this pass.
+
+#### Known gaps a Guardian will hit today
+
+- No self-service way to become a linked guardian in the first place (see Owner section) — anyone
+  demoing this role has to start from a pre-seeded account.
+- Household-level document assignment / "sent to every household" broadcasts not yet verified from
+  the receiving end this pass.
+
+### 38.4 Athlete
+
+**Mental model:** The most permission-constrained role — a real, scoped account (not a shared
+family login), mobile-only, built around Home/Calendar/Messages.
+
+**Status: thin coverage.** Unlike the three roles above, this session did not live-walk an athlete
+session — there is currently **no product path to create a real athlete-self login** to test with
+in the first place. `AuthorizationService.linkAthleteSelf` exists in backend code but has **zero**
+controller route exposing it (confirmed via `docs/qa/README.md`'s own note on this — same finding,
+not re-derived here). Until that gap closes, athlete-persona QA/demos are blocked at the "how do I
+even get a session" step, not a feature-completeness step.
+
+**Next step for this section:** once a real athlete login path exists (web or mobile), replace this
+placeholder with an actual walked workflow — don't guess at one in the meantime.
+
+### 38.5 Platform admin (Rally26 staff, not an org's own staff)
+
+**Mental model:** Rally26's own internal console for cross-org support, billing oversight, and
+platform-wide moderation — not something any customer org ever sees.
+
+**Status: partially covered.** Verified this session: isolation direction only — a regular Owner
+hitting `/app/platform` gets a clean "You don't have access to this page," and the platform APIs
+(`/api/v1/platform/dashboard/summary`, `/organizations`) both correctly 403 a non-platform-admin
+token at the API layer. The console's *own* features (from other sessions' work, not re-walked
+here): cross-org payments list + refund/void, read-only integrations during support sessions,
+roster drill-down (athletes/coaches, table/card view), audit log.
+
+**Known gap:** no seeded platform-admin account exists in `V9000__dev_seed_dashboard_role_users.sql`
+the way the other four roles do — provisioning one (or documenting how) is a prerequisite for this
+section to get the same live-walked treatment as Owner/Coach/Guardian.
+
+### 38.6 Using this for QA
+
+Each "Verified" workflow above is a literal repro script — the exact click path this session used
+to confirm the feature works, including the specific real data it produced. Re-run these after any
+change that touches auth, media/storage config, or the CSP (`frontend/nginx.conf.template`) — this
+session found three separate silent-failure bugs (LR-018 RSVP, LR-022 eligibility, LR-029 uploads)
+that a role would experience as "the button just doesn't work," not an error message.
+
+### 38.7 Using this for demos
+
+Owner → Coach → Guardian is the natural demo arc (create the season → run a team → be a parent in
+it), using the four seeded accounts above against a fresh docker-compose stack or a demo org built
+from `docs/qa/README.md`'s CSV. Skip Athlete and Platform Admin for now — both have real
+prerequisite gaps (no self-signup path; no seeded account) that would derail a live demo rather
+than showcase the product.
