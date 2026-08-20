@@ -46,7 +46,7 @@ class EligibilityClearanceRepository(
                 """
                 select $CLEARANCE_COLUMNS from eligibility_clearance
                 where team_id = :teamId and organization_id = :organizationId
-                  and (:statusFilter is null or status = :statusFilter)
+                  and (:statusFilter::text is null or status = :statusFilter::text)
                 """.trimIndent(),
             ).param("teamId", teamId)
             .param("organizationId", organizationId)
