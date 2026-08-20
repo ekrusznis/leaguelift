@@ -138,5 +138,29 @@ class GlobalExceptionHandlerIntegrationTest : AbstractIntegrationTest() {
         assert(!body.contains("Exception")) { "error body must never leak an internal exception class name: $body" }
     }
 
+    @Test
+    fun `a GET to a path no controller maps returns 404 with the standard error envelope, not 500`() {
+        // Reproduces LR-020: a frontend call to an endpoint the backend never
+        // implemented (GET .../teams/{teamId}/staff) fell through Spring's static
+        // resource handler, which throws NoResourceFoundException — and that fell
+        // through to handleUnexpected's opaque 500 (plus a false-positive ERROR log)
+        // because there was no handler for it, same class of bug as the missing-header
+        // and missing-parameter cases above.
+        val (token, organizationId) = authedOrg()
+        val request =
+            HttpRequest
+                .newBuilder()
+                .uri(URI.create("http://localhost:$port/api/v1/organizations/$organizationId/this-endpoint-does-not-exist"))
+                .header("Authorization", "Bearer $token")
+                .GET()
+                .build()
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        assertEquals(404, response.statusCode())
+        val body = response.body()
+        assertNotEquals("INTERNAL_ERROR", extractCode(body), "must not fall through to the generic 500 handler")
+        assert(!body.contains("Exception")) { "error body must never leak an internal exception class name: $body" }
+    }
+
     private fun extractCode(body: String): String? = Regex("\"code\"\\s*:\\s*\"([^\"]+)\"").find(body)?.groupValues?.get(1)
 }

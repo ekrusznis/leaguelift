@@ -10,6 +10,7 @@ import org.springframework.web.bind.MissingRequestHeaderException
 import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.servlet.resource.NoResourceFoundException
 
 /**
  * Translates exceptions into the standard error envelope (DESIGN-DOC.md section
@@ -95,6 +96,22 @@ class GlobalExceptionHandler(
                 requestId = requestIdProvider.currentRequestId(),
             )
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body)
+    }
+
+    @ExceptionHandler(NoResourceFoundException::class)
+    fun handleNoResourceFound(): ResponseEntity<ErrorResponse> {
+        // A request to a path no controller (and no static resource) matches — a typo'd
+        // API call, a since-removed endpoint, or a probe — is a routine 404, not a
+        // server error. Same class of gap as handleMissingHeader/handleMissingParameter:
+        // without this it fell through to handleUnexpected's opaque 500 and fired a
+        // false-positive ERROR log (and New Relic alert) for every one (LR-020).
+        val body =
+            ErrorResponse(
+                code = "NOT_FOUND",
+                message = "The requested resource could not be found.",
+                requestId = requestIdProvider.currentRequestId(),
+            )
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body)
     }
 
     @ExceptionHandler(Exception::class)

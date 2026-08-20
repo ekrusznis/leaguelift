@@ -1,6 +1,7 @@
 package com.rally26.authorization.application
 
 import com.rally26.authorization.domain.AuthorizationContext
+import com.rally26.authorization.domain.Capabilities
 import com.rally26.authorization.domain.CapabilityRegistry
 import com.rally26.authorization.domain.ContextType
 import com.rally26.authorization.domain.ResourceRole
@@ -434,6 +435,21 @@ class AuthorizationService(
         currentUser: CurrentUser,
     ): List<RoleAssignment> {
         membershipService.requireManagerRole(organizationId, currentUser)
+        requireNotNull(teamRepository.findById(teamId, organizationId)) { "Team not found in this organization." }
+        return roleAssignmentRepository.listActiveForResource(RoleAssignmentContextType.TEAM, teamId)
+    }
+
+    /**
+     * Same data as [listTeamRoleAssignments], but gated by `TEAM_VIEW` rather than
+     * `requireManagerRole` (LR-020) — anyone who can see the team's roster (coaches
+     * included) can see who else coaches it; only granting/revoking stays manager-only.
+     */
+    fun listTeamStaff(
+        organizationId: UUID,
+        teamId: UUID,
+        currentUser: CurrentUser,
+    ): List<RoleAssignment> {
+        requireTeamCapability(organizationId, teamId, currentUser, Capabilities.TEAM_VIEW)
         requireNotNull(teamRepository.findById(teamId, organizationId)) { "Team not found in this organization." }
         return roleAssignmentRepository.listActiveForResource(RoleAssignmentContextType.TEAM, teamId)
     }

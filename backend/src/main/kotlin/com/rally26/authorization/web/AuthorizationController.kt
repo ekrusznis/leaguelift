@@ -36,6 +36,18 @@ class AuthorizationController(
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): List<ContextResponse> = authorizationService.listContexts(currentUser).map { it.toResponse() }
 
+    /** Reduced-exposure "who coaches this team" view (LR-020) — no email/phone, TEAM_VIEW-gated. */
+    @GetMapping("/organizations/{organizationId}/teams/{teamId}/staff")
+    fun listTeamStaff(
+        @PathVariable organizationId: UUID,
+        @PathVariable teamId: UUID,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): List<TeamStaffResponse> =
+        authorizationService.listTeamStaff(organizationId, teamId, currentUser).map {
+            val user = appUserRepository.findById(it.userId)
+            TeamStaffResponse(it.userId, user?.displayName, teamRoleLabel(it.role.name))
+        }
+
     @GetMapping("/organizations/{organizationId}/teams/{teamId}/role-assignments")
     fun listTeamRoleAssignments(
         @PathVariable organizationId: UUID,
