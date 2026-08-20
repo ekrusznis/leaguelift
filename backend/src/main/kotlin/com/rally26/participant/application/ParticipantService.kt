@@ -120,14 +120,30 @@ class ParticipantService(
         return participantRepository.findById(participantId, organizationId)!!
     }
 
+    /**
+     * Read-only, so open to a guardian checking their own participant's team
+     * assignments too (LR-018) — not just org staff. This is what the event RSVP
+     * page uses to decide whether a participant belongs to the event's team, so a
+     * membership-only check silently hid the guardian's RSVP controls entirely.
+     */
     fun listTeams(
         organizationId: UUID,
         participantId: UUID,
         currentUser: CurrentUser,
     ): List<ParticipantTeamAssignment> {
-        membershipService.requireActiveMembership(organizationId, currentUser)
-        participantRepository.findById(participantId, organizationId)
-            ?: throw NotFoundException("PARTICIPANT_NOT_FOUND", "The participant could not be found.")
+        val participant =
+            participantRepository.findById(participantId, organizationId)
+                ?: throw NotFoundException("PARTICIPANT_NOT_FOUND", "The participant could not be found.")
+        val hasHouseholdAccess =
+            authorizationService.hasHouseholdCapability(
+                organizationId,
+                participant.householdId,
+                currentUser,
+                Capabilities.HOUSEHOLD_VIEW,
+            )
+        if (!hasHouseholdAccess) {
+            membershipService.requireActiveMembership(organizationId, currentUser)
+        }
         return participantRepository.listTeamAssignments(participantId, organizationId)
     }
 
