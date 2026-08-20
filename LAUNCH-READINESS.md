@@ -284,9 +284,9 @@ Populate status/evidence while testing. Add any currently exposed feature not li
 | Help | Help Center | ☑ | ☐ | ☑ | ☑ | PASS | Live-tested as Owner: real role/access-filtered article list, live search-as-you-type filtering (e.g. "fundraiser" correctly narrows to fundraising articles), category filter present |
 | Support | Submit / status / admin response | ☑ | ☐ | ☑ | ☑ | PASS (submit + status) | Live-tested as Owner: submitted a real support case (real 200, real case id, confirmation banner), immediately appeared in "My recent cases" as OPEN alongside a real pre-existing case ("Public page creation doesn't submit," IN PROGRESS). Admin-side response/resolution flow not yet tested from the platform-admin side |
 | Platform Admin | Overview / orgs / payments / support / audit | ☐ | — | ☑ | ☑ | IN TEST | Isolation direction confirmed: an Owner (mike.anderson) hitting `/app/platform` gets a clean "You don't have access to this page," and `/api/v1/platform/dashboard/summary` + `/organizations` both 403 at the API layer for a non-platform-admin token. Platform admin's own console UI/features not yet walked |
-| Integrations | QuickBooks / TeamSnap / SportsEngine | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
-| Integrations | GameChanger / MaxPreps if exposed | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
-| Integrations | CSV / ICS | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
+| Integrations | QuickBooks / TeamSnap / SportsEngine | ☑ | ☐ | ☑ | ☑ | PASS (honest scaffold) | Live-tested as Owner: all three correctly show "Not configured" with clear, accurate explanatory copy (real OAuth2/credential/sandbox prerequisites listed, not vague). QuickBooks has a detailed "readiness gates" panel (Activation blocked, per-gate Pending status: integration scaffold exists / company context / sandbox verification / accounting-approval / write-policy) — matches the honest-scaffold pattern established by LR-021's marketing-site fixes earlier this session; no misleading "connected" claims anywhere |
+| Integrations | GameChanger / MaxPreps if exposed | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | Not found on the Integrations page this pass — likely not built/exposed at all rather than hidden; not confirmed either way |
+| Integrations | CSV / ICS | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | Integrations page header references "reviewed CSV and ICS workflows" but the actual controls were below the fold, not reached this pass |
 | Ads | Free adult sponsor bar if launch-enabled | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
 | Ads | Confirm NO athlete ads | ☐ | ☐ | ☐ | ☐ | UNVERIFIED | |
 
