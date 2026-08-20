@@ -7,7 +7,7 @@ describe("HomePage", () => {
 	it("renders the hero headline and primary conversion action", () => {
 		renderWithProviders(<HomePage />);
 
-		expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/more revenue/i);
+		expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/run your club/i);
 		expect(screen.getAllByRole("link", { name: /get started/i }).length).toBeGreaterThan(0);
 	});
 

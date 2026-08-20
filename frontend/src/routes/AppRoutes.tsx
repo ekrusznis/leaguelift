@@ -57,6 +57,7 @@ import { ContactRedirect } from "../pages/marketing/ContactRedirect";
 import { HomePage } from "../pages/marketing/HomePage";
 import { PublicAthleteStorefrontView } from "../pages/marketing/PublicAthleteStorefrontView";
 import { PublicBoxPoolView } from "../pages/marketing/PublicBoxPoolView";
+import { FoundingOrganizationsPage } from "../pages/marketing/FoundingOrganizationsPage";
 import { PublicCampaignView } from "../pages/marketing/PublicCampaignView";
 import { PublicFundraisingGameView } from "../pages/marketing/PublicFundraisingGameView";
 import { PublicSponsorshipView } from "../pages/marketing/PublicSponsorshipView";
@@ -80,7 +81,8 @@ export function AppRoutes() {
 			<Route element={<MarketingLayout />}>
 				<Route path="solutions/:slug" element={<SolutionDetailPage />} />
 				<Route path="talk-to-sales" element={<TalkToSalesPage />} />
-				<Route path="founding-pilot" element={<Navigate to="/talk-to-sales" replace />} />
+				<Route path="founding-organizations" element={<FoundingOrganizationsPage />} />
+				<Route path="founding-pilot" element={<Navigate to="/founding-organizations" replace />} />
 				<Route path="book-demo" element={<Navigate to="/talk-to-sales" replace />} />
 				<Route path="contact" element={<ContactRedirect />} />
 				<Route path="security" element={<SecurityPage />} />

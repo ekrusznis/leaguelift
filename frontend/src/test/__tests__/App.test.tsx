@@ -16,7 +16,7 @@ describe("App", () => {
 	it("renders the marketing homepage at the root route", async () => {
 		window.history.pushState({}, "", "/");
 		render(<App />);
-		expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(/more revenue/i);
+		expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(/run your club/i);
 	});
 
 	describe("authenticated app shell", () => {

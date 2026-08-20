@@ -2,7 +2,7 @@ export const HOMEPAGE_FAQ: { question: string; answer: string }[] = [
 	{
 		question: "Does Rally26 replace our current sports software?",
 		answer:
-			"No. Rally26 is not initially a registration, scheduling, or roster-management system. It works alongside the tools your organization already uses and adds the revenue layer around them.",
+			"For most clubs, yes. Rally26 handles teams, rosters, scheduling, RSVPs, messaging, eligibility, dues and fees, fundraising, sponsorships, apparel, and a mobile app for owners, coaches, parents, and athletes — one platform instead of several logins. If you're already committed to another system for a specific workflow, Rally26 can run alongside it too.",
 	},
 	{
 		question: "Which sports does Rally26 support?",
@@ -27,7 +27,8 @@ export const HOMEPAGE_FAQ: { question: string; answer: string }[] = [
 	},
 	{
 		question: "Do children need accounts?",
-		answer: "No. Rally26 does not create child login accounts. Adults manage households and participant records.",
+		answer:
+			"Adults manage households, registration, and payments. Athletes can have their own limited mobile access — schedule, messages, and team updates — but never billing, household management, or contact information for other families.",
 	},
 	{
 		question: "Can we sell apparel without storing inventory?",
@@ -45,6 +46,6 @@ export const HOMEPAGE_FAQ: { question: string; answer: string }[] = [
 	{
 		question: "How does Rally26 make money?",
 		answer:
-			"Through organization subscriptions plus clearly disclosed transaction, payment-processing, and optional service fees. See the Pricing page for details.",
+			"A flat monthly subscription plus a flat 5% transaction fee on dues & fees, fundraising, sponsorships, and Swag Shop sales. Rally26 absorbs card payment-processing costs itself — see Pricing for the full breakdown.",
 	},
 ];

@@ -194,7 +194,7 @@ export function FundraiserFlyerPage() {
 				)}
 
 				<p className="mt-10 text-sm text-slate-gray">
-					Powered by Rally26 · More revenue. Lower fees. Stronger programs.
+					Powered by Rally26 · Run your club. Fund your season. Keep everyone connected.
 				</p>
 			</main>
 		</div>
