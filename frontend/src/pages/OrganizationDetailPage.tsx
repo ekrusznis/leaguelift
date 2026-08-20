@@ -75,6 +75,18 @@ export function OrganizationDetailPage() {
 	);
 	const canLoadOrganization = !contexts.isLoading && hasMatchingPlatformAccess;
 	const { data: organization, isLoading, isError, refetch } = useOrganization(organizationId ?? "", canLoadOrganization);
+	const activeSectionForTitle: OrganizationSection = section && isOrganizationSection(section) ? section : "overview";
+
+	// This page never renders <Seo> (that's pre-auth/marketing-only) and has no other title
+	// source, so without this the tab title just freezes on whatever the browser last showed
+	// (typically "Sign In | Rally26" from before login) across every section of every org.
+	// Must run before the early returns below (rules of hooks), so it guards its own body
+	// instead of relying on `organization` already being loaded.
+	useEffect(() => {
+		if (!organization) return;
+		const sectionLabel = SECTION_LABELS.find((item) => item.id === activeSectionForTitle)?.label ?? "Overview";
+		document.title = `${sectionLabel} · ${organization.name} | Rally26`;
+	}, [activeSectionForTitle, organization]);
 
 	if (!organizationId) return <ErrorState message="No organization selected." />;
 	if (section && !isOrganizationSection(section)) return <Navigate to={appPaths.organization(organizationId, "overview")} replace />;

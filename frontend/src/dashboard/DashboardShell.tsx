@@ -88,6 +88,16 @@ export function DashboardShell({
 		scrollToCurrentHash(location.hash);
 	}, [location.hash]);
 
+	// Every authenticated page renders through this shell, but none of them set their own
+	// document title (`<Seo>` is only used pre-auth/marketing-side) — without this, the tab
+	// title just freezes on whatever the browser last showed (typically "Sign In | Rally26"
+	// from before login) for the entire rest of the session, on every authenticated page.
+	// contextName is already the real per-role label (org name, household name, "My Teams",
+	// etc.), so this gives every page at least a correct, dynamic base title.
+	useEffect(() => {
+		document.title = `${contextName} | Rally26`;
+	}, [contextName]);
+
 	useEffect(() => {
 		function closeMenus(event: MouseEvent) {
 			if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
