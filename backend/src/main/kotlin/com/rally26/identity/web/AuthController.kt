@@ -43,6 +43,7 @@ class AuthController(
                 invitationToken = request.invitationToken,
                 acceptedTerms = request.agreeToTerms,
                 confirmedAdult = request.confirmAdult,
+                foundingPromoCode = request.foundingPromoCode,
             )
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(RegistrationAcceptedResponse(email = accepted.email))
     }

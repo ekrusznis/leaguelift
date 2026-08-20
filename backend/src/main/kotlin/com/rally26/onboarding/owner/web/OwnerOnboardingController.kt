@@ -81,4 +81,14 @@ class OwnerOnboardingController(
     fun activateFreePlan(
         @AuthenticationPrincipal currentUser: CurrentUser,
     ): OwnerOnboardingResponse = ownerOnboardingService.activateFreePlan(currentUser).toResponse()
+
+    @GetMapping("/founding-promo-reserved")
+    fun foundingPromoReserved(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): FoundingPromoReservationResponse = FoundingPromoReservationResponse(ownerOnboardingService.hasReservedFoundingPromoCode(currentUser))
+
+    @PostMapping("/founding-activate")
+    fun activateFoundingPromoPlan(
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): OwnerOnboardingResponse = ownerOnboardingService.activateFoundingPromoPlan(currentUser).toResponse()
 }

@@ -11,6 +11,8 @@ import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageRequest
 import com.rally26.common.web.PageResponse
 import com.rally26.config.FrontendProperties
+import com.rally26.foundingorg.domain.FOUNDING_PROMO_PLAN_CODE
+import com.rally26.foundingorg.persistence.FoundingOrgPromoCodeRepository
 import com.rally26.identity.persistence.AppUserRepository
 import com.rally26.membership.application.MembershipService
 import com.rally26.membership.persistence.MembershipRepository
@@ -75,6 +77,7 @@ class OrganizationSubscriptionService(
     private val membershipRepository: MembershipRepository,
     private val outboxWriter: OutboxWriter,
     private val objectMapper: ObjectMapper,
+    private val foundingOrgPromoCodeRepository: FoundingOrgPromoCodeRepository? = null,
 ) {
     private val log = LoggerFactory.getLogger(OrganizationSubscriptionService::class.java)
 
@@ -271,6 +274,61 @@ class OrganizationSubscriptionService(
     }
 
     /**
+     * Founding Organization pilot activation (founder-directed, 2026-08-20) — the promo-code
+     * counterpart to [activateFreeSubscription] just above, granting real FOUNDING_CLUB
+     * entitlements for a 90-day pilot with no Stripe Checkout. Unlike [activateFreeSubscription]
+     * it deliberately does NOT check `plan.requiresCheckout`/`contactOnly` — FOUNDING_CLUB stays
+     * a normal $149/mo paid catalog row for every other customer; the promo code itself (already
+     * verified `RESERVED`-and-owned-by-this-user by the caller) is what authorizes the bypass,
+     * not the plan's own shape. See [com.rally26.foundingorg.application.FoundingPromoCodeService].
+     */
+    @Transactional
+    fun activateFoundingPromoSubscription(
+        organizationId: UUID,
+        currentUser: CurrentUser,
+    ): OrganizationSubscription {
+        requireOnboardingOwner(organizationId, currentUser)
+        val organization =
+            organizationRepository.findById(organizationId)
+                ?: throw NotFoundException("ORGANIZATION_NOT_FOUND", "The organization could not be found.")
+        if (organization.status == OrganizationStatus.ARCHIVED) {
+            throw ConflictException("ORGANIZATION_ARCHIVED", "An archived organization cannot activate a subscription.")
+        }
+        val plan =
+            planRepository
+                .findByCodeForUpdate(FOUNDING_PROMO_PLAN_CODE)
+                ?.takeIf { it.active }
+                ?: throw NotFoundException("SUBSCRIPTION_PLAN_NOT_FOUND", "The Club plan could not be found.")
+
+        val existing = subscriptionRepository.findByOrganizationIdForUpdate(organizationId)
+        if (existing != null &&
+            existing.status in
+            setOf(
+                OrganizationSubscriptionStatus.ACTIVE,
+                OrganizationSubscriptionStatus.TRIALING,
+                OrganizationSubscriptionStatus.PAST_DUE,
+            )
+        ) {
+            throw ConflictException(
+                "SUBSCRIPTION_ALREADY_ACTIVE",
+                "This organization already has an active or recoverable subscription.",
+            )
+        }
+
+        val subscription = subscriptionRepository.insertActive(organizationId, plan.code)
+        onboardingRepository.activateOrganization(organizationId)
+        onboardingRepository.markCompleteForOrganization(organizationId)
+        auditService.record(
+            actorUserId = currentUser.userId,
+            organizationId = organizationId,
+            action = "organization_subscription.founding_promo_activated",
+            entityType = "organization_subscription",
+            entityId = subscription.id,
+        )
+        return subscription
+    }
+
+    /**
      * FREE->paid upgrade (`OrganizationPlanChangeService`) — a FREE organization has no
      * existing Stripe subscription, so unlike a Starter&lt;-&gt;Club change this genuinely
      * needs a new Checkout session. Deliberately does **not** write `plan_code` eagerly
@@ -309,7 +367,12 @@ class OrganizationSubscriptionService(
         val local =
             subscriptionRepository.findByOrganizationIdForUpdate(organizationId)
                 ?: throw NotFoundException("SUBSCRIPTION_NOT_FOUND", "No organization subscription exists yet.")
-        if (local.planCode != "FREE") {
+        // FREE has no Stripe subscription by construction. A founding-promo org also has
+        // none yet (activateFoundingPromoSubscription never touches Stripe) while its pilot
+        // is still running — allow it through the same no-existing-subscription path so an
+        // owner can convert to paid early, without waiting for the 90-day pilot to expire.
+        val onUnconvertedFoundingPromo = local.planCode == FOUNDING_PROMO_PLAN_CODE && local.stripeSubscriptionId == null
+        if (local.planCode != "FREE" && !onUnconvertedFoundingPromo) {
             throw ConflictException(
                 "SUBSCRIPTION_ALREADY_ACTIVE",
                 "Use the plan-change flow for an existing paid subscription instead of starting a new checkout.",
@@ -452,6 +515,12 @@ class OrganizationSubscriptionService(
             }
         }
 
+        // A founding-promo org converting to paid early (startUpgradeCheckout's
+        // onUnconvertedFoundingPromo branch): plan_code stays FOUNDING_CLUB throughout, so
+        // the metadata-planCode branch above never fires for this case — detect it instead
+        // by a real Stripe subscription id landing on a promo row that never had one.
+        val convertingFoundingPromo = local.planCode == FOUNDING_PROMO_PLAN_CODE && local.stripeSubscriptionId == null
+
         subscriptionRepository.syncExternalState(
             local.id,
             mapped,
@@ -459,6 +528,9 @@ class OrganizationSubscriptionService(
             subscription.id,
             subscription.cancelAtPeriodEnd,
         )
+        if (convertingFoundingPromo) {
+            foundingOrgPromoCodeRepository?.markConverted(local.organizationId)
+        }
         applyOrganizationAccess(local.organizationId, mapped)
         auditService.record(
             actorUserId = null,

@@ -3,6 +3,7 @@ package com.rally26.identity.application
 import com.rally26.common.error.ConflictException
 import com.rally26.common.error.UnauthorizedException
 import com.rally26.common.web.CurrentUser
+import com.rally26.foundingorg.application.FoundingPromoCodeService
 import com.rally26.identity.domain.AppUser
 import com.rally26.identity.domain.AppUserStatus
 import com.rally26.identity.persistence.AppUserRepository
@@ -23,6 +24,7 @@ class PasswordAuthenticationService(
     private val emailVerificationService: EmailVerificationService,
     private val passwordEncoder: PasswordEncoder,
     private val ownerOnboardingRepository: OwnerOnboardingRepository? = null,
+    private val foundingPromoCodeService: FoundingPromoCodeService? = null,
 ) {
     data class RegistrationAccepted(
         val email: String,
@@ -62,6 +64,7 @@ class PasswordAuthenticationService(
         invitationToken: String? = null,
         acceptedTerms: Boolean = true,
         confirmedAdult: Boolean = true,
+        foundingPromoCode: String? = null,
     ): RegistrationAccepted {
         val normalizedEmail = email.trim().lowercase()
         if (appUserRepository.findByEmail(normalizedEmail) != null) {
@@ -69,6 +72,17 @@ class PasswordAuthenticationService(
         }
         require(acceptedTerms) { "Terms must be accepted before owner registration." }
         require(confirmedAdult) { "Owner registration requires adult confirmation." }
+        // Validated before the user row is created so a bad/redeemed code fails loudly
+        // instead of leaving behind an app_user with no way to complete the pilot flow.
+        if (!foundingPromoCode.isNullOrBlank()) {
+            foundingPromoCodeService?.validate(foundingPromoCode)?.let {
+                if (!it.valid) {
+                    throw com.rally26.common.error.ValidationException(
+                        it.reason ?: "This founding organization code cannot be used.",
+                    )
+                }
+            }
+        }
         val created =
             try {
                 appUserRepository.insert(
@@ -85,6 +99,9 @@ class PasswordAuthenticationService(
         // resumable onboarding row; the unique owner_user_id constraint makes retries safe.
         if (invitationToken.isNullOrBlank()) {
             ownerOnboardingRepository?.createForOwner(created.id)
+        }
+        if (!foundingPromoCode.isNullOrBlank()) {
+            foundingPromoCodeService?.reserve(foundingPromoCode, created.id)
         }
         val issued = emailVerificationService.issueForUser(created.id, invitationToken)
         emailVerificationService.enqueueVerificationEmail(issued)

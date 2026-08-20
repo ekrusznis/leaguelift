@@ -81,6 +81,10 @@ data class SubscriptionCheckoutResponse(
     val checkoutUrl: String,
 )
 
+data class FoundingPromoReservationResponse(
+    val reserved: Boolean,
+)
+
 fun SubscriptionPlan.toResponse() =
     SubscriptionPlanResponse(code, name, description, amountMinor, currency, billingInterval, contactOnly, requiresCheckout)
 
