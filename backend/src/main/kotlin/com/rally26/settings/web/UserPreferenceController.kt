@@ -29,4 +29,15 @@ class UserPreferenceController(
                 userId = currentUser.userId,
                 appearance = request.appearance,
             ).toResponse()
+
+    @PatchMapping("/media-visibility")
+    fun updateDefaultMediaVisibility(
+        @RequestBody request: UpdateDefaultMediaVisibilityRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): UserPreferenceResponse =
+        service
+            .updateDefaultMediaVisibility(
+                userId = currentUser.userId,
+                defaultMediaVisibility = request.defaultMediaVisibility,
+            ).toResponse()
 }

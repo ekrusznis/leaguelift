@@ -17,6 +17,8 @@ import com.rally26.media.persistence.MediaAssetRepository
 import com.rally26.media.persistence.MediaAssignmentRepository
 import com.rally26.membership.application.MembershipService
 import com.rally26.outbox.application.OutboxWriter
+import com.rally26.settings.application.UserPreferenceService
+import com.rally26.settings.domain.MediaVisibilityDefault
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -43,6 +45,7 @@ class HouseholdMediaService(
     private val householdRepository: HouseholdRepository,
     private val auditService: AuditService,
     private val outboxWriter: OutboxWriter,
+    private val userPreferenceService: UserPreferenceService,
 ) {
     fun list(
         organizationId: UUID,
@@ -74,6 +77,9 @@ class HouseholdMediaService(
         if (asset.intendedUsageSlot != MediaUsageSlot.HOUSEHOLD_MEDIA) {
             throw ValidationException("This asset was not uploaded as household media.")
         }
+        // The uploader's own preference (Settings > Media sharing), never an existing item's
+        // visibility — changing the preference later only affects future uploads.
+        val startsPublic = userPreferenceService.defaultMediaVisibility(currentUser.userId) == MediaVisibilityDefault.PUBLIC
         val assignment =
             mediaAssignmentRepository.insert(
                 organizationId = organizationId,
@@ -82,7 +88,7 @@ class HouseholdMediaService(
                 entityId = householdId,
                 usageSlot = MediaUsageSlot.HOUSEHOLD_MEDIA,
                 publicationStatus = PublicationStatus.APPROVED,
-                visibility = Visibility.HOUSEHOLD_PRIVATE,
+                visibility = if (startsPublic) Visibility.PUBLIC else Visibility.HOUSEHOLD_PRIVATE,
                 altText = null,
             )
         auditService.record(
@@ -93,6 +99,25 @@ class HouseholdMediaService(
             assignment.id,
             householdId = householdId,
         )
+        if (startsPublic) {
+            // Same per-item traceability rationale as releasePublicly below — this item left
+            // household-private scope immediately, driven by the uploader's own saved default.
+            auditService.record(
+                currentUser.userId,
+                organizationId,
+                "household_media.released_publicly",
+                "media_assignment",
+                assignment.id,
+                householdId = householdId,
+            )
+            outboxWriter.write(
+                aggregateType = "media_assignment",
+                aggregateId = assignment.id,
+                organizationId = organizationId,
+                eventType = "media.assignment.published",
+                payloadJson = """{"assignmentId":"${assignment.id}","usageSlot":"${MediaUsageSlot.HOUSEHOLD_MEDIA.name}"}""",
+            )
+        }
         return assignment
     }
 

@@ -1,4 +1,5 @@
 export type AppearancePreference = "SYSTEM" | "LIGHT" | "DARK";
+export type MediaVisibilityDefault = "PRIVATE" | "PUBLIC";
 
 export type NotificationTopic =
 	| "EVENTS_SCHEDULE"
@@ -15,10 +16,15 @@ export type NotificationPreferenceState = "DEFAULT" | "ENABLED" | "DISABLED";
 
 export interface UserPreferences {
 	appearance: AppearancePreference;
+	defaultMediaVisibility: MediaVisibilityDefault;
 }
 
 export interface UpdateUserPreferencesRequest {
 	appearance: AppearancePreference;
+}
+
+export interface UpdateDefaultMediaVisibilityRequest {
+	defaultMediaVisibility: MediaVisibilityDefault;
 }
 
 export interface NotificationTopicPreference {

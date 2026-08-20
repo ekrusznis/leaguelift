@@ -3,6 +3,7 @@ import { apiFetch } from "../../lib/apiClient";
 import type {
 	NotificationPreferences,
 	NotificationTopic,
+	UpdateDefaultMediaVisibilityRequest,
 	UpdateNotificationTopicRequest,
 	UpdateSmsConsentRequest,
 	UpdateUserPreferencesRequest,
@@ -24,6 +25,17 @@ export function useUpdateUserPreferences() {
 	return useMutation({
 		mutationFn: (request: UpdateUserPreferencesRequest) =>
 			apiFetch<UserPreferences>("/me/preferences", { method: "PATCH", body: request }),
+		onSuccess: (preferences) => {
+			queryClient.setQueryData(userPreferencesQueryKey, preferences);
+		},
+	});
+}
+
+export function useUpdateDefaultMediaVisibility() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (request: UpdateDefaultMediaVisibilityRequest) =>
+			apiFetch<UserPreferences>("/me/preferences/media-visibility", { method: "PATCH", body: request }),
 		onSuccess: (preferences) => {
 			queryClient.setQueryData(userPreferencesQueryKey, preferences);
 		},
