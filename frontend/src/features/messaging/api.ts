@@ -10,11 +10,14 @@ export function useMyMessageThreads() {
 	});
 }
 
+const THREAD_MESSAGES_POLL_MS = 15_000;
+
 export function useMyThreadMessages(threadId: string | undefined) {
 	return useQuery({
 		queryKey: ["me", "message-threads", threadId, "messages"],
 		queryFn: () => apiFetch<PageResponse<MyBroadcastMessage>>(`/me/message-threads/${threadId}/messages?page=0&size=100`),
 		enabled: !!threadId,
+		refetchInterval: THREAD_MESSAGES_POLL_MS,
 	});
 }
 
@@ -26,11 +29,14 @@ export function useMyThreadMembers(threadId: string | undefined, enabled: boolea
 	});
 }
 
-export function useMarkMessageRead() {
+export function useMarkMessageRead(threadId?: string) {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: (messageId: string) => apiFetch<void>(`/me/messages/${messageId}/read`, { method: "POST" }),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me", "message-threads"] }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["me", "message-threads"] });
+			if (threadId) queryClient.invalidateQueries({ queryKey: ["me", "message-threads", threadId, "messages"] });
+		},
 	});
 }
 
@@ -42,7 +48,10 @@ export function useReplyToConversation() {
 				method: "POST",
 				body: { idempotencyKey: crypto.randomUUID(), body },
 			}),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me", "message-threads"] }),
+		onSuccess: (_data, { threadId }) => {
+			queryClient.invalidateQueries({ queryKey: ["me", "message-threads"] });
+			queryClient.invalidateQueries({ queryKey: ["me", "message-threads", threadId, "messages"] });
+		},
 	});
 }
 
@@ -68,6 +77,7 @@ export function useManagedThreadMessages(organizationId: string | undefined, thr
 		queryKey: ["message-threads", "managed", organizationId, threadId, "messages"],
 		queryFn: () => apiFetch<PageResponse<BroadcastMessage>>(`/organizations/${organizationId}/message-threads/${threadId}/messages?page=0&size=100`),
 		enabled: !!organizationId && !!threadId,
+		refetchInterval: THREAD_MESSAGES_POLL_MS,
 	});
 }
 
@@ -136,8 +146,9 @@ export function useSendBroadcastMessage() {
 				method: "POST",
 				body: { idempotencyKey: crypto.randomUUID(), body },
 			}),
-		onSuccess: () => {
+		onSuccess: (_data, { organizationId, threadId }) => {
 			queryClient.invalidateQueries({ queryKey: ["message-threads", "managed"] });
+			queryClient.invalidateQueries({ queryKey: ["message-threads", "managed", organizationId, threadId, "messages"] });
 			queryClient.invalidateQueries({ queryKey: ["me", "message-threads"] });
 		},
 	});

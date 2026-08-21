@@ -45,6 +45,7 @@ export function TournamentDashboard({ organizationId, tournamentId }: { organiza
 			contextRole="Tournament Admin"
 			navItems={navItems}
 			userName={user?.displayName ?? "Account"}
+			userAvatarSrc={user?.avatarUrl ?? undefined}
 			promo={{
 				heading: "Run a tournament families love.",
 				copy: "Keep the tournament page and changing event schedule easy to find.",

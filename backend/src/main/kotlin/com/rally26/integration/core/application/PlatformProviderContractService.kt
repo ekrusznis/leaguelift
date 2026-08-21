@@ -48,7 +48,7 @@ class PlatformProviderContractService(
                 readiness,
                 "Environment secret + webhook secret",
                 "Environment/KMS rotation with application restart",
-                "Configuration-only until Phase 20",
+                "Configuration-only for now",
                 "Stripe-Signature verification is active for the existing webhook inbox",
                 "Provider event ID and source transaction identity",
                 listOf(
@@ -60,7 +60,7 @@ class PlatformProviderContractService(
                     capability(
                         "Connect account health",
                         ProviderContractCapabilityStatus.SCAFFOLDED,
-                        "Account-health mapping is modeled; credentialed webhook rehearsal remains Phase 20.",
+                        "Account-health mapping is modeled; credentialed webhook rehearsal is still pending.",
                     ),
                     capability(
                         "Subscription billing",
@@ -74,7 +74,7 @@ class PlatformProviderContractService(
                 readiness,
                 "Rally26 platform API token",
                 "Replace token in managed secret storage; never organization-entered",
-                "Configuration/shop readiness only until Phase 20",
+                "Configuration/shop readiness only for now",
                 if (printifyProperties.webhookSecret.isNotBlank()) {
                     "HMAC secret configured; official event contract still requires verification"
                 } else {
@@ -90,7 +90,7 @@ class PlatformProviderContractService(
                     capability(
                         "Shipment webhooks",
                         ProviderContractCapabilityStatus.SCAFFOLDED,
-                        "Phase 24.4 (ADR-070): a real signature-verified, deduped receiver exists (PrintifyWebhookController) and " +
+                        "A real signature-verified, deduped receiver exists (PrintifyWebhookController, ADR-070) and " +
                             "maps sent-to-production/shipment events onto real Fulfillment states, but has no live traffic today — " +
                             "OrderService never submits orders to production yet — and the exact payload/signature-header shape is " +
                             "still unverified against Printify's live docs.",
@@ -109,7 +109,7 @@ class PlatformProviderContractService(
                 "Managed secret rotation",
                 "Configuration/delivery-result readiness only",
                 if (resendProperties.webhookSecret.isNotBlank()) {
-                    "Webhook signing secret configured; official event fixture verification remains Phase 20"
+                    "Webhook signing secret configured; official event fixture verification is still pending"
                 } else {
                     "Bounce/complaint webhook verifier seam scaffolded"
                 },
@@ -123,7 +123,7 @@ class PlatformProviderContractService(
                     capability(
                         "Bounce and complaint events",
                         ProviderContractCapabilityStatus.SCAFFOLDED,
-                        "Normalized result contracts are ready; domain activation remains Phase 20.",
+                        "Normalized result contracts are ready; domain activation is still pending.",
                     ),
                 ),
             ),
@@ -144,7 +144,7 @@ class PlatformProviderContractService(
                     capability(
                         "Delivery callbacks",
                         ProviderContractCapabilityStatus.SCAFFOLDED,
-                        "Normalized undeliverable/opt-out contracts are ready; live callback verification remains Phase 20.",
+                        "Normalized undeliverable/opt-out contracts are ready; live callback verification is still pending.",
                     ),
                 ),
             ),
@@ -161,7 +161,7 @@ class PlatformProviderContractService(
                     capability(
                         "Read/write/delete probes",
                         ProviderContractCapabilityStatus.SCAFFOLDED,
-                        "Credentialed bucket probes remain Phase 20.",
+                        "Credentialed bucket probes are still pending.",
                     ),
                 ),
             ),

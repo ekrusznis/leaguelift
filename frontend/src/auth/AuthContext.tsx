@@ -71,7 +71,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	}, []);
 
 	const establishSession = (response: authApi.AuthApiResponse): AuthResult => {
-		const authUser: AuthUser = { displayName: response.user.displayName, email: response.user.email };
+		const authUser: AuthUser = {
+			displayName: response.user.displayName,
+			email: response.user.email,
+			avatarUrl: response.user.avatarUrl,
+			avatarSeed: response.user.avatarSeed,
+			avatarStyle: response.user.avatarStyle,
+		};
 		const session: Session = {
 			accessToken: response.accessToken,
 			expiresAt: Date.now() + response.expiresIn * 1000,
@@ -109,6 +115,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 				clearStoredSession();
 				setUser(null);
 				setStatus("unauthenticated");
+			},
+			updateAvatar: (avatar) => {
+				setUser((current) => {
+					if (!current) return current;
+					const next = { ...current, ...avatar };
+					const session = sessionRef.current;
+					if (session) {
+						const updatedSession = { ...session, user: next };
+						sessionRef.current = updatedSession;
+						writeStoredSession(updatedSession);
+					}
+					return next;
+				});
 			},
 		}),
 		[status, user],

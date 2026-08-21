@@ -18,4 +18,7 @@ data class AppUser(
     val updatedAt: Instant,
     val provider: OAuthProvider? = null,
     val providerSubject: String? = null,
+    val avatarObjectKey: String? = null,
+    val avatarSeed: String? = null,
+    val avatarStyle: String? = null,
 )

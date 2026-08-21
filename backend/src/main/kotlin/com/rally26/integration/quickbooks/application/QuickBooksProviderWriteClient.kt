@@ -46,6 +46,6 @@ class DisabledQuickBooksProviderWriteClient : QuickBooksProviderWriteClient {
     private fun writesDisabled(): Nothing =
         throw ServiceUnavailableException(
             "QUICKBOOKS_WRITES_DISABLED",
-            "QuickBooks provider writes/readback remain disabled throughout Phase 29.",
+            "QuickBooks provider writes/readback are disabled until credentialed activation is approved.",
         )
 }

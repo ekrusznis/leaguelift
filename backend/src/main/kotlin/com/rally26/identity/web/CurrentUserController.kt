@@ -1,6 +1,7 @@
 package com.rally26.identity.web
 
 import com.rally26.common.web.CurrentUser
+import com.rally26.identity.application.AvatarService
 import com.rally26.identity.persistence.AppUserRepository
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/v1")
 class CurrentUserController(
     private val appUserRepository: AppUserRepository,
+    private val avatarService: AvatarService,
 ) {
     // By the time a request reaches here, the security filter chain has already
     // resolved the app_user (see JwtCurrentUserConverter), so /me is a read of
@@ -25,7 +27,7 @@ class CurrentUserController(
         val appUser =
             appUserRepository.findById(currentUser.userId)
                 ?: error("Authenticated user ${currentUser.userId} has no app_user record")
-        return appUser.toResponse()
+        return appUser.toResponse(avatarService.resolve(appUser))
     }
 
     @PostMapping("/bootstrap")
@@ -35,6 +37,6 @@ class CurrentUserController(
         val appUser =
             appUserRepository.findById(currentUser.userId)
                 ?: error("Authenticated user ${currentUser.userId} has no app_user record")
-        return appUser.toResponse()
+        return appUser.toResponse(avatarService.resolve(appUser))
     }
 }

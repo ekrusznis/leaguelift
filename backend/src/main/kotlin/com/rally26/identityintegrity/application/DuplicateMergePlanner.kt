@@ -240,7 +240,7 @@ object DuplicateMergePlanner {
                     items +=
                         blocker(
                             "NO_SUPPORT_ORGANIZATION_SCOPE",
-                            "This source account has no active tenant scope. Phase 27.4 requires an organization-scoped support session for account merges.",
+                            "This source account has no active tenant scope. Account merges require an organization-scoped support session.",
                         )
                     null
                 }
@@ -279,7 +279,7 @@ object DuplicateMergePlanner {
                     items +=
                         blocker(
                             "UNSUPPORTED_DEPENDENCY_${dependency.tableName}_${dependency.columnName}",
-                            "${dependency.tableName}.${dependency.columnName} has ${dependency.count} source reference(s) that Phase 27.4 does not explicitly migrate. The merge is blocked rather than guessing.",
+                            "${dependency.tableName}.${dependency.columnName} has ${dependency.count} source reference(s) that this merge tool does not explicitly migrate. The merge is blocked rather than guessing.",
                         )
             }
         }

@@ -163,7 +163,7 @@ export function QuickBooksScaffoldPanel({ organizationId, readOnly = false }: { 
 					<div>
 						<h4 className="font-medium text-navy-900 dark:text-[#f8fafc]">Activation readiness gates</h4>
 						<p className="mt-1 text-sm text-slate-500 dark:text-[#cbd5e1]">
-							These gates distinguish local setup from verified provider access. Phase 29 cannot satisfy or bypass the future credential, sandbox, accounting-approval, or write-policy gates.
+							These gates distinguish local setup from verified provider access. Local setup alone cannot satisfy or bypass the credential, sandbox, accounting-approval, or write-policy gates.
 						</p>
 					</div>
 					<span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-[#cbd5e1]">
@@ -179,7 +179,7 @@ export function QuickBooksScaffoldPanel({ organizationId, readOnly = false }: { 
 									{gate.status === "SATISFIED"
 										? "Satisfied"
 										: gate.status === "BLOCKED_BY_PHASE_POLICY"
-											? "Phase 29 blocked"
+											? "Not yet available"
 											: "Pending"}
 								</span>
 							</div>

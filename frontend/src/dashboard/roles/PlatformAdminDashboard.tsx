@@ -80,6 +80,7 @@ export function PlatformAdminDashboard() {
 			showHelp
 			searchScope={{ kind: "platform" }}
 			userName={user?.displayName ?? "Account"}
+			userAvatarSrc={user?.avatarUrl ?? undefined}
 			userRole="Rally26 employee"
 			promo={{
 				heading: supportAccess.data ? "Support access active" : "Platform operations",

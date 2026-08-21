@@ -61,6 +61,7 @@ data class BroadcastMessage(
     val body: String,
     val sentAt: Instant,
     val recipientCount: Long,
+    val readRecipientCount: Long,
     val emailSentCount: Long,
     val emailFailedCount: Long,
     val smsSentCount: Long,

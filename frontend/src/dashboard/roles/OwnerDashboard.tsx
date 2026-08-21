@@ -13,7 +13,7 @@ import { ProgressBar } from "../components/ProgressBar";
 import { CardQuery } from "../components/CardQuery";
 import { IconBadge } from "../components/IconBadge";
 import { PrimaryButton, SecondaryLightButton } from "../../marketing/components/buttons";
-import { adultAvatars, sidebarPromoBackground } from "../demoAssets";
+import { sidebarPromoBackground } from "../demoAssets";
 import { useAuth } from "../../auth/AuthContext";
 import { formatMoneyMinorUnits } from "../../lib/money";
 import { appPaths } from "../../routes/appPaths";
@@ -94,7 +94,7 @@ export function OwnerDashboard({ organizationId }: { organizationId: string }) {
 			searchScope={{ kind: "organization", organizationId }}
 			showHelp
 			userName={user?.displayName ?? "Account"}
-			userAvatarSrc={adultAvatars.owner}
+			userAvatarSrc={user?.avatarUrl ?? undefined}
 			promo={{
 				heading: "Stronger clubs. Stronger communities.",
 				copy: "We're here to help.",

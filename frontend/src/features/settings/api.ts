@@ -70,3 +70,36 @@ export function useUpdateSmsConsent() {
 		},
 	});
 }
+
+export interface AvatarResponse {
+	avatarUrl: string | null;
+	avatarSeed: string;
+	avatarStyle: string;
+}
+
+interface AvatarUploadUrlResponse {
+	uploadUrl: string;
+	objectKey: string;
+	expiresAt: string;
+}
+
+/** Presigns an upload, PUTs the file bytes directly to storage, then confirms — same three-step shape as the org media pipeline (`features/media/api.ts`), just against the org-independent `/me/avatar/*` routes. */
+export function useUploadAvatar() {
+	return useMutation({
+		mutationFn: async (file: File) => {
+			const { uploadUrl, objectKey } = await apiFetch<AvatarUploadUrlResponse>("/me/avatar/upload-url", {
+				method: "POST",
+				body: { contentType: file.type, fileSizeBytes: file.size },
+			});
+			const putResponse = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+			if (!putResponse.ok) throw new Error("The photo could not be uploaded. Please try again.");
+			return apiFetch<AvatarResponse>("/me/avatar/confirm", { method: "POST", body: { objectKey } });
+		},
+	});
+}
+
+export function useRemoveAvatar() {
+	return useMutation({
+		mutationFn: () => apiFetch<AvatarResponse>("/me/avatar", { method: "DELETE" }),
+	});
+}

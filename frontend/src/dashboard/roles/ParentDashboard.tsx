@@ -10,7 +10,7 @@ import { Pill } from "../components/Pill";
 import { ProgressBar } from "../components/ProgressBar";
 import { CardQuery } from "../components/CardQuery";
 import { PrimaryButton, SecondaryLightButton } from "../../marketing/components/buttons";
-import { adultAvatars, sidebarPromoBackground } from "../demoAssets";
+import { sidebarPromoBackground } from "../demoAssets";
 import { useAuth } from "../../auth/AuthContext";
 import { formatMoneyMinorUnits } from "../../lib/money";
 import { appPaths } from "../../routes/appPaths";
@@ -61,7 +61,7 @@ export function ParentDashboard({ organizationId, householdId }: { organizationI
 			contextRole="Guardian"
 			navItems={navItems}
 			userName={user?.displayName ?? "Account"}
-			userAvatarSrc={adultAvatars.guardianSarah}
+			userAvatarSrc={user?.avatarUrl ?? undefined}
 			promo={{
 				heading: "Stay connected.",
 				copy: "Enable SMS alerts for schedule updates, payments, and more.",

@@ -12,7 +12,10 @@ import { webEmbedRoute } from '@/lib/webEmbed';
 /**
  * Owner More hub.
  * Native management: Fundraising, Financial Operations, Fees/Collections, Swag Orders,
- * Sponsorships, Payout Account, Documents, announcements, and broadcasts.
+ * Sponsorships, Payout Account, Documents, and announcements. Org-wide message oversight
+ * (formerly a "Broadcasts" entry here) moved to the Messages tab's oversight link —
+ * having two differently-labeled paths to the same renamed "Organization Messages"
+ * screen was confusing, and the tab is the more discoverable entry point anyway.
  * Complex organization configuration that already has a complete responsive web surface
  * uses the existing authenticated WebView seam instead of duplicating domain logic natively.
  */
@@ -23,7 +26,6 @@ export default function OwnerMoreScreen() {
 
   const items: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }[] = [
     { icon: 'megaphone-outline', label: 'Announcements', onPress: () => router.push('/owner/announcements-manage') },
-    { icon: 'chatbubbles-outline', label: 'Broadcasts', onPress: () => router.push('/owner/broadcasts-manage') },
     { icon: 'bar-chart-outline', label: 'Reports', onPress: () => router.push('/owner/reports') },
     { icon: 'wallet-outline', label: 'Fees & Collections', onPress: () => router.push('/owner/fees' as any) },
     { icon: 'cash-outline', label: 'Financial Operations', onPress: () => router.push('/owner/financial-operations' as any) },

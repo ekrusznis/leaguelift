@@ -9,8 +9,8 @@ tests:
       - goal: Sign in using the supplied active OWNER test credentials.
         hint: Wait for dashboard-context and owner-onboarding checks to finish.
         finalScreenAssertion: >-
-          The native Owner experience is visible with Home, Teams, Members, and More.
-          The owner is not trapped in setup and no unexpected error is shown.
+          The native Owner experience is visible with Home, Teams, Messages, Members,
+          and More. The owner is not trapped in setup and no unexpected error is shown.
 
   - displayName: "[SMOKE] Owner - dashboard full visual sweep"
     id: owner-dashboard
@@ -88,7 +88,7 @@ tests:
           Stripe Connect/payout status is clearly communicated with readable balances
           or a deliberate not-configured state.
 
-  - displayName: "Owner - announcements and broadcasts"
+  - displayName: "Owner - announcements"
     id: owner-comms
     prerequisiteTestCaseId: owner-login
     steps:
@@ -96,10 +96,51 @@ tests:
         finalScreenAssertion: >-
           Announcement management is readable and clearly distinguishes draft/published
           state where present.
-      - goal: Return to More and open Broadcasts management.
+
+  - displayName: "[SMOKE] Owner - Messages tab and own inbox"
+    id: owner-messages
+    prerequisiteTestCaseId: owner-login
+    steps:
+      - goal: Open the Messages tab and inspect the thread list.
         finalScreenAssertion: >-
-          Broadcast threads or a deliberate empty state are readable and the New Broadcast
-          entry is clearly identified.
+          The Owner's own message threads (or a deliberate empty state) are visible with
+          a search box and All/Unread/Teams/Direct filter chips. No thread from another
+          organization is visible.
+      - goal: Type a search term that matches no thread, then clear it.
+        finalScreenAssertion: >-
+          Searching narrows the list to a "no matching conversations" state or matching
+          rows, and clearing the search restores the full list.
+      - goal: Open one thread if available and inspect the message bubbles and any reply control.
+        finalScreenAssertion: >-
+          Messages sent by the signed-in owner appear as one visually distinct bubble
+          color/side and messages from others appear as a different, clearly distinct
+          color/side. Any reply control accurately reflects whether the owner may reply
+          in this specific thread, and if replying isn't available, a specific reason is
+          shown (not just a missing composer with no explanation).
+
+  - displayName: "Owner - organization-wide message oversight"
+    id: owner-messages-oversight
+    prerequisiteTestCaseId: owner-messages
+    steps:
+      - goal: >-
+          From the Messages tab, open "View all organization messages" (the oversight
+          link).
+        finalScreenAssertion: >-
+          "Organization Messages" opens and lists every broadcast and conversation in the
+          organization, each labeled with its type (Broadcast/Conversation/Athlete
+          conversation) — not only threads the owner personally sent or is a member of.
+      - goal: >-
+          Open a conversation thread (not a broadcast) from this oversight list, such as a
+          coach-to-parent conversation the owner is not personally part of.
+        finalScreenAssertion: >-
+          The real message content of the conversation is visible to the owner for
+          oversight, and a clear "viewing for oversight" read-only explanation is shown
+          instead of a composer — the owner cannot inject a reply into a conversation
+          between other people from this screen.
+      - goal: Open a broadcast thread from the same oversight list.
+        finalScreenAssertion: >-
+          The broadcast's sent updates are visible and, if the broadcast is still open, a
+          working composer to send a new update to its audience is present.
 
   - displayName: "Owner - fundraising"
     id: owner-fundraising

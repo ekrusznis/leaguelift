@@ -24,12 +24,22 @@ export function useMyMessageThreads() {
   });
 }
 
+/**
+ * No websocket/push channel exists for messaging (ADR-074 explicitly rules one out for
+ * this domain). Polling while a thread is open keeps it from feeling stale without
+ * introducing new realtime infrastructure — same convention as `actionCenter/api.ts`'s
+ * 60s inbox poll, just shorter since an open two-way conversation benefits more from
+ * feeling live than a background action list does.
+ */
+const THREAD_MESSAGES_POLL_MS = 15_000;
+
 export function useThreadMessages(threadId: string | null) {
   return useQuery({
     queryKey: ['me', 'message-threads', threadId, 'messages'],
     queryFn: ({ signal }) =>
       apiFetch<PageResponse<MyBroadcastMessageResponse>>(`/me/message-threads/${threadId}/messages?size=100`, { signal }),
     enabled: !!threadId,
+    refetchInterval: THREAD_MESSAGES_POLL_MS,
   });
 }
 

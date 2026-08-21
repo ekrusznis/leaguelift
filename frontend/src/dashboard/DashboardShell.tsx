@@ -230,6 +230,9 @@ export function DashboardShell({
 								<Link to="/app/announcements" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 dark:text-[#f8fafc] hover:bg-ice-50 hover:dark:bg-[#0f172a]">
 									Announcements
 								</Link>
+								<Link to="/app/settings" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 dark:text-[#f8fafc] hover:bg-ice-50 hover:dark:bg-[#0f172a]">
+									Settings
+								</Link>
 								<Link to="/app/help" className="block rounded-lg px-3 py-2 text-sm font-medium text-navy-900 dark:text-[#f8fafc] hover:bg-ice-50 hover:dark:bg-[#0f172a]">
 									Help center
 								</Link>
