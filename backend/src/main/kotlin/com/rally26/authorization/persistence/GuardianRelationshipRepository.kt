@@ -90,6 +90,14 @@ class GuardianRelationshipRepository(
             .query(Boolean::class.java)
             .single()
 
+    /** Whether this household_adult contact is already linked to *any* real login — regardless of which user — so an invite isn't sent for a contact that's already claimed. */
+    fun isAdultLinkedToAnyUser(householdAdultId: UUID): Boolean =
+        jdbcClient
+            .sql("select exists(select 1 from guardian_relationship where household_adult_id = :householdAdultId and status = 'ACTIVE')")
+            .param("householdAdultId", householdAdultId)
+            .query(Boolean::class.java)
+            .single()
+
     fun insert(
         organizationId: UUID,
         householdId: UUID,

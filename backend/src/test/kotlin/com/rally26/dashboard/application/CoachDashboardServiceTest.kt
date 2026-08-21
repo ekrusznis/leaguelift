@@ -9,6 +9,7 @@ import com.rally26.fundraising.persistence.CampaignRepository
 import com.rally26.fundraising.persistence.ContributionRepository
 import com.rally26.participant.persistence.ParticipantRepository
 import com.rally26.publicpage.persistence.PublicPageRepository
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -169,5 +170,5 @@ class CoachDashboardServiceTest {
     }
 
     private fun team(name: String) =
-        Team(UUID.randomUUID(), orgId, name, "Soccer", "2025", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
+        Team(UUID.randomUUID(), orgId, name, Sport.SOCCER, "2025", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
 }

@@ -3,13 +3,17 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import { Avatar } from "../../dashboard/components/Avatar";
 import { Button } from "../../components/Button";
+import { Modal } from "../../components/Modal";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { featureFlags } from "../../lib/featureFlags";
 import { OrganizationSettingsDirectory } from "./OrganizationSettingsDirectory";
 import {
+	useCancelAccountDeletion,
 	useNotificationPreferences,
+	usePendingAccountDeletion,
 	useRemoveAvatar,
+	useRequestAccountDeletion,
 	useUpdateDefaultMediaVisibility,
 	useUpdateNotificationTopic,
 	useUpdateSmsConsent,
@@ -60,6 +64,11 @@ const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 export function SettingsPage() {
 	const { user, updateAvatar } = useAuth();
 	const preferences = useUserPreferences();
+	const pendingDeletion = usePendingAccountDeletion();
+	const requestDeletion = useRequestAccountDeletion();
+	const cancelDeletion = useCancelAccountDeletion();
+	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+	const [deleteError, setDeleteError] = useState<string | null>(null);
 	const update = useUpdateUserPreferences();
 	const updateMediaVisibility = useUpdateDefaultMediaVisibility();
 	const notifications = useNotificationPreferences();
@@ -329,6 +338,73 @@ export function SettingsPage() {
 					<Link to="/app/help" className="rounded-lg border border-slate-300 dark:border-[#334155] px-4 py-2 text-sm font-semibold text-navy-900 dark:text-[#f8fafc] hover:bg-ice-white hover:dark:bg-[#0f172a]">Help</Link>
 				</div>
 			</section>
+
+			<section className="rounded-xl border border-rose-200 dark:border-rose-900 bg-white dark:bg-[#111827] p-5" aria-labelledby="settings-danger-heading">
+				<h2 id="settings-danger-heading" className="font-heading text-xl font-semibold text-rose-700">Danger zone</h2>
+				{pendingDeletion.data ? (
+					<>
+						<p className="mt-1 text-sm text-slate-600 dark:text-[#cbd5e1]">
+							Your account is scheduled for deletion on{" "}
+							<span className="font-semibold">{new Date(pendingDeletion.data.scheduledFor).toLocaleDateString()}</span>. Export
+							anything you need before then — after that date it can&rsquo;t be undone.
+						</p>
+						<Button
+							type="button"
+							variant="danger"
+							className="mt-4"
+							disabled={cancelDeletion.isPending}
+							onClick={async () => {
+								await cancelDeletion.mutateAsync();
+							}}
+						>
+							{cancelDeletion.isPending ? "Canceling…" : "Cancel deletion"}
+						</Button>
+					</>
+				) : (
+					<>
+						<p className="mt-1 text-sm text-slate-600 dark:text-[#cbd5e1]">
+							Permanently delete your Rally26 account and remove yourself from every team and organization you belong to.
+						</p>
+						<Button type="button" variant="danger" className="mt-4" onClick={() => { setDeleteError(null); setDeleteModalOpen(true); }}>
+							Delete my account
+						</Button>
+					</>
+				)}
+			</section>
+
+			<Modal
+				open={deleteModalOpen}
+				onClose={() => setDeleteModalOpen(false)}
+				title="Delete your account?"
+				actions={
+					<>
+						<Button type="button" variant="secondary" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
+						<Button
+							type="button"
+							variant="danger"
+							disabled={requestDeletion.isPending}
+							onClick={async () => {
+								try {
+									await requestDeletion.mutateAsync();
+									setDeleteModalOpen(false);
+								} catch {
+									setDeleteError(
+										"Could not start account deletion. If you own an organization, transfer ownership or close it first.",
+									);
+								}
+							}}
+						>
+							{requestDeletion.isPending ? "Starting…" : "Delete my account"}
+						</Button>
+					</>
+				}
+			>
+				<p className="text-sm text-slate-600 dark:text-[#cbd5e1]">
+					You&rsquo;ll have 7 days to export any data you need. After that, your account is permanently deleted and you&rsquo;re
+					removed from every team and organization you belong to. This can&rsquo;t be undone.
+				</p>
+				{deleteError && <p role="alert" className="mt-3 text-sm font-medium text-rose-700">{deleteError}</p>}
+			</Modal>
 
 		</div>
 	);

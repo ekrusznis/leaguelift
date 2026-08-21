@@ -4,6 +4,7 @@ import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.common.web.PageResponse
 import com.rally26.team.application.TeamService
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.TeamGenderCategory
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -27,6 +28,12 @@ private fun genderCategory(value: String?): TeamGenderCategory? =
         runCatching { TeamGenderCategory.valueOf(it) }
             .getOrElse { throw ValidationException("Unknown gender category.") }
     }
+
+private fun sport(value: String): Sport =
+    runCatching { Sport.valueOf(value.trim().uppercase()) }
+        .getOrElse { throw ValidationException("Unknown sport.") }
+
+private fun sportOrNull(value: String?): Sport? = value?.let(::sport)
 
 @RestController
 @RequestMapping("/api/v1/organizations/{organizationId}/teams")
@@ -56,13 +63,14 @@ class TeamController(
             teamService.create(
                 organizationId,
                 request.name,
-                request.sport,
+                sport(request.sport),
                 request.season,
                 request.contactEmail,
                 request.ageGroup,
                 genderCategory(request.genderCategory),
                 request.level,
                 currentUser,
+                request.sportOtherLabel,
             )
         return ResponseEntity.status(HttpStatus.CREATED).body(team.toResponse())
     }
@@ -86,13 +94,14 @@ class TeamController(
                 organizationId,
                 teamId,
                 request.name,
-                request.sport,
+                sportOrNull(request.sport),
                 request.season,
                 request.contactEmail,
                 request.ageGroup,
                 genderCategory(request.genderCategory),
                 request.level,
                 currentUser,
+                request.sportOtherLabel,
             ).toResponse()
 
     @DeleteMapping("/{teamId}")

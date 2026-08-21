@@ -72,6 +72,35 @@ export function acceptInvitation(token: string): Promise<InvitationAcceptanceRes
 	return apiFetch<InvitationAcceptanceResponse>(`/invitations/${token}/accept`, { method: "POST" });
 }
 
+export interface HouseholdInvitationAcceptanceResponse {
+	id: string;
+	organizationId: string;
+	householdId: string;
+	kind: "GUARDIAN" | "ATHLETE";
+	participantId: string;
+	email: string;
+	status: string;
+	expiresAt: string;
+	createdAt: string;
+}
+
+export function acceptHouseholdInvitation(token: string): Promise<HouseholdInvitationAcceptanceResponse> {
+	return apiFetch<HouseholdInvitationAcceptanceResponse>(`/household-invitations/${token}/accept`, { method: "POST" });
+}
+
+export interface OwnershipTransferInvitationAcceptanceResponse {
+	id: string;
+	organizationId: string;
+	email: string;
+	status: string;
+	expiresAt: string;
+	createdAt: string;
+}
+
+export function acceptOwnershipTransferInvitation(token: string): Promise<OwnershipTransferInvitationAcceptanceResponse> {
+	return apiFetch<OwnershipTransferInvitationAcceptanceResponse>(`/ownership-transfer-invitations/${token}/accept`, { method: "POST" });
+}
+
 /** Maps a failed login/register call to a message safe to show the user. */
 export function messageForAuthError(error: unknown): string {
 	if (error instanceof ApiError) {
@@ -89,6 +118,26 @@ export function messageForInvitationError(error: unknown): string {
 		if (error.status === 401) return "Sign in first to accept this invitation.";
 		if (error.code === "INVITATION_EMAIL_MISMATCH") return "This invitation was sent to a different email address.";
 		if (error.code === "INVITATION_NOT_FOUND") return "This invitation link is invalid or has already been rotated.";
+		return error.message;
+	}
+	return "Could not accept this invitation. Please try again.";
+}
+
+export function messageForHouseholdInvitationError(error: unknown): string {
+	if (error instanceof ApiError) {
+		if (error.status === 401) return "Sign in first to accept this invitation.";
+		if (error.code === "HOUSEHOLD_INVITATION_EMAIL_MISMATCH") return "This invitation was sent to a different email address.";
+		if (error.code === "HOUSEHOLD_INVITATION_NOT_FOUND") return "This invitation link is invalid.";
+		return error.message;
+	}
+	return "Could not accept this invitation. Please try again.";
+}
+
+export function messageForOwnershipTransferInvitationError(error: unknown): string {
+	if (error instanceof ApiError) {
+		if (error.status === 401) return "Sign in first to accept this invitation.";
+		if (error.code === "OWNERSHIP_TRANSFER_INVITATION_EMAIL_MISMATCH") return "This invitation was sent to a different email address.";
+		if (error.code === "OWNERSHIP_TRANSFER_INVITATION_NOT_FOUND") return "This invitation link is invalid.";
 		return error.message;
 	}
 	return "Could not accept this invitation. Please try again.";

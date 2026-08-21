@@ -13,6 +13,8 @@ import { formatEventAllDayDate, formatEventDateTime } from "./formatEventDateTim
 import { downloadEventCalendar, useCreateEvent, useEventTemplates, useEventTimezoneDefault, type EventScope } from "./api";
 import { useEventSearch, type EventSearchSort } from "./searchApi";
 import type { CreateEventInput, EventStatus, EventTemplate, EventType, EventVisibility, Rally26Event } from "./types";
+import { useTeam } from "../teams/api";
+import { terminologyForSport, type SportTerminology } from "../teams/sport";
 
 function formatDateTime(value: string | null, timezone: string) {
 	if (!value) return "To be determined";
@@ -49,14 +51,17 @@ function saveBlob(blob: Blob, filename: string) {
 	URL.revokeObjectURL(url);
 }
 
-const EVENT_TYPE_OPTIONS: { value: EventType | ""; label: string }[] = [
-	{ value: "", label: "All event types" },
-	{ value: "COMPETITION", label: "Game / match" },
-	{ value: "PRACTICE", label: "Practice" },
-	{ value: "MEETING", label: "Meeting" },
-	{ value: "TOURNAMENT", label: "Tournament" },
-	{ value: "OTHER", label: "Other" },
-];
+/** COMPETITION's label reflects the in-view team's real sport (e.g. "Match" for soccer, "Meet" for swimming) — [terminology] is [GENERIC_TERMINOLOGY] outside of a single team's context. */
+function buildEventTypeOptions(terminology: SportTerminology): { value: EventType | ""; label: string }[] {
+	return [
+		{ value: "", label: "All event types" },
+		{ value: "COMPETITION", label: terminology.event },
+		{ value: "PRACTICE", label: "Practice" },
+		{ value: "MEETING", label: "Meeting" },
+		{ value: "TOURNAMENT", label: "Tournament" },
+		{ value: "OTHER", label: "Other" },
+	];
+}
 
 const EVENT_STATUS_OPTIONS: { value: EventStatus | ""; label: string }[] = [
 	{ value: "", label: "All statuses" },
@@ -81,6 +86,9 @@ export function EventListPanel({
 	participantId?: string;
 }) {
 	const location = useLocation();
+	const teamQuery = useTeam(scope.organizationId, scope.type === "team" ? scope.teamId : "");
+	const terminology = terminologyForSport(scope.type === "team" ? teamQuery.data?.sport : null);
+	const eventTypeOptions = buildEventTypeOptions(terminology);
 	const [page, setPage] = useState(0);
 	const [size, setSize] = useState(25);
 	const [query, setQuery] = useState("");
@@ -160,7 +168,7 @@ export function EventListPanel({
 							onChange={(event) => { setEventType(event.target.value as EventType | ""); resetPage(); }}
 							className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-navy dark:border-[#334155] dark:bg-[#0f172a] dark:text-[#f8fafc]"
 						>
-							{EVENT_TYPE_OPTIONS.map((option) => <option key={option.value || "ALL"} value={option.value}>{option.label}</option>)}
+							{eventTypeOptions.map((option) => <option key={option.value || "ALL"} value={option.value}>{option.label}</option>)}
 						</select>
 						<select
 							aria-label="Filter by event status"
@@ -307,6 +315,9 @@ function CreateEventForm({
 }) {
 	const templatesQuery = useEventTemplates(scope.organizationId);
 	const templates = templatesQuery.data ?? [];
+	const teamQuery = useTeam(scope.organizationId, scope.type === "team" ? scope.teamId : "");
+	const terminology = terminologyForSport(scope.type === "team" ? teamQuery.data?.sport : null);
+	const eventTypeOptions = buildEventTypeOptions(terminology).filter((option) => option.value !== "");
 	const [selectedTemplateId, setSelectedTemplateId] = useState("");
 	const [eventType, setEventType] = useState<EventType>("COMPETITION");
 	const [title, setTitle] = useState("");
@@ -401,7 +412,7 @@ function CreateEventForm({
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">
 					Event type
 					<select value={eventType} onChange={(event) => setEventType(event.target.value as EventType)} className="min-h-11 rounded-md border border-slate-gray/30 bg-white px-3 py-2 dark:bg-[#111827]">
-						<option value="COMPETITION">Game / match / competition</option><option value="PRACTICE">Practice</option><option value="MEETING">Meeting</option><option value="TOURNAMENT">Tournament item</option><option value="OTHER">Other</option>
+						{eventTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
 					</select>
 				</label>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">Title<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Optional custom title" maxLength={200} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
@@ -419,7 +430,7 @@ function CreateEventForm({
 						<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">Meeting time<input type="datetime-local" value={meetingAt} onChange={(event) => setMeetingAt(event.target.value)} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
 					</>
 				)}
-				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">Venue<input value={venueName} onChange={(event) => setVenueName(event.target.value)} maxLength={200} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
+				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">{terminology.venue}<input value={venueName} onChange={(event) => setVenueName(event.target.value)} maxLength={200} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc]">Field / court / area<input value={area} onChange={(event) => setArea(event.target.value)} maxLength={120} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">Address<input value={address} onChange={(event) => setAddress(event.target.value)} maxLength={300} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>
 				<label className="flex flex-col gap-1 text-sm font-medium text-navy dark:text-[#f8fafc] md:col-span-2">Meeting point<input value={meetingPoint} onChange={(event) => setMeetingPoint(event.target.value)} maxLength={300} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" /></label>

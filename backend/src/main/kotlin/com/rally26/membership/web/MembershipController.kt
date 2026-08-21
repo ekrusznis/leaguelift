@@ -89,4 +89,15 @@ class MembershipController(
         membershipService.revoke(organizationId, memberId, currentUser)
         return ResponseEntity.noContent().build()
     }
+
+    @PatchMapping("/ownership-transfer")
+    fun transferOwnership(
+        @PathVariable organizationId: UUID,
+        @Valid @RequestBody request: TransferOwnershipRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): MembershipResponse {
+        val membership = membershipService.transferOwnership(organizationId, request.newOwnerMembershipId, currentUser)
+        val user = appUserRepository.findById(membership.userId)
+        return membership.toResponse(userEmail = user?.email, userDisplayName = user?.displayName)
+    }
 }

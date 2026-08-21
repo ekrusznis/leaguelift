@@ -4,6 +4,7 @@ export interface OrgTeamResponse {
   organizationId: string;
   name: string;
   sport: string;
+  sportOtherLabel: string | null;
   season: string | null;
   status: string;
   contactEmail: string | null;

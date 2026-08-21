@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
 import com.rally26.authorization.application.AuthorizationService
 import com.rally26.common.error.NotFoundException
+import com.rally26.common.error.ServiceUnavailableException
 import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.fee.domain.AdjustmentType
@@ -367,6 +368,104 @@ class FeeServiceTest {
         assertFailsWith<ValidationException> {
             service.voidPayment(orgId, assignment.id, payment.id, "Already voided", currentUser)
         }
+    }
+
+    @Test
+    fun `voidPayment throws ValidationException for a confirmed card payment without force`() {
+        val assignment = sampleAssignment()
+        val payment = samplePayment(assignment.id).copy(method = PaymentMethod.STRIPE_ONLINE, stripePaymentIntentId = "pi_test123")
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { feeRepository.findAssignmentById(assignment.id, orgId) } returns assignment
+        every { feePaymentRepository.findById(payment.id, orgId) } returns payment
+
+        assertFailsWith<ValidationException> {
+            service.voidPayment(orgId, assignment.id, payment.id, "Trying to void a card payment directly", currentUser)
+        }
+        verify(exactly = 0) { feePaymentRepository.void(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `voidPayment force-voids a confirmed card payment without calling Stripe, audited distinctly`() {
+        val assignment = sampleAssignment().copy(status = FeeAssignmentStatus.PAID)
+        val payment = samplePayment(assignment.id).copy(method = PaymentMethod.STRIPE_ONLINE, stripePaymentIntentId = "pi_test123")
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { feeRepository.findAssignmentById(assignment.id, orgId) } returnsMany
+            listOf(assignment, assignment.copy(status = FeeAssignmentStatus.OPEN))
+        every { feePaymentRepository.findById(payment.id, orgId) } returns payment
+        every { feePaymentRepository.void(payment.id, orgId, currentUser.userId, "Adjusted manually in Stripe") } returns 1
+        every { feePaymentRepository.sumActiveByAssignment(assignment.id, orgId) } returns 0L
+        every { feeAdjustmentRepository.sumActiveByAssignment(assignment.id, orgId) } returns 0L
+        every { feeRepository.updateAssignmentStatus(assignment.id, orgId, FeeAssignmentStatus.OPEN) } returns 1
+        every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+
+        service.voidPayment(orgId, assignment.id, payment.id, "Adjusted manually in Stripe", currentUser, force = true)
+
+        verify(exactly = 1) { feePaymentRepository.void(payment.id, orgId, currentUser.userId, "Adjusted manually in Stripe") }
+        verify(exactly = 1) {
+            auditService.record(currentUser.userId, orgId, "fee_assignment.payment_force_voided", "fee_assignment", assignment.id, any())
+        }
+        verify(exactly = 0) { stripeFeePaymentCheckoutClient.createRefund(any()) }
+    }
+
+    @Test
+    fun `refundPayment throws ValidationException for a non-card payment`() {
+        val assignment = sampleAssignment()
+        val payment = samplePayment(assignment.id)
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { feeRepository.findAssignmentById(assignment.id, orgId) } returns assignment
+        every { feePaymentRepository.findById(payment.id, orgId) } returns payment
+
+        assertFailsWith<ValidationException> {
+            service.refundPayment(orgId, assignment.id, payment.id, "Trying to refund cash", currentUser)
+        }
+    }
+
+    @Test
+    fun `refundPayment calls Stripe, voids with the refund id, and records a ledger refund`() {
+        val assignment = sampleAssignment().copy(status = FeeAssignmentStatus.PAID)
+        val payment = samplePayment(assignment.id).copy(method = PaymentMethod.STRIPE_ONLINE, stripePaymentIntentId = "pi_test123")
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { feeRepository.findAssignmentById(assignment.id, orgId) } returnsMany
+            listOf(assignment, assignment.copy(status = FeeAssignmentStatus.OPEN))
+        every { feePaymentRepository.findById(payment.id, orgId) } returns payment
+        every { stripeFeePaymentCheckoutClient.createRefund("pi_test123") } returns "re_test456"
+        every { feePaymentRepository.refund(payment.id, orgId, currentUser.userId, "Requested by family", "re_test456") } returns 1
+        every {
+            ledgerService.recordRefund(orgId, LedgerSourceType.FEE_PAYMENT, payment.id, payment.amountMinor, payment.currency, "re_test456")
+        } just runs
+        every { feePaymentRepository.sumActiveByAssignment(assignment.id, orgId) } returns 0L
+        every { feeAdjustmentRepository.sumActiveByAssignment(assignment.id, orgId) } returns 0L
+        every { feeRepository.updateAssignmentStatus(assignment.id, orgId, FeeAssignmentStatus.OPEN) } returns 1
+        every { auditService.record(any(), any(), any(), any(), any(), any()) } just runs
+
+        val result = service.refundPayment(orgId, assignment.id, payment.id, "Requested by family", currentUser)
+
+        assertEquals(FeeAssignmentStatus.OPEN, result.assignment.status)
+        verify(exactly = 1) { stripeFeePaymentCheckoutClient.createRefund("pi_test123") }
+        verify(exactly = 1) { feePaymentRepository.refund(payment.id, orgId, currentUser.userId, "Requested by family", "re_test456") }
+        verify(exactly = 1) {
+            ledgerService.recordRefund(orgId, LedgerSourceType.FEE_PAYMENT, payment.id, payment.amountMinor, payment.currency, "re_test456")
+        }
+        verify(exactly = 1) {
+            auditService.record(currentUser.userId, orgId, "fee_assignment.payment_refunded", "fee_assignment", assignment.id, any())
+        }
+    }
+
+    @Test
+    fun `refundPayment throws ServiceUnavailableException when Stripe fails, and never voids locally`() {
+        val assignment = sampleAssignment()
+        val payment = samplePayment(assignment.id).copy(method = PaymentMethod.STRIPE_ONLINE, stripePaymentIntentId = "pi_test123")
+        every { membershipService.requireManagerRole(orgId, currentUser) } returns managerMembership()
+        every { feeRepository.findAssignmentById(assignment.id, orgId) } returns assignment
+        every { feePaymentRepository.findById(payment.id, orgId) } returns payment
+        every { stripeFeePaymentCheckoutClient.createRefund("pi_test123") } throws
+            com.stripe.exception.ApiConnectionException("network down")
+
+        assertFailsWith<ServiceUnavailableException> {
+            service.refundPayment(orgId, assignment.id, payment.id, "Requested by family", currentUser)
+        }
+        verify(exactly = 0) { feePaymentRepository.refund(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { feePaymentRepository.void(any(), any(), any(), any()) }
     }
 
     // --- Adjustments ---

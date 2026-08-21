@@ -9,6 +9,7 @@ import com.rally26.identity.domain.AppUser
 import com.rally26.organization.application.OrganizationService
 import com.rally26.organization.domain.OrganizationType
 import com.rally26.team.application.TeamService
+import com.rally26.team.domain.Sport
 import com.rally26.testsupport.AbstractIntegrationTest
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -82,7 +83,7 @@ class TeamStaffIntegrationTest : AbstractIntegrationTest() {
                 OrganizationType.RECREATIONAL_LEAGUE,
                 owner,
             )
-        val team = teamService.create(organization.id, "Varsity Soccer", "Soccer", null, null, null, null, null, owner)
+        val team = teamService.create(organization.id, "Varsity Soccer", Sport.SOCCER, null, null, null, null, null, owner)
 
         val (coachAppUser, coach) = registerUser("coach")
         authorizationService.grantTeamRole(organization.id, team.id, coach.userId, ResourceRole.COACH_READ, owner)

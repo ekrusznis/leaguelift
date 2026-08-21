@@ -8,6 +8,7 @@ import com.rally26.common.error.ValidationException
 import com.rally26.common.web.CurrentUser
 import com.rally26.membership.application.MembershipService
 import com.rally26.subscription.application.PlanEntitlementService
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamGenderCategory
 import com.rally26.team.persistence.TeamRepository
@@ -59,19 +60,31 @@ class TeamService(
     fun create(
         organizationId: UUID,
         name: String,
-        sport: String,
+        sport: Sport,
         season: String?,
         contactEmail: String?,
         ageGroup: String?,
         genderCategory: TeamGenderCategory?,
         level: String?,
         currentUser: CurrentUser,
+        sportOtherLabel: String? = null,
     ): Team {
         membershipService.requireManagerRole(organizationId, currentUser)
         planEntitlementService.requireTeamCapacity(organizationId, teamRepository.countAll(organizationId))
         validateContactEmail(contactEmail)
         return try {
-            val team = teamRepository.insert(organizationId, name, sport, season, contactEmail, ageGroup, genderCategory, level)
+            val team =
+                teamRepository.insert(
+                    organizationId,
+                    name,
+                    sport,
+                    season,
+                    contactEmail,
+                    ageGroup,
+                    genderCategory,
+                    level,
+                    sportOtherLabel,
+                )
             auditService.record(
                 actorUserId = currentUser.userId,
                 organizationId = organizationId,
@@ -90,20 +103,32 @@ class TeamService(
         organizationId: UUID,
         teamId: UUID,
         name: String?,
-        sport: String?,
+        sport: Sport?,
         season: String?,
         contactEmail: String?,
         ageGroup: String?,
         genderCategory: TeamGenderCategory?,
         level: String?,
         currentUser: CurrentUser,
+        sportOtherLabel: String? = null,
     ): Team {
         membershipService.requireManagerRole(organizationId, currentUser)
         teamRepository.findById(teamId, organizationId)
             ?: throw NotFoundException("TEAM_NOT_FOUND", "The team could not be found.")
         validateContactEmail(contactEmail)
         return try {
-            teamRepository.update(teamId, organizationId, name, sport, season, contactEmail, ageGroup, genderCategory, level)
+            teamRepository.update(
+                teamId,
+                organizationId,
+                name,
+                sport,
+                season,
+                contactEmail,
+                ageGroup,
+                genderCategory,
+                level,
+                sportOtherLabel,
+            )
             auditService.record(
                 actorUserId = currentUser.userId,
                 organizationId = organizationId,

@@ -15,6 +15,7 @@ import { EntityBrandingPanel } from "../media/EntityBrandingPanel";
 import { useArchiveTeam, useCreateTeam, useUpdateTeamTimezone } from "./api";
 import { useTeamSearch } from "./searchApi";
 import { createTeamSchema, type CreateTeamFormValues } from "./schema";
+import { SPORT_OPTIONS, sportLabel } from "./sport";
 import { TeamColorsPanel } from "./TeamColorsPanel";
 
 const GENDER_CATEGORY_OPTIONS = [
@@ -53,11 +54,13 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 		register,
 		handleSubmit,
 		reset,
+		watch,
 		formState: { errors, isSubmitting },
 	} = useForm<CreateTeamFormValues>({
 		resolver: zodResolver(createTeamSchema),
-		defaultValues: { name: "", sport: "", season: "", contactEmail: "", ageGroup: "", genderCategory: "", level: "" },
+		defaultValues: { name: "", sport: "SOCCER", sportOtherLabel: "", season: "", contactEmail: "", ageGroup: "", genderCategory: "", level: "" },
 	});
+	const selectedSport = watch("sport");
 
 	const onSubmit = handleSubmit(async (values) => {
 		try {
@@ -99,13 +102,17 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 				}
 				filters={
 					<>
-						<input
+						<select
 							aria-label="Filter by sport"
-							placeholder="Sport"
 							value={sport}
 							onChange={(event) => { setSport(event.target.value); resetPage(); }}
-							className="min-h-11 w-32 rounded-lg border border-slate-300 bg-white px-3 text-navy dark:border-[#334155] dark:bg-[#0f172a] dark:text-[#f8fafc]"
-						/>
+							className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-navy dark:border-[#334155] dark:bg-[#0f172a] dark:text-[#f8fafc]"
+						>
+							<option value="">All sports</option>
+							{SPORT_OPTIONS.map((option) => (
+								<option key={option.value} value={option.value}>{option.label}</option>
+							))}
+						</select>
 						<input
 							aria-label="Filter by season"
 							placeholder="Season"
@@ -148,9 +155,20 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 						</div>
 						<div className="flex flex-col gap-1">
 							<label htmlFor="team-sport" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Sport <span aria-hidden>*</span></label>
-							<input id="team-sport" type="text" {...register("sport")} aria-invalid={!!errors.sport} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+							<select id="team-sport" {...register("sport")} aria-invalid={!!errors.sport} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2">
+								{SPORT_OPTIONS.map((option) => (
+									<option key={option.value} value={option.value}>{option.label}</option>
+								))}
+							</select>
 							{errors.sport && <p role="alert" className="text-sm text-error-red">{errors.sport.message}</p>}
 						</div>
+						{selectedSport === "OTHER" && (
+							<div className="flex flex-col gap-1">
+								<label htmlFor="team-sport-other" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Sport name <span aria-hidden>*</span></label>
+								<input id="team-sport-other" type="text" placeholder="e.g. Ultimate Frisbee" {...register("sportOtherLabel")} aria-invalid={!!errors.sportOtherLabel} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+								{errors.sportOtherLabel && <p role="alert" className="text-sm text-error-red">{errors.sportOtherLabel.message}</p>}
+							</div>
+						)}
 						<div className="flex flex-col gap-1">
 							<label htmlFor="team-season" className="text-sm font-medium text-navy dark:text-[#f8fafc]">Season</label>
 							<input id="team-season" type="text" placeholder="e.g. Fall 2026" {...register("season")} className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
@@ -194,7 +212,7 @@ export function TeamList({ organizationId }: { organizationId: string }) {
 								<div className="min-w-0 flex-1">
 									<p className="break-words font-medium text-navy dark:text-[#f8fafc]">{team.name}</p>
 									<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
-										{team.sport}{team.season ? ` · ${team.season}` : ""}{team.ageGroup ? ` · ${team.ageGroup}` : ""}
+										{sportLabel(team)}{team.season ? ` · ${team.season}` : ""}{team.ageGroup ? ` · ${team.ageGroup}` : ""}
 										{team.genderCategory ? ` · ${GENDER_CATEGORY_OPTIONS.find((option) => option.value === team.genderCategory)?.label ?? team.genderCategory}` : ""}
 										{team.level ? ` · ${team.level}` : ""} · {team.status === "ARCHIVED" ? "Archived" : "Active"}
 									</p>

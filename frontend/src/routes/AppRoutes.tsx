@@ -49,6 +49,8 @@ import { PublicPageView } from "../pages/PublicPageView";
 import { AuthErrorPage } from "../pages/auth/AuthErrorPage";
 import { ForgotPasswordPage } from "../pages/auth/ForgotPasswordPage";
 import { InvitationPage } from "../pages/auth/InvitationPage";
+import { HouseholdInvitationPage } from "../pages/auth/HouseholdInvitationPage";
+import { OwnershipTransferInvitationPage } from "../pages/auth/OwnershipTransferInvitationPage";
 import { RegisterPage } from "../pages/auth/RegisterPage";
 import { ResendVerificationPage } from "../pages/auth/ResendVerificationPage";
 import { ResetPasswordPage } from "../pages/auth/ResetPasswordPage";
@@ -111,6 +113,8 @@ export function AppRoutes() {
 				<Route path="auth/reset-password" element={<ResetPasswordPage />} />
 				<Route path="auth/verify-email" element={<VerifyEmailPage />} />
 				<Route path="auth/invitation" element={<InvitationPage />} />
+				<Route path="auth/household-invitation" element={<HouseholdInvitationPage />} />
+				<Route path="auth/ownership-transfer-invitation" element={<OwnershipTransferInvitationPage />} />
 				<Route path="auth/error" element={<AuthErrorPage />} />
 			</Route>
 			<Route path="p/:slug" element={<PublicPageView />} />

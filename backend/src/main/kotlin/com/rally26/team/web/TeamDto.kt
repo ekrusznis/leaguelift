@@ -24,6 +24,9 @@ data class CreateTeamRequest(
     val genderCategory: String? = null,
     @field:Size(max = 60)
     val level: String? = null,
+    /** Required (and only meaningful) when [sport] is "OTHER" — the org's real sport name, e.g. "Ultimate Frisbee". */
+    @field:Size(max = 60)
+    val sportOtherLabel: String? = null,
 )
 
 data class UpdateTeamRequest(
@@ -40,6 +43,8 @@ data class UpdateTeamRequest(
     val genderCategory: String? = null,
     @field:Size(max = 60)
     val level: String? = null,
+    @field:Size(max = 60)
+    val sportOtherLabel: String? = null,
 )
 
 data class TeamResponse(
@@ -56,6 +61,7 @@ data class TeamResponse(
     val level: String?,
     val primaryColor: String,
     val secondaryColor: String,
+    val sportOtherLabel: String?,
     val createdAt: Instant,
     val updatedAt: Instant,
 )
@@ -65,7 +71,7 @@ fun Team.toResponse() =
         id = id,
         organizationId = organizationId,
         name = name,
-        sport = sport,
+        sport = sport.name,
         season = season,
         status = status.name,
         contactEmail = contactEmail,
@@ -75,6 +81,7 @@ fun Team.toResponse() =
         level = level,
         primaryColor = resolvedPrimaryColor,
         secondaryColor = resolvedSecondaryColor,
+        sportOtherLabel = sportOtherLabel,
         createdAt = createdAt,
         updatedAt = updatedAt,
     )

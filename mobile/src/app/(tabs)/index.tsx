@@ -14,6 +14,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useMyAnnouncements } from '@/features/announcements/api';
 import { useTeamEvents } from '@/features/events/api';
 import { useCoach } from '@/features/teams/CoachContext';
+import { sportLabel } from '@/features/teams/sportLabel';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -92,7 +93,7 @@ export default function DashboardScreen() {
           <View style={styles.teamRowText}>
             <ThemedText type="subtitle">{selectedTeam?.name ?? '—'}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              {selectedTeam?.sport} · {selectedTeam?.participants} participants
+              {selectedTeam ? sportLabel(selectedTeam.sport) : ''} · {selectedTeam?.participants} participants
             </ThemedText>
           </View>
           {coach.teams.length > 1 && <Ionicons name="chevron-down" size={18} color={theme.textSecondary} />}

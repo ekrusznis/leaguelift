@@ -14,6 +14,15 @@ export function useTeams(organizationId: string) {
 	});
 }
 
+/** A single team's real `Sport` — used to resolve the sport-terminology matrix for a team-scoped screen. */
+export function useTeam(organizationId: string, teamId: string) {
+	return useQuery({
+		queryKey: [...teamsQueryKey(organizationId), teamId],
+		queryFn: () => apiFetch<Team>(`/organizations/${organizationId}/teams/${teamId}`),
+		enabled: !!organizationId && !!teamId,
+	});
+}
+
 /** GET .../teams/{teamId}/participants — "a coach's team roster picker" (Swag Shop, DESIGN-DOC.md section 13), reused here for the real roster list. */
 export function useTeamRoster(organizationId: string, teamId: string) {
 	return useQuery({
@@ -31,6 +40,7 @@ export function useCreateTeam(organizationId: string) {
 				method: "POST",
 				body: {
 					...values,
+					sportOtherLabel: values.sport === "OTHER" ? values.sportOtherLabel || null : null,
 					season: values.season || null,
 					contactEmail: values.contactEmail || null,
 					ageGroup: values.ageGroup || null,

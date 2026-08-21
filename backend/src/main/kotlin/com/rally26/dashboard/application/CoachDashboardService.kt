@@ -49,7 +49,7 @@ class CoachDashboardService(
         return teamIds
             .mapNotNull { teamRepository.findById(it, organizationId) }
             .sortedBy { it.name }
-            .map { CoachTeamSummary(it.id, it.name, it.sport, participantRepository.countActiveForTeam(it.id, organizationId)) }
+            .map { CoachTeamSummary(it.id, it.name, it.sport.name, participantRepository.countActiveForTeam(it.id, organizationId)) }
     }
 
     fun getTeamSchedule(

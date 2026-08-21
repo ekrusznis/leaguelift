@@ -122,7 +122,11 @@ class AthleteDashboardService(
                     .firstOrNull()
                     ?.let { appUserRepository.findById(it.userId)?.displayName }
                     ?: "Not yet assigned"
-            AthleteTeamSummary(team.name, "${team.sport}${team.season?.let { " · $it" } ?: ""}", coachName)
+            val sportLabel =
+                team.sport.name
+                    .lowercase()
+                    .replaceFirstChar { it.uppercase() }
+            AthleteTeamSummary(team.name, "$sportLabel${team.season?.let { " · $it" } ?: ""}", coachName)
         }
     }
 

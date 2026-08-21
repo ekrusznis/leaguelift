@@ -17,6 +17,7 @@ import com.rally26.membership.application.MembershipService
 import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -45,7 +46,8 @@ class CsvEventImportServiceTest {
     private val teamId = UUID.randomUUID()
     private val currentUser = CurrentUser(UUID.randomUUID(), "coach@example.com", "Coach")
 
-    private fun team() = Team(teamId, orgId, "Varsity Soccer", "Soccer", "Fall 2026", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
+    private fun team() =
+        Team(teamId, orgId, "Varsity Soccer", Sport.SOCCER, "Fall 2026", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
 
     private fun managerMembership() =
         OrganizationMembership(

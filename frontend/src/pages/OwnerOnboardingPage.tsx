@@ -65,6 +65,7 @@ export function OwnerOnboardingPage() {
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [slugTouched, setSlugTouched] = useState(false);
+	const [orgSaveAttempted, setOrgSaveAttempted] = useState(false);
 	const [timezoneSuggestion, setTimezoneSuggestion] = useState<string | null>(null);
 	const [organizationForm, setOrganizationForm] = useState<SaveOrganizationInput>(() => ({
 		name: "", slug: "", organizationType: "TRAVEL_CLUB", sports: [], contactEmail: "", contactPhone: "",
@@ -138,7 +139,18 @@ export function OwnerOnboardingPage() {
 			if (!result.timezone) setError("Rally26 could not confidently suggest a timezone from that country/state. Enter and confirm the IANA timezone manually.");
 		} catch (err) { setError(err instanceof ApiError ? err.message : "Could not suggest a timezone."); }
 	}
+	const REQUIRED_ORG_TEXT_FIELDS = ["name", "slug", "contactEmail", "addressLine1", "addressCity", "addressState", "addressPostalCode", "addressCountry", "timezone"] as const;
+	function missingOrganizationFields(): string[] {
+		const missing = REQUIRED_ORG_TEXT_FIELDS.filter((key) => !organizationForm[key].trim());
+		if (organizationForm.sports.length === 0) missing.push("sports");
+		return missing;
+	}
 	async function saveOrganization() {
+		setOrgSaveAttempted(true);
+		if (missingOrganizationFields().length > 0) {
+			setError("Fill in every field marked * before continuing — the fields below show what's still missing.");
+			return;
+		}
 		setSaving(true); setError(null);
 		try { applyOnboarding(await saveOnboardingOrganization(organizationForm)); navigate("/app/onboarding/plan"); }
 		catch (err) { setError(err instanceof ApiError ? err.message : "Could not save organization details."); }
@@ -182,14 +194,24 @@ export function OwnerOnboardingPage() {
 	const step = routeStepIndex(routeStep);
 	const input = "mt-1 w-full rounded-lg border border-slate-300 dark:border-[#334155] px-3 py-2";
 	const label = "text-sm font-semibold text-slate-700 dark:text-[#cbd5e1]";
+	const required = <span aria-hidden className="text-red-600"> *</span>;
+	function requiredMark(filled: boolean) {
+		if (!orgSaveAttempted) return required;
+		return filled
+			? <span aria-hidden className="ml-1 inline-flex size-4 items-center justify-center rounded-full bg-green-600 text-[10px] font-bold text-white">✓</span>
+			: <span aria-hidden className="ml-1 inline-flex size-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white">×</span>;
+	}
 
 	return <main className="min-h-screen bg-slate-50 dark:bg-[#1e293b] px-4 py-10 sm:px-6"><div className="mx-auto max-w-5xl">
 		<div className="mb-8"><p className="text-sm font-semibold uppercase tracking-[0.18em] text-green-700">Rally26 setup</p><h1 className="mt-2 font-heading text-3xl font-extrabold text-navy-900 dark:text-[#f8fafc]">Create your organization</h1><p className="mt-2 max-w-2xl text-slate-600 dark:text-[#cbd5e1]">Your progress is saved after each step. You can close this page and resume after signing in again.</p></div>
 		<ol className="mb-8 grid gap-3 sm:grid-cols-4" aria-label="Onboarding progress">{STEP_ORDER.map((text, index) => {
 			const target = index === 1 ? "/app/onboarding/organization" : index === 2 ? "/app/onboarding/plan" : index === 3 ? "/app/onboarding/review" : null;
 			const enabled = index < 2 || (index === 2 && !!onboarding?.organization) || (index === 3 && !!onboarding?.selectedPlanCode);
-			const classes = `block rounded-xl border px-4 py-3 text-sm font-semibold ${index <= step ? "border-green-300 bg-green-50 dark:bg-green-950 text-green-900" : "border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] text-slate-500 dark:text-[#cbd5e1]"}`;
-			return <li key={text}>{target && enabled ? <Link to={target} className={classes} aria-current={index === step ? "step" : undefined}><span className="mr-2">{index + 1}.</span>{text}</Link> : <div className={classes}><span className="mr-2">{index + 1}.</span>{text}</div>}</li>;
+			const completed = index < step;
+			const current = index === step;
+			const classes = `flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold bg-white dark:bg-[#111827] ${current ? "border-green-500 text-navy-900 dark:text-[#f8fafc]" : "border-slate-200 dark:border-[#334155]"} ${!current && !completed ? "text-slate-500 dark:text-[#cbd5e1]" : ""} ${!current && completed ? "text-slate-700 dark:text-[#cbd5e1]" : ""}`;
+			const content = <>{completed ? <span aria-hidden className="flex size-5 shrink-0 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">✓</span> : <span className="mr-0.5">{index + 1}.</span>}{text}</>;
+			return <li key={text}>{target && enabled ? <Link to={target} className={classes} aria-current={current ? "step" : undefined}>{content}</Link> : <div className={classes}>{content}</div>}</li>;
 		})}</ol>
 		{error && <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 dark:bg-red-950 p-4 text-sm text-red-800">{error}</div>}
 		{searchParams.get("checkout") === "cancelled" && <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950 p-4 text-sm text-amber-900">Checkout was canceled. Your setup is saved and you can continue when ready.</div>}
@@ -198,18 +220,18 @@ export function OwnerOnboardingPage() {
 		{routeStep === "organization" && <section className="rounded-2xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-6 shadow-sm">
 			<h2 className="text-lg font-bold text-navy-900 dark:text-[#f8fafc]">2. Organization</h2><p className="mt-1 text-sm text-slate-600 dark:text-[#cbd5e1]">Create the draft club profile and confirm its timezone.</p>
 			<div className="mt-5 grid gap-4 sm:grid-cols-2">
-				<label className={label}>Organization name<input className={input} value={organizationForm.name} onChange={(e) => { updateField("name", e.target.value); if (!slugTouched) updateField("slug", slugify(e.target.value)); }} /></label>
-				<label className={label}>Organization URL<input disabled={!!onboarding?.organization} className={`${input} disabled:bg-slate-100 disabled:dark:bg-slate-800`} value={organizationForm.slug} onChange={(e) => { setSlugTouched(true); updateField("slug", slugify(e.target.value)); }} /></label>
+				<label className={label}>Organization name{requiredMark(!!organizationForm.name.trim())}<input className={input} value={organizationForm.name} onChange={(e) => { updateField("name", e.target.value); if (!slugTouched) updateField("slug", slugify(e.target.value)); }} /></label>
+				<label className={label}>Organization URL{requiredMark(!!organizationForm.slug.trim())}<input disabled={!!onboarding?.organization} className={`${input} disabled:bg-slate-100 disabled:dark:bg-slate-800`} value={organizationForm.slug} onChange={(e) => { setSlugTouched(true); updateField("slug", slugify(e.target.value)); }} /></label>
 				<label className={label}>Organization type<select className={input} value={organizationForm.organizationType} onChange={(e) => updateField("organizationType", e.target.value)}>{ORGANIZATION_TYPES.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>
-				<div className="sm:col-span-2"><span className={label}>Sports</span><div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3">{SPORT_OPTIONS.map((sport) => <label key={sport} className="flex items-center gap-2 text-sm text-slate-700 dark:text-[#cbd5e1]"><input type="checkbox" checked={organizationForm.sports.includes(sport)} onChange={() => toggleSport(sport)} className="size-4 rounded border-slate-300 dark:border-[#334155]" />{sport}</label>)}</div></div>
-				<label className={label}>Contact email<input type="email" className={input} value={organizationForm.contactEmail} onChange={(e) => updateField("contactEmail", e.target.value)} /></label>
+				<div className="sm:col-span-2"><span className={label}>Sports{requiredMark(organizationForm.sports.length > 0)}</span><div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3">{SPORT_OPTIONS.map((sport) => <label key={sport} className="flex items-center gap-2 text-sm text-slate-700 dark:text-[#cbd5e1]"><input type="checkbox" checked={organizationForm.sports.includes(sport)} onChange={() => toggleSport(sport)} className="size-4 rounded border-slate-300 dark:border-[#334155]" />{sport}</label>)}</div></div>
+				<label className={label}>Contact email{requiredMark(!!organizationForm.contactEmail.trim())}<input type="email" className={input} value={organizationForm.contactEmail} onChange={(e) => updateField("contactEmail", e.target.value)} /></label>
 				<label className={label}>Contact phone<input className={input} value={organizationForm.contactPhone ?? ""} onChange={(e) => updateField("contactPhone", e.target.value)} /></label>
-				<label className={`${label} sm:col-span-2`}>Address<input className={input} value={organizationForm.addressLine1} onChange={(e) => updateField("addressLine1", e.target.value)} /></label>
-				<label className={label}>City<input className={input} value={organizationForm.addressCity} onChange={(e) => updateField("addressCity", e.target.value)} /></label>
-				<label className={label}>State / province<input className={input} value={organizationForm.addressState} onChange={(e) => updateField("addressState", e.target.value)} /></label>
-				<label className={label}>Postal code<input className={input} value={organizationForm.addressPostalCode} onChange={(e) => updateField("addressPostalCode", e.target.value)} /></label>
-				<label className={label}>Country code<input maxLength={2} className={`${input} uppercase`} value={organizationForm.addressCountry} onChange={(e) => updateField("addressCountry", e.target.value.toUpperCase())} /></label>
-				<div className="sm:col-span-2"><div className="flex flex-wrap items-end gap-3"><label className={`min-w-0 flex-1 ${label}`}>Confirmed timezone<input className={input} value={organizationForm.timezone} onChange={(e) => updateField("timezone", e.target.value)} /><span className="mt-1 block text-xs font-normal text-slate-500 dark:text-[#cbd5e1]">Use an IANA timezone such as America/New_York.</span></label><button type="button" onClick={suggestTimezone} className="rounded-lg border border-slate-300 dark:border-[#334155] bg-white dark:bg-[#111827] px-3 py-2 text-sm font-bold text-slate-800 dark:text-slate-200">Suggest from address</button></div>{timezoneSuggestion && <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950 p-3 text-sm text-blue-900">Suggested timezone: <strong>{timezoneSuggestion}</strong>. <button type="button" onClick={() => { updateField("timezone", timezoneSuggestion); setTimezoneSuggestion(null); }} className="font-bold underline">Use this timezone</button></div>}</div>
+				<label className={`${label} sm:col-span-2`}>Address{requiredMark(!!organizationForm.addressLine1.trim())}<input className={input} value={organizationForm.addressLine1} onChange={(e) => updateField("addressLine1", e.target.value)} /></label>
+				<label className={label}>City{requiredMark(!!organizationForm.addressCity.trim())}<input className={input} value={organizationForm.addressCity} onChange={(e) => updateField("addressCity", e.target.value)} /></label>
+				<label className={label}>State / province{requiredMark(!!organizationForm.addressState.trim())}<input className={input} value={organizationForm.addressState} onChange={(e) => updateField("addressState", e.target.value)} /></label>
+				<label className={label}>Postal code{requiredMark(!!organizationForm.addressPostalCode.trim())}<input className={input} value={organizationForm.addressPostalCode} onChange={(e) => updateField("addressPostalCode", e.target.value)} /></label>
+				<label className={label}>Country code{requiredMark(!!organizationForm.addressCountry.trim())}<input maxLength={2} className={`${input} uppercase`} value={organizationForm.addressCountry} onChange={(e) => updateField("addressCountry", e.target.value.toUpperCase())} /></label>
+				<div className="sm:col-span-2"><div className="flex flex-wrap items-end gap-3"><label className={`min-w-0 flex-1 ${label}`}>Confirmed timezone{requiredMark(!!organizationForm.timezone.trim())}<input className={input} value={organizationForm.timezone} onChange={(e) => updateField("timezone", e.target.value)} /><span className="mt-1 block text-xs font-normal text-slate-500 dark:text-[#cbd5e1]">Use an IANA timezone such as America/New_York.</span></label><button type="button" onClick={suggestTimezone} className="rounded-lg border border-slate-300 dark:border-[#334155] bg-white dark:bg-[#111827] px-3 py-2 text-sm font-bold text-slate-800 dark:text-slate-200">Suggest from address</button></div>{timezoneSuggestion && <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950 p-3 text-sm text-blue-900">Suggested timezone: <strong>{timezoneSuggestion}</strong>. <button type="button" onClick={() => { updateField("timezone", timezoneSuggestion); setTimezoneSuggestion(null); }} className="font-bold underline">Use this timezone</button></div>}</div>
 			</div><button type="button" disabled={saving || onboarding?.organization?.status === "ACTIVE" || onboarding?.organization?.status === "SUSPENDED"} onClick={saveOrganization} className="mt-5 rounded-lg bg-navy-900 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">Save & continue</button>
 		</section>}
 

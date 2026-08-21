@@ -17,6 +17,7 @@ import com.rally26.fee.domain.FeeAssignmentStatus
 import com.rally26.fee.domain.FeeAssignmentSummary
 import com.rally26.fee.domain.FeeAssignmentWithBalance
 import com.rally26.fee.domain.FeePayment
+import com.rally26.fee.domain.FeePaymentStatus
 import com.rally26.fee.domain.FeeTemplate
 import com.rally26.fee.domain.PaymentMethod
 import com.rally26.fee.domain.computeFeeBalance
@@ -408,12 +409,57 @@ class FeeService(
         return feePaymentRepository.findById(payment.id, payment.organizationId)
     }
 
+    /**
+     * A confirmed STRIPE_ONLINE payment can't be plain-voided: voiding only resets
+     * Rally26's own ledger while the family's card stays genuinely charged, silently
+     * creating an accounting mismatch with no automatic way back. Use [refundPayment]
+     * instead — it actually calls Stripe. [force] is the deliberate escape hatch for
+     * when Stripe was already adjusted manually (e.g. refunded directly in the Stripe
+     * dashboard) and staff just need Rally26's own records to match; it's audited under
+     * a distinct action so it's never confused with a normal successful refund.
+     */
     @Transactional
     fun voidPayment(
         organizationId: UUID,
         assignmentId: UUID,
         paymentId: UUID,
         voidReason: String,
+        currentUser: CurrentUser,
+        force: Boolean = false,
+    ): FeeAssignmentWithBalance {
+        membershipService.requireManagerRole(organizationId, currentUser)
+        val assignment =
+            feeRepository.findAssignmentById(assignmentId, organizationId)
+                ?: throw NotFoundException("FEE_ASSIGNMENT_NOT_FOUND", "The fee assignment could not be found.")
+        val payment =
+            feePaymentRepository
+                .findById(paymentId, organizationId)
+                ?.takeIf { it.feeAssignmentId == assignmentId }
+                ?: throw NotFoundException("FEE_PAYMENT_NOT_FOUND", "The payment could not be found.")
+        if (payment.isVoided) throw ValidationException("This payment has already been voided.")
+        if (payment.method == PaymentMethod.STRIPE_ONLINE && payment.status == FeePaymentStatus.CONFIRMED && !force) {
+            throw ValidationException(
+                "A confirmed card payment can't be voided directly — use Refund instead so the family's card is " +
+                    "actually credited. If Stripe was already adjusted manually, use Force Void.",
+            )
+        }
+        feePaymentRepository.void(paymentId, organizationId, currentUser.userId, voidReason)
+        feePaymentPlanRepository.findLatestByAssignment(organizationId, assignmentId)?.let {
+            feePaymentPlanRepository.refreshStatus(organizationId, it.id)
+        }
+        val result = recomputeStatus(organizationId, assignment)
+        val auditAction = if (force) "fee_assignment.payment_force_voided" else "fee_assignment.payment_voided"
+        auditService.record(currentUser.userId, organizationId, auditAction, "fee_assignment", assignmentId)
+        return result
+    }
+
+    /** Real Stripe refund for a confirmed card payment — mirrors OrderService.refund/SponsorshipService.refund/ContributionService.refund. On Stripe failure, callers should offer [voidPayment] with `force=true` as the manual-reconciliation fallback rather than retrying blindly. */
+    @Transactional
+    fun refundPayment(
+        organizationId: UUID,
+        assignmentId: UUID,
+        paymentId: UUID,
+        reason: String,
         currentUser: CurrentUser,
     ): FeeAssignmentWithBalance {
         membershipService.requireManagerRole(organizationId, currentUser)
@@ -426,12 +472,37 @@ class FeeService(
                 ?.takeIf { it.feeAssignmentId == assignmentId }
                 ?: throw NotFoundException("FEE_PAYMENT_NOT_FOUND", "The payment could not be found.")
         if (payment.isVoided) throw ValidationException("This payment has already been voided.")
-        feePaymentRepository.void(paymentId, organizationId, currentUser.userId, voidReason)
+        if (payment.method != PaymentMethod.STRIPE_ONLINE ||
+            payment.status != FeePaymentStatus.CONFIRMED ||
+            payment.stripePaymentIntentId == null
+        ) {
+            throw ValidationException("Only a confirmed card payment can be refunded.")
+        }
+        val stripeRefundId =
+            try {
+                stripeFeePaymentCheckoutClient.createRefund(payment.stripePaymentIntentId)
+            } catch (e: StripeException) {
+                log.warn("Stripe refund failed for fee payment {}: {}", paymentId, e.message, e)
+                throw ServiceUnavailableException(
+                    "FEE_PAYMENT_REFUND_PROVIDER_UNAVAILABLE",
+                    "The refund could not be sent to Stripe right now. If this payment was already refunded or " +
+                        "adjusted directly in Stripe, use Force Void instead of retrying.",
+                )
+            }
+        feePaymentRepository.refund(paymentId, organizationId, currentUser.userId, reason, stripeRefundId)
+        ledgerService.recordRefund(
+            organizationId,
+            LedgerSourceType.FEE_PAYMENT,
+            payment.id,
+            payment.amountMinor,
+            payment.currency,
+            stripeRefundId,
+        )
         feePaymentPlanRepository.findLatestByAssignment(organizationId, assignmentId)?.let {
             feePaymentPlanRepository.refreshStatus(organizationId, it.id)
         }
         val result = recomputeStatus(organizationId, assignment)
-        auditService.record(currentUser.userId, organizationId, "fee_assignment.payment_voided", "fee_assignment", assignmentId)
+        auditService.record(currentUser.userId, organizationId, "fee_assignment.payment_refunded", "fee_assignment", assignmentId)
         return result
     }
 

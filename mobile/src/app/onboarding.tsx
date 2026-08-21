@@ -7,11 +7,12 @@ import {
   StyleSheet,
   View,
   useWindowDimensions,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
   type ImageSourcePropType,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { Button } from '@/components/button';
 import { ThemedText } from '@/components/themed-text';
 import { Brand, Spacing } from '@/constants/theme';
@@ -21,22 +22,18 @@ interface Slide {
   image: ImageSourcePropType;
   title: string;
   body: string;
-  /** 'top' pins the image's top edge to the frame's top edge instead of centering the cover-crop, so illustration content near the top of the source file isn't clipped. */
-  imageAlign?: 'center' | 'top';
 }
 
 /**
- * First-launch-only walkthrough. Real founder-supplied illustrations
- * (docs/design/splash2-4.png, ADR-107) — replaces the earlier Ionicons/color-block
- * stand-in from ADR-101. Slides 2 and 3 use `imageAlign: 'top'` (Phase 37 slice
- * 37.13) — `resizeMode="cover"` always center-crops in React Native's built-in Image
- * component (no `object-position` equivalent), which was clipping the top of those
- * two illustrations; slide 1's framing already reads correctly centered.
+ * First-launch-only walkthrough.
  *
- * The hero frame is sized from the live window height rather than a fixed percentage
- * of the remaining FlatList area. This keeps the illustration and copy visually grouped
- * on phones while capping the artwork on tablets/foldables so it does not push the copy
- * too far down the screen.
+ * Layout notes:
+ * - The pager fills the entire screen.
+ * - The hero illustration + title + body are centered as one visual group.
+ * - Bottom controls are overlaid on the same navy canvas instead of taking
+ *   vertical space away from the slide.
+ * - Artwork uses `contain` so the full illustration remains visible without
+ *   the old top-aligned 135% crop workaround.
  */
 const SLIDES: Slide[] = [
   {
@@ -48,13 +45,11 @@ const SLIDES: Slide[] = [
     image: require('../../assets/images/onboarding-2.png'),
     title: 'Stay in the Loop',
     body: 'Get updates, reminders, and important info — all in one place.',
-    imageAlign: 'top',
   },
   {
     image: require('../../assets/images/onboarding-3.png'),
     title: 'Focus on What Matters',
     body: 'Less admin. More team. Let’s make this your best season yet.',
-    imageAlign: 'top',
   },
 ];
 
@@ -64,9 +59,20 @@ export default function OnboardingScreen() {
   const { markSeen } = useOnboarding();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
-  // Pull the artwork closer to the copy on tall phones while keeping a useful minimum
-  // on compact devices and preventing oversized hero art on tablets/foldables.
-  const imageFrameHeight = Math.min(Math.max(screenHeight * 0.36, 250), 400);
+  const compactHeight = screenHeight < 720;
+
+  // Reserve enough space for the overlaid dots / CTA / Skip controls so the
+  // centered hero group never sits behind them.
+  const footerReserve = compactHeight ? 150 : 185;
+
+  // Keep the illustration substantial on phones, but prevent it from becoming
+  // oversized on tablets/foldables.
+  const imageFrameHeight = Math.min(
+    Math.max(screenHeight * (compactHeight ? 0.33 : 0.38), compactHeight ? 215 : 260),
+    420,
+  );
+
+  const contentWidth = Math.min(screenWidth, 720);
 
   async function finish() {
     await markSeen();
@@ -78,7 +84,11 @@ export default function OnboardingScreen() {
       void finish();
       return;
     }
-    listRef.current?.scrollToIndex({ index: index + 1 });
+
+    listRef.current?.scrollToIndex({
+      index: index + 1,
+      animated: true,
+    });
   }
 
   function onScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -87,6 +97,7 @@ export default function OnboardingScreen() {
   }
 
   const isLast = index === SLIDES.length - 1;
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -97,27 +108,36 @@ export default function OnboardingScreen() {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={onScroll}
-        getItemLayout={(_, itemIndex) => ({ length: screenWidth, offset: screenWidth * itemIndex, index: itemIndex })}
+        style={styles.pager}
+        getItemLayout={(_, itemIndex) => ({
+          length: screenWidth,
+          offset: screenWidth * itemIndex,
+          index: itemIndex,
+        })}
         renderItem={({ item }) => (
           <View style={[styles.slide, { width: screenWidth }]}>
-            <View style={[styles.slideImageFrame, { height: imageFrameHeight }]}>
-              <Image
-                source={item.image}
-                resizeMode="cover"
-                style={item.imageAlign === 'top' ? styles.slideImageTopAligned : styles.slideImage}
-              />
-            </View>
-            <View style={styles.slideTextWrap}>
-              <ThemedText type="title" style={styles.slideTitle}>
-                {item.title}
-              </ThemedText>
-              <ThemedText style={styles.slideBody} themeColor="textSecondary">
-                {item.body}
-              </ThemedText>
-            </View>
+            <SafeAreaView style={styles.slideSafeArea} edges={['top']}>
+              <View style={[styles.slideContent, { paddingBottom: footerReserve }]}>
+                <View style={[styles.heroGroup, { width: contentWidth }]}>
+                  <View style={[styles.slideImageFrame, { height: imageFrameHeight }]}>
+                    <Image source={item.image} resizeMode="contain" style={styles.slideImage} />
+                  </View>
+
+                  <View style={styles.slideTextWrap}>
+                    <ThemedText type="title" style={styles.slideTitle}>
+                      {item.title}
+                    </ThemedText>
+                    <ThemedText style={styles.slideBody} themeColor="textSecondary">
+                      {item.body}
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
+            </SafeAreaView>
           </View>
         )}
       />
+
       <SafeAreaView style={styles.footer} edges={['bottom']}>
         <View style={styles.dots}>
           {SLIDES.map((slide, i) => (
@@ -125,9 +145,12 @@ export default function OnboardingScreen() {
           ))}
         </View>
 
-        <Button onPress={next}>{isLast ? 'Get Started' : 'Next'}</Button>
+        <Button onPress={next} style={styles.primaryButton}>
+          {isLast ? 'Get Started' : 'Next'}
+        </Button>
+
         {!isLast && (
-          <Pressable onPress={finish} style={styles.skip}>
+          <Pressable onPress={finish} style={styles.skip} accessibilityRole="button">
             <ThemedText themeColor="textSecondary">Skip</ThemedText>
           </Pressable>
         )}
@@ -141,29 +164,42 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Brand.navy,
   },
+  pager: {
+    ...StyleSheet.absoluteFillObject,
+  },
   slide: {
     flex: 1,
+    backgroundColor: Brand.navy,
+  },
+  slideSafeArea: {
+    flex: 1,
+  },
+  slideContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
+  },
+  heroGroup: {
+    alignItems: 'center',
+    alignSelf: 'center',
   },
   slideImageFrame: {
     width: '100%',
-    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   slideImage: {
     width: '100%',
     height: '100%',
   },
-  slideImageTopAligned: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    width: '100%',
-    height: '135%',
-  },
   slideTextWrap: {
-    flex: 1,
-    paddingHorizontal: Spacing.five,
-    paddingTop: Spacing.three,
+    width: '100%',
+    maxWidth: 600,
+    alignItems: 'center',
+    paddingHorizontal: Spacing.two,
+    marginTop: Spacing.three,
   },
   slideTitle: {
     textAlign: 'center',
@@ -172,11 +208,17 @@ const styles = StyleSheet.create({
   slideBody: {
     textAlign: 'center',
     lineHeight: 22,
+    maxWidth: 560,
   },
   footer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     paddingHorizontal: Spacing.five,
-    paddingBottom: Spacing.three,
-    gap: Spacing.three,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.two,
+    gap: Spacing.two,
   },
   dots: {
     flexDirection: 'row',
@@ -193,8 +235,13 @@ const styles = StyleSheet.create({
   dotActive: {
     backgroundColor: Brand.championshipGold,
   },
+  primaryButton: {
+    minHeight: 52,
+  },
   skip: {
+    minHeight: 44,
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: Spacing.two,
   },
 });

@@ -203,6 +203,20 @@ class MembershipRepository(
             .query(::mapRow)
             .list()
 
+    /** The current OWNER-role membership for an organization — exactly one is expected to exist at all times. */
+    fun findOwnerMembership(organizationId: UUID): OrganizationMembership? =
+        jdbcClient
+            .sql(
+                """
+                select id, organization_id, user_id, role, status, created_at, updated_at
+                from organization_membership
+                where organization_id = :organizationId and status = 'ACTIVE' and role = 'OWNER'
+                """.trimIndent(),
+            ).param("organizationId", organizationId)
+            .query(::mapRow)
+            .optional()
+            .orElse(null)
+
     fun findById(membershipId: UUID): OrganizationMembership? =
         jdbcClient
             .sql(

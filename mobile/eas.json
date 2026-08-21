@@ -14,8 +14,8 @@
         "simulator": true
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "http://localhost:8080/api/v1",
-        "EXPO_PUBLIC_FRONTEND_BASE_URL": "http://localhost:5173",
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.rally26.com/api/v1",
+        "EXPO_PUBLIC_FRONTEND_BASE_URL": "https://rally26.com",
         "EXPO_PUBLIC_ENVIRONMENT_NAME": "development"
       }
     },

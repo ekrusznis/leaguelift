@@ -27,6 +27,7 @@ import com.rally26.participant.domain.Participant
 import com.rally26.participant.domain.ParticipantStatus
 import com.rally26.participant.domain.ParticipantTeamAssignment
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -68,7 +69,7 @@ class EligibilityServiceTest {
     private val user = CurrentUser(UUID.randomUUID(), "owner@example.com", "Owner")
 
     private fun team(
-        sport: String = "Soccer",
+        sport: Sport = Sport.SOCCER,
         season: String? = "Fall 2026",
     ) = Team(
         id = teamId,
@@ -419,7 +420,7 @@ class EligibilityServiceTest {
     @Test
     fun `recomputeClearance excludes requirements scoped to a different sport`() {
         val req = requirement(sport = "Basketball")
-        every { teamRepository.findById(teamId, organizationId) } returns team(sport = "Soccer")
+        every { teamRepository.findById(teamId, organizationId) } returns team(sport = Sport.SOCCER)
         every { participantRepository.findById(participantId, organizationId) } returns participant()
         every { requirementRepository.listActiveForScope(organizationId, teamId) } returns listOf(req)
         every { clearanceRepository.upsert(organizationId, participantId, teamId, ClearanceStatus.CLEARED, 0) } returns

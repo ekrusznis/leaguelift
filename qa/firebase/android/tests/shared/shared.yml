@@ -31,3 +31,53 @@ tests:
         finalScreenAssertion: >-
           Google sign-in either starts a valid configured flow or clearly says it is
           coming soon/not configured. The app remains responsive.
+
+  - displayName: "[SMOKE] Shared - owner registration validation"
+    id: shared-register-validation
+    prerequisiteTestCaseId: shared-first-launch
+    steps:
+      - goal: >-
+          From the sign-in screen, tap "Don't have an account? Create one" to open owner
+          registration, then tap Create Owner Account with every field empty.
+        finalScreenAssertion: >-
+          Rally26 shows an understandable validation message asking for name, email, and
+          password and the registration form remains usable.
+      - goal: >-
+          Fill in first name, last name, and email, enter a password under 8 characters,
+          then submit.
+        finalScreenAssertion: >-
+          Rally26 shows a clear password-length validation message without clearing the
+          fields already entered.
+      - goal: >-
+          Enter a valid password and a confirm-password value that does not match it,
+          then submit without checking either agreement box.
+        finalScreenAssertion: >-
+          Rally26 shows a password-mismatch message and/or a Terms/Privacy and
+          age-confirmation requirement, and does not submit the form.
+
+  - displayName: "Shared - owner registration success and email verification prompt"
+    id: shared-register-success
+    prerequisiteTestCaseId: shared-register-validation
+    steps:
+      - goal: >-
+          On owner registration, fill in a real first/last name, a fresh disposable email
+          address unique to this run, a password of at least 8 characters typed
+          identically in both password fields, and check both the Terms/Privacy and
+          age-confirmation boxes, then tap Create Owner Account.
+        hint: >-
+          Use a timestamped/disposable email such as qa-register-<unique>@example.com so
+          this is safe to run repeatedly — this step creates a real, unverified account.
+          Do not reuse an existing seeded QA credential's email here.
+        finalScreenAssertion: >-
+          Rally26 shows a "Check your email" confirmation screen naming the email address
+          just entered, with a way to resend the verification email and a "Go to Sign In"
+          action. No organization or dashboard is created or shown yet.
+      - goal: Tap "Didn't get the email? Resend verification".
+        finalScreenAssertion: >-
+          The resend control shows a sending state and then a sent/confirmed state without
+          an error, and the screen remains otherwise unchanged.
+      - goal: Tap "Go to Sign In".
+        finalScreenAssertion: >-
+          Rally26 returns to the sign-in screen. Signing in with the just-registered,
+          not-yet-verified email is correctly blocked or clearly prompts for email
+          verification first, rather than opening a dashboard.

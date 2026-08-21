@@ -5,6 +5,7 @@ import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 const DURATION = 400;
+const HOLD_MS = 2000;
 
 /**
  * Launch transition between the native splash screen and the first rendered route.
@@ -61,7 +62,7 @@ export function AnimatedSplashOverlay() {
       style={styles.splashOverlay}
       onLayout={() => {
         SplashScreen.hideAsync().finally(() => {
-          setAnimate(true);
+          setTimeout(() => setAnimate(true), HOLD_MS);
         });
       }}
     />

@@ -83,3 +83,30 @@ Targets:
 - `authority/coach-read`
 - `authority/coach-editor`
 - `authority/coach-manager`
+
+## 7. Guardian/athlete household-invitation flow has no mobile entry point
+
+A new `household_invitation` mechanism shipped this session (backend
+`com.rally26.invitation.*`, web `HouseholdDetailPage.tsx`'s "Invite guardian"/"Invite
+athlete login" controls, `auth/household-invitation` accept page) letting an
+Owner/Administrator or a roster-managing coach invite a guardian for an athlete, and
+letting an already-linked guardian invite that athlete (13+) to get their own login.
+`mobile/src/app` has no screen, deep link, or WebView embed that reaches any part of
+this flow — confirmed via full-source grep for "invitation"/"Invite", which only
+matches `mobile/src/app/owner/(tabs)/members.tsx` (the pre-existing, unrelated org
+staff membership-invitation feature). A guardian or athlete cannot get linked to a
+household from the mobile app at all today; this only works from the web app.
+
+This is a real mobile/web parity gap, not a QA-pack omission — no test case was added
+for it because there is nothing on mobile to exercise yet.
+
+Target (once built): a new `parent`/`coach` test case once a native screen or WebView
+embed exists, likely mirroring the existing `parent-household-web`/`owner-management-web`
+pattern of embedding an authenticated web surface inside the app.
+
+## 8. Owner registration has no mobile QA coverage until this pass
+
+`mobile/src/app/register.tsx` (owner sign-up, `POST /auth/register-owner`) existed with
+no corresponding test case anywhere in the pack — `shared.yml` covered login validation
+and Google sign-in but never registration. Added `shared-register-validation` and
+`shared-register-success` this session; see `qa/matrices/COVERAGE-MATRIX.md`.

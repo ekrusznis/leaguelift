@@ -1,5 +1,6 @@
 package com.rally26.team.persistence
 
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamGenderCategory
 import com.rally26.team.domain.TeamStatus
@@ -11,7 +12,7 @@ import java.util.UUID
 
 private const val TEAM_COLUMNS =
     "id, organization_id, name, sport, season, status, contact_email, timezone_override, " +
-        "age_group, gender_category, level, primary_color, secondary_color, created_at, updated_at"
+        "age_group, gender_category, level, primary_color, secondary_color, sport_other_label, created_at, updated_at"
 
 @Repository
 class TeamRepository(
@@ -70,12 +71,13 @@ class TeamRepository(
     fun insert(
         organizationId: UUID,
         name: String,
-        sport: String,
+        sport: Sport,
         season: String?,
         contactEmail: String?,
         ageGroup: String?,
         genderCategory: TeamGenderCategory?,
         level: String?,
+        sportOtherLabel: String? = null,
     ): Team {
         val now = Instant.now()
         val id = UUID.randomUUID()
@@ -84,22 +86,23 @@ class TeamRepository(
                 """
                 insert into team (
                     id, organization_id, name, sport, season, status, contact_email,
-                    age_group, gender_category, level, created_at, updated_at
+                    age_group, gender_category, level, sport_other_label, created_at, updated_at
                 )
                 values (
                     :id, :organizationId, :name, :sport, :season, 'ACTIVE', :contactEmail,
-                    :ageGroup, :genderCategory, :level, :now, :now
+                    :ageGroup, :genderCategory, :level, :sportOtherLabel, :now, :now
                 )
                 """.trimIndent(),
             ).param("id", id)
             .param("organizationId", organizationId)
             .param("name", name)
-            .param("sport", sport)
+            .param("sport", sport.name)
             .param("season", season)
             .param("contactEmail", contactEmail)
             .param("ageGroup", ageGroup)
             .param("genderCategory", genderCategory?.name)
             .param("level", level)
+            .param("sportOtherLabel", sportOtherLabel)
             .param("now", Timestamp.from(now))
             .update()
         return Team(
@@ -113,6 +116,7 @@ class TeamRepository(
             ageGroup = ageGroup,
             genderCategory = genderCategory,
             level = level,
+            sportOtherLabel = sportOtherLabel,
             createdAt = now,
             updatedAt = now,
         )
@@ -122,35 +126,38 @@ class TeamRepository(
         id: UUID,
         organizationId: UUID,
         name: String?,
-        sport: String?,
+        sport: Sport?,
         season: String?,
         contactEmail: String?,
         ageGroup: String?,
         genderCategory: TeamGenderCategory?,
         level: String?,
+        sportOtherLabel: String? = null,
     ): Int {
         val now = Instant.now()
         return jdbcClient
             .sql(
                 """
                 update team
-                set name            = coalesce(:name, name),
-                    sport           = coalesce(:sport, sport),
-                    season          = coalesce(:season, season),
-                    contact_email   = coalesce(:contactEmail, contact_email),
-                    age_group       = coalesce(:ageGroup, age_group),
-                    gender_category = coalesce(:genderCategory, gender_category),
-                    level           = coalesce(:level, level),
-                    updated_at      = :now
+                set name              = coalesce(:name, name),
+                    sport             = coalesce(:sport, sport),
+                    season            = coalesce(:season, season),
+                    contact_email     = coalesce(:contactEmail, contact_email),
+                    age_group         = coalesce(:ageGroup, age_group),
+                    gender_category   = coalesce(:genderCategory, gender_category),
+                    level             = coalesce(:level, level),
+                    sport_other_label = case when :sport is not null then :sportOtherLabel else sport_other_label end,
+                    updated_at        = :now
                 where id = :id and organization_id = :organizationId
                 """.trimIndent(),
             ).param("name", name)
-            .param("sport", sport)
+            .param("sport", sport?.name)
             .param("season", season)
             .param("contactEmail", contactEmail)
             .param("ageGroup", ageGroup)
             .param("genderCategory", genderCategory?.name)
             .param("level", level)
+            .param("sportOtherLabel", sportOtherLabel)
             .param("now", Timestamp.from(now))
             .param("id", id)
             .param("organizationId", organizationId)
@@ -224,7 +231,7 @@ class TeamRepository(
             id = rs.getObject("id", UUID::class.java),
             organizationId = rs.getObject("organization_id", UUID::class.java),
             name = rs.getString("name"),
-            sport = rs.getString("sport"),
+            sport = Sport.valueOf(rs.getString("sport")),
             season = rs.getString("season"),
             status = TeamStatus.valueOf(rs.getString("status")),
             contactEmail = rs.getString("contact_email"),
@@ -234,6 +241,7 @@ class TeamRepository(
             level = rs.getString("level"),
             primaryColor = rs.getString("primary_color"),
             secondaryColor = rs.getString("secondary_color"),
+            sportOtherLabel = rs.getString("sport_other_label"),
             createdAt = rs.getTimestamp("created_at").toInstant(),
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
         )

@@ -6,6 +6,7 @@ import com.rally26.identity.application.TokenService
 import com.rally26.organization.application.OrganizationService
 import com.rally26.organization.domain.OrganizationType
 import com.rally26.team.application.TeamService
+import com.rally26.team.domain.Sport
 import com.rally26.testsupport.AbstractIntegrationTest
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -71,7 +72,7 @@ class TeamEligibilityClearanceIntegrationTest : AbstractIntegrationTest() {
             teamService.create(
                 organization.id,
                 "Varsity Soccer",
-                "Soccer",
+                Sport.SOCCER,
                 null,
                 null,
                 null,

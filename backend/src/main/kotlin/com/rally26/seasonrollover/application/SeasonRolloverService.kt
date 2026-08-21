@@ -14,6 +14,7 @@ import com.rally26.seasonrollover.domain.SeasonRolloverRun
 import com.rally26.seasonrollover.domain.SeasonRolloverTeamSummary
 import com.rally26.seasonrollover.persistence.SeasonRolloverRepository
 import com.rally26.team.application.TeamService
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -77,7 +78,8 @@ class SeasonRolloverService(
             teamService.create(
                 organizationId = organizationId,
                 name = normalized.newTeamName,
-                sport = preview.sourceTeam.sport,
+                // preview.sourceTeam.sport was itself derived from a real Team.sport.name, so this round-trip is always a valid enum name.
+                sport = Sport.valueOf(preview.sourceTeam.sport),
                 season = normalized.newSeason,
                 contactEmail = preview.sourceTeam.contactEmail,
                 ageGroup = null,
@@ -184,7 +186,7 @@ class SeasonRolloverService(
             SeasonRolloverTeamSummary(
                 id = UUID(0L, 0L),
                 name = command.newTeamName,
-                sport = source.sport,
+                sport = source.sport.name,
                 season = command.newSeason,
                 contactEmail = source.contactEmail,
             )
@@ -332,5 +334,5 @@ class SeasonRolloverService(
         completedAt = run.createdAt,
     )
 
-    private fun Team.toSummary() = SeasonRolloverTeamSummary(id, name, sport, season, contactEmail)
+    private fun Team.toSummary() = SeasonRolloverTeamSummary(id, name, sport.name, season, contactEmail)
 }

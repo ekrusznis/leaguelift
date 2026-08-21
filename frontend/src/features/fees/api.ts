@@ -159,9 +159,26 @@ export function useFeePaymentStatus(organizationId: string, assignmentId: string
 export function useVoidPayment(organizationId: string, householdId: string, assignmentId: string) {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: ({ paymentId, reason }: { paymentId: string } & VoidFormValues) =>
+		mutationFn: ({ paymentId, reason, force }: { paymentId: string; force?: boolean } & VoidFormValues) =>
 			apiFetch<FeeAssignment>(`/organizations/${organizationId}/fee-assignments/${assignmentId}/payments/${paymentId}`, {
 				method: "DELETE",
+				body: { reason, force: force ?? false },
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: assignmentsKey(organizationId, householdId) });
+			queryClient.invalidateQueries({ queryKey: paymentsKey(organizationId, assignmentId) });
+			queryClient.invalidateQueries({ queryKey: paymentPlanKey(organizationId, assignmentId) });
+		},
+	});
+}
+
+/** Real Stripe refund for a confirmed card payment — see FeeService.refundPayment. On failure, the caller should offer useVoidPayment with `force: true` as the manual-reconciliation fallback. */
+export function useRefundPayment(organizationId: string, householdId: string, assignmentId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ paymentId, reason }: { paymentId: string } & VoidFormValues) =>
+			apiFetch<FeeAssignment>(`/organizations/${organizationId}/fee-assignments/${assignmentId}/payments/${paymentId}/refund`, {
+				method: "POST",
 				body: { reason },
 			}),
 		onSuccess: () => {

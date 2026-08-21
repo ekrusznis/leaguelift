@@ -1,5 +1,6 @@
 package com.rally26.team.domain
 
+import com.rally26.team.domain.Sport
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
@@ -13,7 +14,7 @@ class TeamTest {
         id = UUID.randomUUID(),
         organizationId = UUID.randomUUID(),
         name = "Riverside U12 Blue",
-        sport = "Soccer",
+        sport = Sport.SOCCER,
         season = "Fall 2026",
         status = TeamStatus.ACTIVE,
         contactEmail = null,

@@ -18,6 +18,7 @@ import com.rally26.participant.domain.Participant
 import com.rally26.participant.domain.ParticipantStatus
 import com.rally26.participant.domain.ParticipantTeamAssignment
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -119,7 +120,8 @@ class AthleteDashboardServiceTest {
 
     @Test
     fun `getTeams returns the linked participant's real team assignments and coach identity`() {
-        val team = Team(UUID.randomUUID(), orgId, "Varsity Soccer", "Soccer", "2024", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
+        val team =
+            Team(UUID.randomUUID(), orgId, "Varsity Soccer", Sport.SOCCER, "2024", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
         val coach =
             AppUser(UUID.randomUUID(), "coach@example.com", "Jordan Ellis", AppUserStatus.ACTIVE, null, Instant.now(), Instant.now())
         val coachGrant =
@@ -189,7 +191,8 @@ class AthleteDashboardServiceTest {
 
     @Test
     fun `getWeekEvents returns the linked participant's real upcoming events`() {
-        val team = Team(UUID.randomUUID(), orgId, "Varsity Soccer", "Soccer", "2024", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
+        val team =
+            Team(UUID.randomUUID(), orgId, "Varsity Soccer", Sport.SOCCER, "2024", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
         val event =
             com.rally26.event.domain.Event(
                 id = UUID.randomUUID(),

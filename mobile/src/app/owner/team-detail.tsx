@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useDashboardContext } from '@/features/dashboard/api';
 import { useOrgTeam } from '@/features/organization-teams/api';
+import { sportLabel } from '@/features/teams/sportLabel';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -84,7 +85,7 @@ export default function OwnerTeamDetailScreen() {
           </ThemedView>
         </Pressable>
 
-        <DetailRow label="Sport" value={team.sport} />
+        <DetailRow label="Sport" value={sportLabel(team.sport, team.sportOtherLabel)} />
         <DetailRow label="Season" value={team.season} />
         <DetailRow label="Age Group" value={team.ageGroup} />
         <DetailRow label="Gender Category" value={team.genderCategory} />

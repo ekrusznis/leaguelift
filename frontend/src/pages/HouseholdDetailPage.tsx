@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,6 +16,8 @@ import {
 	useAssignTeam,
 	useCreateParticipant,
 	useHousehold,
+	useInviteAthlete,
+	useInviteGuardian,
 	useParticipantTeams,
 	useParticipants,
 	useRemoveAdult,
@@ -37,6 +39,7 @@ import {
 	useFeePayments,
 	usePaymentMethods,
 	useRecordPayment,
+	useRefundPayment,
 	useUpdateFeeAssignmentStatus,
 	useVoidAdjustment,
 	useVoidPayment,
@@ -326,6 +329,68 @@ export function worstClearanceByParticipant(clearances: EligibilityClearance[]):
 	return byParticipant;
 }
 
+function InviteGuardianForm({ organizationId, householdId, participantId, onDone }: { organizationId: string; householdId: string; participantId: string; onDone: () => void }) {
+	const inviteGuardian = useInviteGuardian(organizationId, householdId, participantId);
+	const [firstName, setFirstName] = useState("");
+	const [lastName, setLastName] = useState("");
+	const [email, setEmail] = useState("");
+	const [relationship, setRelationship] = useState("");
+	const [error, setError] = useState<string | null>(null);
+
+	async function handleSubmit(event: FormEvent) {
+		event.preventDefault();
+		setError(null);
+		try {
+			await inviteGuardian.mutateAsync({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), relationship: relationship.trim() });
+			onDone();
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Could not send the invitation.");
+		}
+	}
+
+	return (
+		<form onSubmit={(event) => void handleSubmit(event)} className="mt-2 flex flex-col gap-2 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-3">
+			<div className="grid gap-2 sm:grid-cols-2">
+				<input value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="Guardian first name" required className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+				<input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Guardian last name" required className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+			</div>
+			<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="Guardian email" required className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+			<input value={relationship} onChange={(event) => setRelationship(event.target.value)} placeholder="Relationship (e.g. Mother, Father, Guardian)" className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+			{error && <p role="alert" className="text-sm text-error-red">{error}</p>}
+			<div className="flex justify-end gap-2">
+				<Button type="button" variant="secondary" onClick={onDone}>Cancel</Button>
+				<Button type="submit" disabled={inviteGuardian.isPending}>{inviteGuardian.isPending ? "Sending…" : "Send invitation"}</Button>
+			</div>
+		</form>
+	);
+}
+
+function InviteAthleteButton({ organizationId, householdId, participantId }: { organizationId: string; householdId: string; participantId: string }) {
+	const inviteAthlete = useInviteAthlete(organizationId, householdId, participantId);
+	const [message, setMessage] = useState<string | null>(null);
+
+	async function handleClick() {
+		const email = window.prompt("This athlete's own email address, for their own Rally26 login:");
+		if (!email || !email.trim()) return;
+		setMessage(null);
+		try {
+			await inviteAthlete.mutateAsync(email.trim());
+			setMessage("Invitation sent.");
+		} catch (err) {
+			setMessage(err instanceof Error ? err.message : "Could not send the invitation.");
+		}
+	}
+
+	return (
+		<div className="flex flex-col items-end gap-1">
+			<button type="button" className="text-sm text-azure-blue hover:underline" onClick={() => void handleClick()} disabled={inviteAthlete.isPending}>
+				Invite athlete login
+			</button>
+			{message && <p className="text-xs text-slate-gray dark:text-[#cbd5e1]">{message}</p>}
+		</div>
+	);
+}
+
 function ParticipantsPanel({ organizationId, householdId, canManage, canManagePhotos }: { organizationId: string; householdId: string; canManage: boolean; canManagePhotos: boolean }) {
 	const { data, isLoading, isError, refetch } = useParticipants(organizationId, householdId);
 	const clearances = useHouseholdEligibilityClearance(organizationId, householdId);
@@ -334,6 +399,7 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 	const [expandedId, setExpandedId] = useState<string | null>(null);
 	const [eligibilityExpandedId, setEligibilityExpandedId] = useState<string | null>(null);
 	const [correctionParticipantId, setCorrectionParticipantId] = useState<string | null>(null);
+	const [inviteGuardianForId, setInviteGuardianForId] = useState<string | null>(null);
 
 	return (
 		<section aria-label="Participants" className="flex flex-col gap-3">
@@ -394,8 +460,26 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 									>
 										{eligibilityExpandedId === participant.id ? "Hide eligibility" : "Eligibility"}
 									</button>
+									{canManage && (
+										<button
+											type="button"
+											className="text-sm text-azure-blue hover:underline"
+											onClick={() => setInviteGuardianForId((id) => id === participant.id ? null : participant.id)}
+										>
+											{inviteGuardianForId === participant.id ? "Cancel invite" : "Invite guardian"}
+										</button>
+									)}
+									{!canManage && <InviteAthleteButton organizationId={organizationId} householdId={householdId} participantId={participant.id} />}
 								</div>
 							</div>
+							{inviteGuardianForId === participant.id && (
+								<InviteGuardianForm
+									organizationId={organizationId}
+									householdId={householdId}
+									participantId={participant.id}
+									onDone={() => setInviteGuardianForId(null)}
+								/>
+							)}
 							{correctionParticipantId === participant.id && (
 								<ProfileCorrectionForm
 									organizationId={organizationId}
@@ -541,14 +625,42 @@ function FeeDetailPanel({ organizationId, householdId, fee, canManage }: { organ
 	const { data: payments, isLoading: paymentsLoading } = useFeePayments(organizationId, fee.id);
 	const { data: adjustments, isLoading: adjustmentsLoading } = useFeeAdjustments(organizationId, fee.id);
 	const voidPayment = useVoidPayment(organizationId, householdId, fee.id);
+	const refundPayment = useRefundPayment(organizationId, householdId, fee.id);
 	const voidAdjustment = useVoidAdjustment(organizationId, householdId, fee.id);
 	const [activeForm, setActiveForm] = useState<"payment" | "adjustment" | null>(null);
+	// Force Void is only offered after a refund attempt has actually failed for that
+	// specific payment — it's the manual-reconciliation escape hatch, not a first resort.
+	const [failedRefundIds, setFailedRefundIds] = useState<Set<string>>(new Set());
 	const locked = fee.status === "WAIVED" || fee.status === "CANCELLED";
 
 	function handleVoidPayment(paymentId: string) {
 		const reason = window.prompt("Reason for voiding this payment?");
 		if (reason && reason.trim()) {
 			voidPayment.mutate({ paymentId, reason: reason.trim() });
+		}
+	}
+
+	async function handleRefundPayment(paymentId: string) {
+		const reason = window.prompt("Reason for refunding this card payment? The family's card will be credited through Stripe.");
+		if (!reason || !reason.trim()) return;
+		try {
+			await refundPayment.mutateAsync({ paymentId, reason: reason.trim() });
+			setFailedRefundIds((current) => {
+				const next = new Set(current);
+				next.delete(paymentId);
+				return next;
+			});
+		} catch {
+			setFailedRefundIds((current) => new Set(current).add(paymentId));
+		}
+	}
+
+	function handleForceVoidPayment(paymentId: string) {
+		const reason = window.prompt(
+			"Force Void does NOT refund the card through Stripe — only use this if Stripe was already adjusted manually. Reason?",
+		);
+		if (reason && reason.trim()) {
+			voidPayment.mutate({ paymentId, reason: reason.trim(), force: true });
 		}
 	}
 
@@ -611,19 +723,45 @@ function FeeDetailPanel({ organizationId, householdId, fee, canManage }: { organ
 				<div>
 					<h3 className="text-sm font-semibold text-navy dark:text-[#f8fafc]">Payments</h3>
 					<ul className="flex flex-col gap-1">
-						{payments.map((payment) => (
-							<li key={payment.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
-								<span className={`min-w-0 flex-1 break-words ${payment.voidedAt ? "text-slate-gray dark:text-[#cbd5e1] line-through" : "text-slate-gray dark:text-[#cbd5e1]"}`}>
-									{formatAmount(payment.amountMinor, payment.currency)} · {payment.method} · {payment.paidAt}
-									{payment.voidedAt ? ` · voided (${payment.voidReason})` : ""}
-								</span>
-								{canManage && !payment.voidedAt && (
-									<button type="button" className="shrink-0 text-azure-blue hover:underline" onClick={() => handleVoidPayment(payment.id)}>
-										Void
-									</button>
-								)}
-							</li>
-						))}
+						{payments.map((payment) => {
+							const isConfirmedCard = payment.method === "STRIPE_ONLINE" && payment.status === "CONFIRMED";
+							const refundFailed = failedRefundIds.has(payment.id);
+							return (
+								<li key={payment.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
+									<span className={`min-w-0 flex-1 break-words ${payment.voidedAt ? "text-slate-gray dark:text-[#cbd5e1] line-through" : "text-slate-gray dark:text-[#cbd5e1]"}`}>
+										{formatAmount(payment.amountMinor, payment.currency)} · {payment.method} · {payment.paidAt}
+										{payment.voidedAt
+											? payment.stripeRefundId
+												? ` · refunded (${payment.voidReason})`
+												: ` · voided (${payment.voidReason})`
+											: ""}
+										{refundFailed && !payment.voidedAt && (
+											<span className="ml-1 text-error-red">· refund failed, try again or use Force Void</span>
+										)}
+									</span>
+									{canManage && !payment.voidedAt && (
+										<span className="flex shrink-0 items-center gap-3">
+											{isConfirmedCard ? (
+												<>
+													<button type="button" className="text-azure-blue hover:underline" disabled={refundPayment.isPending} onClick={() => void handleRefundPayment(payment.id)}>
+														Refund
+													</button>
+													{refundFailed && (
+														<button type="button" className="text-error-red hover:underline" onClick={() => handleForceVoidPayment(payment.id)}>
+															Force Void
+														</button>
+													)}
+												</>
+											) : (
+												<button type="button" className="text-azure-blue hover:underline" onClick={() => handleVoidPayment(payment.id)}>
+													Void
+												</button>
+											)}
+										</span>
+									)}
+								</li>
+							);
+						})}
 					</ul>
 				</div>
 			)}

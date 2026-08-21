@@ -140,3 +140,46 @@ export function useRemoveFromTeam(organizationId: string, participantId: string)
 		},
 	});
 }
+
+// --- Guardian / athlete self-service invitations ---
+
+const householdInvitationsKey = (orgId: string, householdId: string) =>
+	["organizations", orgId, "households", householdId, "invitations"] as const;
+
+export interface InviteGuardianValues {
+	firstName: string;
+	lastName: string;
+	email: string;
+	relationship?: string;
+}
+
+/** Athlete comes first: this always targets a real, existing participant, and finds-or-creates the household_adult contact record internally. */
+export function useInviteGuardian(organizationId: string, householdId: string, participantId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (values: InviteGuardianValues) =>
+			apiFetch(`/organizations/${organizationId}/participants/${participantId}/guardian-invitations`, {
+				method: "POST",
+				body: { ...values, relationship: values.relationship || null },
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: adultsKey(organizationId, householdId) });
+			queryClient.invalidateQueries({ queryKey: householdInvitationsKey(organizationId, householdId) });
+		},
+	});
+}
+
+/** Only callable by an active guardian of the athlete's own household — see HouseholdInvitationService.inviteAthlete. */
+export function useInviteAthlete(organizationId: string, householdId: string, participantId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (email: string) =>
+			apiFetch(`/organizations/${organizationId}/participants/${participantId}/athlete-invitations`, {
+				method: "POST",
+				body: { email },
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: householdInvitationsKey(organizationId, householdId) });
+		},
+	});
+}

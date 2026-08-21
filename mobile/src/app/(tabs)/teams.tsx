@@ -15,6 +15,7 @@ import { useTeamEligibilityClearance } from '@/features/eligibility/api';
 import type { ClearanceStatus } from '@/features/eligibility/types';
 import { useTeamRoster } from '@/features/roster/api';
 import { useCoach } from '@/features/teams/CoachContext';
+import { sportLabel } from '@/features/teams/sportLabel';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -85,7 +86,7 @@ export default function TeamsScreen() {
           <ThemedText type="smallBold">Team Roster</ThemedText>
           {selectedTeam && (
             <ThemedText type="small" themeColor="textSecondary">
-              {selectedTeam.name} · {selectedTeam.sport}
+              {selectedTeam.name} · {sportLabel(selectedTeam.sport)}
             </ThemedText>
           )}
         </View>

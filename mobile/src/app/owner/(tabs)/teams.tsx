@@ -14,6 +14,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useDashboardContext } from '@/features/dashboard/api';
 import { flattenInfiniteItems, useInfiniteTeamSearch, type TeamSearchSort } from '@/features/people-search/api';
+import { sportLabel } from '@/features/teams/sportLabel';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -101,7 +102,7 @@ export default function OwnerTeamsScreen() {
                 <View style={styles.rowBody}>
                   <ThemedText type="smallBold">{item.name}</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
-                    {item.sport}
+                    {sportLabel(item.sport, item.sportOtherLabel)}
                     {item.season ? ` · ${item.season}` : ''}
                     {item.ageGroup ? ` · ${item.ageGroup}` : ''}
                     {item.status === 'ARCHIVED' ? ' · Archived' : ''}

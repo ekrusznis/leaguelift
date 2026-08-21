@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "../../auth/AuthContext";
 import { Button } from "../../components/Button";
 import { ListToolbar } from "../../components/lists/ListToolbar";
 import { Pagination } from "../../components/lists/Pagination";
@@ -7,7 +8,18 @@ import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import type { Membership } from "./types";
-import { useDisableOrganizationMember, useMemberSearch, useUpdateOrganizationMemberRole } from "./searchApi";
+import {
+	useCancelOrganizationDeletion,
+	useDisableOrganizationMember,
+	useInviteOwnershipTransfer,
+	useMemberSearch,
+	usePendingOrganizationDeletion,
+	usePendingOwnershipTransferInvitation,
+	useRequestOrganizationDeletion,
+	useRevokeOwnershipTransferInvitation,
+	useTransferOwnership,
+	useUpdateOrganizationMemberRole,
+} from "./searchApi";
 
 const ROLE_LABELS: Record<string, string> = {
 	OWNER: "Owner",
@@ -27,11 +39,27 @@ export function OrganizationMembersPanel({ organizationId }: { organizationId: s
 	const [status, setStatus] = useState("ACTIVE");
 	const [sort, setSort] = useState<"NAME_ASC" | "NAME_DESC" | "ROLE_ASC" | "NEWEST" | "OLDEST">("NAME_ASC");
 	const [disableTarget, setDisableTarget] = useState<Membership | null>(null);
+	const [transferTarget, setTransferTarget] = useState<Membership | null>(null);
+	const [inviteEmail, setInviteEmail] = useState("");
+	const [inviteError, setInviteError] = useState<string | null>(null);
+	const [closeOrgModalOpen, setCloseOrgModalOpen] = useState(false);
 
+	const { user } = useAuth();
 	const members = useMemberSearch(organizationId, { page, size, q: query, role, status, sort });
 	const updateRole = useUpdateOrganizationMemberRole(organizationId);
 	const disableMember = useDisableOrganizationMember(organizationId);
+	const transferOwnership = useTransferOwnership(organizationId);
 	const hasFilters = !!role || status !== "ACTIVE";
+
+	const isViewerOwner = !!members.data?.items.some(
+		(member) => member.role === "OWNER" && !!user?.email && member.userEmail?.toLowerCase() === user.email.toLowerCase(),
+	);
+	const pendingOwnershipInvitation = usePendingOwnershipTransferInvitation(organizationId, isViewerOwner);
+	const inviteOwnershipTransfer = useInviteOwnershipTransfer(organizationId);
+	const revokeOwnershipInvitation = useRevokeOwnershipTransferInvitation(organizationId);
+	const pendingOrgDeletion = usePendingOrganizationDeletion(organizationId, isViewerOwner);
+	const requestOrgDeletion = useRequestOrganizationDeletion(organizationId);
+	const cancelOrgDeletion = useCancelOrganizationDeletion(organizationId);
 
 	const resetPage = () => setPage(0);
 
@@ -150,6 +178,11 @@ export function OrganizationMembersPanel({ organizationId }: { organizationId: s
 												))}
 											</select>
 										)}
+										{isViewerOwner && member.role === "ADMINISTRATOR" && member.status === "ACTIVE" && (
+											<Button type="button" variant="secondary" onClick={() => setTransferTarget(member)}>
+												Make owner
+											</Button>
+										)}
 										{!isOwner && member.status === "ACTIVE" && (
 											<Button type="button" variant="danger" onClick={() => setDisableTarget(member)}>
 												Disable access
@@ -175,6 +208,160 @@ export function OrganizationMembersPanel({ organizationId }: { organizationId: s
 					}}
 				/>
 			)}
+
+			{isViewerOwner && (
+				<section className="flex flex-col gap-3 rounded-lg border border-slate-gray/20 bg-ice-white p-4 dark:bg-[#0f172a]" aria-labelledby="ownership-transfer-heading">
+					<div>
+						<h3 id="ownership-transfer-heading" className="font-heading text-base font-bold text-navy dark:text-[#f8fafc]">
+							Transfer ownership
+						</h3>
+						<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">
+							Hand this organization to an existing Administrator using &quot;Make owner&quot; above, or invite someone
+							new by email. You&rsquo;ll become an Administrator once the transfer completes.
+						</p>
+					</div>
+					{pendingOwnershipInvitation.data ? (
+						<div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-gray/20 bg-pure-white p-3 dark:bg-[#111827]">
+							<p className="text-sm text-navy dark:text-[#f8fafc]">
+								Invitation sent to <span className="font-medium">{pendingOwnershipInvitation.data.email}</span> — pending.
+							</p>
+							<Button
+								type="button"
+								variant="secondary"
+								disabled={revokeOwnershipInvitation.isPending}
+								onClick={() => revokeOwnershipInvitation.mutate(pendingOwnershipInvitation.data!.id)}
+							>
+								Revoke
+							</Button>
+						</div>
+					) : (
+						<form
+							className="flex flex-wrap items-end gap-3"
+							noValidate
+							aria-label="Invite someone to become the owner"
+							onSubmit={async (event) => {
+								event.preventDefault();
+								setInviteError(null);
+								try {
+									await inviteOwnershipTransfer.mutateAsync(inviteEmail.trim());
+									setInviteEmail("");
+								} catch {
+									setInviteError("Could not send the invitation. Check the email and try again.");
+								}
+							}}
+						>
+							<div className="flex flex-col gap-1">
+								<label htmlFor="ownership-invite-email" className="text-sm font-medium text-navy dark:text-[#f8fafc]">
+									Invite a new owner by email
+								</label>
+								<input
+									id="ownership-invite-email"
+									type="email"
+									required
+									value={inviteEmail}
+									onChange={(event) => setInviteEmail(event.target.value)}
+									className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2"
+								/>
+							</div>
+							<Button type="submit" variant="secondary" disabled={inviteOwnershipTransfer.isPending}>
+								{inviteOwnershipTransfer.isPending ? "Sending…" : "Send invitation"}
+							</Button>
+							{inviteError && <p role="alert" className="w-full text-sm text-error-red">{inviteError}</p>}
+						</form>
+					)}
+				</section>
+			)}
+
+			{isViewerOwner && (
+				<section className="flex flex-col gap-3 rounded-lg border border-rose-200 bg-white p-4 dark:border-rose-900 dark:bg-[#111827]" aria-labelledby="org-closure-heading">
+					<div>
+						<h3 id="org-closure-heading" className="font-heading text-base font-bold text-rose-700">
+							Close this organization
+						</h3>
+						<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">
+							Instead of closing, consider transferring ownership above — closing removes this organization for every
+							member, not just you.
+						</p>
+					</div>
+					{pendingOrgDeletion.data ? (
+						<div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-rose-200 bg-rose-50 p-3 dark:border-rose-900 dark:bg-[#1f1315]">
+							<p className="text-sm text-navy dark:text-[#f8fafc]">
+								This organization is scheduled to close on{" "}
+								<span className="font-semibold">{new Date(pendingOrgDeletion.data.scheduledFor).toLocaleDateString()}</span>.
+								Export anything you need before then — after that date it can&rsquo;t be undone.
+							</p>
+							<Button
+								type="button"
+								variant="secondary"
+								disabled={cancelOrgDeletion.isPending}
+								onClick={() => cancelOrgDeletion.mutate()}
+							>
+								{cancelOrgDeletion.isPending ? "Canceling…" : "Cancel closure"}
+							</Button>
+						</div>
+					) : (
+						<Button type="button" variant="danger" onClick={() => setCloseOrgModalOpen(true)}>
+							Close this organization
+						</Button>
+					)}
+				</section>
+			)}
+
+			<Modal
+				open={closeOrgModalOpen}
+				onClose={() => setCloseOrgModalOpen(false)}
+				title="Close this organization?"
+				actions={
+					<>
+						<Button type="button" variant="secondary" onClick={() => setCloseOrgModalOpen(false)}>Cancel</Button>
+						<Button
+							type="button"
+							variant="danger"
+							disabled={requestOrgDeletion.isPending}
+							onClick={async () => {
+								await requestOrgDeletion.mutateAsync();
+								setCloseOrgModalOpen(false);
+							}}
+						>
+							{requestOrgDeletion.isPending ? "Starting…" : "Close this organization"}
+						</Button>
+					</>
+				}
+			>
+				<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
+					You&rsquo;ll have 7 days to export any data you need. After that, this organization and every member&rsquo;s
+					access to it is permanently deleted. This can&rsquo;t be undone. Financial records are archived for your
+					records; everyone else&rsquo;s personal account stays intact — only their link to this organization is removed.
+				</p>
+			</Modal>
+
+			<Modal
+				open={!!transferTarget}
+				onClose={() => setTransferTarget(null)}
+				title="Transfer ownership?"
+				actions={
+					<>
+						<Button type="button" variant="secondary" onClick={() => setTransferTarget(null)}>Cancel</Button>
+						<Button
+							type="button"
+							variant="danger"
+							disabled={transferOwnership.isPending}
+							onClick={async () => {
+								if (!transferTarget) return;
+								await transferOwnership.mutateAsync(transferTarget.id);
+								setTransferTarget(null);
+							}}
+						>
+							{transferOwnership.isPending ? "Transferring…" : "Transfer ownership"}
+						</Button>
+					</>
+				}
+			>
+				<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
+					{transferTarget?.userDisplayName || transferTarget?.userEmail || "This member"} will become the organization
+					owner. You will become an Administrator.
+				</p>
+			</Modal>
 
 			<Modal
 				open={!!disableTarget}

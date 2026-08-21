@@ -15,7 +15,8 @@ import java.util.UUID
 private const val COLUMNS = """
     id, organization_id, fee_assignment_id, household_id, amount_minor, currency, method,
     paid_at, note, recorded_by_user_id, voided_at, voided_by_user_id, void_reason, created_at,
-    status, stripe_checkout_session_id, stripe_payment_intent_id, payer_email, payer_name
+    status, stripe_checkout_session_id, stripe_payment_intent_id, payer_email, payer_name,
+    stripe_refund_id
 """
 
 @Repository
@@ -241,6 +242,32 @@ class FeePaymentRepository(
             .update()
     }
 
+    /** Same void bookkeeping as [void], plus the real Stripe refund id — used only when the refund actually succeeded through Stripe (see FeeService.refundPayment). */
+    fun refund(
+        id: UUID,
+        organizationId: UUID,
+        voidedByUserId: UUID,
+        voidReason: String,
+        stripeRefundId: String,
+    ): Int {
+        val now = Instant.now()
+        return jdbcClient
+            .sql(
+                """
+                update fee_payment
+                set voided_at = :now, voided_by_user_id = :voidedByUserId, void_reason = :voidReason,
+                    stripe_refund_id = :stripeRefundId
+                where id = :id and organization_id = :organizationId and voided_at is null
+                """.trimIndent(),
+            ).param("now", Timestamp.from(now))
+            .param("voidedByUserId", voidedByUserId)
+            .param("voidReason", voidReason)
+            .param("stripeRefundId", stripeRefundId)
+            .param("id", id)
+            .param("organizationId", organizationId)
+            .update()
+    }
+
     private fun mapRow(
         rs: ResultSet,
         rowNum: Int,
@@ -265,5 +292,6 @@ class FeePaymentRepository(
             stripePaymentIntentId = rs.getString("stripe_payment_intent_id"),
             payerEmail = rs.getString("payer_email"),
             payerName = rs.getString("payer_name"),
+            stripeRefundId = rs.getString("stripe_refund_id"),
         )
 }

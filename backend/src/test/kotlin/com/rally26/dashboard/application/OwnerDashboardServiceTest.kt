@@ -26,6 +26,7 @@ import com.rally26.organization.domain.OrganizationType
 import com.rally26.organization.persistence.OrganizationRepository
 import com.rally26.participant.persistence.ParticipantRepository
 import com.rally26.payout.application.PayoutAccountService
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -161,7 +162,7 @@ class OwnerDashboardServiceTest {
 
     @Test
     fun `getTeamPerformance is tagged demo for fundraising when a team has no active campaign`() {
-        val team = Team(UUID.randomUUID(), orgId, "U12 Blue", "Soccer", "2025", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
+        val team = Team(UUID.randomUUID(), orgId, "U12 Blue", Sport.SOCCER, "2025", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
         every { membershipService.requireActiveMembership(orgId, currentUser) } returns membership()
         every { teamRepository.findAll(orgId, 0, 10) } returns listOf(team)
         every { participantRepository.countActiveForTeam(team.id, orgId) } returns 5
@@ -177,7 +178,7 @@ class OwnerDashboardServiceTest {
 
     @Test
     fun `getTeamPerformance returns real fundraising figures when a team has an active campaign`() {
-        val team = Team(UUID.randomUUID(), orgId, "U12 Blue", "Soccer", "2025", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
+        val team = Team(UUID.randomUUID(), orgId, "U12 Blue", Sport.SOCCER, "2025", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
         val campaign =
             Campaign(
                 id = UUID.randomUUID(),

@@ -38,3 +38,8 @@ data class UpdateMembershipRoleRequest(
     @field:NotNull
     val role: MembershipRole,
 )
+
+data class TransferOwnershipRequest(
+    @field:NotNull
+    val newOwnerMembershipId: UUID,
+)

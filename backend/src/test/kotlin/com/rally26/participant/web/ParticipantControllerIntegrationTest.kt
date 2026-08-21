@@ -8,6 +8,7 @@ import com.rally26.organization.application.OrganizationService
 import com.rally26.organization.domain.OrganizationType
 import com.rally26.participant.application.ParticipantService
 import com.rally26.team.application.TeamService
+import com.rally26.team.domain.Sport
 import com.rally26.testsupport.AbstractIntegrationTest
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -81,7 +82,18 @@ class ParticipantControllerIntegrationTest : AbstractIntegrationTest() {
         val org = authedOrg()
         val household = householdService.create(org.organizationId, "Johnson Family", "sarah@example.com", null, null, org.currentUser)
         val participant = participantService.create(org.organizationId, household.id, "Maya", "Johnson", null, null, org.currentUser)
-        val team = teamService.create(org.organizationId, "Varsity Soccer", "Soccer", "Fall 2026", null, null, null, null, org.currentUser)
+        val team =
+            teamService.create(
+                org.organizationId,
+                "Varsity Soccer",
+                Sport.SOCCER,
+                "Fall 2026",
+                null,
+                null,
+                null,
+                null,
+                org.currentUser,
+            )
         participantService.assignToTeam(org.organizationId, participant.id, team.id, null, org.currentUser)
 
         val request =

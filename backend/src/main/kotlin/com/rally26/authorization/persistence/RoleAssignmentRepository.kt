@@ -36,6 +36,26 @@ class RoleAssignmentRepository(
             .query(::mapRow)
             .list()
 
+    /** Whether *any* user already holds an active grant for this specific TEAM/TOURNAMENT/PARTICIPANT resource+role — e.g. checking a participant doesn't already have an athlete-self login before inviting a new one. */
+    fun hasAnyActiveForResourceAndRole(
+        contextType: RoleAssignmentContextType,
+        resourceId: UUID,
+        role: ResourceRole,
+    ): Boolean =
+        jdbcClient
+            .sql(
+                """
+                select exists(
+                    select 1 from role_assignment
+                    where context_type = :contextType and resource_id = :resourceId and role = :role and status = 'ACTIVE'
+                )
+                """.trimIndent(),
+            ).param("contextType", contextType.name)
+            .param("resourceId", resourceId)
+            .param("role", role.name)
+            .query(Boolean::class.java)
+            .single()
+
     /** The active grant (if any) this user holds for a specific TEAM/TOURNAMENT/PARTICIPANT resource. */
     fun findActiveForResource(
         userId: UUID,
