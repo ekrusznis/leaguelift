@@ -35,3 +35,62 @@ export function useRevokeMember(organizationId: string | null) {
     },
   });
 }
+
+/** Owner-only server-side; the target must already be an active Administrator member. */
+export function useTransferOwnership(organizationId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (newOwnerMembershipId: string) =>
+      apiFetch(`/organizations/${organizationId}/members/ownership-transfer`, {
+        method: 'PATCH',
+        body: { newOwnerMembershipId },
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organizations', organizationId, 'members'] });
+    },
+  });
+}
+
+export interface OwnershipTransferInvitation {
+  id: string;
+  organizationId: string;
+  email: string;
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+/** Owner-only server-side — pass `enabled: false` for any viewer who isn't the current owner. */
+export function usePendingOwnershipTransferInvitation(organizationId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ['organizations', organizationId, 'ownership-transfer-invitation'],
+    queryFn: () =>
+      apiFetch<OwnershipTransferInvitation | null>(`/organizations/${organizationId}/ownership-transfer-invitations/pending`),
+    enabled: !!organizationId && enabled,
+  });
+}
+
+export function useInviteOwnershipTransfer(organizationId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (email: string) =>
+      apiFetch<OwnershipTransferInvitation>(`/organizations/${organizationId}/ownership-transfer-invitations`, {
+        method: 'POST',
+        body: { email },
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organizations', organizationId, 'ownership-transfer-invitation'] });
+    },
+  });
+}
+
+export function useRevokeOwnershipTransferInvitation(organizationId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) =>
+      apiFetch(`/organizations/${organizationId}/ownership-transfer-invitations/${invitationId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organizations', organizationId, 'ownership-transfer-invitation'] });
+    },
+  });
+}

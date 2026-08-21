@@ -1,5 +1,6 @@
 package com.rally26.membership.application
 
+import com.rally26.audit.application.AuditService
 import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
@@ -25,6 +26,7 @@ import java.util.UUID
 class MembershipService(
     private val membershipRepository: MembershipRepository,
     private val outboxWriter: OutboxWriter,
+    private val auditService: AuditService,
     private val organizationRepository: OrganizationRepository? = null,
 ) {
     @Transactional
@@ -158,6 +160,75 @@ class MembershipService(
             throw ValidationException("Ownership cannot be changed through this endpoint.")
         }
         membershipRepository.updateRole(membershipId, newRole)
+    }
+
+    /**
+     * Owner-only controlled workflow ([grantMembership]/[updateRole] both explicitly
+     * refuse to touch OWNER). The target must already be an Administrator — reduces the
+     * risk of handing an organization to a Viewer/Team Administrator who never expected
+     * full control. Use [inviteOwnershipTransferByEmail] instead when the intended new
+     * owner is not yet an org member.
+     */
+    @Transactional
+    fun transferOwnership(
+        organizationId: UUID,
+        newOwnerMembershipId: UUID,
+        currentUser: CurrentUser,
+    ): OrganizationMembership {
+        requireOwnerRole(organizationId, currentUser)
+        val target =
+            membershipRepository
+                .findById(newOwnerMembershipId)
+                ?.takeIf { it.organizationId == organizationId }
+                ?: throw NotFoundException("MEMBERSHIP_NOT_FOUND", "The membership could not be found.")
+        if (target.status != com.rally26.membership.domain.MembershipStatus.ACTIVE) {
+            throw ValidationException("Only an active member can become the new owner.")
+        }
+        if (target.role != MembershipRole.ADMINISTRATOR) {
+            throw ValidationException("Ownership can only be transferred to an existing Administrator.")
+        }
+        return finalizeOwnershipTransfer(organizationId, target.userId)
+    }
+
+    /**
+     * Shared finalization step for both the direct existing-member transfer above and
+     * [com.rally26.invitation.application.OwnershipTransferInvitationService]'s accept
+     * flow. The outgoing owner is demoted to Administrator, not removed — they keep
+     * access rather than being locked out of an organization they may still work in.
+     * The new owner may or may not already be a member; both cases are handled.
+     */
+    @Transactional
+    fun finalizeOwnershipTransfer(
+        organizationId: UUID,
+        newOwnerUserId: UUID,
+    ): OrganizationMembership {
+        val previousOwner =
+            membershipRepository.findOwnerMembership(organizationId)
+                ?: throw NotFoundException("ORGANIZATION_OWNER_NOT_FOUND", "This organization has no active owner.")
+        if (previousOwner.userId == newOwnerUserId) {
+            throw ValidationException("You are already the organization owner.")
+        }
+        membershipRepository.updateRole(previousOwner.id, MembershipRole.ADMINISTRATOR)
+        val existingTarget = membershipRepository.findActiveMembership(organizationId, newOwnerUserId)
+        val newOwnerMembership =
+            if (existingTarget != null) {
+                membershipRepository.updateRole(existingTarget.id, MembershipRole.OWNER)
+                membershipRepository.findById(existingTarget.id)!!
+            } else {
+                val isFirstMembership = membershipRepository.findAnyActiveMembershipForUser(newOwnerUserId) == null
+                val membership = membershipRepository.insert(organizationId, newOwnerUserId, MembershipRole.OWNER)
+                if (isFirstMembership) enqueueWelcomeEmail(membership)
+                membership
+            }
+        auditService.record(
+            actorUserId = previousOwner.userId,
+            organizationId = organizationId,
+            action = "membership.ownership_transferred",
+            entityType = "organization_membership",
+            entityId = newOwnerMembership.id,
+            targetUserId = newOwnerUserId,
+        )
+        return newOwnerMembership
     }
 
     @Transactional

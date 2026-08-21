@@ -1,5 +1,6 @@
 package com.rally26.membership.application
 
+import com.rally26.audit.application.AuditService
 import com.rally26.common.error.ForbiddenException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ValidationException
@@ -32,7 +33,8 @@ import kotlin.test.assertFailsWith
 class MembershipServiceTest {
     private val membershipRepository = mockk<MembershipRepository>()
     private val outboxWriter = mockk<OutboxWriter>()
-    private val service = MembershipService(membershipRepository, outboxWriter)
+    private val auditService = mockk<AuditService>(relaxed = true)
+    private val service = MembershipService(membershipRepository, outboxWriter, auditService)
 
     @Test
     fun `user without a membership is denied access to the organization`() {
@@ -136,7 +138,7 @@ class MembershipServiceTest {
     fun `requireActiveMembership rejects a SUSPENDED organization`() {
         val organizationId = UUID.randomUUID()
         val organizationRepository = mockk<OrganizationRepository>()
-        val serviceWithOrgs = MembershipService(membershipRepository, outboxWriter, organizationRepository)
+        val serviceWithOrgs = MembershipService(membershipRepository, outboxWriter, auditService, organizationRepository)
         val owner = CurrentUser(UUID.randomUUID(), "suspended-owner@example.com", "Suspended Owner")
         every { membershipRepository.findActiveMembership(organizationId, owner.userId) } returns
             membership(organizationId, owner.userId, MembershipRole.OWNER)
@@ -153,7 +155,7 @@ class MembershipServiceTest {
     fun `hasManagerRole returns false for a SUSPENDED organization even for the owner`() {
         val organizationId = UUID.randomUUID()
         val organizationRepository = mockk<OrganizationRepository>()
-        val serviceWithOrgs = MembershipService(membershipRepository, outboxWriter, organizationRepository)
+        val serviceWithOrgs = MembershipService(membershipRepository, outboxWriter, auditService, organizationRepository)
         val owner = CurrentUser(UUID.randomUUID(), "suspended-owner2@example.com", "Suspended Owner 2")
         every { membershipRepository.findActiveMembership(organizationId, owner.userId) } returns
             membership(organizationId, owner.userId, MembershipRole.OWNER)
@@ -166,7 +168,7 @@ class MembershipServiceTest {
     fun `requireOwnerRoleForBilling still allows the owner of a SUSPENDED organization`() {
         val organizationId = UUID.randomUUID()
         val organizationRepository = mockk<OrganizationRepository>()
-        val serviceWithOrgs = MembershipService(membershipRepository, outboxWriter, organizationRepository)
+        val serviceWithOrgs = MembershipService(membershipRepository, outboxWriter, auditService, organizationRepository)
         val owner = CurrentUser(UUID.randomUUID(), "billing-owner@example.com", "Billing Owner")
         every { membershipRepository.findActiveMembership(organizationId, owner.userId) } returns
             membership(organizationId, owner.userId, MembershipRole.OWNER)
@@ -181,7 +183,7 @@ class MembershipServiceTest {
     fun `requireOwnerRoleForBilling still rejects a non-owner of a SUSPENDED organization`() {
         val organizationId = UUID.randomUUID()
         val organizationRepository = mockk<OrganizationRepository>()
-        val serviceWithOrgs = MembershipService(membershipRepository, outboxWriter, organizationRepository)
+        val serviceWithOrgs = MembershipService(membershipRepository, outboxWriter, auditService, organizationRepository)
         val admin = CurrentUser(UUID.randomUUID(), "billing-admin@example.com", "Billing Admin")
         every { membershipRepository.findActiveMembership(organizationId, admin.userId) } returns
             membership(organizationId, admin.userId, MembershipRole.ADMINISTRATOR)
@@ -320,6 +322,103 @@ class MembershipServiceTest {
         service.grantMembership(organizationId, userId, MembershipRole.VIEWER)
 
         verify(exactly = 1) { outboxWriter.write("organization_membership", created.id, organizationId, "membership.first_granted", any()) }
+    }
+
+    @Test
+    fun `transferOwnership requires the caller to be the owner`() {
+        val organizationId = UUID.randomUUID()
+        val admin = CurrentUser(UUID.randomUUID(), "not-owner@example.com", "Not Owner")
+        every { membershipRepository.findActiveMembership(organizationId, admin.userId) } returns
+            membership(organizationId, admin.userId, MembershipRole.ADMINISTRATOR)
+
+        assertFailsWith<ForbiddenException> {
+            service.transferOwnership(organizationId, UUID.randomUUID(), admin)
+        }
+    }
+
+    @Test
+    fun `transferOwnership requires the target to be an active administrator`() {
+        val organizationId = UUID.randomUUID()
+        val owner = CurrentUser(UUID.randomUUID(), "owner-t1@example.com", "Owner")
+        val ownerMembership = membership(organizationId, owner.userId, MembershipRole.OWNER)
+        every { membershipRepository.findActiveMembership(organizationId, owner.userId) } returns ownerMembership
+        val viewerTarget = membership(organizationId, UUID.randomUUID(), MembershipRole.VIEWER)
+        every { membershipRepository.findById(viewerTarget.id) } returns viewerTarget
+
+        assertFailsWith<ValidationException> {
+            service.transferOwnership(organizationId, viewerTarget.id, owner)
+        }
+    }
+
+    @Test
+    fun `transferOwnership demotes the old owner and promotes the target atomically, and audits it`() {
+        val organizationId = UUID.randomUUID()
+        val owner = CurrentUser(UUID.randomUUID(), "owner-t2@example.com", "Owner")
+        val ownerMembership = membership(organizationId, owner.userId, MembershipRole.OWNER)
+        val adminMembership = membership(organizationId, UUID.randomUUID(), MembershipRole.ADMINISTRATOR)
+        every { membershipRepository.findActiveMembership(organizationId, owner.userId) } returns ownerMembership
+        every { membershipRepository.findById(adminMembership.id) } returns adminMembership
+        every { membershipRepository.findOwnerMembership(organizationId) } returns ownerMembership
+        every { membershipRepository.findActiveMembership(organizationId, adminMembership.userId) } returns adminMembership
+        every { membershipRepository.updateRole(ownerMembership.id, MembershipRole.ADMINISTRATOR) } returns 1
+        every { membershipRepository.updateRole(adminMembership.id, MembershipRole.OWNER) } returns 1
+
+        service.transferOwnership(organizationId, adminMembership.id, owner)
+
+        verify(exactly = 1) { membershipRepository.updateRole(ownerMembership.id, MembershipRole.ADMINISTRATOR) }
+        verify(exactly = 1) { membershipRepository.updateRole(adminMembership.id, MembershipRole.OWNER) }
+        verify(exactly = 1) {
+            auditService.record(
+                actorUserId = ownerMembership.userId,
+                organizationId = organizationId,
+                action = "membership.ownership_transferred",
+                entityType = "organization_membership",
+                entityId = adminMembership.id,
+                metadataJson = "{}",
+                teamId = null,
+                householdId = null,
+                participantId = null,
+                targetUserId = adminMembership.userId,
+                actorType = null,
+                result = com.rally26.audit.domain.AuditResult.SUCCESS,
+                summary = null,
+                correlationId = null,
+            )
+        }
+    }
+
+    @Test
+    fun `finalizeOwnershipTransfer grants ownership to a user with no existing membership`() {
+        val organizationId = UUID.randomUUID()
+        val previousOwnerId = UUID.randomUUID()
+        val newOwnerId = UUID.randomUUID()
+        val ownerMembership = membership(organizationId, previousOwnerId, MembershipRole.OWNER)
+        every { membershipRepository.findOwnerMembership(organizationId) } returns ownerMembership
+        every { membershipRepository.findActiveMembership(organizationId, newOwnerId) } returns null
+        every { membershipRepository.findAnyActiveMembershipForUser(newOwnerId) } returns null
+        every { membershipRepository.updateRole(ownerMembership.id, MembershipRole.ADMINISTRATOR) } returns 1
+        every { membershipRepository.insert(organizationId, newOwnerId, MembershipRole.OWNER) } returns
+            membership(organizationId, newOwnerId, MembershipRole.OWNER)
+        every { outboxWriter.write(any(), any(), any(), any(), any()) } just runs
+
+        val result = service.finalizeOwnershipTransfer(organizationId, newOwnerId)
+
+        assertEquals(MembershipRole.OWNER, result.role)
+        assertEquals(newOwnerId, result.userId)
+        verify(exactly = 1) { membershipRepository.updateRole(ownerMembership.id, MembershipRole.ADMINISTRATOR) }
+        verify(exactly = 1) { membershipRepository.insert(organizationId, newOwnerId, MembershipRole.OWNER) }
+    }
+
+    @Test
+    fun `finalizeOwnershipTransfer rejects transferring to the current owner`() {
+        val organizationId = UUID.randomUUID()
+        val ownerId = UUID.randomUUID()
+        val ownerMembership = membership(organizationId, ownerId, MembershipRole.OWNER)
+        every { membershipRepository.findOwnerMembership(organizationId) } returns ownerMembership
+
+        assertFailsWith<ValidationException> {
+            service.finalizeOwnershipTransfer(organizationId, ownerId)
+        }
     }
 
     private fun organization(
