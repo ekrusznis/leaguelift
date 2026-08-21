@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,6 +16,8 @@ import {
 	useAssignTeam,
 	useCreateParticipant,
 	useHousehold,
+	useInviteAthlete,
+	useInviteGuardian,
 	useParticipantTeams,
 	useParticipants,
 	useRemoveAdult,
@@ -327,6 +329,68 @@ export function worstClearanceByParticipant(clearances: EligibilityClearance[]):
 	return byParticipant;
 }
 
+function InviteGuardianForm({ organizationId, householdId, participantId, onDone }: { organizationId: string; householdId: string; participantId: string; onDone: () => void }) {
+	const inviteGuardian = useInviteGuardian(organizationId, householdId, participantId);
+	const [firstName, setFirstName] = useState("");
+	const [lastName, setLastName] = useState("");
+	const [email, setEmail] = useState("");
+	const [relationship, setRelationship] = useState("");
+	const [error, setError] = useState<string | null>(null);
+
+	async function handleSubmit(event: FormEvent) {
+		event.preventDefault();
+		setError(null);
+		try {
+			await inviteGuardian.mutateAsync({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), relationship: relationship.trim() });
+			onDone();
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Could not send the invitation.");
+		}
+	}
+
+	return (
+		<form onSubmit={(event) => void handleSubmit(event)} className="mt-2 flex flex-col gap-2 rounded-lg border border-slate-gray/20 bg-ice-white dark:bg-[#0f172a] p-3">
+			<div className="grid gap-2 sm:grid-cols-2">
+				<input value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="Guardian first name" required className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+				<input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Guardian last name" required className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+			</div>
+			<input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="Guardian email" required className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+			<input value={relationship} onChange={(event) => setRelationship(event.target.value)} placeholder="Relationship (e.g. Mother, Father, Guardian)" className="min-h-11 rounded-md border border-slate-gray/30 px-3 py-2" />
+			{error && <p role="alert" className="text-sm text-error-red">{error}</p>}
+			<div className="flex justify-end gap-2">
+				<Button type="button" variant="secondary" onClick={onDone}>Cancel</Button>
+				<Button type="submit" disabled={inviteGuardian.isPending}>{inviteGuardian.isPending ? "Sending…" : "Send invitation"}</Button>
+			</div>
+		</form>
+	);
+}
+
+function InviteAthleteButton({ organizationId, householdId, participantId }: { organizationId: string; householdId: string; participantId: string }) {
+	const inviteAthlete = useInviteAthlete(organizationId, householdId, participantId);
+	const [message, setMessage] = useState<string | null>(null);
+
+	async function handleClick() {
+		const email = window.prompt("This athlete's own email address, for their own Rally26 login:");
+		if (!email || !email.trim()) return;
+		setMessage(null);
+		try {
+			await inviteAthlete.mutateAsync(email.trim());
+			setMessage("Invitation sent.");
+		} catch (err) {
+			setMessage(err instanceof Error ? err.message : "Could not send the invitation.");
+		}
+	}
+
+	return (
+		<div className="flex flex-col items-end gap-1">
+			<button type="button" className="text-sm text-azure-blue hover:underline" onClick={() => void handleClick()} disabled={inviteAthlete.isPending}>
+				Invite athlete login
+			</button>
+			{message && <p className="text-xs text-slate-gray dark:text-[#cbd5e1]">{message}</p>}
+		</div>
+	);
+}
+
 function ParticipantsPanel({ organizationId, householdId, canManage, canManagePhotos }: { organizationId: string; householdId: string; canManage: boolean; canManagePhotos: boolean }) {
 	const { data, isLoading, isError, refetch } = useParticipants(organizationId, householdId);
 	const clearances = useHouseholdEligibilityClearance(organizationId, householdId);
@@ -335,6 +399,7 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 	const [expandedId, setExpandedId] = useState<string | null>(null);
 	const [eligibilityExpandedId, setEligibilityExpandedId] = useState<string | null>(null);
 	const [correctionParticipantId, setCorrectionParticipantId] = useState<string | null>(null);
+	const [inviteGuardianForId, setInviteGuardianForId] = useState<string | null>(null);
 
 	return (
 		<section aria-label="Participants" className="flex flex-col gap-3">
@@ -395,8 +460,26 @@ function ParticipantsPanel({ organizationId, householdId, canManage, canManagePh
 									>
 										{eligibilityExpandedId === participant.id ? "Hide eligibility" : "Eligibility"}
 									</button>
+									{canManage && (
+										<button
+											type="button"
+											className="text-sm text-azure-blue hover:underline"
+											onClick={() => setInviteGuardianForId((id) => id === participant.id ? null : participant.id)}
+										>
+											{inviteGuardianForId === participant.id ? "Cancel invite" : "Invite guardian"}
+										</button>
+									)}
+									{!canManage && <InviteAthleteButton organizationId={organizationId} householdId={householdId} participantId={participant.id} />}
 								</div>
 							</div>
+							{inviteGuardianForId === participant.id && (
+								<InviteGuardianForm
+									organizationId={organizationId}
+									householdId={householdId}
+									participantId={participant.id}
+									onDone={() => setInviteGuardianForId(null)}
+								/>
+							)}
 							{correctionParticipantId === participant.id && (
 								<ProfileCorrectionForm
 									organizationId={organizationId}
