@@ -12,6 +12,7 @@ import com.rally26.organization.persistence.OrganizationRepository
 import com.rally26.subscription.domain.OrganizationSubscriptionStatus
 import com.rally26.subscription.persistence.OrganizationSubscriptionRepository
 import com.rally26.team.application.TeamService
+import com.rally26.team.domain.Sport
 import com.rally26.testsupport.AbstractIntegrationTest
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -104,11 +105,11 @@ class FreeSubscriptionIntegrationTest : AbstractIntegrationTest() {
         val (owner, organizationId) = registerAndDraftOrganization()
         ownerOnboardingService.activateFreePlan(owner)
 
-        teamService.create(organizationId, "Team A", "Soccer", null, null, null, null, null, owner)
+        teamService.create(organizationId, "Team A", Sport.SOCCER, null, null, null, null, null, owner)
 
         val denied =
             assertFailsWith<ForbiddenException> {
-                teamService.create(organizationId, "Team B", "Soccer", null, null, null, null, null, owner)
+                teamService.create(organizationId, "Team B", Sport.SOCCER, null, null, null, null, null, owner)
             }
         assertEquals("PLAN_UPGRADE_REQUIRED", denied.code)
     }

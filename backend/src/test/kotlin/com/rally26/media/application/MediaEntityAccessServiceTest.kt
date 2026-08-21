@@ -25,6 +25,7 @@ import com.rally26.support.domain.SupportArticle
 import com.rally26.support.domain.SupportArticleStatus
 import com.rally26.support.domain.SupportAudience
 import com.rally26.support.persistence.SupportArticleRepository
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -200,7 +201,7 @@ class MediaEntityAccessServiceTest {
             id = UUID.randomUUID(),
             organizationId = organizationId,
             name = "U14 Blue",
-            sport = "Volleyball",
+            sport = Sport.VOLLEYBALL,
             season = "2026-27",
             status = TeamStatus.ACTIVE,
             contactEmail = null,

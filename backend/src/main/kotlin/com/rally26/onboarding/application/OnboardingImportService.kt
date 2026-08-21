@@ -20,6 +20,7 @@ import com.rally26.onboarding.domain.OnboardingRecordType
 import com.rally26.onboarding.persistence.OnboardingImportIdentityRepository
 import com.rally26.participant.domain.ParticipantStatus
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
 import org.springframework.stereotype.Service
@@ -621,17 +622,24 @@ class OnboardingImportService(
         resolvedExisting[recordType to externalId]
             ?: identityRepository.find(organizationId, recordType, externalId)?.entityId
 
+    /** Leniently matches an imported spreadsheet's free-text sport column to a known [Sport] code (case/whitespace-insensitive); anything unrecognized falls back to OTHER with the real imported text preserved rather than rejecting the whole row — same normalization V100's migration applied to pre-existing data. */
+    private fun parseImportedSport(value: String): Pair<Sport, String?> {
+        val normalized = value.trim().uppercase().replace(' ', '_')
+        val matched = Sport.entries.find { it.name == normalized }
+        return if (matched != null) matched to null else Sport.OTHER to value.trim()
+    }
+
     private fun upsertTeam(
         organizationId: UUID,
         row: AnalysisRow,
     ): UUID {
         val name = row.required("name")
-        val sport = row.required("sport")
+        val (sport, sportOtherLabel) = parseImportedSport(row.required("sport"))
         val season = blankToNull(row.fields["season"])
         val contactEmail = normalizedEmail(row.fields["contact_email"])
         val existingId = row.existingEntityId
         if (existingId == null) {
-            return teamRepository.insert(organizationId, name, sport, season, contactEmail, null, null, null).id
+            return teamRepository.insert(organizationId, name, sport, season, contactEmail, null, null, null, sportOtherLabel).id
         }
         val existing =
             teamRepository
@@ -639,7 +647,7 @@ class OnboardingImportService(
                 ?.takeIf { it.status == TeamStatus.ACTIVE }
                 ?: throw ValidationException("The matched team no longer exists or is inactive.")
         if (row.action == OnboardingPreviewAction.MATCH_EXISTING) return existing.id
-        teamRepository.update(existing.id, organizationId, name, sport, season, contactEmail, null, null, null)
+        teamRepository.update(existing.id, organizationId, name, sport, season, contactEmail, null, null, null, sportOtherLabel)
         return existing.id
     }
 

@@ -5,6 +5,7 @@ import com.rally26.organization.domain.Organization
 import com.rally26.organization.domain.OrganizationStatus
 import com.rally26.organization.domain.OrganizationType
 import com.rally26.organization.persistence.OrganizationRepository
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -47,7 +48,7 @@ class TimeZoneServiceTest {
         )
 
     private fun team(timezoneOverride: String?) =
-        Team(teamId, orgId, "Varsity Soccer", "Soccer", null, TeamStatus.ACTIVE, null, Instant.now(), Instant.now(), timezoneOverride)
+        Team(teamId, orgId, "Varsity Soccer", Sport.SOCCER, null, TeamStatus.ACTIVE, null, Instant.now(), Instant.now(), timezoneOverride)
 
     private fun tournament(timezoneOverride: String?) =
         Tournament(

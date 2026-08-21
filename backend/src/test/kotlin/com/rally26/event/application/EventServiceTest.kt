@@ -23,6 +23,7 @@ import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.outbox.application.OutboxWriter
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -90,7 +91,7 @@ class EventServiceTest {
     private val currentUser = CurrentUser(UUID.randomUUID(), "coach@example.com", "Coach")
 
     private fun team(id: UUID = teamId) =
-        Team(id, orgId, "Varsity Soccer", "Soccer", "Fall 2026", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
+        Team(id, orgId, "Varsity Soccer", Sport.SOCCER, "Fall 2026", TeamStatus.ACTIVE, null, Instant.now(), Instant.now())
 
     private fun managerMembership() =
         OrganizationMembership(

@@ -10,7 +10,8 @@ import { LoadingState } from "../../components/states/LoadingState";
 import { appPaths } from "../../routes/appPaths";
 import { useTeamEligibilityClearance } from "../eligibility/api";
 import { ClearanceStatusPill } from "../eligibility/ClearanceStatusPill";
-import { useTeamRoster } from "./api";
+import { useTeam, useTeamRoster } from "./api";
+import { terminologyForSport } from "./sport";
 import { TeamStaffList } from "./TeamStaffList";
 
 export function TeamRosterPage() {
@@ -20,6 +21,8 @@ export function TeamRosterPage() {
 	const [eligibilityFilter, setEligibilityFilter] = useState<"ALL" | "INELIGIBLE">("ALL");
 	const [sort, setSort] = useState<"NAME_ASC" | "NAME_DESC">("NAME_ASC");
 	const rosterQuery = useTeamRoster(organizationId ?? "", teamId ?? "");
+	const teamQuery = useTeam(organizationId ?? "", teamId ?? "");
+	const terminology = terminologyForSport(teamQuery.data?.sport);
 	const clearanceQuery = useTeamEligibilityClearance(
 		organizationId ?? "",
 		teamId ?? "",
@@ -56,17 +59,17 @@ export function TeamRosterPage() {
 					← Back to team schedule
 				</Link>
 				<h1 className="font-heading text-2xl font-bold text-navy dark:text-[#f8fafc]">Team Roster</h1>
-				<p className="mt-1 text-slate-gray dark:text-[#cbd5e1]">Athletes and assigned team staff.</p>
+				<p className="mt-1 text-slate-gray dark:text-[#cbd5e1]">{terminology.athletePlural} and assigned team staff.</p>
 			</div>
 
 			<TeamStaffList organizationId={organizationId} teamId={teamId} />
 
 			<section aria-labelledby="athletes-heading" className="flex flex-col gap-4">
-				<h2 id="athletes-heading" className="font-heading text-lg font-bold text-navy dark:text-[#f8fafc]">Athletes</h2>
+				<h2 id="athletes-heading" className="font-heading text-lg font-bold text-navy dark:text-[#f8fafc]">{terminology.athletePlural}</h2>
 				<ListToolbar
 					searchValue={query}
 					onSearchChange={setQuery}
-					searchPlaceholder="Search athletes by name"
+					searchPlaceholder={`Search ${terminology.athletePlural.toLowerCase()} by name`}
 					resultCount={visibleRoster.length}
 					sortValue={sort}
 					sortOptions={[
@@ -90,7 +93,7 @@ export function TeamRosterPage() {
 									onChange={(event) => setEligibilityFilter(event.target.value as "ALL" | "INELIGIBLE")}
 									className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 font-normal text-navy dark:border-[#334155] dark:bg-[#0f172a] dark:text-[#f8fafc]"
 								>
-									<option value="ALL">All athletes</option>
+									<option value="ALL">{`All ${terminology.athletePlural.toLowerCase()}`}</option>
 									<option value="INELIGIBLE">Ineligible only</option>
 								</select>
 							</label>

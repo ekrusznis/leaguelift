@@ -274,7 +274,7 @@ class EligibilityService(
         val applicable =
             requirementRepository
                 .listActiveForScope(organizationId, teamId)
-                .filter { it.sport == null || it.sport.equals(team.sport, ignoreCase = true) }
+                .filter { it.sport == null || it.sport.equals(team.sport.name, ignoreCase = true) }
                 .filter { it.season == null || it.season.equals(team.season, ignoreCase = true) }
 
         if (applicable.isEmpty()) {
@@ -407,7 +407,7 @@ class EligibilityService(
                 .flatMap { team ->
                     requirementRepository
                         .listActiveForScope(organizationId, team.id)
-                        .filter { it.sport == null || it.sport.equals(team.sport, ignoreCase = true) }
+                        .filter { it.sport == null || it.sport.equals(team.sport.name, ignoreCase = true) }
                         .filter { it.season == null || it.season.equals(team.season, ignoreCase = true) }
                 }.distinctBy { it.requirementGroupId }
         return applicable.map { requirement ->

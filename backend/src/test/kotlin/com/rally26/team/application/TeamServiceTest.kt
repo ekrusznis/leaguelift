@@ -12,6 +12,7 @@ import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.subscription.application.PlanEntitlementService
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamGenderCategory
 import com.rally26.team.domain.TeamStatus
@@ -90,7 +91,7 @@ class TeamServiceTest {
         } throws DuplicateKeyException("unique violation")
 
         assertFailsWith<ConflictException> {
-            service.create(orgId, "Duplicate", "Soccer", null, null, null, null, null, currentUser)
+            service.create(orgId, "Duplicate", Sport.SOCCER, null, null, null, null, null, currentUser)
         }
     }
 
@@ -100,7 +101,7 @@ class TeamServiceTest {
         every { teamRepository.countAll(orgId) } returns 0
 
         assertFailsWith<ValidationException> {
-            service.create(orgId, "Team A", "Soccer", null, "not-an-email", null, null, null, currentUser)
+            service.create(orgId, "Team A", Sport.SOCCER, null, "not-an-email", null, null, null, currentUser)
         }
     }
 
@@ -140,7 +141,7 @@ class TeamServiceTest {
             ForbiddenException("PLAN_UPGRADE_REQUIRED", "Your plan allows up to 3 teams.")
 
         assertFailsWith<ForbiddenException> {
-            service.create(orgId, "Team A", "Soccer", null, null, null, null, null, currentUser)
+            service.create(orgId, "Team A", Sport.SOCCER, null, null, null, null, null, currentUser)
         }
         verify(exactly = 0) { teamRepository.insert(any(), any(), any(), any(), any(), any(), any(), any()) }
     }
@@ -297,7 +298,7 @@ class TeamServiceTest {
             id = UUID.randomUUID(),
             organizationId = orgId,
             name = "Riverside U12 Blue",
-            sport = "Soccer",
+            sport = Sport.SOCCER,
             season = "Fall 2026",
             status = TeamStatus.ACTIVE,
             contactEmail = "coach@riverside.org",

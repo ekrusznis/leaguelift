@@ -15,6 +15,7 @@ import com.rally26.onboarding.domain.OnboardingRecordType
 import com.rally26.onboarding.persistence.OnboardingImportIdentity
 import com.rally26.onboarding.persistence.OnboardingImportIdentityRepository
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -110,8 +111,8 @@ class OnboardingImportServiceTest {
         val now = Instant.now()
         every { teamRepository.findNameMatches(organizationId, "U14 Blue") } returns
             listOf(
-                Team(UUID.randomUUID(), organizationId, "U14 Blue", "Volleyball", null, TeamStatus.ACTIVE, null, now, now),
-                Team(UUID.randomUUID(), organizationId, "U14 Blue", "Volleyball", null, TeamStatus.ACTIVE, null, now, now),
+                Team(UUID.randomUUID(), organizationId, "U14 Blue", Sport.VOLLEYBALL, null, TeamStatus.ACTIVE, null, now, now),
+                Team(UUID.randomUUID(), organizationId, "U14 Blue", Sport.VOLLEYBALL, null, TeamStatus.ACTIVE, null, now, now),
             )
 
         val preview =
@@ -217,7 +218,7 @@ class OnboardingImportServiceTest {
     fun `execute aborts when a matched record was concurrently bound to another external id`() {
         allowManager()
         val now = Instant.now()
-        val team = Team(UUID.randomUUID(), organizationId, "U14 Blue", "Volleyball", null, TeamStatus.ACTIVE, null, now, now)
+        val team = Team(UUID.randomUUID(), organizationId, "U14 Blue", Sport.VOLLEYBALL, null, TeamStatus.ACTIVE, null, now, now)
         every { teamRepository.findById(team.id, organizationId) } returns team
         every { identityRepository.find(organizationId, OnboardingRecordType.TEAM, "team-blue") } returns null
         every { identityRepository.findByEntity(organizationId, OnboardingRecordType.TEAM, team.id) } returns null
@@ -247,11 +248,11 @@ class OnboardingImportServiceTest {
         allowManager()
         emptyMatches()
         val now = Instant.now()
-        val team = Team(UUID.randomUUID(), organizationId, "U14 Blue", "Volleyball", "2026-2027", TeamStatus.ACTIVE, null, now, now)
+        val team = Team(UUID.randomUUID(), organizationId, "U14 Blue", Sport.VOLLEYBALL, "2026-2027", TeamStatus.ACTIVE, null, now, now)
         val csv = "record_type,external_id,name,sport,season\nTEAM,team-blue,U14 Blue,Volleyball,2026-2027\n"
         val preview = service.preview(organizationId, "pilot.csv", csv, user)
         every {
-            teamRepository.insert(organizationId, "U14 Blue", "Volleyball", "2026-2027", null, null, null, null)
+            teamRepository.insert(organizationId, "U14 Blue", Sport.VOLLEYBALL, "2026-2027", null, null, null, null)
         } returns team
         every {
             identityRepository.insert(organizationId, OnboardingRecordType.TEAM, "team-blue", team.id, user.userId)

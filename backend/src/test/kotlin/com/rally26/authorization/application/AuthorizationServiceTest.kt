@@ -17,6 +17,7 @@ import com.rally26.membership.domain.MembershipRole
 import com.rally26.membership.domain.MembershipStatus
 import com.rally26.membership.domain.OrganizationMembership
 import com.rally26.membership.persistence.MembershipRepository
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -66,7 +67,7 @@ class AuthorizationServiceTest {
             id = UUID.randomUUID(),
             organizationId = organizationId,
             name = "Varsity Soccer",
-            sport = "Soccer",
+            sport = Sport.SOCCER,
             season = "2024",
             status = TeamStatus.ACTIVE,
             contactEmail = null,

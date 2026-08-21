@@ -129,7 +129,7 @@ class OwnerDashboardService(
                 TeamPerformanceRow(
                     teamId = team.id,
                     name = team.name,
-                    sport = team.sport,
+                    sport = team.sport.name,
                     participants = participantRepository.countActiveForTeam(team.id, organizationId),
                     status = team.status.name,
                     isFundraisingDemoData = activeCampaign == null,

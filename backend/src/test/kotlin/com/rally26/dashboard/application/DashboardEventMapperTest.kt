@@ -5,6 +5,7 @@ import com.rally26.event.domain.EventSourceType
 import com.rally26.event.domain.EventStatus
 import com.rally26.event.domain.EventType
 import com.rally26.event.domain.EventVisibility
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -64,7 +65,7 @@ class DashboardEventMapperTest {
             id = UUID.randomUUID(),
             organizationId = organizationId,
             name = name,
-            sport = "Soccer",
+            sport = Sport.SOCCER,
             season = "2026",
             status = TeamStatus.ACTIVE,
             contactEmail = null,

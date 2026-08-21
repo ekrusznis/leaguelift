@@ -18,6 +18,7 @@ import com.rally26.onboarding.domain.BulkActionStatus
 import com.rally26.participant.domain.Participant
 import com.rally26.participant.domain.ParticipantStatus
 import com.rally26.participant.persistence.ParticipantRepository
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -101,7 +102,7 @@ class BulkOnboardingServiceTest {
         allowManager()
         val now = Instant.now()
         val teamId = UUID.randomUUID()
-        val team = Team(teamId, organizationId, "U14 Blue", "Volleyball", null, TeamStatus.ACTIVE, null, now, now)
+        val team = Team(teamId, organizationId, "U14 Blue", Sport.VOLLEYBALL, null, TeamStatus.ACTIVE, null, now, now)
         val first =
             Participant(
                 UUID.randomUUID(),

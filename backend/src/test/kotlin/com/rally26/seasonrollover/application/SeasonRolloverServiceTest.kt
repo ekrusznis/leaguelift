@@ -16,6 +16,7 @@ import com.rally26.seasonrollover.domain.SeasonRolloverRun
 import com.rally26.seasonrollover.domain.SeasonRolloverStaffItem
 import com.rally26.seasonrollover.persistence.SeasonRolloverRepository
 import com.rally26.team.application.TeamService
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamStatus
 import com.rally26.team.persistence.TeamRepository
@@ -55,7 +56,7 @@ class SeasonRolloverServiceTest {
             UUID.randomUUID(),
             organizationId,
             "U14 Blue",
-            "Volleyball",
+            Sport.VOLLEYBALL,
             "2026-2027",
             TeamStatus.ACTIVE,
             "coach@example.com",
@@ -67,7 +68,7 @@ class SeasonRolloverServiceTest {
             UUID.randomUUID(),
             organizationId,
             "U15 Blue",
-            "Volleyball",
+            Sport.VOLLEYBALL,
             "2027-2028",
             TeamStatus.ACTIVE,
             "coach@example.com",
@@ -112,7 +113,7 @@ class SeasonRolloverServiceTest {
         val preview = service.preview(organizationId, command, user)
         every { repository.findRunByHash(organizationId, preview.confirmationHash) } returns null
         every {
-            teamService.create(organizationId, "U15 Blue", "Volleyball", "2027-2028", "coach@example.com", null, null, null, user)
+            teamService.create(organizationId, "U15 Blue", Sport.VOLLEYBALL, "2027-2028", "coach@example.com", null, null, null, user)
         } returns destination
         every { repository.copyRoster(organizationId, source.id, destination.id) } returns 1
         every { repository.copyStaff(organizationId, source.id, destination.id, user.userId) } returns 1

@@ -1,10 +1,14 @@
+import type { Sport } from "./sport";
+
 export type TeamGenderCategory = "BOYS" | "GIRLS" | "COED" | "MENS" | "WOMENS" | "OPEN";
 
 export interface Team {
 	id: string;
 	organizationId: string;
 	name: string;
-	sport: string;
+	sport: Sport;
+	/** Only meaningful when `sport` is `"OTHER"` — the org's real sport name, e.g. "Ultimate Frisbee". */
+	sportOtherLabel: string | null;
 	season: string | null;
 	status: "ACTIVE" | "ARCHIVED";
 	contactEmail: string | null;

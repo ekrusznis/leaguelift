@@ -18,6 +18,7 @@ import {
   useOwnerTeamPerformance,
   useOwnerUpcomingEvents,
 } from '@/features/owner/api';
+import { sportLabel } from '@/features/teams/sportLabel';
 import { Brand, Spacing } from '@/constants/theme';
 import { formatMoneyMinorUnits } from '@/lib/money';
 import { webEmbedRoute } from '@/lib/webEmbed';
@@ -138,7 +139,7 @@ export default function OwnerDashboardScreen() {
               <View style={styles.teamRowBody}>
                 <ThemedText type="smallBold">{team.name}</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
-                  {team.sport} · {team.participants} athletes
+                  {sportLabel(team.sport)} · {team.participants} athletes
                 </ThemedText>
               </View>
               {!team.isFundraisingDemoData && team.fundraisingRaisedMinor != null && (

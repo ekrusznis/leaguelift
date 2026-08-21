@@ -6,6 +6,7 @@ import com.rally26.identity.application.TokenService
 import com.rally26.organization.application.OrganizationService
 import com.rally26.organization.domain.OrganizationType
 import com.rally26.team.application.TeamService
+import com.rally26.team.domain.Sport
 import com.rally26.testsupport.AbstractIntegrationTest
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -88,8 +89,8 @@ class TeamSearchControllerIntegrationTest : AbstractIntegrationTest() {
     @Test
     fun `search returns 200 with real results instead of 500ing on the literal 'search' path segment`() {
         val org = authedOrg()
-        teamService.create(org.organizationId, "Varsity Soccer", "Soccer", "Fall 2026", null, null, null, null, org.currentUser)
-        teamService.create(org.organizationId, "JV Basketball", "Basketball", "Fall 2026", null, null, null, null, org.currentUser)
+        teamService.create(org.organizationId, "Varsity Soccer", Sport.SOCCER, "Fall 2026", null, null, null, null, org.currentUser)
+        teamService.create(org.organizationId, "JV Basketball", Sport.BASKETBALL, "Fall 2026", null, null, null, null, org.currentUser)
 
         val response = searchTeams(org.organizationId, org.token, "page=0&size=25&sort=NAME_ASC")
 
@@ -101,8 +102,8 @@ class TeamSearchControllerIntegrationTest : AbstractIntegrationTest() {
     @Test
     fun `search keyword filters by sport`() {
         val org = authedOrg()
-        teamService.create(org.organizationId, "Varsity Soccer", "Soccer", null, null, null, null, null, org.currentUser)
-        teamService.create(org.organizationId, "JV Basketball", "Basketball", null, null, null, null, null, org.currentUser)
+        teamService.create(org.organizationId, "Varsity Soccer", Sport.SOCCER, null, null, null, null, null, org.currentUser)
+        teamService.create(org.organizationId, "JV Basketball", Sport.BASKETBALL, null, null, null, null, null, org.currentUser)
 
         val response = searchTeams(org.organizationId, org.token, "page=0&size=25&sort=NAME_ASC&q=basketball")
 

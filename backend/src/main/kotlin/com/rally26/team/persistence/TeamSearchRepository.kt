@@ -1,5 +1,6 @@
 package com.rally26.team.persistence
 
+import com.rally26.team.domain.Sport
 import com.rally26.team.domain.Team
 import com.rally26.team.domain.TeamGenderCategory
 import com.rally26.team.domain.TeamSearchCriteria
@@ -112,7 +113,7 @@ class TeamSearchRepository(
             id = rs.getObject("id", UUID::class.java),
             organizationId = rs.getObject("organization_id", UUID::class.java),
             name = rs.getString("name"),
-            sport = rs.getString("sport"),
+            sport = Sport.valueOf(rs.getString("sport")),
             season = rs.getString("season"),
             status = TeamStatus.valueOf(rs.getString("status")),
             contactEmail = rs.getString("contact_email"),
