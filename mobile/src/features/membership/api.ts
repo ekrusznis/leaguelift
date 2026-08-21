@@ -94,3 +94,39 @@ export function useRevokeOwnershipTransferInvitation(organizationId: string | nu
     },
   });
 }
+
+export interface OrganizationDeletionRequest {
+  id: string;
+  status: string;
+  requestedAt: string;
+  scheduledFor: string;
+}
+
+/** Owner-only server-side — pass `enabled: false` for any viewer who isn't the current owner. */
+export function usePendingOrganizationDeletion(organizationId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ['organizations', organizationId, 'deletion-request'],
+    queryFn: () => apiFetch<OrganizationDeletionRequest | null>(`/organizations/${organizationId}/deletion-request`),
+    enabled: !!organizationId && enabled,
+  });
+}
+
+export function useRequestOrganizationDeletion(organizationId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch<OrganizationDeletionRequest>(`/organizations/${organizationId}/deletion-request`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organizations', organizationId, 'deletion-request'] });
+    },
+  });
+}
+
+export function useCancelOrganizationDeletion(organizationId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch(`/organizations/${organizationId}/deletion-request`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organizations', organizationId, 'deletion-request'] });
+    },
+  });
+}

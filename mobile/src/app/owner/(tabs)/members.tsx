@@ -16,8 +16,11 @@ import { useToast } from '@/components/toast';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useDashboardContext } from '@/features/dashboard/api';
 import {
+  useCancelOrganizationDeletion,
   useInviteOwnershipTransfer,
+  usePendingOrganizationDeletion,
   usePendingOwnershipTransferInvitation,
+  useRequestOrganizationDeletion,
   useRevokeMember,
   useRevokeOwnershipTransferInvitation,
   useTransferOwnership,
@@ -59,6 +62,7 @@ export default function OwnerMembersScreen() {
   const [transferTarget, setTransferTarget] = useState<MembershipResponse | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [closeOrgOpen, setCloseOrgOpen] = useState(false);
 
   const membersQuery = useInfiniteMemberSearch(organizationId, { q: query, role, status, sort });
   const members = useMemo(() => flattenInfiniteItems(membersQuery.data?.pages), [membersQuery.data?.pages]);
@@ -67,6 +71,9 @@ export default function OwnerMembersScreen() {
   const pendingOwnershipInvitation = usePendingOwnershipTransferInvitation(organizationId, isViewerOwner);
   const inviteOwnershipTransfer = useInviteOwnershipTransfer(organizationId);
   const revokeOwnershipInvitation = useRevokeOwnershipTransferInvitation(organizationId);
+  const pendingOrgDeletion = usePendingOrganizationDeletion(organizationId, isViewerOwner);
+  const requestOrgDeletion = useRequestOrganizationDeletion(organizationId);
+  const cancelOrgDeletion = useCancelOrganizationDeletion(organizationId);
   const activeFilters = [
     ...(role ? [ROLE_LABELS[role] ?? role] : []),
     ...(status && status !== 'ACTIVE' ? [status === 'REVOKED' ? 'Disabled' : status] : []),
@@ -105,11 +112,34 @@ export default function OwnerMembersScreen() {
       <View style={styles.header}>
         <ThemedText type="smallBold">Members & Staff</ThemedText>
         {isViewerOwner && (
-          <Pressable accessibilityRole="button" accessibilityLabel="Transfer ownership" hitSlop={8} onPress={() => setInviteOpen(true)}>
-            <ThemedText type="small" style={{ color: Brand.championshipGold }}>Transfer ownership</ThemedText>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Transfer ownership" hitSlop={8} onPress={() => setInviteOpen(true)}>
+              <ThemedText type="small" style={{ color: Brand.championshipGold }}>Transfer ownership</ThemedText>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close organization" hitSlop={8} onPress={() => setCloseOrgOpen(true)}>
+              <ThemedText type="small" style={{ color: Brand.errorRed }}>Close org</ThemedText>
+            </Pressable>
+          </View>
         )}
       </View>
+
+      {isViewerOwner && pendingOrgDeletion.data && (
+        <View style={styles.closureBanner}>
+          <ThemedText type="small">
+            This organization is scheduled to close on{' '}
+            {new Date(pendingOrgDeletion.data.scheduledFor).toLocaleDateString()}. Export anything you need before then.
+          </ThemedText>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => cancelOrgDeletion.mutate(undefined, {
+              onSuccess: () => toast.show('Closure canceled.', 'success'),
+              onError: () => toast.show('Could not cancel closure.', 'error'),
+            })}
+            style={styles.doneButton}>
+            <ThemedText type="smallBold">{cancelOrgDeletion.isPending ? 'Canceling…' : 'Cancel closure'}</ThemedText>
+          </Pressable>
+        </View>
+      )}
 
       {membersQuery.isLoading && <LoadingState label="Loading members…" />}
       {membersQuery.isError && <ErrorState message="Could not load members." onRetry={() => membersQuery.refetch()} />}
@@ -294,6 +324,22 @@ export default function OwnerMembersScreen() {
         onCancel={() => setTransferTarget(null)}
       />
 
+      <ConfirmDialog
+        visible={closeOrgOpen}
+        title="Close this organization?"
+        message="You'll have 7 days to export any data you need. After that, this organization and every member's access to it is permanently deleted. This can't be undone. Financial records are archived for your records; everyone else's personal account stays intact — only their link to this organization is removed."
+        confirmLabel="Close this organization"
+        destructive
+        onConfirm={() => {
+          requestOrgDeletion.mutate(undefined, {
+            onSuccess: () => toast.show('Organization closure scheduled.', 'success'),
+            onError: () => toast.show('Could not start closing this organization.', 'error'),
+          });
+          setCloseOrgOpen(false);
+        }}
+        onCancel={() => setCloseOrgOpen(false)}
+      />
+
       <Modal visible={inviteOpen} onClose={() => setInviteOpen(false)}>
         <ThemedText type="smallBold" style={styles.modalTitle}>Transfer ownership</ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.filterHeading}>
@@ -356,6 +402,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  closureBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.three,
+    marginHorizontal: Spacing.four,
+    marginBottom: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: Spacing.two,
+    borderWidth: 1,
+    borderColor: Brand.errorRed,
   },
   pendingInviteRow: {
     flexDirection: 'row',

@@ -104,3 +104,37 @@ export function useRevokeOwnershipTransferInvitation(organizationId: string) {
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ownershipInvitationKey(organizationId) }),
 	});
 }
+
+export interface OrganizationDeletionRequest {
+	id: string;
+	status: string;
+	requestedAt: string;
+	scheduledFor: string;
+}
+
+const organizationDeletionKey = (organizationId: string) => ["organizations", organizationId, "deletion-request"] as const;
+
+/** Owner-only backend endpoint — pass `enabled: false` for any viewer who isn't the current owner. */
+export function usePendingOrganizationDeletion(organizationId: string, enabled: boolean) {
+	return useQuery({
+		queryKey: organizationDeletionKey(organizationId),
+		queryFn: () => apiFetch<OrganizationDeletionRequest | null>(`/organizations/${organizationId}/deletion-request`),
+		enabled: !!organizationId && enabled,
+	});
+}
+
+export function useRequestOrganizationDeletion(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: () => apiFetch<OrganizationDeletionRequest>(`/organizations/${organizationId}/deletion-request`, { method: "POST" }),
+		onSuccess: (request) => queryClient.setQueryData(organizationDeletionKey(organizationId), request),
+	});
+}
+
+export function useCancelOrganizationDeletion(organizationId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: () => apiFetch(`/organizations/${organizationId}/deletion-request`, { method: "DELETE" }),
+		onSuccess: () => queryClient.setQueryData(organizationDeletionKey(organizationId), null),
+	});
+}

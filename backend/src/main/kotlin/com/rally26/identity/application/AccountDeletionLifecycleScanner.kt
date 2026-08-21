@@ -7,6 +7,7 @@ import com.rally26.identity.persistence.AccountDeletionRequestRepository
 import com.rally26.identityintegrity.persistence.IdentityResolutionRepository
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.context.annotation.Lazy
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -29,6 +30,14 @@ private val log = LoggerFactory.getLogger(AccountDeletionLifecycleScanner::class
  * guardian-relationship revoke, message-thread-membership close, auth-token
  * invalidation); this only ever calls the revoke-style methods, never the move-to-
  * target ones, since a deletion has no surviving target user.
+ *
+ * [self] is a Spring self-injection ([Lazy] breaks the circular-construction reference):
+ * calling `pastDue.forEach(::finalize)` directly from [scanAndFinalize] would invoke
+ * `finalize` on `this` rather than through the proxy, silently skipping `@Transactional`
+ * (the classic Spring AOP self-invocation pitfall — see
+ * `organization/application/OrganizationDeletionLifecycleScanner.kt`'s doc comment,
+ * where an integration test proved this pattern runs un-atomically). Nullable with a
+ * default so the existing plain-constructor unit tests keep working unchanged.
  */
 @Component
 class AccountDeletionLifecycleScanner(
@@ -36,12 +45,13 @@ class AccountDeletionLifecycleScanner(
     private val repository: IdentityResolutionRepository,
     private val auditService: AuditService,
     private val properties: AccountDeletionLifecycleProperties,
+    @Lazy private val self: AccountDeletionLifecycleScanner? = null,
 ) {
     @Scheduled(cron = "\${rally26.identity.account-deletion.lifecycle.cron:0 30 8 * * *}")
     fun scanAndFinalize() {
         if (!properties.enabled) return
         val pastDue = accountDeletionRequestRepository.listPendingPastDue(Instant.now())
-        pastDue.forEach(::finalize)
+        pastDue.forEach { (self ?: this).finalize(it) }
     }
 
     @Transactional

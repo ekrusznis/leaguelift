@@ -9,10 +9,13 @@ import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import type { Membership } from "./types";
 import {
+	useCancelOrganizationDeletion,
 	useDisableOrganizationMember,
 	useInviteOwnershipTransfer,
 	useMemberSearch,
+	usePendingOrganizationDeletion,
 	usePendingOwnershipTransferInvitation,
+	useRequestOrganizationDeletion,
 	useRevokeOwnershipTransferInvitation,
 	useTransferOwnership,
 	useUpdateOrganizationMemberRole,
@@ -39,6 +42,7 @@ export function OrganizationMembersPanel({ organizationId }: { organizationId: s
 	const [transferTarget, setTransferTarget] = useState<Membership | null>(null);
 	const [inviteEmail, setInviteEmail] = useState("");
 	const [inviteError, setInviteError] = useState<string | null>(null);
+	const [closeOrgModalOpen, setCloseOrgModalOpen] = useState(false);
 
 	const { user } = useAuth();
 	const members = useMemberSearch(organizationId, { page, size, q: query, role, status, sort });
@@ -53,6 +57,9 @@ export function OrganizationMembersPanel({ organizationId }: { organizationId: s
 	const pendingOwnershipInvitation = usePendingOwnershipTransferInvitation(organizationId, isViewerOwner);
 	const inviteOwnershipTransfer = useInviteOwnershipTransfer(organizationId);
 	const revokeOwnershipInvitation = useRevokeOwnershipTransferInvitation(organizationId);
+	const pendingOrgDeletion = usePendingOrganizationDeletion(organizationId, isViewerOwner);
+	const requestOrgDeletion = useRequestOrganizationDeletion(organizationId);
+	const cancelOrgDeletion = useCancelOrganizationDeletion(organizationId);
 
 	const resetPage = () => setPage(0);
 
@@ -264,6 +271,69 @@ export function OrganizationMembersPanel({ organizationId }: { organizationId: s
 					)}
 				</section>
 			)}
+
+			{isViewerOwner && (
+				<section className="flex flex-col gap-3 rounded-lg border border-rose-200 bg-white p-4 dark:border-rose-900 dark:bg-[#111827]" aria-labelledby="org-closure-heading">
+					<div>
+						<h3 id="org-closure-heading" className="font-heading text-base font-bold text-rose-700">
+							Close this organization
+						</h3>
+						<p className="mt-1 text-sm text-slate-gray dark:text-[#cbd5e1]">
+							Instead of closing, consider transferring ownership above — closing removes this organization for every
+							member, not just you.
+						</p>
+					</div>
+					{pendingOrgDeletion.data ? (
+						<div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-rose-200 bg-rose-50 p-3 dark:border-rose-900 dark:bg-[#1f1315]">
+							<p className="text-sm text-navy dark:text-[#f8fafc]">
+								This organization is scheduled to close on{" "}
+								<span className="font-semibold">{new Date(pendingOrgDeletion.data.scheduledFor).toLocaleDateString()}</span>.
+								Export anything you need before then — after that date it can&rsquo;t be undone.
+							</p>
+							<Button
+								type="button"
+								variant="secondary"
+								disabled={cancelOrgDeletion.isPending}
+								onClick={() => cancelOrgDeletion.mutate()}
+							>
+								{cancelOrgDeletion.isPending ? "Canceling…" : "Cancel closure"}
+							</Button>
+						</div>
+					) : (
+						<Button type="button" variant="danger" onClick={() => setCloseOrgModalOpen(true)}>
+							Close this organization
+						</Button>
+					)}
+				</section>
+			)}
+
+			<Modal
+				open={closeOrgModalOpen}
+				onClose={() => setCloseOrgModalOpen(false)}
+				title="Close this organization?"
+				actions={
+					<>
+						<Button type="button" variant="secondary" onClick={() => setCloseOrgModalOpen(false)}>Cancel</Button>
+						<Button
+							type="button"
+							variant="danger"
+							disabled={requestOrgDeletion.isPending}
+							onClick={async () => {
+								await requestOrgDeletion.mutateAsync();
+								setCloseOrgModalOpen(false);
+							}}
+						>
+							{requestOrgDeletion.isPending ? "Starting…" : "Close this organization"}
+						</Button>
+					</>
+				}
+			>
+				<p className="text-sm text-slate-gray dark:text-[#cbd5e1]">
+					You&rsquo;ll have 7 days to export any data you need. After that, this organization and every member&rsquo;s
+					access to it is permanently deleted. This can&rsquo;t be undone. Financial records are archived for your
+					records; everyone else&rsquo;s personal account stays intact — only their link to this organization is removed.
+				</p>
+			</Modal>
 
 			<Modal
 				open={!!transferTarget}
