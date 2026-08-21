@@ -18,6 +18,10 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Firebase config — generated from GitHub secrets by scripts/generate-google-services.sh,
+# see google-services.json.template
+google-services.json
+
 # Metro
 .metro-health-check*
 
