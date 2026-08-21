@@ -111,6 +111,12 @@ data class RecordPaymentRequest(
 
 data class VoidRequest(
     @field:NotBlank @field:Size(min = 1, max = 500) val reason: String,
+    /** Manual-reconciliation override for a confirmed card payment — see FeeService.voidPayment's doc comment. Ignored (and unnecessary) for non-card payments. */
+    val force: Boolean = false,
+)
+
+data class RefundRequest(
+    @field:NotBlank @field:Size(min = 1, max = 500) val reason: String,
 )
 
 data class FeePaymentResponse(
@@ -126,6 +132,7 @@ data class FeePaymentResponse(
     val voidReason: String?,
     val createdAt: Instant,
     val status: String,
+    val stripeRefundId: String?,
 )
 
 // --- Online checkout ---
@@ -242,6 +249,7 @@ fun FeePayment.toResponse() =
         voidReason,
         createdAt,
         status.name,
+        stripeRefundId,
     )
 
 fun FeeAdjustment.toResponse() =

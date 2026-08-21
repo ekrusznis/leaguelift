@@ -37,6 +37,7 @@ import {
 	useFeePayments,
 	usePaymentMethods,
 	useRecordPayment,
+	useRefundPayment,
 	useUpdateFeeAssignmentStatus,
 	useVoidAdjustment,
 	useVoidPayment,
@@ -541,14 +542,42 @@ function FeeDetailPanel({ organizationId, householdId, fee, canManage }: { organ
 	const { data: payments, isLoading: paymentsLoading } = useFeePayments(organizationId, fee.id);
 	const { data: adjustments, isLoading: adjustmentsLoading } = useFeeAdjustments(organizationId, fee.id);
 	const voidPayment = useVoidPayment(organizationId, householdId, fee.id);
+	const refundPayment = useRefundPayment(organizationId, householdId, fee.id);
 	const voidAdjustment = useVoidAdjustment(organizationId, householdId, fee.id);
 	const [activeForm, setActiveForm] = useState<"payment" | "adjustment" | null>(null);
+	// Force Void is only offered after a refund attempt has actually failed for that
+	// specific payment — it's the manual-reconciliation escape hatch, not a first resort.
+	const [failedRefundIds, setFailedRefundIds] = useState<Set<string>>(new Set());
 	const locked = fee.status === "WAIVED" || fee.status === "CANCELLED";
 
 	function handleVoidPayment(paymentId: string) {
 		const reason = window.prompt("Reason for voiding this payment?");
 		if (reason && reason.trim()) {
 			voidPayment.mutate({ paymentId, reason: reason.trim() });
+		}
+	}
+
+	async function handleRefundPayment(paymentId: string) {
+		const reason = window.prompt("Reason for refunding this card payment? The family's card will be credited through Stripe.");
+		if (!reason || !reason.trim()) return;
+		try {
+			await refundPayment.mutateAsync({ paymentId, reason: reason.trim() });
+			setFailedRefundIds((current) => {
+				const next = new Set(current);
+				next.delete(paymentId);
+				return next;
+			});
+		} catch {
+			setFailedRefundIds((current) => new Set(current).add(paymentId));
+		}
+	}
+
+	function handleForceVoidPayment(paymentId: string) {
+		const reason = window.prompt(
+			"Force Void does NOT refund the card through Stripe — only use this if Stripe was already adjusted manually. Reason?",
+		);
+		if (reason && reason.trim()) {
+			voidPayment.mutate({ paymentId, reason: reason.trim(), force: true });
 		}
 	}
 
@@ -611,19 +640,45 @@ function FeeDetailPanel({ organizationId, householdId, fee, canManage }: { organ
 				<div>
 					<h3 className="text-sm font-semibold text-navy dark:text-[#f8fafc]">Payments</h3>
 					<ul className="flex flex-col gap-1">
-						{payments.map((payment) => (
-							<li key={payment.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
-								<span className={`min-w-0 flex-1 break-words ${payment.voidedAt ? "text-slate-gray dark:text-[#cbd5e1] line-through" : "text-slate-gray dark:text-[#cbd5e1]"}`}>
-									{formatAmount(payment.amountMinor, payment.currency)} · {payment.method} · {payment.paidAt}
-									{payment.voidedAt ? ` · voided (${payment.voidReason})` : ""}
-								</span>
-								{canManage && !payment.voidedAt && (
-									<button type="button" className="shrink-0 text-azure-blue hover:underline" onClick={() => handleVoidPayment(payment.id)}>
-										Void
-									</button>
-								)}
-							</li>
-						))}
+						{payments.map((payment) => {
+							const isConfirmedCard = payment.method === "STRIPE_ONLINE" && payment.status === "CONFIRMED";
+							const refundFailed = failedRefundIds.has(payment.id);
+							return (
+								<li key={payment.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
+									<span className={`min-w-0 flex-1 break-words ${payment.voidedAt ? "text-slate-gray dark:text-[#cbd5e1] line-through" : "text-slate-gray dark:text-[#cbd5e1]"}`}>
+										{formatAmount(payment.amountMinor, payment.currency)} · {payment.method} · {payment.paidAt}
+										{payment.voidedAt
+											? payment.stripeRefundId
+												? ` · refunded (${payment.voidReason})`
+												: ` · voided (${payment.voidReason})`
+											: ""}
+										{refundFailed && !payment.voidedAt && (
+											<span className="ml-1 text-error-red">· refund failed, try again or use Force Void</span>
+										)}
+									</span>
+									{canManage && !payment.voidedAt && (
+										<span className="flex shrink-0 items-center gap-3">
+											{isConfirmedCard ? (
+												<>
+													<button type="button" className="text-azure-blue hover:underline" disabled={refundPayment.isPending} onClick={() => void handleRefundPayment(payment.id)}>
+														Refund
+													</button>
+													{refundFailed && (
+														<button type="button" className="text-error-red hover:underline" onClick={() => handleForceVoidPayment(payment.id)}>
+															Force Void
+														</button>
+													)}
+												</>
+											) : (
+												<button type="button" className="text-azure-blue hover:underline" onClick={() => handleVoidPayment(payment.id)}>
+													Void
+												</button>
+											)}
+										</span>
+									)}
+								</li>
+							);
+						})}
 					</ul>
 				</div>
 			)}

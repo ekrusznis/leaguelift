@@ -61,6 +61,7 @@ export interface FeePayment {
 	voidReason: string | null;
 	createdAt: string;
 	status: FeePaymentStatus;
+	stripeRefundId: string | null;
 }
 
 export interface FeePaymentCheckout {

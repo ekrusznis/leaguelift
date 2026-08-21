@@ -179,7 +179,17 @@ class FeeAssignmentController(
         @PathVariable paymentId: UUID,
         @Valid @RequestBody request: VoidRequest,
         @AuthenticationPrincipal currentUser: CurrentUser,
-    ): FeeAssignmentResponse = feeService.voidPayment(organizationId, assignmentId, paymentId, request.reason, currentUser).toResponse()
+    ): FeeAssignmentResponse =
+        feeService.voidPayment(organizationId, assignmentId, paymentId, request.reason, currentUser, request.force).toResponse()
+
+    @PostMapping("/fee-assignments/{assignmentId}/payments/{paymentId}/refund")
+    fun refundPayment(
+        @PathVariable organizationId: UUID,
+        @PathVariable assignmentId: UUID,
+        @PathVariable paymentId: UUID,
+        @Valid @RequestBody request: RefundRequest,
+        @AuthenticationPrincipal currentUser: CurrentUser,
+    ): FeeAssignmentResponse = feeService.refundPayment(organizationId, assignmentId, paymentId, request.reason, currentUser).toResponse()
 
     // --- Adjustments ---
 

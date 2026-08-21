@@ -3,6 +3,7 @@ package com.rally26.fee.infra
 import com.rally26.common.stripe.StripeTaxSupport
 import com.rally26.config.StripeTaxProperties
 import com.stripe.StripeClient
+import com.stripe.param.RefundCreateParams
 import com.stripe.param.checkout.SessionCreateParams
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -66,5 +67,18 @@ class StripeFeePaymentCheckoutClient(
         }
         val session = stripeClient.checkout().sessions().create(builder.build())
         return FeePaymentCheckoutSession(sessionId = session.id, checkoutUrl = session.url)
+    }
+
+    /** `reverseTransfer = false` — see the order/sponsorship/contribution refund clients' identical note on ADR-017's negative-balance handling. */
+    fun createRefund(paymentIntentId: String): String {
+        val refund =
+            stripeClient.refunds().create(
+                RefundCreateParams
+                    .builder()
+                    .setPaymentIntent(paymentIntentId)
+                    .setReverseTransfer(false)
+                    .build(),
+            )
+        return refund.id
     }
 }

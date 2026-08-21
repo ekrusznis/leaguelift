@@ -29,6 +29,8 @@ data class FeePayment(
     val stripePaymentIntentId: String? = null,
     val payerEmail: String? = null,
     val payerName: String? = null,
+    /** Set only when this payment was actually refunded through Stripe (see FeeService.refundPayment) — distinct from a plain/force void, which never calls Stripe. */
+    val stripeRefundId: String? = null,
 ) {
     val isVoided: Boolean get() = voidedAt != null
 }
