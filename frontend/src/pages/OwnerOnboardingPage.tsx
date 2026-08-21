@@ -141,7 +141,7 @@ export function OwnerOnboardingPage() {
 	}
 	const REQUIRED_ORG_TEXT_FIELDS = ["name", "slug", "contactEmail", "addressLine1", "addressCity", "addressState", "addressPostalCode", "addressCountry", "timezone"] as const;
 	function missingOrganizationFields(): string[] {
-		const missing = REQUIRED_ORG_TEXT_FIELDS.filter((key) => !organizationForm[key].trim());
+		const missing: string[] = REQUIRED_ORG_TEXT_FIELDS.filter((key) => !organizationForm[key].trim());
 		if (organizationForm.sports.length === 0) missing.push("sports");
 		return missing;
 	}
