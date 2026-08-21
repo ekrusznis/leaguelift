@@ -44,6 +44,7 @@ export interface BroadcastMessageResponse {
   body: string;
   sentAt: string;
   recipientCount: number;
+  readRecipientCount: number;
   emailSentCount: number;
   emailFailedCount: number;
   smsSentCount: number;

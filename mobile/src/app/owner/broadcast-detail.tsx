@@ -14,7 +14,15 @@ import type { BroadcastMessageResponse } from '@/features/messaging/types';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Broadcast thread detail — messages sent here go out to every recipient the thread's audience resolves to (ADR-105). */
+/**
+ * Org-wide message thread detail (oversight). For a real `BROADCAST` thread, Owner can
+ * send an update the same way as before. For a `CONVERSATION`/`ATHLETE_CONVERSATION`
+ * thread this is deliberately read-only — Owner can see the real content for youth-safety
+ * oversight (same `listMessagesForManagement` read path, gated on manager role not
+ * thread membership), but does not get a composer to inject messages into a
+ * conversation between other people; that's a materially different, bigger decision
+ * than "can see the contents" and isn't built here.
+ */
 export default function OwnerBroadcastDetailScreen() {
   const { threadId } = useLocalSearchParams<{ threadId: string }>();
   const theme = useTheme();
@@ -27,6 +35,7 @@ export default function OwnerBroadcastDetailScreen() {
   const [draft, setDraft] = useState('');
 
   const thread = threadsQuery.data?.items.find((t) => t.id === threadId);
+  const isBroadcast = thread?.threadType === 'BROADCAST';
 
   async function send() {
     const trimmed = draft.trim();
@@ -41,10 +50,10 @@ export default function OwnerBroadcastDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title={thread?.title ?? 'Broadcast'} />
+      <ScreenHeader title={thread?.title ?? 'Message thread'} />
 
       {messagesQuery.isLoading && <LoadingState label="Loading messages…" />}
-      {messagesQuery.isError && <ErrorState message="Could not load this broadcast." onRetry={() => messagesQuery.refetch()} />}
+      {messagesQuery.isError && <ErrorState message="Could not load this thread." onRetry={() => messagesQuery.refetch()} />}
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <FlatList
@@ -54,19 +63,28 @@ export default function OwnerBroadcastDetailScreen() {
           renderItem={({ item }) => <MessageBubble item={item} />}
         />
 
-        <View style={styles.inputRow}>
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="Send a message to this thread's audience…"
-            placeholderTextColor={theme.textSecondary}
-            style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-            multiline
-          />
-          <Pressable onPress={send} hitSlop={8} disabled={sendMessage.isPending} style={styles.sendButton}>
-            <Ionicons name="send" size={20} color={Brand.pureWhite} />
-          </Pressable>
-        </View>
+        {isBroadcast ? (
+          <View style={styles.inputRow}>
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              placeholder="Send a message to this thread's audience…"
+              placeholderTextColor={theme.textSecondary}
+              style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+              multiline
+            />
+            <Pressable onPress={send} hitSlop={8} disabled={sendMessage.isPending} style={styles.sendButton}>
+              <Ionicons name="send" size={20} color={Brand.pureWhite} />
+            </Pressable>
+          </View>
+        ) : (
+          <View style={[styles.readOnlyBanner, { backgroundColor: theme.backgroundElement }]}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={theme.textSecondary} />
+            <ThemedText type="small" themeColor="textSecondary" style={styles.readOnlyText}>
+              Viewing for oversight — replying here isn’t available for a conversation between other people.
+            </ThemedText>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </View>
   );
@@ -131,6 +149,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     maxHeight: 100,
+  },
+  readOnlyBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.two,
+    marginHorizontal: Spacing.four,
+    marginBottom: Spacing.three,
+    padding: Spacing.three,
+    borderRadius: Spacing.three,
+  },
+  readOnlyText: {
+    flex: 1,
   },
   sendButton: {
     width: 40,

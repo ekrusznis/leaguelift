@@ -50,7 +50,7 @@ class DuplicateIdentityResolutionService(
         ) {
             throw ValidationException("Identity resolution requires a reason between 10 and 500 characters.")
         }
-        if (!PREVIEW_HASH.matches(previewHash)) throw ValidationException("A valid Phase 27.4 preview hash is required.")
+        if (!PREVIEW_HASH.matches(previewHash)) throw ValidationException("A valid preview hash is required.")
         val normalizedPreviewHash = previewHash.lowercase()
 
         listOf(sourceRef, targetRef)

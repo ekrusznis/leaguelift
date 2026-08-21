@@ -1,5 +1,6 @@
 package com.rally26.identity.web
 
+import com.rally26.identity.application.AvatarService
 import com.rally26.identity.application.EmailVerificationService
 import com.rally26.identity.application.OAuthSignInService
 import com.rally26.identity.application.PasswordAuthenticationService
@@ -24,6 +25,7 @@ class AuthController(
     private val passwordResetService: PasswordResetService,
     private val oauthSignInService: OAuthSignInService,
     private val tokenService: TokenService,
+    private val avatarService: AvatarService,
 ) {
     @PostMapping("/register")
     fun register(
@@ -104,7 +106,7 @@ class AuthController(
             accessToken = token.accessToken,
             tokenType = "Bearer",
             expiresIn = token.expiresInSeconds,
-            user = appUser.toResponse(),
+            user = appUser.toResponse(avatarService.resolve(appUser)),
         )
     }
 }

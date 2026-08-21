@@ -16,7 +16,8 @@
 | Owner dashboard/teams/members | `owner` | read | member modal opened then canceled |
 | Owner reports/fees/financial ops | `owner` | read | no money mutation |
 | Owner payout | `owner` | read | no transfer |
-| Owner comms/fundraising | `owner` | read | compose mutation left for manual/advanced |
+| Owner announcements/fundraising | `owner` | read | compose mutation left for manual/advanced |
+| Owner Messages tab + org-wide oversight | `owner` | low write | QA reply only; oversight of others' conversations is read-only by design |
 | Owner commerce/web embeds | `owner` | read | no checkout |
 | Owner onboarding | `owner-onboarding` | stateful | disposable account |
 | Owner authority tiers | `authority/owner-*` | read | catches UI leakage |

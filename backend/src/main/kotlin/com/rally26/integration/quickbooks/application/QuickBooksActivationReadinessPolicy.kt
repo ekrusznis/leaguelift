@@ -130,9 +130,9 @@ class QuickBooksActivationReadinessPolicy {
                             },
                         detail =
                             if (providerWritesEnabled) {
-                                "The separately approved activation phase enabled provider writes."
+                                "Separately approved activation enabled provider writes."
                             } else {
-                                "Phase 29 policy keeps all QuickBooks provider writes disabled."
+                                "Provider writes are disabled until credentialed activation is approved."
                             },
                         satisfiedAt = null,
                     ),

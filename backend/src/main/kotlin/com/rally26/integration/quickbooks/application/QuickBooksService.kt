@@ -334,9 +334,9 @@ class QuickBooksService(
             reason =
                 if (blocked) {
                     "Complete or repair the required chart-of-accounts mappings before a later credentialed " +
-                        "activation. Provider writes remain disabled in Phase 29."
+                        "activation. Provider writes remain disabled until then."
                 } else {
-                    "The preview is ready, but provider writes remain disabled throughout Phase 29 and require " +
+                    "The preview is ready, but provider writes remain disabled and require " +
                         "a later explicitly approved credentialed activation."
                 },
         )

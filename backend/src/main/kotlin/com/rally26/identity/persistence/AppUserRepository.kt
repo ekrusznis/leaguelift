@@ -9,7 +9,9 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
-private const val APP_USER_COLUMNS = "id, email, display_name, status, password_hash, created_at, updated_at, provider, provider_subject"
+private const val APP_USER_COLUMNS =
+    "id, email, display_name, status, password_hash, created_at, updated_at, provider, provider_subject, " +
+        "avatar_object_key, avatar_seed, avatar_style"
 
 @Repository
 class AppUserRepository(
@@ -189,6 +191,46 @@ class AppUserRepository(
             .update()
     }
 
+    /** Sets the confirmed uploaded-photo storage key, overwriting any previous one. */
+    fun updateAvatarObjectKey(
+        id: UUID,
+        objectKey: String,
+    ): Int {
+        val now = Instant.now()
+        return jdbcClient
+            .sql("update app_user set avatar_object_key = :objectKey, updated_at = :now where id = :id")
+            .param("objectKey", objectKey)
+            .param("now", Timestamp.from(now))
+            .param("id", id)
+            .update()
+    }
+
+    /** Clears an uploaded photo, reverting display to the generated fallback avatar. */
+    fun clearAvatarObjectKey(id: UUID): Int {
+        val now = Instant.now()
+        return jdbcClient
+            .sql("update app_user set avatar_object_key = null, updated_at = :now where id = :id")
+            .param("now", Timestamp.from(now))
+            .param("id", id)
+            .update()
+    }
+
+    /** Sets an explicit seed/style choice for the generated fallback avatar (independent of any uploaded photo). */
+    fun updateAvatarChoice(
+        id: UUID,
+        seed: String,
+        style: String,
+    ): Int {
+        val now = Instant.now()
+        return jdbcClient
+            .sql("update app_user set avatar_seed = :seed, avatar_style = :style, updated_at = :now where id = :id")
+            .param("seed", seed)
+            .param("style", style)
+            .param("now", Timestamp.from(now))
+            .param("id", id)
+            .update()
+    }
+
     private fun mapRow(
         rs: java.sql.ResultSet,
         rowNum: Int,
@@ -203,5 +245,8 @@ class AppUserRepository(
             updatedAt = rs.getTimestamp("updated_at").toInstant(),
             provider = rs.getString("provider")?.let { OAuthProvider.valueOf(it) },
             providerSubject = rs.getString("provider_subject"),
+            avatarObjectKey = rs.getString("avatar_object_key"),
+            avatarSeed = rs.getString("avatar_seed"),
+            avatarStyle = rs.getString("avatar_style"),
         )
 }

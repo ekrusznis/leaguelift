@@ -11,6 +11,9 @@ export interface AuthApiResponse {
 		email: string;
 		displayName: string;
 		status: string;
+		avatarUrl: string | null;
+		avatarSeed: string;
+		avatarStyle: string;
 	};
 }
 

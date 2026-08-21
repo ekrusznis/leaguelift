@@ -676,6 +676,7 @@ class MessageRepository(
                 """
                 select me.*, au.display_name as sender_display_name,
                        coalesce(ds.recipient_count, 0) as recipient_count,
+                       coalesce(ds.read_recipient_count, 0) as read_recipient_count,
                        coalesce(ds.email_sent_count, 0) as email_sent_count,
                        coalesce(ds.email_failed_count, 0) as email_failed_count,
                        coalesce(ds.sms_sent_count, 0) as sms_sent_count,
@@ -688,6 +689,7 @@ class MessageRepository(
                   left join message_recipient mr on mr.message_id = me.id and mr.user_id = :userId and mr.in_app_visible = true
                   left join (
                     select message_id, count(*) as recipient_count,
+                           count(*) filter (where read_at is not null) as read_recipient_count,
                            count(*) filter (where email_status = 'SENT') as email_sent_count,
                            count(*) filter (where email_status = 'FAILED') as email_failed_count,
                            count(*) filter (where sms_status = 'SENT') as sms_sent_count,
@@ -919,6 +921,7 @@ class MessageRepository(
             """
             select me.*, au.display_name as sender_display_name,
                    coalesce(ds.recipient_count, 0) as recipient_count,
+                   coalesce(ds.read_recipient_count, 0) as read_recipient_count,
                    coalesce(ds.email_sent_count, 0) as email_sent_count,
                    coalesce(ds.email_failed_count, 0) as email_failed_count,
                    coalesce(ds.sms_sent_count, 0) as sms_sent_count,
@@ -927,6 +930,7 @@ class MessageRepository(
               join app_user au on au.id = me.sender_user_id
               left join (
                 select message_id, count(*) as recipient_count,
+                       count(*) filter (where read_at is not null) as read_recipient_count,
                        count(*) filter (where email_status = 'SENT') as email_sent_count,
                        count(*) filter (where email_status = 'FAILED') as email_failed_count,
                        count(*) filter (where sms_status = 'SENT') as sms_sent_count,
@@ -976,6 +980,7 @@ class MessageRepository(
             body = rs.getString("body"),
             sentAt = rs.getTimestamp("sent_at").toInstant(),
             recipientCount = rs.getLong("recipient_count"),
+            readRecipientCount = rs.getLong("read_recipient_count"),
             emailSentCount = rs.getLong("email_sent_count"),
             emailFailedCount = rs.getLong("email_failed_count"),
             smsSentCount = rs.getLong("sms_sent_count"),

@@ -1,16 +1,20 @@
-import type { ChangeEvent } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
+import { Avatar } from "../../dashboard/components/Avatar";
+import { Button } from "../../components/Button";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { featureFlags } from "../../lib/featureFlags";
 import { OrganizationSettingsDirectory } from "./OrganizationSettingsDirectory";
 import {
 	useNotificationPreferences,
+	useRemoveAvatar,
 	useUpdateDefaultMediaVisibility,
 	useUpdateNotificationTopic,
 	useUpdateSmsConsent,
 	useUpdateUserPreferences,
+	useUploadAvatar,
 	useUserPreferences,
 } from "./api";
 import type {
@@ -50,8 +54,11 @@ const STATE_OPTIONS: Array<{ value: NotificationPreferenceState; label: string }
 	{ value: "DISABLED", label: "Off" },
 ];
 
+const AVATAR_CONTENT_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+
 export function SettingsPage() {
-	const { user } = useAuth();
+	const { user, updateAvatar } = useAuth();
 	const preferences = useUserPreferences();
 	const update = useUpdateUserPreferences();
 	const updateMediaVisibility = useUpdateDefaultMediaVisibility();
@@ -60,6 +67,42 @@ export function SettingsPage() {
 	const updateSmsConsent = useUpdateSmsConsent();
 	const appearancePreferences = preferences.data;
 	const notificationPreferences = notifications.data;
+
+	const uploadAvatar = useUploadAvatar();
+	const removeAvatar = useRemoveAvatar();
+	const avatarInputRef = useRef<HTMLInputElement>(null);
+	const [avatarError, setAvatarError] = useState<string | null>(null);
+
+	async function handleAvatarFileChange(event: ChangeEvent<HTMLInputElement>) {
+		const file = event.target.files?.[0];
+		event.target.value = "";
+		if (!file) return;
+		setAvatarError(null);
+		if (!AVATAR_CONTENT_TYPES.includes(file.type)) {
+			setAvatarError("Please choose a PNG, JPEG, or WebP image.");
+			return;
+		}
+		if (file.size > AVATAR_MAX_BYTES) {
+			setAvatarError("That image is too large. Please choose one under 5 MB.");
+			return;
+		}
+		try {
+			const result = await uploadAvatar.mutateAsync(file);
+			updateAvatar(result);
+		} catch (error) {
+			setAvatarError(error instanceof Error ? error.message : "The photo could not be uploaded.");
+		}
+	}
+
+	async function handleRemoveAvatar() {
+		setAvatarError(null);
+		try {
+			const result = await removeAvatar.mutateAsync();
+			updateAvatar(result);
+		} catch (error) {
+			setAvatarError(error instanceof Error ? error.message : "The photo could not be removed.");
+		}
+	}
 
 	function selectAppearance(appearance: AppearancePreference) {
 		if (appearance === appearancePreferences?.appearance || update.isPending) return;
@@ -99,12 +142,36 @@ export function SettingsPage() {
 
 			<section className="rounded-xl border border-slate-200 dark:border-[#334155] bg-white dark:bg-[#111827] p-5" aria-labelledby="account-settings-heading">
 				<h2 id="account-settings-heading" className="font-heading text-xl font-semibold text-navy-900 dark:text-[#f8fafc]">Account</h2>
+				<div className="mt-4 flex items-center gap-4">
+					<Avatar name={user?.displayName ?? "Account"} src={user?.avatarUrl ?? undefined} size="lg" />
+					<div className="flex flex-col gap-2">
+						<div className="flex flex-wrap gap-2">
+							<Button type="button" variant="secondary" disabled={uploadAvatar.isPending} onClick={() => avatarInputRef.current?.click()}>
+								{uploadAvatar.isPending ? "Uploading…" : user?.avatarUrl ? "Change photo" : "Upload photo"}
+							</Button>
+							{user?.avatarUrl && (
+								<Button type="button" variant="secondary" disabled={removeAvatar.isPending} onClick={() => void handleRemoveAvatar()}>
+									{removeAvatar.isPending ? "Removing…" : "Remove photo"}
+								</Button>
+							)}
+						</div>
+						<input
+							ref={avatarInputRef}
+							type="file"
+							accept={AVATAR_CONTENT_TYPES.join(",")}
+							className="hidden"
+							onChange={(event) => void handleAvatarFileChange(event)}
+						/>
+						<p className="text-xs text-slate-500 dark:text-[#cbd5e1]">PNG, JPEG, or WebP. Up to 5 MB. Shown next to your name across Rally26.</p>
+						{avatarError && <p role="alert" className="text-sm font-medium text-rose-700">{avatarError}</p>}
+					</div>
+				</div>
 				<dl className="mt-4 grid gap-4 sm:grid-cols-2">
 					<div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-[#cbd5e1]">Name</dt><dd className="mt-1 text-sm text-navy-900 dark:text-[#f8fafc]">{user?.displayName ?? "Signed-in user"}</dd></div>
 					<div><dt className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-[#cbd5e1]">Email</dt><dd className="mt-1 text-sm text-navy-900 dark:text-[#f8fafc]">{user?.email ?? "—"}</dd></div>
 				</dl>
 				<p className="mt-4 text-sm text-slate-600 dark:text-[#cbd5e1]">
-					Profile-photo, password, and verified-email changes continue through their existing protected workflows; Settings does not bypass profile-correction or identity-verification rules.
+					Password and verified-email changes continue through their existing protected workflows. Household/participant roster photos are managed on their own household page and are separate from this account avatar; Settings does not bypass profile-correction or identity-verification rules.
 				</p>
 			</section>
 

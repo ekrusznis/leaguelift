@@ -66,6 +66,7 @@ export function AthleteDashboard() {
 			contextRole="Athlete"
 			navItems={navItems}
 			userName={user?.displayName ?? "Account"}
+			userAvatarSrc={user?.avatarUrl ?? undefined}
 			promo={{
 				heading: "Stay game ready.",
 				copy: "View your schedule, teams, and event updates in one place.",
