@@ -34,11 +34,14 @@ a `notes` field saying "QA demo data - safe to delete."
    guardian invitation from the household detail page using the same email address
    already on that guardian's record (so it links to the existing person instead of
    creating a duplicate) — or a different real email if you'd rather.
-5. **Athlete persona cannot be tested this way.** Confirmed during earlier research:
-   there's no exposed endpoint anywhere (web or mobile) to create the athlete-self
-   login link (`AuthorizationService.linkAthleteSelf` exists in code but has zero
-   controller route) — it's a real, documented gap, not something this dataset can
-   work around.
+5. **Invite an athlete for login**: from the household detail page, open one of the
+   demo athletes (e.g. a Smith kid) and use "Invite athlete" on their participant
+   card, with a real email you control. This calls a real
+   `POST /participants/{id}/athlete-invitations` endpoint and grants `ATHLETE_SELF`
+   on accept — the athlete must be 13+ (`MINIMUM_ATHLETE_SELF_LOGIN_AGE`) or the
+   invite is rejected. (Earlier notes here said this had no exposed endpoint — that
+   gap was fixed. All 5 demo athletes in this CSV are currently under 13 — edit one's
+   date of birth on the participant page to 13+ before inviting.)
 
 ## Cleanup
 

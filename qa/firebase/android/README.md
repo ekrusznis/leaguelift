@@ -35,6 +35,10 @@ Use a current Firebase CLI version that supports `apptesting:execute`.
 
 Never place passwords in YAML.
 
+Accounts must be real, working logins first — see `../../../docs/qa/README.md` for
+how to provision the actual QA organization/accounts (real signup, CSV import, real
+invitations) against production before creating any of the files below.
+
 Create:
 
 ```text

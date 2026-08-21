@@ -75,11 +75,11 @@ For stable tests, the QA organization should contain at least:
 
 ## Athlete account caveat
 
-The repository's existing `docs/qa/README.md` notes there historically was no exposed UI
-endpoint to create the athlete-self login link. If that remains true in the deployed
-environment, provision the `ATHLETE_SELF` role assignment using the supported admin/dev
-mechanism for the QA environment before running athlete tests. Do not weaken production
-authorization merely to make the test account easier to create.
+Real athlete self-service login now has a real invite path (household detail page →
+participant card → "Invite athlete", `POST /participants/{id}/athlete-invitations`).
+The athlete must be 13+ (`MINIMUM_ATHLETE_SELF_LOGIN_AGE`) — the demo CSV's athletes
+are all under that age, so set a participant's date of birth to 13+ before inviting.
+See `../../docs/qa/README.md` step 5.
 
 ## Secrets
 

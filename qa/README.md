@@ -34,7 +34,14 @@ and `finalScreenAssertion`.
 2. Create/register the Android app in Firebase with package:
    `com.rally26.mobile`.
 3. Opt in to the App Testing agent preview.
-4. Prepare QA accounts using `test-data/TEST-ACCOUNTS.md`.
+4. Provision the actual QA organization and accounts by following
+   `../docs/qa/README.md` end to end (real signup against production, CSV import via
+   `docs/qa/demo-data-import.csv`, then real invitations for the coach/guardian/athlete
+   logins) — this creates real, working accounts for exactly the roles
+   `test-data/TEST-ACCOUNTS.md` lists. `docs/qa/README.md` also covers the
+   `authority/*`/`subscription/*` suites' extra accounts (separate invited members
+   with distinct roles, separate disposable owner signups per subscription state) —
+   see `test-data/TEST-ACCOUNTS.md` for exactly which state each one needs.
 5. Put role credentials in `firebase/android/.credentials/` (never commit them).
 6. Run a single-device smoke pass first:
    `firebase/android/run-suite.sh coach /path/to/rally26.apk --smoke`
