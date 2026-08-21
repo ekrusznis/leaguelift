@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="620" height="160" viewBox="0 0 620 160"
+     role="img">
+  <g transform="translate(10 5) scale(0.75)">
+    <path d="M100 40 L150 40 L185 90 L150 140 L100 140 L128 90 Z" fill="#F2600C"/>
+    <text x="8" y="148" font-family="Manrope, 'Segoe UI', Arial, sans-serif"
+          font-weight="800" font-size="168" letter-spacing="-4" fill="#FFFFFF">R</text>
+  </g>
+  <text x="185" y="112" font-family="Manrope, 'Segoe UI', Arial, sans-serif"
+        font-weight="800" font-size="96" letter-spacing="-2">
+    <tspan fill="#FFFFFF">Rally</tspan><tspan fill="#F2600C">26</tspan>
+  </text>
+</svg>

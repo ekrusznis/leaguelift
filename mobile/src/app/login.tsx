@@ -6,6 +6,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
+import { Rally26Logo } from '@/components/rally26-logo';
 import { ThemedText } from '@/components/themed-text';
 import { useToast } from '@/components/toast';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -116,9 +117,7 @@ export default function LoginScreen() {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <ThemedText type="title" style={styles.wordmark}>
-              RALLY<ThemedText type="title" style={[styles.wordmark, styles.wordmarkAccent]}>26</ThemedText>
-            </ThemedText>
+            <Rally26Logo width={196} />
             <ThemedText themeColor="textSecondary" style={styles.subtitle}>
               Sign in to your account
             </ThemedText>
@@ -217,12 +216,6 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     gap: Spacing.two,
-  },
-  wordmark: {
-    fontSize: 32,
-  },
-  wordmarkAccent: {
-    color: Brand.championshipGold,
   },
   subtitle: {
     fontSize: 15,

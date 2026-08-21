@@ -24,35 +24,33 @@ interface Slide {
   body: string;
 }
 
-/**
- * First-launch-only walkthrough.
- *
- * Layout notes:
- * - The pager fills the entire screen.
- * - The hero illustration + title + body are centered as one visual group.
- * - Bottom controls are overlaid on the same navy canvas instead of taking
- *   vertical space away from the slide.
- * - Artwork uses `contain` so the full illustration remains visible without
- *   the old top-aligned 135% crop workaround.
- */
 const SLIDES: Slide[] = [
   {
-    image: require('../../assets/images/onboarding-1.png'),
+    image: require('../../assets/images/onboarding-1-art.png'),
     title: 'Built for Teams',
     body: 'Rally26 brings your team closer with tools that make communication and organization easy.',
   },
   {
-    image: require('../../assets/images/onboarding-2.png'),
+    image: require('../../assets/images/onboarding-2-art.png'),
     title: 'Stay in the Loop',
     body: 'Get updates, reminders, and important info — all in one place.',
   },
   {
-    image: require('../../assets/images/onboarding-3.png'),
+    image: require('../../assets/images/onboarding-3-art.png'),
     title: 'Focus on What Matters',
     body: 'Less admin. More team. Let’s make this your best season yet.',
   },
 ];
 
+/**
+ * First-launch walkthrough.
+ *
+ * The artwork files are transparent, tightly-cropped illustrations rather than
+ * full-screen screenshots. The slide owns the title/body and places the artwork
+ * immediately above the fixed bottom controls. This avoids the visible image
+ * rectangle/crop that occurred when a full onboarding composition was rendered
+ * inside an Image frame.
+ */
 export default function OnboardingScreen() {
   const [index, setIndex] = useState(0);
   const listRef = useRef<FlatList<Slide>>(null);
@@ -60,16 +58,18 @@ export default function OnboardingScreen() {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const compactHeight = screenHeight < 720;
+  const largeHeight = screenHeight > 900;
 
-  // Reserve enough space for the overlaid dots / CTA / Skip controls so the
-  // centered hero group never sits behind them.
-  const footerReserve = compactHeight ? 150 : 185;
+  // Space reserved for dots + CTA + Skip + bottom safe area.
+  // The final slide has no Skip action, but using one consistent reserve prevents
+  // a noticeable vertical jump while swiping between slides.
+  const footerReserve = compactHeight ? 148 : 178;
 
-  // Keep the illustration substantial on phones, but prevent it from becoming
-  // oversized on tablets/foldables.
+  // Art is intentionally smaller than the previous full-width screenshot image.
+  // It scales with device height but remains bounded on tablets/foldables.
   const imageFrameHeight = Math.min(
-    Math.max(screenHeight * (compactHeight ? 0.33 : 0.38), compactHeight ? 215 : 260),
-    420,
+    Math.max(screenHeight * (compactHeight ? 0.28 : largeHeight ? 0.35 : 0.32), compactHeight ? 190 : 230),
+    360,
   );
 
   const contentWidth = Math.min(screenWidth, 720);
@@ -106,6 +106,7 @@ export default function OnboardingScreen() {
         keyExtractor={(slide) => slide.title}
         horizontal
         pagingEnabled
+        bounces={false}
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={onScroll}
         style={styles.pager}
@@ -117,19 +118,33 @@ export default function OnboardingScreen() {
         renderItem={({ item }) => (
           <View style={[styles.slide, { width: screenWidth }]}>
             <SafeAreaView style={styles.slideSafeArea} edges={['top']}>
-              <View style={[styles.slideContent, { paddingBottom: footerReserve }]}>
-                <View style={[styles.heroGroup, { width: contentWidth }]}>
-                  <View style={[styles.slideImageFrame, { height: imageFrameHeight }]}>
-                    <Image source={item.image} resizeMode="contain" style={styles.slideImage} />
-                  </View>
+              <View
+                style={[
+                  styles.slideContent,
+                  {
+                    width: contentWidth,
+                    paddingBottom: footerReserve,
+                    paddingTop: compactHeight ? Spacing.three : Spacing.five,
+                  },
+                ]}>
+                <View style={styles.slideTextWrap}>
+                  <ThemedText type="title" style={styles.slideTitle}>
+                    {item.title}
+                  </ThemedText>
+                  <ThemedText style={styles.slideBody} themeColor="textSecondary">
+                    {item.body}
+                  </ThemedText>
+                </View>
 
-                  <View style={styles.slideTextWrap}>
-                    <ThemedText type="title" style={styles.slideTitle}>
-                      {item.title}
-                    </ThemedText>
-                    <ThemedText style={styles.slideBody} themeColor="textSecondary">
-                      {item.body}
-                    </ThemedText>
+                <View style={styles.slideImageZone}>
+                  <View style={[styles.slideImageFrame, { height: imageFrameHeight }]}>
+                    <Image
+                      source={item.image}
+                      resizeMode="contain"
+                      style={styles.slideImage}
+                      accessible
+                      accessibilityLabel={`${item.title} illustration`}
+                    />
                   </View>
                 </View>
               </View>
@@ -139,7 +154,7 @@ export default function OnboardingScreen() {
       />
 
       <SafeAreaView style={styles.footer} edges={['bottom']}>
-        <View style={styles.dots}>
+        <View style={styles.dots} accessibilityRole="adjustable" accessibilityLabel={`Onboarding page ${index + 1} of ${SLIDES.length}`}>
           {SLIDES.map((slide, i) => (
             <View key={slide.title} style={[styles.dot, i === index && styles.dotActive]} />
           ))}
@@ -150,7 +165,11 @@ export default function OnboardingScreen() {
         </Button>
 
         {!isLast && (
-          <Pressable onPress={finish} style={styles.skip} accessibilityRole="button">
+          <Pressable
+            onPress={finish}
+            style={styles.skip}
+            accessibilityRole="button"
+            accessibilityLabel="Skip onboarding">
             <ThemedText themeColor="textSecondary">Skip</ThemedText>
           </Pressable>
         )}
@@ -173,33 +192,18 @@ const styles = StyleSheet.create({
   },
   slideSafeArea: {
     flex: 1,
+    alignItems: 'center',
   },
   slideContent: {
     flex: 1,
-    justifyContent: 'center',
+    maxWidth: 720,
     alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.two,
-  },
-  heroGroup: {
-    alignItems: 'center',
-    alignSelf: 'center',
-  },
-  slideImageFrame: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  slideImage: {
-    width: '100%',
-    height: '100%',
+    paddingHorizontal: Spacing.five,
   },
   slideTextWrap: {
     width: '100%',
     maxWidth: 600,
     alignItems: 'center',
-    paddingHorizontal: Spacing.two,
-    marginTop: Spacing.three,
   },
   slideTitle: {
     textAlign: 'center',
@@ -210,11 +214,29 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     maxWidth: 560,
   },
+  slideImageZone: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingTop: Spacing.three,
+  },
+  slideImageFrame: {
+    width: '100%',
+    maxWidth: 620,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  slideImage: {
+    width: '100%',
+    height: '100%',
+  },
   footer: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
+    backgroundColor: Brand.navy,
     paddingHorizontal: Spacing.five,
     paddingTop: Spacing.two,
     paddingBottom: Spacing.two,
