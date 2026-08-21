@@ -3,6 +3,8 @@
 | Area | Primary YAML suite | Mutation level | Notes |
 |---|---|---|---|
 | First launch/login | `shared` | low | blank/invalid validation |
+| Owner registration (sign-up) | `shared` | stateful | creates a real unverified account; use a disposable/timestamped email, never a reusable QA credential |
+| Guardian/athlete household invitations | n/a | n/a | **Mobile-unavailable this session, web-only** — see `qa/KNOWN-REPO-FINDINGS.md` #7; no native screen or WebView embed exists yet |
 | Coach Home/Calendar/Roster | `coach` | low | includes visual sweep |
 | Coach messages | `coach` | low write | QA reply only |
 | Coach More authority | `coach` | read | designed to catch owner-menu leakage |
