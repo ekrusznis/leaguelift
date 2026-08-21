@@ -10,41 +10,28 @@ The full product vision, scope, architecture, and AI-agent operating rules live 
 [`DESIGN-DOC.md`](./DESIGN-DOC.md). That document is authoritative — read it before
 making non-trivial changes.
 
-## Current status
+## Features
 
-Phase 0, Phase 1, and Phase 2 are fully implemented; all running locally.
+Organization and team management, household/roster tracking, fee assignment and
+collection, fundraising campaigns, apparel commerce (Swag Shop), sponsorships,
+in-app messaging, eligibility/compliance tracking, notifications (email/SMS),
+platform-admin support tooling, and a native Android/iOS companion app — all
+backed by real Stripe billing and subscription tiers (Free/Starter/Club/League).
 
-| Phase | What's done |
-|-------|-------------|
-| **Phase 0** | Repository, Spring Boot / React scaffold, PostgreSQL + Flyway, auth integration, organization CRUD, membership model, audit events, CI pipeline |
-| **Phase 1** | Organization profile & onboarding checklist, administrator invitations, teams, tournaments, public pages (DRAFT → PUBLISHED, public `/p/:slug` route), organization isolation integration test, file upload/branding (organization logo/cover image, ADR-012 — real DigitalOcean Spaces credentials still needed before a real staging/prod deploy; local/test run against MinIO) |
-| **Phase 2** | Households with adults, participants with team assignments, fee templates, fee assignments with status tracking, manual/offline payment recording, manual discounts/credits, org-wide collections dashboard + CSV export, real (non-demo) outstanding-balance/financial-overview data, Stripe Connect Express onboarding (ADR-005 — onboarding only, no live charge routing; real Stripe test-mode keys still needed to exercise the actual Stripe flow, everything else runs local) |
+Full team scheduling, two-way team chat, voice calling, and a Redis caching layer
+are intentionally out of scope — see `DESIGN-DOC.md` §14.2.
 
-**Still to do** (approximate priority order):
-
-- Phase 3: Fundraising campaigns, attribution, credits applied to fees, live payment processing
-- Phase 4: Apparel commerce
-- Phase 5: Financial controls and live pilot
-- Phase 6: Sponsorships and automation
-- Phase 7: Capability-based authorization model + real (non-static-preview) persona dashboards, document storage, activity feed, global search
-- Phase 8: Notifications infrastructure — outbox worker, email delivery, one-way SMS (no chat/voice)
-- Phase 9: Reporting module and analytics integration
-- Phase 10 (post-pilot): Native mobile app, standalone registration workflows
-
-Phases 7-10 were added 2026-07-28 while reconciling the roadmap against
-`frontend/src/assets/demos/LLdiagram.png` (a marketing/vision asset, not a
-picture of current or committed-near-term scope). Full team scheduling,
-two-way team chat, voice calling, and a Redis caching layer remain
-indefinitely out of scope — see `DESIGN-DOC.md` §14.2.
-
-See `DESIGN-DOC.md` sections 10 and 14 for full milestone acceptance criteria, and
-`docs/openapi.yaml` for the current API contract.
+See `DESIGN-DOC.md` for the authoritative product spec, phase-by-phase build
+history, and API/database reference. See `LAUNCH-READINESS.md` for current
+pre-launch QA status. `docs/openapi.yaml` has the API contract.
 
 ## Repository layout
 
 ```text
 backend/    Kotlin + Spring Boot API (modular monolith)
 frontend/   React + TypeScript + Vite SPA
+mobile/     Expo / React Native app (Android + iOS)
+qa/         Firebase App Testing agent (Android) QA pack
 docs/       Architecture, security, privacy, ops docs, ADRs, OpenAPI contract
 infra/      DigitalOcean / Cloudflare / deployment scripts
 .github/    CI workflows
@@ -104,7 +91,21 @@ The app starts on `http://localhost:5173` and talks to the API at
 `VITE_API_BASE_URL` (defaults to `http://localhost:8080/api/v1`). Sign-in and
 registration always call the real backend endpoints — there is no mock session mode.
 
-### 4. Run everything with Docker Compose
+### 4. Run the mobile app
+
+```bash
+cd mobile
+npm install
+npx expo start
+```
+
+Set `EXPO_PUBLIC_API_BASE_URL`/`EXPO_PUBLIC_FRONTEND_BASE_URL` in `mobile/.env.local`
+(see `.env.example`) — an Android emulator reaches the host machine at `10.0.2.2`, a
+physical device needs a real LAN/tunnel address, never `localhost`. EAS build profiles
+(`mobile/eas.json`) bake these in at build time; `preview`/`production` point at the
+real deployed API.
+
+### 5. Run everything with Docker Compose
 
 ```bash
 docker compose up --build
@@ -121,6 +122,10 @@ cd frontend && npm run test
 cd frontend && npm run typecheck
 cd frontend && npm run lint
 cd frontend && npm run build
+
+# Mobile
+cd mobile && npm run typecheck
+cd mobile && npm run lint
 ```
 
 Repository- and pull-request-level checks are defined in `.github/workflows/`.
@@ -131,8 +136,10 @@ Repository- and pull-request-level checks are defined in `.github/workflows/`.
   (section 5), security (7), database (8), API surface (9), dashboard UI (10), roadmap and
   launch gates (14), testing/observability/operations (18), privacy data inventory (21), and
   AI agent operating instructions (20)
+- [`LAUNCH-READINESS.md`](./LAUNCH-READINESS.md) — pre-launch QA checklist, findings log, and go/no-go criteria
 - [`docs/openapi.yaml`](./docs/openapi.yaml) — API contract (foundation endpoints)
 - [`docs/adr/`](./docs/adr) — Architecture Decision Records
+- [`qa/README.md`](./qa/README.md) — Firebase App Testing agent (Android) QA pack
 
 ## License
 
