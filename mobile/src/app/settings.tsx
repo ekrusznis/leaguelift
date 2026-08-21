@@ -12,7 +12,10 @@ import { ThemedView } from '@/components/themed-view';
 import { useToast } from '@/components/toast';
 import { useAuth } from '@/features/auth/AuthContext';
 import {
+  useCancelAccountDeletion,
   useNotificationPreferences,
+  usePendingAccountDeletion,
+  useRequestAccountDeletion,
   useUpdateNotificationTopic,
   useUpdateSmsConsent,
   useUpdateUserPreferences,
@@ -56,12 +59,16 @@ export default function SettingsScreen() {
   const toast = useToast();
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [editingTopic, setEditingTopic] = useState<NotificationTopicPreference | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const preferences = useUserPreferences();
   const updatePreferences = useUpdateUserPreferences();
   const notifications = useNotificationPreferences();
   const updateTopic = useUpdateNotificationTopic();
   const updateSmsConsent = useUpdateSmsConsent();
+  const pendingDeletion = usePendingAccountDeletion();
+  const requestDeletion = useRequestAccountDeletion();
+  const cancelDeletion = useCancelAccountDeletion();
 
   function selectAppearance(appearance: AppearancePreference) {
     if (appearance === preferences.data?.appearance) return;
@@ -160,6 +167,27 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
+        <ThemedText type="smallBold" style={{ color: Brand.errorRed }}>
+          Danger zone
+        </ThemedText>
+        {pendingDeletion.data ? (
+          <>
+            <ThemedText type="small" themeColor="textSecondary">
+              Your account is scheduled for deletion on {new Date(pendingDeletion.data.scheduledFor).toLocaleDateString()}. Export
+              anything you need before then — after that date it can&rsquo;t be undone.
+            </ThemedText>
+            <Button variant="secondary" onPress={() => void cancelDeletion.mutateAsync()} disabled={cancelDeletion.isPending}>
+              {cancelDeletion.isPending ? 'Canceling…' : 'Cancel deletion'}
+            </Button>
+          </>
+        ) : (
+          <Button variant="secondary" onPress={() => setDeleteConfirmOpen(true)}>
+            Delete my account
+          </Button>
+        )}
+      </View>
+
+      <View style={styles.section}>
         <Button variant="secondary" onPress={() => setLogoutConfirmOpen(true)}>
           Log Out
         </Button>
@@ -209,6 +237,22 @@ export default function SettingsScreen() {
           void logout();
         }}
         onCancel={() => setLogoutConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        visible={deleteConfirmOpen}
+        title="Delete your account?"
+        message="You'll have 7 days to export any data you need. After that, your account is permanently deleted and you're removed from every team and organization you belong to. This can't be undone. If you own an organization, transfer ownership or close it first."
+        confirmLabel="Delete my account"
+        destructive
+        onConfirm={() => {
+          setDeleteConfirmOpen(false);
+          requestDeletion.mutate(undefined, {
+            onError: () =>
+              toast.show('Could not start account deletion. If you own an organization, transfer ownership or close it first.', 'error'),
+          });
+        }}
+        onCancel={() => setDeleteConfirmOpen(false)}
       />
     </ThemedView>
   );

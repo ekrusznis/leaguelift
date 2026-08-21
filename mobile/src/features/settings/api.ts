@@ -61,3 +61,35 @@ export function useUpdateSmsConsent() {
     },
   });
 }
+
+export interface AccountDeletionRequest {
+  id: string;
+  status: string;
+  requestedAt: string;
+  scheduledFor: string;
+}
+
+const accountDeletionQueryKey = ['me', 'deletion-request'] as const;
+
+export function usePendingAccountDeletion() {
+  return useQuery({
+    queryKey: accountDeletionQueryKey,
+    queryFn: () => apiFetch<AccountDeletionRequest | null>('/me/deletion-request'),
+  });
+}
+
+export function useRequestAccountDeletion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch<AccountDeletionRequest>('/me/deletion-request', { method: 'POST' }),
+    onSuccess: (request) => queryClient.setQueryData(accountDeletionQueryKey, request),
+  });
+}
+
+export function useCancelAccountDeletion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch('/me/deletion-request', { method: 'DELETE' }),
+    onSuccess: () => queryClient.setQueryData(accountDeletionQueryKey, null),
+  });
+}

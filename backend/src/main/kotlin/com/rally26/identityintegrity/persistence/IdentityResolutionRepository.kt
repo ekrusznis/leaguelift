@@ -411,6 +411,60 @@ class IdentityResolutionRepository(
             .param("sourceUserId", sourceUserId)
             .update()
 
+    /**
+     * Self-service account deletion (distinct from [retireSourceUser]'s merge — there is
+     * no surviving target here). The row itself is never hard-deleted: ~70 tables
+     * reference `app_user.id` with no `on delete cascade`, so anonymize-in-place is the
+     * only technically viable approach. `DELETED` is rejected by
+     * `JwtCurrentUserConverter`'s existing non-ACTIVE check, so no separate login block
+     * is needed.
+     */
+    fun retireDeletedUser(
+        userId: UUID,
+        anonymizedEmail: String,
+        now: Instant,
+    ): Int =
+        jdbcClient
+            .sql(
+                """
+                update app_user
+                set status = 'DELETED', display_name = '[User Deleted]', email = :anonymizedEmail,
+                    password_hash = null, avatar_object_key = null, avatar_seed = null, avatar_style = null,
+                    updated_at = :now
+                where id = :userId and status <> 'DELETED'
+                """.trimIndent(),
+            ).param("anonymizedEmail", anonymizedEmail)
+            .param("userId", userId)
+            .param("now", Timestamp.from(now))
+            .update()
+
+    /**
+     * Failsafe for the two stored-snapshot recipient tables (`message_recipient`/
+     * `announcement_recipient` store `display_name` at delivery time, never re-joined to
+     * `app_user` — everything else that shows a user's name is a live lookup and self-
+     * heals from [retireDeletedUser] alone). Confirmed via a full sweep this session:
+     * no other table stores a user-linked display-name snapshot.
+     */
+    fun anonymizeMessageRecipientDisplayName(
+        userId: UUID,
+        now: Instant,
+    ): Int =
+        jdbcClient
+            .sql("update message_recipient set display_name = '[User Deleted]', updated_at = :now where user_id = :userId")
+            .param("userId", userId)
+            .param("now", Timestamp.from(now))
+            .update()
+
+    fun anonymizeAnnouncementRecipientDisplayName(
+        userId: UUID,
+        now: Instant,
+    ): Int =
+        jdbcClient
+            .sql("update announcement_recipient set display_name = '[User Deleted]', updated_at = :now where user_id = :userId")
+            .param("userId", userId)
+            .param("now", Timestamp.from(now))
+            .update()
+
     fun insertCompleted(
         id: UUID,
         operationType: IdentityResolutionOperationType,

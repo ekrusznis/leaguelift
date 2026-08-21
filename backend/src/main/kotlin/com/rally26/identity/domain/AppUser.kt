@@ -3,7 +3,7 @@ package com.rally26.identity.domain
 import java.time.Instant
 import java.util.UUID
 
-enum class AppUserStatus { ACTIVE, SUSPENDED, PENDING_EMAIL_VERIFICATION }
+enum class AppUserStatus { ACTIVE, SUSPENDED, PENDING_EMAIL_VERIFICATION, DELETED }
 
 /** A linked external sign-in identity (Phase 37) — see V78's migration comment for why this coexists with password auth rather than replacing it. */
 enum class OAuthProvider { GOOGLE, APPLE }
