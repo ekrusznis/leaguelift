@@ -15,7 +15,7 @@ import { useTeamEligibilityClearance } from '@/features/eligibility/api';
 import type { ClearanceStatus } from '@/features/eligibility/types';
 import { useTeamRoster } from '@/features/roster/api';
 import { useCoach } from '@/features/teams/CoachContext';
-import { sportLabel } from '@/features/teams/sportLabel';
+import { sportLabel, terminologyForSport } from '@/features/teams/sportLabel';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -43,6 +43,7 @@ export default function TeamsScreen() {
   const coach = useCoach();
   const theme = useTheme();
   const selectedTeam = coach.teams.find((team) => team.teamId === coach.selectedTeamId) ?? null;
+  const terminology = terminologyForSport(selectedTeam?.sport ?? null);
   const rosterQuery = useTeamRoster(coach.organizationId, coach.selectedTeamId);
   const [query, setQuery] = useState('');
   const [ineligibleOnly, setIneligibleOnly] = useState(false);
@@ -126,7 +127,7 @@ export default function TeamsScreen() {
               <ListControls
                 query={query}
                 onChangeQuery={setQuery}
-                searchPlaceholder="Search athletes"
+                searchPlaceholder={`Search ${terminology.athletePlural.toLowerCase()}`}
                 resultCount={visibleRoster.length}
                 activeFilters={activeFilters}
                 onRemoveFilter={() => setIneligibleOnly(false)}
@@ -181,7 +182,7 @@ export default function TeamsScreen() {
       <Modal visible={filterOpen} onClose={() => setFilterOpen(false)}>
         <ThemedText type="smallBold" style={styles.modalTitle}>Filter roster</ThemedText>
         {([
-          [false, 'All athletes'],
+          [false, `All ${terminology.athletePlural.toLowerCase()}`],
           [true, 'Ineligible only'],
         ] as const).map(([value, label]) => (
           <Pressable

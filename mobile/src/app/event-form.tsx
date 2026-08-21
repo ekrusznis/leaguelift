@@ -14,17 +14,22 @@ import { useToast } from '@/components/toast';
 import { useDashboardContext } from '@/features/dashboard/api';
 import { useCreateEvent, useEvent, useEventTimezoneDefault, useUpdateEvent } from '@/features/events/api';
 import type { EventResponse, EventType, EventVisibility } from '@/features/events/types';
+import { useOrgTeam } from '@/features/organization-teams/api';
+import { terminologyForSport, type SportTerminology } from '@/features/teams/sportLabel';
 import { Brand, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { apiFetch } from '@/lib/apiClient';
 
-const EVENT_TYPES: { value: EventType; label: string }[] = [
-  { value: 'PRACTICE', label: 'Practice' },
-  { value: 'COMPETITION', label: 'Competition' },
-  { value: 'TOURNAMENT', label: 'Tournament' },
-  { value: 'MEETING', label: 'Meeting' },
-  { value: 'OTHER', label: 'Other' },
-];
+/** COMPETITION's label reflects the in-view team's real sport (e.g. "Match" for soccer, "Meet" for swimming) — matches frontend/src/features/events/EventListPanel.tsx's buildEventTypeOptions. */
+function buildEventTypes(terminology: SportTerminology): { value: EventType; label: string }[] {
+  return [
+    { value: 'PRACTICE', label: 'Practice' },
+    { value: 'COMPETITION', label: terminology.event },
+    { value: 'TOURNAMENT', label: 'Tournament' },
+    { value: 'MEETING', label: 'Meeting' },
+    { value: 'OTHER', label: 'Other' },
+  ];
+}
 
 const VISIBILITY_OPTIONS: { value: EventVisibility; label: string }[] = [
   { value: 'TEAM', label: 'Team' },
@@ -120,6 +125,11 @@ function EventFormFields({
   const createEvent = useCreateEvent(organizationId);
   const updateEvent = useUpdateEvent(organizationId, eventId ?? '');
 
+  const effectiveTeamId = teamId ?? existing?.teamId ?? null;
+  const teamQuery = useOrgTeam(organizationId, effectiveTeamId);
+  const terminology = terminologyForSport(teamQuery.data?.sport ?? null);
+  const eventTypes = buildEventTypes(terminology);
+
   const [eventType, setEventType] = useState<EventType>(existing?.eventType ?? 'PRACTICE');
   const [title, setTitle] = useState(
     existing && existing.displayTitle !== titleFallback(existing.eventType, existing.opponentName) ? existing.displayTitle : '',
@@ -197,7 +207,7 @@ function EventFormFields({
               Type
             </ThemedText>
             <View style={styles.chipRow}>
-              {EVENT_TYPES.map((option) => {
+              {eventTypes.map((option) => {
                 const selected = option.value === eventType;
                 return (
                   <Pressable
@@ -271,11 +281,11 @@ function EventFormFields({
           />
         )}
 
-        <Field label="Venue (optional)">
+        <Field label={`${terminology.venue} (optional)`}>
           <TextInput
             value={venueName}
             onChangeText={setVenueName}
-            placeholder="Venue name"
+            placeholder={`${terminology.venue} name`}
             placeholderTextColor={theme.textSecondary}
             style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
           />
