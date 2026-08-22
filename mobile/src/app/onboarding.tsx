@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.navy,
   },
   pager: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   slide: {
     flex: 1,

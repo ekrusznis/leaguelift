@@ -1,0 +1,47 @@
+name: mobile
+
+on:
+  pull_request:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile.yml"
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install (lockfile-verified)
+        run: npm ci
+
+      # `npm run typecheck` depends on Expo Router's generated `.expo/types/router.d.ts`
+      # (gitignored, machine-local — see LR-002 in LAUNCH-READINESS.md). It's normally
+      # written as a side effect of `expo start`'s dev server, which doesn't fit CI;
+      # `expo customize tsconfig.json` is Expo's documented non-interactive way to
+      # generate it without starting a server. Verified locally: regenerates the types
+      # file and leaves tsconfig.json untouched when it's already configured correctly.
+      - name: Generate Expo Router types
+        run: npx expo customize tsconfig.json
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Targeted tests
+        run: npm run test

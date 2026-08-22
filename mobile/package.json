@@ -47,6 +47,7 @@
     "lint": "expo lint",
     "test:owner-onboarding": "node --experimental-strip-types --test scripts/owner-onboarding-routing.test.mjs",
     "test:messaging": "node --experimental-strip-types --test scripts/messaging-date-format.test.mjs",
+    "test": "npm run test:owner-onboarding && npm run test:messaging",
     "build:android:preview": "./scripts/build-release.sh android preview",
     "build:android:production": "./scripts/build-release.sh android production",
     "build:ios:preview": "./scripts/build-release.sh ios preview",
