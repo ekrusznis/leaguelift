@@ -2,7 +2,13 @@ package com.rally26.integration.core.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
+import com.rally26.authorization.domain.ResourceRole
+import com.rally26.authorization.domain.RoleAssignment
+import com.rally26.authorization.domain.RoleAssignmentContextType
+import com.rally26.authorization.domain.RoleAssignmentStatus
+import com.rally26.authorization.persistence.RoleAssignmentRepository
 import com.rally26.common.error.ValidationException
+import com.rally26.common.web.CurrentUser
 import com.rally26.config.IntegrationProperties
 import com.rally26.config.IntegrationProviderRuntimeProperties
 import com.rally26.integration.core.domain.IntegrationAdapterMode
@@ -60,6 +66,10 @@ class IntegrationOAuthServiceTest {
         )
     private val cipher = CredentialCipher(properties)
     private val planEntitlementService = mockk<PlanEntitlementService>(relaxed = true)
+    private val roleAssignmentRepository =
+        mockk<RoleAssignmentRepository> {
+            every { findActiveForUser(any()) } returns emptyList()
+        }
     private val service =
         IntegrationOAuthService(
             catalogService,
@@ -73,6 +83,7 @@ class IntegrationOAuthServiceTest {
             ObjectMapper(),
             auditService,
             planEntitlementService,
+            roleAssignmentRepository,
         )
 
     @Test
@@ -188,6 +199,76 @@ class IntegrationOAuthServiceTest {
         assertNotEquals(tokenSet.refreshToken, ciphertext.captured)
         verify(exactly = 1) { connectionRepository.markConnected(any(), any(), any(), any(), any(), any()) }
     }
+
+    @Test
+    fun `an athlete cannot start connecting a social provider`() {
+        val userId = UUID.randomUUID()
+        every { roleAssignmentRepository.findActiveForUser(userId) } returns listOf(athleteRoleAssignment(userId))
+
+        assertFailsWith<ValidationException> {
+            service.startUserAuthorization(IntegrationProvider.INSTAGRAM, currentUser(userId))
+        }
+
+        verify(exactly = 0) { catalogService.requireDefinition(any()) }
+    }
+
+    @Test
+    fun `an athlete can still start connecting a non-social provider`() {
+        val userId = UUID.randomUUID()
+        every { roleAssignmentRepository.findActiveForUser(userId) } returns listOf(athleteRoleAssignment(userId))
+        every { catalogService.requireDefinition(IntegrationProvider.GOOGLE_CALENDAR) } returns
+            definition().copy(
+                provider = IntegrationProvider.GOOGLE_CALENDAR,
+                category = IntegrationCategory.CALENDAR,
+                ownershipScope = IntegrationOwnerType.USER,
+            )
+        every { catalogService.readiness(any()) } returns IntegrationReadiness.AVAILABLE
+        every { adapterRegistry.find(IntegrationProvider.GOOGLE_CALENDAR) } returns
+            mockk<IntegrationAuthorizationAdapter> {
+                every { buildAuthorizationUrl(any()) } returns "https://accounts.google.com/authorize"
+            }
+        every { connectionRepository.findActiveForUser(userId, IntegrationProvider.GOOGLE_CALENDAR) } returns null
+        every { connectionRepository.insertAuthorizationPending(any(), any(), any(), any(), any()) } returns
+            connection(UUID.randomUUID(), userId).copy(ownerType = IntegrationOwnerType.USER, organizationId = null, userId = userId)
+        every {
+            oauthStateRepository.insert(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+            )
+        } returns
+            mockk()
+
+        val result = service.startUserAuthorization(IntegrationProvider.GOOGLE_CALENDAR, currentUser(userId))
+
+        assertEquals("https://accounts.google.com/authorize", result.authorizationUrl)
+    }
+
+    private fun athleteRoleAssignment(userId: UUID) =
+        RoleAssignment(
+            id = UUID.randomUUID(),
+            organizationId = UUID.randomUUID(),
+            userId = userId,
+            contextType = RoleAssignmentContextType.PARTICIPANT,
+            resourceId = UUID.randomUUID(),
+            role = ResourceRole.ATHLETE_SELF,
+            status = RoleAssignmentStatus.ACTIVE,
+            grantedBy = null,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
+
+    private fun currentUser(userId: UUID) = CurrentUser(userId, "athlete@example.com", "Athlete")
 
     private fun definition() =
         IntegrationProviderDefinition(

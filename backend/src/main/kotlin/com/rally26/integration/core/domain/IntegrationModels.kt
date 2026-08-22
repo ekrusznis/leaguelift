@@ -18,9 +18,12 @@ enum class IntegrationProvider(
     TWILIO("twilio"),
     DIGITALOCEAN_SPACES("digitalocean-spaces"),
     GOOGLE_MAPS("google-maps"),
+    INSTAGRAM("instagram"),
+    FACEBOOK("facebook"),
+    X("x"),
 }
 
-enum class IntegrationCategory { PAYMENTS, FULFILLMENT, COMMUNICATIONS, STORAGE, CALENDAR, ACCOUNTING, SPORTS_DATA, MAPS }
+enum class IntegrationCategory { PAYMENTS, FULFILLMENT, COMMUNICATIONS, STORAGE, CALENDAR, ACCOUNTING, SPORTS_DATA, MAPS, SOCIAL }
 
 enum class IntegrationOwnerType { PLATFORM, ORGANIZATION, USER }
 

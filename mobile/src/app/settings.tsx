@@ -1,3 +1,4 @@
+import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -11,6 +12,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useToast } from '@/components/toast';
 import { useAuth } from '@/features/auth/AuthContext';
+import { useDashboardContext } from '@/features/dashboard/api';
 import {
   useCancelAccountDeletion,
   useNotificationPreferences,
@@ -27,7 +29,15 @@ import type {
   NotificationTopic,
   NotificationTopicPreference,
 } from '@/features/settings/types';
+import { useDisconnectSocialConnection, useSocialCatalog, useStartSocialAuthorization } from '@/features/social/api';
+import type { SocialCatalogItem } from '@/features/social/types';
 import { Brand, Spacing } from '@/constants/theme';
+
+const SOCIAL_DISPLAY_NAME: Record<string, string> = {
+  INSTAGRAM: 'Instagram',
+  FACEBOOK: 'Facebook',
+  X: 'X',
+};
 
 const APPEARANCE_OPTIONS: { value: AppearancePreference; label: string }[] = [
   { value: 'SYSTEM', label: 'System' },
@@ -60,6 +70,8 @@ export default function SettingsScreen() {
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [editingTopic, setEditingTopic] = useState<NotificationTopicPreference | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
+  const [disconnectTarget, setDisconnectTarget] = useState<SocialCatalogItem | null>(null);
 
   const preferences = useUserPreferences();
   const updatePreferences = useUpdateUserPreferences();
@@ -69,6 +81,32 @@ export default function SettingsScreen() {
   const pendingDeletion = usePendingAccountDeletion();
   const requestDeletion = useRequestAccountDeletion();
   const cancelDeletion = useCancelAccountDeletion();
+
+  // Rally26 serves minors — athlete accounts don't get connected-social-account
+  // controls at all (brief §10), not just a rejected request. The backend also
+  // enforces this (IntegrationOAuthService.requireNotAthlete), this is purely so an
+  // athlete never sees a control that would fail.
+  const dashboardContext = useDashboardContext(true);
+  const isAthlete = dashboardContext.data?.role === 'ATHLETE';
+  const socialCatalog = useSocialCatalog(!isAthlete);
+  const startSocialAuthorization = useStartSocialAuthorization();
+  const disconnectSocialConnection = useDisconnectSocialConnection();
+
+  async function connectSocialProvider(provider: SocialCatalogItem['provider']) {
+    setConnectingProvider(provider);
+    try {
+      const result = await startSocialAuthorization.mutateAsync(provider);
+      await WebBrowser.openBrowserAsync(result.authorizationUrl);
+      // openBrowserAsync only resolves once the user dismisses the browser (after
+      // finishing or abandoning the flow on the provider's own site) — refetching
+      // here, not on a timer, is what picks up the finished connection.
+      await socialCatalog.refetch();
+    } catch {
+      toast.show(`Could not start connecting ${SOCIAL_DISPLAY_NAME[provider] ?? provider}.`, 'error');
+    } finally {
+      setConnectingProvider(null);
+    }
+  }
 
   function selectAppearance(appearance: AppearancePreference) {
     if (appearance === preferences.data?.appearance) return;
@@ -166,6 +204,52 @@ export default function SettingsScreen() {
         )}
       </View>
 
+      {!isAthlete && (
+        <View style={styles.section}>
+          <ThemedText type="smallBold">Connected Social Accounts</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Share Rally26 events, fundraisers, approved media, sponsors, and team gear using your connected accounts.
+          </ThemedText>
+          {socialCatalog.isPending && <LoadingState label="Loading…" />}
+          {socialCatalog.isError && <ErrorState message="Could not load connected accounts." onRetry={() => socialCatalog.refetch()} />}
+          {socialCatalog.data?.map((item) => {
+            const connected = item.connection?.status === 'CONNECTED';
+            const degraded = item.connection?.status === 'DEGRADED';
+            return (
+              <ThemedView key={item.provider} type="backgroundElement" style={styles.topicRow}>
+                <View style={styles.socialRow}>
+                  <View style={styles.socialInfo}>
+                    <ThemedText style={styles.topicLabel}>{item.displayName}</ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {connected
+                        ? (item.connection?.externalAccountName ?? 'Connected')
+                        : degraded
+                          ? 'Needs attention — reconnect'
+                          : 'Not connected'}
+                    </ThemedText>
+                  </View>
+                  {connected || degraded ? (
+                    <Button
+                      variant="secondary"
+                      onPress={() => setDisconnectTarget(item)}
+                      disabled={disconnectSocialConnection.isPending}>
+                      Manage
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      onPress={() => void connectSocialProvider(item.provider)}
+                      disabled={connectingProvider === item.provider}>
+                      {connectingProvider === item.provider ? 'Connecting…' : 'Connect'}
+                    </Button>
+                  )}
+                </View>
+              </ThemedView>
+            );
+          })}
+        </View>
+      )}
+
       <View style={styles.section}>
         <ThemedText type="smallBold" style={{ color: Brand.errorRed }}>
           Danger zone
@@ -237,6 +321,23 @@ export default function SettingsScreen() {
           void logout();
         }}
         onCancel={() => setLogoutConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        visible={!!disconnectTarget}
+        title={`Disconnect ${disconnectTarget ? (SOCIAL_DISPLAY_NAME[disconnectTarget.provider] ?? disconnectTarget.provider) : ''}?`}
+        message="Rally26 will no longer be able to share directly to this account. You can reconnect it at any time."
+        confirmLabel="Disconnect"
+        destructive
+        onConfirm={() => {
+          const target = disconnectTarget;
+          setDisconnectTarget(null);
+          if (!target?.connection) return;
+          disconnectSocialConnection.mutate(target.connection.id, {
+            onError: () => toast.show('Could not disconnect that account.', 'error'),
+          });
+        }}
+        onCancel={() => setDisconnectTarget(null)}
       />
 
       <ConfirmDialog
@@ -334,6 +435,16 @@ const styles = StyleSheet.create({
   },
   topicLabel: {
     marginBottom: 2,
+  },
+  socialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.three,
+  },
+  socialInfo: {
+    flex: 1,
+    gap: 2,
   },
   pickerTitle: {
     marginBottom: Spacing.three,

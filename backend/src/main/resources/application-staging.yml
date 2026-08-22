@@ -173,6 +173,27 @@ rally26:
         authorization-uri: ${TEAMSNAP_AUTHORIZATION_URI:}
         token-uri: ${TEAMSNAP_TOKEN_URI:}
         revocation-uri: ${TEAMSNAP_REVOCATION_URI:}
+      instagram:
+        enabled: ${INSTAGRAM_INTEGRATION_ENABLED:false}
+        client-id: ${INSTAGRAM_CLIENT_ID:}
+        client-secret: ${INSTAGRAM_CLIENT_SECRET:}
+        authorization-uri: ${INSTAGRAM_AUTHORIZATION_URI:}
+        token-uri: ${INSTAGRAM_TOKEN_URI:}
+        revocation-uri: ${INSTAGRAM_REVOCATION_URI:}
+      facebook:
+        enabled: ${FACEBOOK_INTEGRATION_ENABLED:false}
+        client-id: ${FACEBOOK_CLIENT_ID:}
+        client-secret: ${FACEBOOK_CLIENT_SECRET:}
+        authorization-uri: ${FACEBOOK_AUTHORIZATION_URI:}
+        token-uri: ${FACEBOOK_TOKEN_URI:}
+        revocation-uri: ${FACEBOOK_REVOCATION_URI:}
+      x:
+        enabled: ${X_INTEGRATION_ENABLED:false}
+        client-id: ${X_CLIENT_ID:}
+        client-secret: ${X_CLIENT_SECRET:}
+        authorization-uri: ${X_AUTHORIZATION_URI:}
+        token-uri: ${X_TOKEN_URI:}
+        revocation-uri: ${X_REVOCATION_URI:}
 
   # Phase 17 support-case routing. The mailbox is public configuration; real delivery activation is Phase 20.
   support:

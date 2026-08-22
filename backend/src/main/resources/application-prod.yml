@@ -185,6 +185,37 @@ rally26:
         authorization-uri: ${TEAMSNAP_AUTHORIZATION_URI:}
         token-uri: ${TEAMSNAP_TOKEN_URI:}
         revocation-uri: ${TEAMSNAP_REVOCATION_URI:}
+      # Social Sharing & Connected Accounts, Slice 1. Instagram and Facebook share one
+      # Meta developer app (Login for Business) — real endpoints (researched, not
+      # guessed): authorization https://www.facebook.com/v21.0/dialog/oauth, token
+      # https://graph.facebook.com/v21.0/oauth/access_token. Meta has no revocation
+      # endpoint compatible with this generic request shape — see
+      # FacebookAuthorizationAdapter/InstagramAuthorizationAdapter's doc comments.
+      instagram:
+        enabled: ${INSTAGRAM_INTEGRATION_ENABLED:false}
+        client-id: ${INSTAGRAM_CLIENT_ID:}
+        client-secret: ${INSTAGRAM_CLIENT_SECRET:}
+        authorization-uri: ${INSTAGRAM_AUTHORIZATION_URI:}
+        token-uri: ${INSTAGRAM_TOKEN_URI:}
+        revocation-uri: ${INSTAGRAM_REVOCATION_URI:}
+      facebook:
+        enabled: ${FACEBOOK_INTEGRATION_ENABLED:false}
+        client-id: ${FACEBOOK_CLIENT_ID:}
+        client-secret: ${FACEBOOK_CLIENT_SECRET:}
+        authorization-uri: ${FACEBOOK_AUTHORIZATION_URI:}
+        token-uri: ${FACEBOOK_TOKEN_URI:}
+        revocation-uri: ${FACEBOOK_REVOCATION_URI:}
+      # Real endpoints (researched, not guessed): authorization
+      # https://x.com/i/oauth2/authorize, token https://api.x.com/2/oauth2/token,
+      # revoke https://api.x.com/2/oauth2/revoke (revoke path not independently
+      # confirmed against a live X app — see XAuthorizationAdapter's doc comment).
+      x:
+        enabled: ${X_INTEGRATION_ENABLED:false}
+        client-id: ${X_CLIENT_ID:}
+        client-secret: ${X_CLIENT_SECRET:}
+        authorization-uri: ${X_AUTHORIZATION_URI:}
+        token-uri: ${X_TOKEN_URI:}
+        revocation-uri: ${X_REVOCATION_URI:}
 
   # Phase 17 support-case routing. The mailbox is public configuration; real delivery activation is Phase 20.
   support:

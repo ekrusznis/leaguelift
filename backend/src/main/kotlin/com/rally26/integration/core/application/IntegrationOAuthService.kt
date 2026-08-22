@@ -3,6 +3,8 @@ package com.rally26.integration.core.application
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.rally26.audit.application.AuditService
+import com.rally26.authorization.domain.ResourceRole
+import com.rally26.authorization.persistence.RoleAssignmentRepository
 import com.rally26.common.error.ConflictException
 import com.rally26.common.error.NotFoundException
 import com.rally26.common.error.ServiceUnavailableException
@@ -62,8 +64,26 @@ class IntegrationOAuthService(
     private val objectMapper: ObjectMapper,
     private val auditService: AuditService,
     private val planEntitlementService: PlanEntitlementService,
+    private val roleAssignmentRepository: RoleAssignmentRepository,
 ) {
     private val secureRandom = SecureRandom()
+
+    /**
+     * Rally26 serves minors — social-account connections stay out of scope for
+     * athlete accounts until intentionally approved (brief §10). Blocks on holding
+     * *any* active `ATHLETE_SELF` role assignment, even if the same user also holds
+     * an unrelated staff/guardian role elsewhere, since the youth-safety concern is
+     * about the account being reachable as an athlete at all, not about it being
+     * exclusively an athlete account.
+     */
+    private val socialProviders = setOf(IntegrationProvider.INSTAGRAM, IntegrationProvider.FACEBOOK, IntegrationProvider.X)
+
+    private fun requireNotAthlete(userId: UUID) {
+        val isAthlete = roleAssignmentRepository.findActiveForUser(userId).any { it.role == ResourceRole.ATHLETE_SELF }
+        if (isAthlete) {
+            throw ValidationException("Athlete accounts cannot connect social accounts.")
+        }
+    }
 
     fun listOrganizationConnections(
         organizationId: UUID,
@@ -88,7 +108,10 @@ class IntegrationOAuthService(
     fun startUserAuthorization(
         provider: IntegrationProvider,
         currentUser: CurrentUser,
-    ): AuthorizationStartResult = startAuthorization(provider, IntegrationOwnerType.USER, null, currentUser.userId, currentUser.userId)
+    ): AuthorizationStartResult {
+        if (provider in socialProviders) requireNotAthlete(currentUser.userId)
+        return startAuthorization(provider, IntegrationOwnerType.USER, null, currentUser.userId, currentUser.userId)
+    }
 
     fun completeAuthorization(
         provider: IntegrationProvider,

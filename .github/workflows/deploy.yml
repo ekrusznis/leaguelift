@@ -143,6 +143,8 @@ jobs:
             SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
             SMTP_FROM_ADDRESS=${{ vars.SMTP_FROM_ADDRESS || 'support@rally26.com' }}
             NEW_RELIC_LICENSE_KEY=${{ secrets.NEW_RELIC_KEY_ID }}
+            X_CLIENT_ID=${{ secrets.X_CLIENT_ID }}
+            X_CLIENT_SECRET=${{ secrets.X_CLIENT_SECRET }}
             EOF
             chmod 600 .env
             # DO Container Registry accepts the API token as both username and

@@ -100,6 +100,8 @@ val ORGANIZATION_DELETION_SCOPE: List<ScopedTable> =
         ScopedTable("reconciliation_issue", ScopeMode.DIRECT, "organization_id", null, false),
         ScopedTable("role_assignment", ScopeMode.DIRECT, "organization_id", null, false),
         ScopedTable("season_rollover_run", ScopeMode.DIRECT, "organization_id", null, false),
+        ScopedTable("social_publishing_history", ScopeMode.DIRECT, "organization_id", null, false),
+        ScopedTable("social_post_draft", ScopeMode.DIRECT, "organization_id", null, false),
         ScopedTable("sponsorship", ScopeMode.DIRECT, "organization_id", null, true),
         ScopedTable("sports_data_import_issue", ScopeMode.VIA_PARENT, "import_run_id", "sports_data_import_run", false),
         ScopedTable("sports_data_mapping", ScopeMode.VIA_PARENT, "connection_id", "integration_connection", false),

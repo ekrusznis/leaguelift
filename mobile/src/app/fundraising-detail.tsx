@@ -219,6 +219,16 @@ export default function FundraisingDetailScreen() {
               />
             )}
             <Button variant="secondary" onPress={share}>Share fundraiser</Button>
+            <Button
+              variant="secondary"
+              onPress={() =>
+                router.push({
+                  pathname: '/social-share' as any,
+                  params: { organizationId, sourceType: 'FUNDRAISER', sourceId: item.id, title: item.name },
+                })
+              }>
+              Post to social
+            </Button>
             <Button variant="secondary" onPress={() => Linking.openURL(publicUrl)}>Open public page</Button>
           </ThemedView>
         </View>
