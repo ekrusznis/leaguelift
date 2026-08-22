@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { verifyEmail } from "../../auth/authApi";
 import { ApiError } from "../../lib/apiError";
 import { InlineAlert } from "../../marketing/components/InlineAlert";
@@ -7,6 +7,7 @@ import { Seo } from "../../marketing/components/Seo";
 import { PrimaryButton, SecondaryDarkButton } from "../../marketing/components/buttons";
 
 export function VerifyEmailPage() {
+	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const token = searchParams.get("token")?.trim() ?? "";
 	// Set when this link was reached via registering from an invitation-accept page
@@ -48,6 +49,14 @@ export function VerifyEmailPage() {
 		}
 	};
 
+	// BUG-005: hand off to Sign In on its own once verified — the user shouldn't have
+	// to click through a stale confirmation screen to get there.
+	useEffect(() => {
+		if (status !== "verified") return;
+		const timer = window.setTimeout(() => navigate(signInHref, { replace: true }), 1500);
+		return () => window.clearTimeout(timer);
+	}, [status, signInHref, navigate]);
+
 	if (!token) {
 		return (
 			<div className="flex flex-col items-center gap-4 rounded-[24px] border border-white/[0.16] bg-navy-800 p-7 text-center shadow-[0_22px_60px_rgba(0,0,0,0.32)] sm:p-9">
@@ -74,16 +83,18 @@ export function VerifyEmailPage() {
 			{error && <InlineAlert tone="error" title={error} />}
 			{status === "verified" && (
 				<InlineAlert tone="success" title="Email verified">
-					{next ? "You can now sign in to accept your invitation." : "You can now sign in and create your organization."}
+					{next ? "Redirecting you to accept your invitation…" : "Redirecting you to sign in…"}
 				</InlineAlert>
 			)}
-			<div className="mt-2 flex flex-wrap justify-center gap-3">
-				<PrimaryButton onClick={onVerify} loading={status === "submitting"}>
-					Verify Email
-				</PrimaryButton>
-				<SecondaryDarkButton to="/auth/resend-verification">Resend verification</SecondaryDarkButton>
-				<SecondaryDarkButton to={signInHref}>Sign In</SecondaryDarkButton>
-			</div>
+			{status !== "verified" && (
+				<div className="mt-2 flex flex-wrap justify-center gap-3">
+					<PrimaryButton onClick={onVerify} loading={status === "submitting"} disabled={status === "submitting"}>
+						Verify Email
+					</PrimaryButton>
+					<SecondaryDarkButton to="/auth/resend-verification">Resend verification</SecondaryDarkButton>
+					<SecondaryDarkButton to={signInHref}>Sign In</SecondaryDarkButton>
+				</div>
+			)}
 		</div>
 	);
 }
