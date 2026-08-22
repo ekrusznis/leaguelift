@@ -6,6 +6,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
+import { PasswordInput } from '@/components/password-input';
 import { Rally26Logo } from '@/components/rally26-logo';
 import { ThemedText } from '@/components/themed-text';
 import { useToast } from '@/components/toast';
@@ -21,7 +22,7 @@ import { useTheme } from '@/hooks/use-theme';
 // used for the Google flow closes itself after redirecting back into the app.
 WebBrowser.maybeCompleteAuthSession();
 
-/** Real login — POST /auth/login (ADR-102). No "forgot password" flow yet; that exists on web only for now. */
+/** Real login — POST /auth/login (ADR-102). "Forgot password?" opens the web reset flow in an in-app browser tab rather than duplicating it natively. */
 export default function LoginScreen() {
   const theme = useTheme();
   const toast = useToast();
@@ -78,6 +79,10 @@ export default function LoginScreen() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function onForgotPasswordPress() {
+    await WebBrowser.openBrowserAsync(`${env.frontendBaseUrl}/auth/forgot-password`);
   }
 
   function onGooglePress() {
@@ -140,17 +145,21 @@ export default function LoginScreen() {
               />
             </View>
             <View style={styles.field}>
-              <ThemedText type="small" themeColor="textSecondary">
-                Password
-              </ThemedText>
-              <TextInput
+              <View style={styles.passwordLabelRow}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Password
+                </ThemedText>
+                <Pressable onPress={onForgotPasswordPress}>
+                  <ThemedText type="small" style={styles.forgotPasswordLink}>
+                    Forgot password?
+                  </ThemedText>
+                </Pressable>
+              </View>
+              <PasswordInput
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
                 autoComplete="password"
                 placeholder="••••••••"
-                placeholderTextColor={theme.textSecondary}
-                style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
                 onSubmitEditing={onSubmit}
               />
             </View>
@@ -225,6 +234,14 @@ const styles = StyleSheet.create({
   },
   field: {
     gap: Spacing.one,
+  },
+  passwordLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  forgotPasswordLink: {
+    color: Brand.championshipGold,
   },
   input: {
     minHeight: 48,

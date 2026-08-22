@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
+import { PasswordInput } from '@/components/password-input';
 import { Rally26Logo } from '@/components/rally26-logo';
 import { ThemedText } from '@/components/themed-text';
 import { messageForAuthError, resendVerificationEmail } from '@/features/auth/authApi';
@@ -162,14 +163,11 @@ export default function RegisterScreen() {
               <ThemedText type="small" themeColor="textSecondary">
                 Password
               </ThemedText>
-              <TextInput
+              <PasswordInput
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
                 autoComplete="password-new"
                 placeholder="At least 8 characters"
-                placeholderTextColor={theme.textSecondary}
-                style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
               />
             </View>
 
@@ -177,14 +175,11 @@ export default function RegisterScreen() {
               <ThemedText type="small" themeColor="textSecondary">
                 Confirm password
               </ThemedText>
-              <TextInput
+              <PasswordInput
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                secureTextEntry
                 autoComplete="password-new"
                 placeholder="••••••••"
-                placeholderTextColor={theme.textSecondary}
-                style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
                 onSubmitEditing={onSubmit}
               />
             </View>
